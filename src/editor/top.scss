@@ -1,0 +1,17 @@
+
+.buttonContainer {
+  height: 100%;
+}
+.button {
+  box-sizing: border-box;
+  padding-top: 10px;
+  text-align: center;
+  display: inline-block;
+  color: $layout-effect-color;
+  width: 50px;
+  height: 100%;
+}
+.button i {
+  display: block;
+  font-size: 25px;
+}
