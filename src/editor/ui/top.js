@@ -2,9 +2,11 @@ import { el, list, mount } from 'redom';
 
 export class TopButton {
 	constructor() {
-		this.el = el('div.iconTextButton',
-			this.icon = el('i.fa'),
-			this.text = el('span')
+		this.el = el('div.button.topIconTextButton',
+			el('div.topIconTextButtonContent',
+				this.icon = el('i.fa'),
+				this.text = el('span')
+			)
 		)
 	}
 	update(state) {
@@ -17,6 +19,7 @@ export class TopButton {
 export class Top {
 	constructor() {
 		this.el = el('div.top',
+			this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
 			this.list = list('div.buttonContainer', TopButton)
 		);
 	}

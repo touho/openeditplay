@@ -1,5 +1,35 @@
 
-.buttonContainer {
-  height: 100%;
+div.top {
+  position: relative;
 }
 
+.buttonContainer {
+  height: 100%;
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  padding-top: 2px;
+}
+
+img.logo {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.topIconTextButton {
+  box-sizing: border-box;
+  text-align: center;
+  display: inline-block;
+  width: 50px;
+  height: 100%;
+  transform: translateY(50%);
+}
+.topIconTextButton i {
+  display: block;
+  font-size: 25px;
+}
+
+.topIconTextButtonContent {
+  transform: translateY(-50%);
+}

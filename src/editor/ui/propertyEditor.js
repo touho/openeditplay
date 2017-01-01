@@ -4,7 +4,7 @@ export class PropertyEditor {
 	constructor() {
 		this.el = el('div.propertyEditor.packable',
 			this.editor = el('div.propertyEditor'),
-			this.toggleButton = el('i.togglePacked.iconButton.fa.fa-chevron-right')
+			this.toggleButton = el('i.togglePacked.button.iconButton.fa.fa-chevron-right')
 		);
 		this.el.onclick = () => this.el.classList.contains('packed') && this.el.classList.remove('packed');
 		this.toggleButton.onclick = event => {
@@ -13,13 +13,11 @@ export class PropertyEditor {
 		};
 	}
 	update(state) {
-		if (!Array.isArray(state)) return;
-		if (!state.length)
+		// if (!Array.isArray(state)) return;
+		// if (!state.length)
 			
 		
-		
-		
-		
+			
 		new PJS($(this.editor), state.schema, state.data);
 	}
 }

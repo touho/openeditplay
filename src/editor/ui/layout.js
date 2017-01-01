@@ -5,13 +5,6 @@ import { PropertyEditor } from './propertyEditor';
 import { Left } from './left';
 import { Bottom } from './bottom';
 
-import { componentClasses } from '../../core/component';
-
-let propertyTypeToEditorType = {
-	'float': 'number',
-	'string': 'text'
-};
-
 export default class Layout {
 	constructor() {
 		this.el = el('div.editorLayout',
@@ -98,7 +91,10 @@ Event.listen('load', () => {
 				}
 			]
 		},
-		propertyEditor: 
+		propertyEditor: {
+			schema,
+			data
+		}
 	};
 
 	let layout = new Layout;
