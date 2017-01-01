@@ -24,8 +24,7 @@ function startJsWatch(SOURCE, DESTINATION, callback) {
 			 	jsnext: true,
 				 preferBuiltins: false
 			 }),
-
-
+			
 			 rollupBuble({
 			 	transforms: { dangerousForOf: true }
 			 }),
@@ -54,7 +53,7 @@ function startJsWatch(SOURCE, DESTINATION, callback) {
 			case 'ERROR':
 				var err = event.error;
 				// log('Got error', event);
-				// log('Got error', err);
+				log('Got error', err);
 			function syntaxError(filename, message) {
 				log(`Rollup error: ${message}`);
 				log(`Fix ${filename} to continue`);
@@ -134,23 +133,23 @@ function copy(from, to) {
 }
 
 if (process.argv[2] === '--production') {
-	startJsWatch('./src/main.js', './dist/engine.min.js');
-	startCssWatcher('./src/', './src/main.scss', './dist/engine.css');
+	startJsWatch('./src/main.js', './dist/explore.min.js');
+	startCssWatcher('./src/', './src/main.scss', './dist/explore.css');
 } else {
-	startJsWatch('./src/mainDev.js', './dev/engine.dev.min.js');
-	startCssWatcher('./src/', './src/mainDev.scss', './dev/css/engine.dev.css');
+	startJsWatch('./src/mainDev.js', './dev/explore.dev.min.js');
+	startCssWatcher('./src/', './src/mainDev.scss', './dev/css/explore.dev.css');
 
 	concat([
 			'node_modules/jquery/dist/jquery.min.js',
 			'node_modules/propertiesjs/dist/propertiesJS.min.js'
 		],
-		'dev/dev.dependencies.min.js'
+		'dev/explore.dev.dependencies.min.js'
 	);
 	concat([
 			'node_modules/propertiesjs/dist/propertiesJS.css',
 			'src/external/font-awesome.min.css'
 		],
-		'dev/css/dev.dependencies.css'
+		'dev/css/explore.dev.dependencies.css'
 	);
 	log('to make a distribution build, use parameter --production');
 }

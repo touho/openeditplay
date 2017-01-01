@@ -1,11 +1,11 @@
 import { Component, Prop } from '../core/component';
 
 Component.register({
-	name: 'Position',
+	name: 'Test',
 	category: 'Core',
 	icon: 'fa-circle',
 	properties: [
-		Prop('x', 0.1, Prop.float),
-		Prop('y', 0.2, Prop.float)
+		Prop('name', 'Oh right', Prop.string),
+		Prop('number', 666, Prop.float)
 	]
 });

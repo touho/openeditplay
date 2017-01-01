@@ -1,6 +1,10 @@
 
 @import 'variables.scss';
 @import 'top.scss';
+@import 'propertyEditor.scss';
+@import 'left.scss';
+@import 'bottom.scss';
+@import 'buttons.scss';
 
 body, html {
     background: $other-backround;
@@ -8,6 +12,7 @@ body, html {
     height: 100%;
     margin: 0;
     padding: 0;
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
 }
 
 div.editorLayout {
@@ -16,23 +21,35 @@ div.editorLayout {
     display: flex;
     flex-direction: row;
 }
+div.packable {
+    transition: all 0.3s;
+    position: relative;
+}
+div.packable > * {
+    transition: opacity 0.3s;
+}
+div.packable:not(:hover) .togglePacked {
+    opacity: 0.1;
+}
 div.nonRight {
     flex: 1;
     display: flex;
     flex-direction: column;
 }
-div.right {
-    border-left: 1px solid $layout-effect-color;
+div.propertyEditor {
+    border-left: 1px solid $layout-border-color;
     width: 300px;
-    transition: all 0.2s;
+    border-radius: 8px;
 }
-div.right.packed {
+div.propertyEditor.packed {
+    max-width: 30px;
+    min-width: 30px;
     width: 30px;
 }
 div.top {
     min-height: 60px;
     height: 10vh;
-    border-bottom: 1px solid $layout-effect-color;
+    border-bottom: 1px solid $layout-border-color;
 }
 div.middle {
     flex: 1;
@@ -40,20 +57,18 @@ div.middle {
     flex-direction: row;
 }
 div.bottom {
-    border-top: 1px solid $layout-effect-color;
+    border-top: 1px solid $layout-border-color;
     min-height: 150px;
     max-height: 300px;
     height: 25vh;
-    transition: all 0.2s;
 }
 div.bottom.packed {
     min-height: 30px;
     max-height: 30px;
 }
 div.left {
-    border-right: 1px solid $layout-effect-color;
+    border-right: 1px solid $layout-border-color;
     width: 300px;
-    transition: all 0.2s;
 }
 div.left.packed {
     width: 30px;
@@ -62,8 +77,13 @@ div.center {
     flex: 1;
     background: $center-backround;
 }
+div.packed {
+    border-color: $layout-effect-color-inactive;
+}
 div.packed:hover {
     cursor: pointer;
 }
-
-
+div.packed > * {
+    opacity: 0 !important;
+    visibility: hidden;
+}

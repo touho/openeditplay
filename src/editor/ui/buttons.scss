@@ -1,0 +1,28 @@
+.iconButton, .iconTextButton {
+  cursor: pointer;
+  color: $layout-effect-color;
+  opacity: 0.6;
+}
+.iconButton:hover, .iconTextButton:hover {
+  opacity: 1;
+}
+
+.iconTextButton {
+  box-sizing: border-box;
+  padding-top: 10px;
+  text-align: center;
+  display: inline-block;
+  width: 50px;
+  height: 100%;
+}
+.iconTextButton i {
+  display: block;
+  font-size: 25px;
+}
+
+.iconButton {
+  border-radius: 3px;
+  padding: 2px;
+  margin: 1px;
+  font-size: 1.5em;
+}

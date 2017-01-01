@@ -3,7 +3,7 @@ import assert from '../assert';
 import Property from './property';
 export { default as Prop } from './propertyType';
 
-let componentClasses = new Map();
+export let componentClasses = new Map();
 
 // Instance of a component, see componentExample.js
 export class Component extends Serializable {
@@ -67,23 +67,53 @@ export class Component extends Serializable {
 	}
 }
 
-Component.reservedPropertyNames = new Set(['children', 'delete', 'entity', 'env', 'init', 'preInit', 'sleep']);
-Component.register = function(componentClass, {
-	properties = [],
+Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentModel']);
+Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentModel']);
+Component.register = function({
+	name = '',
+	description = '',
 	category = 'Other',
+	icon = 'fa-bars',
+	properties = [],
 	requirements = [],
-	children = []
-} = {}) {
-	assert(!componentClasses.has(componentClass.name), 'Duplicate component class ' + componentClass.name);
-	componentClass.propertyModels = properties;
-	componentClass.category = category;
-	componentClass.requirements = requirements;
-	componentClass.children = children;
+	children = [],
+	parentClass = Component,
+	prototype = {}
+}) {
+	assert(name, 'Component must have a name.');
+	assert(!componentClasses.has(name), 'Duplicate component class ' + name);
+	Object.keys(prototype).forEach(k => {
+		if (Component.reservedPrototypeMembers.has(k))
+			assert(false, 'Component prototype can not have a reserved member: ' + k);
+	});
+	
+	let constructorFunction = prototype.constructor;
+	let deleteFunction = prototype.delete;
+	delete prototype.constructor;
+	delete prototype.delete;
+	class Class extends parentClass {
+		constructor() {
+			super(...arguments);
+			if (constructorFunction)
+				constructorFunction();
+		}
+		delete() {
+			super.delete(...arguments);
+			if (deleteFunction)
+				deleteFunction();
+		}
+	}
+	Object.defineProperty(Class, 'name', { get: () => name });
+	Class.propertyModels = properties;
+	Class.category = category;
+	Class.requirements = requirements;
+	Class.children = children;
+	Object.assign(Class.prototype, prototype);
 
-	componentClass.propertyModels.forEach(p => {
+	Class.propertyModels.forEach(p => {
 		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
-		assert(componentClass.prototype[p.name] === undefined, 'Name ' + p.name + ' clashes ');
-		Object.defineProperty(componentClass.prototype, p.name, {
+		assert(Class.prototype[p.name] === undefined, 'Name ' + p.name + ' clashes ');
+		Object.defineProperty(Class.prototype, p.name, {
 			get() {
 				return this._properties[p.name].value;
 			},
@@ -92,6 +122,6 @@ Component.register = function(componentClass, {
 			}
 		});
 	});
-	
-	componentClasses.set(componentClass.name, componentClass);
+	componentClasses.set(Class.name, Class);
+	return Class;
 };
