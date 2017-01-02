@@ -1,10 +1,7 @@
 
 @import 'variables.scss';
-@import 'top.scss';
-@import 'propertyEditor.scss';
-@import 'left.scss';
-@import 'bottom.scss';
 @import 'buttons.scss';
+@import 'moduleContainer.scss';
 
 body, html {
     background: $other-backround;
@@ -13,6 +10,14 @@ body, html {
     margin: 0;
     padding: 0;
     font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+    color: #b1cacb;
+}
+
+.packButton {
+    position: absolute;
+    padding: 2px 10px;
+    margin-top: 1px;
+    z-index: 100;
 }
 
 div.editorLayout {
@@ -28,23 +33,25 @@ div.packable {
 div.packable > * {
     transition: opacity 0.3s;
 }
-div.packable:not(:hover) .togglePacked {
-    opacity: 0.1;
-}
 div.nonRight {
     flex: 1;
     display: flex;
     flex-direction: column;
 }
-div.propertyEditor {
+div.right {
     border-left: 1px solid $layout-border-color;
     width: 300px;
     border-radius: 8px;
+    min-width: 200px;
 }
-div.propertyEditor.packed {
+div.right.packed {
     max-width: 30px;
     min-width: 30px;
     width: 30px;
+}
+div.right .packButton {
+    top: 0;
+    right: 0;
 }
 div.top {
     min-height: 60px;
@@ -66,6 +73,11 @@ div.bottom.packed {
     min-height: 30px;
     max-height: 30px;
 }
+div.bottom .packButton {
+    top: 0;
+    right: 0;
+}
+
 div.left {
     border-right: 1px solid $layout-border-color;
     width: 300px;
@@ -73,9 +85,14 @@ div.left {
 div.left.packed {
     width: 30px;
 }
+div.left .packButton {
+    right: 0;
+    top: 0;
+}
 div.center {
     flex: 1;
     background: $center-backround;
+    //color: #adadad;
 }
 div.packed {
     border-color: $layout-effect-color-inactive;

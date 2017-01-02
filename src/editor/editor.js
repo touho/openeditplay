@@ -1,12 +1,22 @@
-import Event from './event';
-import Layout from './ui/layout';
+import events from './events';
+import Layout from './layout/layout';
+import './module/topBar';
+import './module/property';
+import './module/scene';
+import './module/test';
+import './module/test2';
+import './module/test3';
 import { el, list, mount } from 'redom';
 
 import { componentClasses } from '../core/component';
 
 window.addEventListener('load', () => {
 	editor = new Editor();
-	
+	events.dispatch('registerModules');
+});
+events.listen('modulesRegistered', () => {
+	editor.update();
+	events.dispatch('loaded');
 });
 
 let propertyTypeToEditorType = {
@@ -19,9 +29,7 @@ class Editor {
 	constructor() {
 		this.layout = new Layout();
 		this.selectedItems = [];
-
-		console.log('layout load', componentClasses);
-
+		
 		let schema = {
 			editors: [
 				{
@@ -54,12 +62,9 @@ class Editor {
 			});
 			data[c.name] = componentData;
 		});
-
-
-		console.log('schema', schema, data);
-
-		let state = {
-			top: {
+		
+		this.state = {
+			TopBar: {
 				buttons: [
 					{
 						iconClass: 'fa fa-bell-o',
@@ -71,18 +76,20 @@ class Editor {
 					}
 				]
 			},
-			propertyEditor: {
+			Properties: {
 				schema,
 				data
 			}
+			// TODO: no module names. data names instead. Properties -> componentClasses
 		};
 
-		let layout = new Layout;
-		layout.update(state);
-		mount(document.body, layout);
+		mount(document.body, this.layout);
 	}
 	select(items) {
 		this.selectedItems = items;
 		this.layout.select(items);
+	}
+	update() {
+		this.layout.update(this.state);
 	}
 }

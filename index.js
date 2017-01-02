@@ -52,7 +52,7 @@ function startJsWatch(SOURCE, DESTINATION, callback) {
 
 			case 'ERROR':
 				var err = event.error;
-				// log('Got error', event);
+				// log('Got error', events);
 				log('Got error', err);
 			function syntaxError(filename, message) {
 				log(`Rollup error: ${message}`);
@@ -88,7 +88,7 @@ function startJsWatch(SOURCE, DESTINATION, callback) {
 				break;
 
 			default:
-				log('Unknown event', event);
+				log('Unknown events', event);
 		}
 	});
 }

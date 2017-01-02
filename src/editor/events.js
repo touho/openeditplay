@@ -1,7 +1,7 @@
 /*
  Global event system
 
- let unlisten = eventManager.listen('event name', function(params, ...) {});
+ let unlisten = events.listen('event name', function(params, ...) {});
  eventManager.dispatch('event name', paramOrParamArray);
  unlisten();
  */
@@ -25,7 +25,7 @@ export default {
 
 			for (var i = 0; i < listeners[event].length; ++i) {
 				try {
-					listeners[event][i].call(null, args);
+					listeners[event][i].apply(null, args);
 				} catch (e) {
 					if (console && console.error) {
 						console.error(e);

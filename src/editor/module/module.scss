@@ -1,0 +1,13 @@
+.module {
+  opacity: 1;
+  transition: opacity 0.2s;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  overflow: auto;
+  visibility: visible;
+}
+.module.hidden {
+  opacity: 0.0;
+  visibility: hidden;
+}

@@ -1,0 +1,36 @@
+.moduleContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  padding-top: 5px;
+  overflow: hidden;
+  background: #181818;
+  background: black;
+  min-height: 20px;
+}
+
+.moduleElements {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.moduleTab {
+  background: #2c2c2c;
+  padding: 1px 5px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+.moduleTab:not(.active) {
+  filter: saturate(0);
+  //opacity: 0.5;
+  background: #2c2c2c;
+}
+.moduleTab.active {
+  opacity: 1;
+}
