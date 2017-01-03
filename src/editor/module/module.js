@@ -31,6 +31,9 @@ Module.packModuleContainer = function(moduleContainerName) {
 Module.unpackModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.remove('packed');
 };
+Module.requestUpdate = function() {
+	events.dispatch('requestUpdate');
+};
 
 // moduleContainerName = left | middle | right | bottom
 Module.register = function(moduleClass, moduleContainerName) {

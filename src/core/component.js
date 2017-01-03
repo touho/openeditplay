@@ -105,12 +105,14 @@ Component.register = function({
 	}
 	Object.defineProperty(Class, 'name', { get: () => name });
 	Class.propertyModels = properties;
+	Class.propertyModelMap = new Map();
 	Class.category = category;
 	Class.requirements = requirements;
 	Class.children = children;
 	Object.assign(Class.prototype, prototype);
 
 	Class.propertyModels.forEach(p => {
+		Class.propertyModelMap.set(p.name, p);
 		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
 		assert(Class.prototype[p.name] === undefined, 'Name ' + p.name + ' clashes ');
 		Object.defineProperty(Class.prototype, p.name, {

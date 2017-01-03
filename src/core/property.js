@@ -1,7 +1,7 @@
 import Serializable from './serializable';
 import assert from '../assert';
 
-// Entity of a property
+// Instance of a property
 export default class Property extends Serializable {
 	constructor(propertyModel) {
 		super('pro');

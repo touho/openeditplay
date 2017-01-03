@@ -26,7 +26,10 @@ class Editor {
 		
 		this.state = {
 			topButtons: [],
-			selectedItems: [],
+			selection: {
+				type: 'none',
+				items: []
+			},
 			componentClasses
 		};
 
@@ -46,6 +49,10 @@ class Editor {
 				i++;
 			}
 			if (i >= 0) topButtons.push(button);
+		});
+		
+		events.listen('requestUpdate', () => {
+			this.update();
 		});
 	}
 	select(items) {
