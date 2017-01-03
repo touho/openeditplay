@@ -16,7 +16,7 @@ export default class Layout {
 					addContainer('left', 'fa-chevron-left'),
 					addContainer('center', null)
 				),
-				addContainer('bottom.packed', 'fa-chevron-down')
+				addContainer('bottom', 'fa-chevron-down')
 			),
 			addContainer('right', 'fa-chevron-right')
 		);

@@ -13,4 +13,4 @@ class TestModule extends Module {
 	}
 }
 
-Module.register(TestModule, 'center');
+Module.register(TestModule, 'left');

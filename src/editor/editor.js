@@ -19,71 +19,34 @@ events.listen('modulesRegistered', () => {
 	events.dispatch('loaded');
 });
 
-let propertyTypeToEditorType = {
-	'float': 'number',
-	'string': 'text'
-};
-
 let editor = null;
 class Editor {
 	constructor() {
 		this.layout = new Layout();
-		this.selectedItems = [];
-		
-		let schema = {
-			editors: [
-				{
-					field: 'yks',
-					title: 'YKS',
-					type: 'text'
-				}
-			]
-		};
-
-		let data = {};
-
-		let componentArray = Array.from(componentClasses.values());
-		componentArray.forEach(c => {
-			let componentSchema = {
-				type: 'group',
-				field: c.name,
-				title: c.name,
-				editors: c.propertyModels.map(pm => ({
-					field: c.name + '.' + pm.name,
-					title: pm.name.length > 30 ? (pm.name.substring(0, 28) + '..') : pm.name,
-					type: propertyTypeToEditorType[pm.type.name] || 'text'
-				}))
-			};
-			schema.editors.push(componentSchema);
-
-			let componentData = {};
-			c.propertyModels.forEach(pm => {
-				componentData[pm.name] = pm.initialValue;
-			});
-			data[c.name] = componentData;
-		});
 		
 		this.state = {
-			TopBar: {
-				buttons: [
-					{
-						iconClass: 'fa fa-bell-o',
-						text: 'Bell'
-					},
-					{
-						iconClass: 'fa fa-cubes',
-						text: 'Cubes'
-					}
-				]
-			},
-			Properties: {
-				schema,
-				data
-			}
-			// TODO: no module names. data names instead. Properties -> componentClasses
+			topButtons: [],
+			selectedItems: [],
+			componentClasses
 		};
 
 		mount(document.body, this.layout);
+		
+		events.listen('registerTopButton', (text, icon, func, priority) => {
+			let button = { icon, text, func, priority };
+			let i = 0;
+			let topButtons = this.state.topButtons;
+			while (i < topButtons.length) {
+				let b = topButtons[i];
+				if (b.priority > priority) {
+					topButtons.splice(i, 0, button);
+					i = -1;
+					break;
+				}
+				i++;
+			}
+			if (i >= 0) topButtons.push(button);
+		});
 	}
 	select(items) {
 		this.selectedItems = items;

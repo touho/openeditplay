@@ -7,10 +7,7 @@ export default class Module {
 		this.el = el('div.module', ...arguments);
 		this._visible = true;
 	}
-	activateModule(moduleName, ...args) {
-		events.dispatch('activateModule_' + moduleName, args);
-	}
-	// Called when this module is opened. Other modules can call this.activateModule('Module', ...args);
+	// Called when this module is opened. Other modules can call Module.activateModule('Module', ...args);
 	activate() {
 	}
 	// Called when state of editor changes
@@ -25,6 +22,30 @@ export default class Module {
 		this._visible = false;
 	}
 }
+Module.activateModule = function(moduleName, ...args) {
+	events.dispatch('activateModule_' + moduleName, args);
+};
+Module.packModuleContainer = function(moduleContainerName) {
+	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.add('packed');
+};
+Module.unpackModuleContainer = function(moduleContainerName) {
+	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.remove('packed');
+};
+
+// moduleContainerName = left | middle | right | bottom
+Module.register = function(moduleClass, moduleContainerName) {
+	registerPromise = registerPromise.then(() => {
+		events.dispatch('registerModule_' + moduleContainerName, [moduleClass]);
+	});
+};
+
+let nextPriorityNumber = 1;
+Module.registerTopButton = function(text, icon, func, priority = nextPriorityNumber++) {
+	registerPromise = registerPromise.then(() => {
+		events.dispatch('registerTopButton', [text, icon, func, priority]);
+	});
+};
+
 
 let registerPromise = new Promise(function(resolve) {
 	events.listen('registerModules', function() {
@@ -34,10 +55,3 @@ let registerPromise = new Promise(function(resolve) {
 		resolve();
 	});
 });
-
-// moduleContainerName = left | middle | right | bottom
-Module.register = function(moduleClass, moduleContainerName) {
-	registerPromise = registerPromise.then(() => {
-		events.dispatch('registerModule_' + moduleContainerName, [moduleClass]);
-	});
-};

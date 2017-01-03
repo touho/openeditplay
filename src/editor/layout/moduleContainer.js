@@ -2,7 +2,8 @@ import { el, list, mount } from 'redom';
 import events from '../events';
 
 export default class ModuleContainer {
-	constructor(moduleContainerName = 'unknownClass', packButtonIcon = 'fa-chevron-left') {
+	constructor(moduleContainerName = 'unknownClass.anotherClass', packButtonIcon = 'fa-chevron-left') {
+		
 		this.modules = [];
 		this.packButtonEnabled = !!packButtonIcon;
 		this.el = el(`div.moduleContainer.packable.${moduleContainerName}`,
@@ -18,7 +19,7 @@ export default class ModuleContainer {
 			}
 		}
 
-		events.listen('registerModule_' + moduleContainerName, moduleClass => {
+		events.listen('registerModule_' + moduleContainerName.split('.')[0], moduleClass => {
 			let module = new moduleClass();
 			module.el.classList.add('module-' + module.name);
 			this.modules.push(module);
@@ -29,7 +30,7 @@ export default class ModuleContainer {
 			this._updateTabs();
 			
 			events.listen('activateModule_' + module.name, () => {
-				console.log('activate');
+				this.el.classList.remove('packed');
 				this._activateModule(module, arguments);
 			});
 		});
@@ -37,9 +38,7 @@ export default class ModuleContainer {
 	}
 	update(state) {
 		state = state || {};
-		this.modules.forEach(m => {
-			m.update(state[m.name]);
-		})
+		this.modules.forEach(m => m.update(state));
 	}
 	_updateTabs() {
 		if (!this.tabs) return;
