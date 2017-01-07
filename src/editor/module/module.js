@@ -4,6 +4,7 @@ import events from '../events';
 export default class Module {
 	constructor() {
 		this.name = this.name || 'Module';
+		this.id = this.id || 'module';
 		this.el = el('div.module', ...arguments);
 		this._visible = true;
 	}
@@ -22,8 +23,9 @@ export default class Module {
 		this._visible = false;
 	}
 }
-Module.activateModule = function(moduleName, ...args) {
-	events.dispatch('activateModule_' + moduleName, args);
+//arguments: moduleName, unpackModuleView=true, ...args 
+Module.activateModule = function(moduleName, unpackModuleView=true, ...args) {
+	events.dispatch('activateModule_' + moduleName, [unpackModuleView, ...args]);
 };
 Module.packModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.add('packed');

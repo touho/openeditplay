@@ -11,7 +11,8 @@ class PropertyModule extends Module {
 		super(
 			this.editor = el('div.propertyEditor', 'hei')
 		);
-		this.name = 'Properties';
+		this.id = 'type';
+		this.name = 'Type';
 	}
 	update(state) {
 		super.update(state);
@@ -35,7 +36,7 @@ class PropertyModule extends Module {
 				type: 'group',
 				field: c.name,
 				title: c.name,
-				editors: c.propertyModels.map(pm => ({
+				editors: c.propertyTypes.map(pm => ({
 					field: c.name + '.' + pm.name,
 					title: pm.name.length > 30 ? (pm.name.substring(0, 28) + '..') : pm.name,
 					type: propertyTypeToEditorType[pm.type.name] || 'text'
@@ -44,7 +45,7 @@ class PropertyModule extends Module {
 			schema.editors.push(componentSchema);
 
 			let componentData = {};
-			c.propertyModels.forEach(pm => {
+			c.propertyTypes.forEach(pm => {
 				componentData[pm.name] = pm.initialValue;
 			});
 			data[c.name] = componentData;

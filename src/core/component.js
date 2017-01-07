@@ -1,20 +1,21 @@
 import Serializable from './serializable';
 import assert from '../assert';
 import Property from './property';
+
 export { default as Prop } from './propertyType';
 
 export let componentClasses = new Map();
 
 // Instance of a component, see componentExample.js
 export class Component extends Serializable {
-	constructor(componentModel, entity, env) {
+	constructor(componentData, entity, env) {
 		super('com');
 		this.entity = entity;
 		this.env = env;
 		this.children = {}; // TODO: create children
 		this._properties = {};
-		this._componentModel = componentModel;
-		this.constructor.propertyModels.forEach(p => {
+		this._componentData = componentData;
+		this.constructor.propertyTypes.forEach(p => {
 			this._properties[p.name] = new Property(p);
 		});
 	}
@@ -67,10 +68,10 @@ export class Component extends Serializable {
 	}
 }
 
-Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentModel']);
-Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentModel']);
+Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
+Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
 Component.register = function({
-	name = '',
+	name = '', // required
 	description = '',
 	category = 'Other',
 	icon = 'fa-bars',
@@ -104,15 +105,17 @@ Component.register = function({
 		}
 	}
 	Object.defineProperty(Class, 'name', { get: () => name });
-	Class.propertyModels = properties;
-	Class.propertyModelMap = new Map();
+	Class.propertyTypes = properties;
+	Class.propertyTypeMap = new Map();
 	Class.category = category;
 	Class.requirements = requirements;
 	Class.children = children;
+	Class.description = description;
+	Class.icon = icon;
 	Object.assign(Class.prototype, prototype);
 
-	Class.propertyModels.forEach(p => {
-		Class.propertyModelMap.set(p.name, p);
+	Class.propertyTypes.forEach(p => {
+		Class.propertyTypeMap.set(p.name, p);
 		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
 		assert(Class.prototype[p.name] === undefined, 'Name ' + p.name + ' clashes ');
 		Object.defineProperty(Class.prototype, p.name, {

@@ -24,6 +24,8 @@ export default {
 			if (!Array.isArray(args)) args = [args];
 
 			for (var i = 0; i < listeners[event].length; ++i) {
+				listeners[event][i].apply(null, args);
+				/*
 				try {
 					listeners[event][i].apply(null, args);
 				} catch (e) {
@@ -31,6 +33,7 @@ export default {
 						console.error(e);
 					}
 				}
+				*/
 			}
 		}
 	}

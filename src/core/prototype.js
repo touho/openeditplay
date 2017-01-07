@@ -5,6 +5,5 @@ export default class Prototype extends Serializable {
 	constructor() {
 		super('prt');
 		this.parent = null;
-		this.componentModels
 	}
 }

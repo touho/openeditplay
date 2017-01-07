@@ -21,7 +21,8 @@ img.logo {
   box-sizing: border-box;
   text-align: center;
   display: inline-block;
-  width: 50px;
+  min-width: 50px;
+  margin: 0 7px;
   height: 100%;
   transform: translateY(50%);
 }
@@ -34,6 +35,6 @@ img.logo {
   transform: translateY(-50%);
 }
 
-.module-TopBar {
+.module-topbar {
   overflow: hidden;
 }

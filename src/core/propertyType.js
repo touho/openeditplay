@@ -1,7 +1,45 @@
+import Serializable from './serializable';
 import assert from '../assert';
-import PropertyModel from './propertyModel';
 
-export default function PropertyType(propertyName, defaultValue, type, ...optionalParameters) {
+// info about type, validator, validatorParameters, initialValue
+
+class PropertyType extends Serializable {
+	constructor(name, type, validator, initialValue) {
+		assert(typeof name === 'string');
+		assert(typeof type.name === 'string');
+		assert(typeof validator.validate === 'function');
+		
+		super('pmo');
+		
+		this.name = name;
+		this.type = type;
+		this.validator = validator;
+		this.initialValue = initialValue;
+	}
+	toJSON() {
+		return Object.assign(super.toJSON(), {
+			name: this.name,
+			type: this.type.name,
+			validatorName: this.validator.validatorName,
+			validatorParameters: this.validator.validatorParameters,
+			initialValue: this.type.toJSON(this.initialValue)
+		});
+	}
+	delete() {
+		super.delete();
+		this.type = null;
+		this.validator = null;
+	}
+}
+
+/*
+	Beautiful way of creating property types
+	
+	optionalParameters:
+		description: 'Example',
+		validator: PropertyType.
+ */
+export default function createPropertyType(propertyName, defaultValue, type, ...optionalParameters) {
 	type = type();
 	let validator = type.validators.default();
 	let description = '';
@@ -13,10 +51,10 @@ export default function PropertyType(propertyName, defaultValue, type, ...option
 		else
 			assert(false, 'invalid parameter ' + p);
 	});
-	return new PropertyModel(propertyName, type, validator, defaultValue);
+	return new PropertyType(propertyName, type, validator, defaultValue);
 };
 
-export function addType({
+export function addDataType({
 	name = '',
 	validators = { default: x => x }, // default must exist
 	toJSON = x => x,
@@ -34,15 +72,15 @@ export function addType({
 		fromJSON
 	};
 	let createType = () => type;
-	
+
 	Object.keys(validators).forEach(validatorName => {
 		createType[validatorName] = createValidator(validatorName, validators[validatorName]);
 		validators[validatorName] = createType[validatorName];
 	});
-	PropertyType[name] = createType;
+	createPropertyType[name] = createType;
 }
 
-export function createValidator(name, validatorFunction) {
+function createValidator(name, validatorFunction) {
 	let validator = function() {
 		let parameters = [...arguments];
 		return {
@@ -55,31 +93,3 @@ export function createValidator(name, validatorFunction) {
 	validator.validate = validatorFunction;
 	return validator;
 }
-
-addType({
-	name: 'float',
-	validators: {
-		default(x) {
-			x = parseFloat(x);
-			assert(!isNaN(x), 'invalid float: ' + x);
-			return x;
-		},
-		// PropertyType.float.range(min, max)
-		range(x, min, max) {
-			x = parseFloat(x);
-			assert(!isNaN(x), 'invalid float: ' + x);
-			return Math.min(max, Math.max(min, x));
-		}
-	},
-	toJSON: x => x,
-	fromJSON: x => x
-});
-
-addType({
-	name: 'string',
-	validators: {
-		default: x => String(x)
-	},
-	toJSON: x => x,
-	fromJSON: x => x
-});

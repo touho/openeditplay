@@ -21,7 +21,7 @@ export default class ModuleContainer {
 
 		events.listen('registerModule_' + moduleContainerName.split('.')[0], moduleClass => {
 			let module = new moduleClass();
-			module.el.classList.add('module-' + module.name);
+			module.el.classList.add('module-' + module.id);
 			this.modules.push(module);
 			if (this.modules.length !== 1) {
 				module._hide();
@@ -29,9 +29,10 @@ export default class ModuleContainer {
 			mount(this.moduleElements, module.el);
 			this._updateTabs();
 			
-			events.listen('activateModule_' + module.name, () => {
-				this.el.classList.remove('packed');
-				this._activateModule(module, arguments);
+			events.listen('activateModule_' + module.id, (unpackModuleView = true, ...args) => {
+				if (unpackModuleView)
+					this.el.classList.remove('packed');
+				this._activateModule(module, args);
 			});
 		});
 		this._updateTabs();
@@ -79,7 +80,7 @@ class ModuleTab {
 		this.el = el('span.moduleTab.button');
 		this.module = null;
 		this.el.onclick = () => {
-			events.dispatch('activateModule_' + this.module.name);
+			events.dispatch('activateModule_' + this.module.id);
 		};
 	}
 	update(module) {

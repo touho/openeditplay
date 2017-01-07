@@ -1,0 +1,44 @@
+
+IN GAME SCENE
+
+    Entity (Instance is editor):
+        - exists in the game scene
+        - contains things called "Component"
+    
+    Component:
+        - adds features to an Entity and makes it alive
+        - is always inside an Entity
+        - contains things called "Property"
+        
+    Property:
+        - makes Components editable and serializable
+        
+
+BEHIND THE SCENE
+
+    
+    Prototype (Type in editor):
+        - you can create an Entity based on a Prototype
+        - contains many ComponentDatas
+        
+    ComponentData:
+        - holds a set of Properties that decide the initial value of a Property in a Component
+
+    PropertyType:
+        - you can create a Property based on PropertyModel
+
+
+
+
+
+Structure
+
+Entity
+    Component
+        Property
+            PropertyModel
+                ComponentClass
+    Prototype
+        ComponentModel
+            Property
+                PropertyFactory

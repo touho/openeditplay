@@ -7,7 +7,8 @@ export class TopBarModule extends Module {
 			this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
 			this.list = list('div.buttonContainer', TopButton)
 		);
-		this.name = 'TopBar';
+		this.id = 'topbar';
+		this.name = 'TopBar'; // not visible
 	}
 	update(state) {
 		this.list.update(state.topButtons);
@@ -15,13 +16,14 @@ export class TopBarModule extends Module {
 }
 Module.register(TopBarModule, 'top');
 
-Module.registerTopButton('Bell', 'fa fa-bell-o', () => { 
-	alert('Ring ring');
+Module.registerTopButton('Bell Types', 'fa fa-bell-o', () => { 
 	Module.unpackModuleContainer('bottom');
+	Module.activateModule('types');
+	Module.activateModule('type');
 }, 1);
-Module.registerTopButton('Cubes', 'fa fa-cubes', () => {
-	Module.activateModule('Test2');
-	Module.packModuleContainer('bottom');
+Module.registerTopButton('Cube Instances', 'fa fa-cubes', () => {
+	Module.activateModule('instances');
+	Module.activateModule('instance');
 }, 2);
 
 export class TopButton {

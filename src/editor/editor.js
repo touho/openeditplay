@@ -1,10 +1,11 @@
 import events from './events';
 import Layout from './layout/layout';
 import './module/topBar';
-import './module/property';
+import './module/type';
+import './module/instance';
 import './module/scene';
-import './module/test';
-import './module/test2';
+import './module/types';
+import './module/instances';
 import './module/test3';
 import { el, list, mount } from 'redom';
 

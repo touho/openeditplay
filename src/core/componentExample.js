@@ -10,7 +10,7 @@ export default Component.register({
 	children: ['Image', 'Image', 'Sound'], // These private components are also autofilled. Error if component is not found.
 	properties: [
 		Prop('variable', 0.5, Prop.float, Prop.float.range(0, 1), 'Description of the property'),
-		Prop('otherVariaerfperfjoierj', 'Hello', Prop.string, 'Description of the property')
+		Prop('otherVar_iaerfperfjoierj', 'Hello', Prop.string, 'Description of the property')
 	],
 	parentClass: Component,
 	prototype: {

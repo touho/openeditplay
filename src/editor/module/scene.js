@@ -6,6 +6,7 @@ class SceneModule extends Module {
 		super(
 			this.content = el('span', 'moi test')
 		);
+		this.id = 'scene';
 		this.name = 'Scene';
 	}
 	update(state) {

@@ -6,7 +6,7 @@ const CHAR_COUNT = BASE_64_CHARACTERS.length;
 function char() {
 	return BASE_64_CHARACTERS[Math.random() * CHAR_COUNT | 0];
 }
-function createStringId(threeLetterPrefix = '???', characters = 16) {
+export function createStringId(threeLetterPrefix = '???', characters = 16) {
 	let id = threeLetterPrefix;
 	for (let i = characters - 1; i !== 0; --i)
 		id += char();

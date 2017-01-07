@@ -4,9 +4,10 @@ import Module from './module';
 class TestModule extends Module {
 	constructor() {
 		super(
-			this.content = el('span', 'moi test2')
+			this.content = el('span', 'List of prototypes')
 		);
-		this.name = 'Test2';
+		this.id = 'types';
+		this.name = 'Types';
 	}
 	update(state) {
 		super.update(state);

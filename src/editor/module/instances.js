@@ -4,9 +4,10 @@ import Module from './module';
 class TestModule extends Module {
 	constructor() {
 		super(
-			this.content = el('span', 'moi test')
+			this.content = el('span', 'List of instances on the scene')
 		);
-		this.name = 'Test';
+		this.name = 'Instances';
+		this.id = 'instances';
 	}
 	update(state) {
 		super.update(state);
