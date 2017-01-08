@@ -3,6 +3,9 @@ import assert from '../assert';
 import Serializable from './serializable';
 (() => {
 	let s = new Serializable('tes');
+	Serializable.registerSerializable('tes', json => {
+		return new Serializable(null, json.id);
+	});
 	let id = s.id;
 	assert(typeof id === 'string' && id.length > 10);
 	let json = s.toJSON();

@@ -1,2 +1,2 @@
 import './core/dataTypes'
-import './components/import'
+import './game/game'

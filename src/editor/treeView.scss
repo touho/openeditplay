@@ -1,0 +1,28 @@
+.jstree-default .jstree-search {
+  color: $editor-text-color;
+  left: 10px;
+  text-decoration: none;
+  font-style: normal;
+  font-weight: normal;
+  filter: brightness(1.3);
+}
+.jstree-default .jstree-search i {
+  display: none;
+}
+.jstree-default .jstree-search::before {
+  font-family: FontAwesome;
+  content: '\f002';
+  color: $editor-effect-color;
+  margin-left: 5px;
+  margin-right: 6px;
+}
+
+.jstree-default .jstree-hovered {
+  background: none;
+  color: $editor-effect-color;
+}
+
+.jstree-default .jstree-clicked {
+  background: $editor-effect-color-dark;
+  color: $editor-effect-color;
+}

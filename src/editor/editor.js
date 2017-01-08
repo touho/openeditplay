@@ -8,11 +8,17 @@ import './module/types';
 import './module/instances';
 import './module/test3';
 import { el, list, mount } from 'redom';
+import Game from '../game/game';
+import Serializable from '../core/serializable';
 
 import { componentClasses } from '../core/component';
 
 window.addEventListener('load', () => {
-	editor = new Editor();
+	let anotherGame;
+	try {
+		anotherGame = Serializable.fromJSON(JSON.parse(localStorage.anotherGameJSON));
+	} catch(e) {}
+	editor = new Editor(anotherGame);
 	events.dispatch('registerModules');
 });
 events.listen('modulesRegistered', () => {
@@ -20,9 +26,16 @@ events.listen('modulesRegistered', () => {
 	events.dispatch('loaded');
 });
 
+setInterval(function() {
+	if (!editor || !editor.state.game) return;
+	try {
+		localStorage.anotherGameJSON = JSON.stringify(editor.state.game.toJSON());
+	} catch(e) {}
+}, 2000);
+
 let editor = null;
 class Editor {
-	constructor() {
+	constructor(game = new Game()) {
 		this.layout = new Layout();
 		
 		this.state = {
@@ -31,6 +44,7 @@ class Editor {
 				type: 'none',
 				items: []
 			},
+			game,
 			componentClasses
 		};
 
@@ -53,6 +67,7 @@ class Editor {
 		});
 		
 		events.listen('requestUpdate', () => {
+			console.log('requested');
 			this.update();
 		});
 	}
@@ -61,6 +76,7 @@ class Editor {
 		this.layout.select(items);
 	}
 	update() {
+		console.log('update');
 		this.layout.update(this.state);
 	}
 }

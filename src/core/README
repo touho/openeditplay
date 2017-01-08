@@ -1,5 +1,5 @@
 
-IN GAME SCENE
+RUNS IN GAME SCENE
 
     Entity (Instance is editor):
         - exists in the game scene
@@ -15,7 +15,6 @@ IN GAME SCENE
         
 
 BEHIND THE SCENE
-
     
     Prototype (Type in editor):
         - you can create an Entity based on a Prototype
@@ -34,11 +33,22 @@ BEHIND THE SCENE
 Structure
 
 Entity
-    Component
-        Property
-            PropertyModel
-                ComponentClass
-    Prototype
-        ComponentModel
-            Property
-                PropertyFactory
+    has: Component
+        has: Property
+            has: PropertyType
+                has: dataType
+                defined in: ComponentClass
+    created with: Prototype
+        has: ComponentData
+            has: Property
+                has: PropertyType
+                    defined in: ComponentClass
+
+Prototype
+    has: ComponentData
+        has: Property
+            has: PropertyType
+                has: dataType
+                defined in: ComponentClass
+    creates: Entity
+

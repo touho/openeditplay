@@ -1,19 +1,21 @@
-let serializables = new Map();
+let serializables = {};
 
 export function addSerializable(serializable) {
-	if (serializables.has(serializable.id)) throw new Error('Serializable id clash!');
-	serializables.set(serializable.id, serializable);
+	if (serializables[serializable.id]) throw new Error('Serializable id clash!');
+	serializables[serializable.id] = serializable;
 }
 
 export function getSerializable(id) {
-	return serializables.get(id);
+	return serializables[id] || null;
 }
 
 export function hasSerializable(id) {
-	return serializables.has(id);
+	return Boolean(serializables[id]);
 }
 
 export function removeSerializable(id) {
-	if (!serializables.delete(id))
+	if (serializables[id])
+		delete serializables[id];
+	else
 		throw new Error('Serializable not found!');
 }

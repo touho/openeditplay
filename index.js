@@ -140,8 +140,9 @@ if (process.argv[2] === '--production') {
 	startCssWatcher('./src/', './src/mainDev.scss', './dev/css/explore.dev.css');
 
 	concat([
-			'node_modules/jquery/dist/jquery.min.js',
-			'node_modules/propertiesjs/dist/propertiesJS.min.js'
+		'node_modules/jquery/dist/jquery.min.js',
+		'node_modules/propertiesjs/dist/propertiesJS.min.js',
+		'src/external/jstree.min.js'
 		],
 		'dev/explore.dev.dependencies.min.js'
 	);

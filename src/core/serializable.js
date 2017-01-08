@@ -1,10 +1,10 @@
 import assert from '../assert';
 import * as serializableManager from './serializableManager';
 
-const BASE_64_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-const CHAR_COUNT = BASE_64_CHARACTERS.length;
+const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
+const CHAR_COUNT = CHARACTERS.length;
 function char() {
-	return BASE_64_CHARACTERS[Math.random() * CHAR_COUNT | 0];
+	return CHARACTERS[Math.random() * CHAR_COUNT | 0];
 }
 export function createStringId(threeLetterPrefix = '???', characters = 16) {
 	let id = threeLetterPrefix;
@@ -13,13 +13,11 @@ export function createStringId(threeLetterPrefix = '???', characters = 16) {
 	return id;
 }
 
+let serializableClasses = new Map();
+
 export default class Serializable {
 	constructor(threeLetterType, predefinedId = false) {
-		if (predefinedId)
-			this.id = predefinedId;
-		else
-			this.id = createStringId(threeLetterType);
-
+		this.id = predefinedId || createStringId(threeLetterType);
 		serializableManager.addSerializable(this);
 	}
 	delete() {
@@ -34,7 +32,14 @@ export default class Serializable {
 		return JSON.stringify(this.toJSON(), null, 4);
 	}
 	static fromJSON(json) {
-		assert(typeof json.id === 'string');
-		return new Serializable(null, json.id);
+		assert(typeof json.id === 'string' && json.id.length > 3);
+		let fromJSON = serializableClasses.get(json.id.substring(0, 3));
+		assert(fromJSON);
+		return fromJSON(json);
+	}
+	static registerSerializable(threeLetterPrefix, fromJSON) {
+		assert(typeof threeLetterPrefix === 'string' && threeLetterPrefix.length === 3);
+		assert(typeof fromJSON === 'function');
+		serializableClasses.set(threeLetterPrefix, fromJSON);
 	}
 }
