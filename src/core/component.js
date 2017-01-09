@@ -1,9 +1,8 @@
 import Serializable from './serializable';
 import assert from '../assert';
 import Property from './property';
-
+import { classProperties } from './propertyType';
 export { default as Prop } from './propertyType';
-
 export let componentClasses = new Map();
 
 // Instance of a component, see componentExample.js
@@ -13,11 +12,9 @@ export class Component extends Serializable {
 		this.entity = entity;
 		this.env = env;
 		this.children = {}; // TODO: create children
-		this._properties = {};
 		this._componentData = componentData;
-		this.constructor.propertyTypes.forEach(p => {
-			this._properties[p.name] = new Property(p);
-		});
+
+		classProperties.set(this, []); // TODO: set properties
 	}
 	delete() {
 		assert(!this.env.entity.alive, 'Do not call Component.delete!');
@@ -66,6 +63,12 @@ export class Component extends Serializable {
 			}
 		});
 	}
+	toJSON() {
+		return Object.assign(super.toJSON(), {
+			prp: classProperties.toJSON(this),
+			name: this.constructor.name
+		});
+	}
 }
 
 Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
@@ -104,29 +107,18 @@ Component.register = function({
 				deleteFunction();
 		}
 	}
+	properties.forEach(p => {
+		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
+	});
+	classProperties.define(Class, properties); // properties means propertyTypes here
 	Object.defineProperty(Class, 'name', { get: () => name });
-	Class.propertyTypes = properties;
-	Class.propertyTypeMap = new Map();
+	// Class.propertyTypeMap = new Map();
 	Class.category = category;
 	Class.requirements = requirements;
 	Class.children = children;
 	Class.description = description;
 	Class.icon = icon;
 	Object.assign(Class.prototype, prototype);
-
-	Class.propertyTypes.forEach(p => {
-		Class.propertyTypeMap.set(p.name, p);
-		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
-		assert(Class.prototype[p.name] === undefined, 'Name ' + p.name + ' clashes ');
-		Object.defineProperty(Class.prototype, p.name, {
-			get() {
-				return this._properties[p.name].value;
-			},
-			set(value) {
-				this._properties[p.name].value = value;
-			}
-		});
-	});
 	componentClasses.set(Class.name, Class);
 	return Class;
 };

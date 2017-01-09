@@ -9,8 +9,7 @@ class TestModule extends Module {
 		this.id = 'test';
 		this.name = 'Test3';
 	}
-	update(state) {
-		super.update(state);
+	update() {
 	}
 }
 

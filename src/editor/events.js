@@ -19,10 +19,8 @@ export default {
 			listeners[event].splice(index, 1);
 		};
 	},
-	dispatch(event, args) {
+	dispatch(event, ...args) {
 		if (listeners.hasOwnProperty(event)) {
-			if (!Array.isArray(args)) args = [args];
-
 			for (var i = 0; i < listeners[event].length; ++i) {
 				listeners[event][i].apply(null, args);
 				/*

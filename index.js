@@ -142,7 +142,7 @@ if (process.argv[2] === '--production') {
 	concat([
 		'node_modules/jquery/dist/jquery.min.js',
 		'node_modules/propertiesjs/dist/propertiesJS.min.js',
-		'src/external/jstree.min.js'
+		'src/external/jstree.js'
 		],
 		'dev/explore.dev.dependencies.min.js'
 	);

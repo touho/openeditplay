@@ -19,8 +19,10 @@ export default class ModuleContainer {
 			}
 		}
 
-		events.listen('registerModule_' + moduleContainerName.split('.')[0], moduleClass => {
+		events.listen('registerModule_' + moduleContainerName.split('.')[0], (moduleClass, editor) => {
 			let module = new moduleClass();
+			module.editor = editor;
+			module.state = editor.state;
 			module.el.classList.add('module-' + module.id);
 			this.modules.push(module);
 			if (this.modules.length !== 1) {
@@ -37,9 +39,8 @@ export default class ModuleContainer {
 		});
 		this._updateTabs();
 	}
-	update(state) {
-		state = state || {};
-		this.modules.forEach(m => m.update(state));
+	update() {
+		this.modules.forEach(m => m.update());
 	}
 	_updateTabs() {
 		if (!this.tabs) return;

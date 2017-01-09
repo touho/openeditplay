@@ -10,8 +10,8 @@ export class TopBarModule extends Module {
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
 	}
-	update(state) {
-		this.list.update(state.topButtons);
+	update() {
+		this.list.update(this.state.topButtons);
 	}
 }
 Module.register(TopBarModule, 'top');

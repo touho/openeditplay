@@ -19,19 +19,12 @@ window.addEventListener('load', () => {
 		anotherGame = Serializable.fromJSON(JSON.parse(localStorage.anotherGameJSON));
 	} catch(e) {}
 	editor = new Editor(anotherGame);
-	events.dispatch('registerModules');
+	events.dispatch('registerModules', editor);
 });
 events.listen('modulesRegistered', () => {
 	editor.update();
 	events.dispatch('loaded');
 });
-
-setInterval(function() {
-	if (!editor || !editor.state.game) return;
-	try {
-		localStorage.anotherGameJSON = JSON.stringify(editor.state.game.toJSON());
-	} catch(e) {}
-}, 2000);
 
 let editor = null;
 class Editor {
@@ -72,11 +65,25 @@ class Editor {
 		});
 	}
 	select(items) {
-		this.selectedItems = items;
-		this.layout.select(items);
+		this.state.selection.items = items;
+		
+		let types = Array.from(new Set(items.map(i => i.id.substring(0, 3))));
+		if (types.length === 0)
+			this.state.selection.type = 'none';
+		else if (types.length === 1)
+			this.state.selection.type = types[0];
+		else
+			this.state.selection.type = 'mixed';
+		
+		this.update();
 	}
 	update() {
-		console.log('update');
 		this.layout.update(this.state);
+	}
+	save() {
+		try {
+			localStorage.anotherGameJSON = JSON.stringify(this.state.game.toJSON());
+			console.log('saved');
+		} catch(e) {}
 	}
 }

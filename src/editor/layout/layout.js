@@ -12,11 +12,13 @@ export default class Layout {
 		this.el = el('div.editorLayout',
 			el('div.nonRight',
 				addContainer('top', null),
-				el('div.middle',
+				el('div.bottomLeft',
 					addContainer('left', 'fa-chevron-left'),
-					addContainer('center', null)
-				),
-				addContainer('bottom', 'fa-chevron-down')
+					el('div.middle',
+						addContainer('center', null),
+						addContainer('bottom', 'fa-chevron-down')
+					)
+				)
 			),
 			addContainer('right', 'fa-chevron-right')
 		);

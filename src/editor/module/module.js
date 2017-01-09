@@ -12,7 +12,7 @@ export default class Module {
 	activate() {
 	}
 	// Called when state of editor changes
-	update(state) {
+	update() {
 	}
 	_show() {
 		this.el.classList.remove('hidden');
@@ -25,7 +25,7 @@ export default class Module {
 }
 //arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleName, unpackModuleView=true, ...args) {
-	events.dispatch('activateModule_' + moduleName, [unpackModuleView, ...args]);
+	events.dispatch('activateModule_' + moduleName, unpackModuleView, ...args);
 };
 Module.packModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.add('packed');
@@ -33,30 +33,30 @@ Module.packModuleContainer = function(moduleContainerName) {
 Module.unpackModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.remove('packed');
 };
-Module.requestUpdate = function() {
-	events.dispatch('requestUpdate');
-};
 
 // moduleContainerName = left | middle | right | bottom
 Module.register = function(moduleClass, moduleContainerName) {
-	registerPromise = registerPromise.then(() => {
-		events.dispatch('registerModule_' + moduleContainerName, [moduleClass]);
+	registerPromise = registerPromise.then(editor => {
+		events.dispatch('registerModule_' + moduleContainerName, moduleClass, editor);
+		return editor;
 	});
 };
 
-let nextPriorityNumber = 1;
-Module.registerTopButton = function(text, icon, func, priority = nextPriorityNumber++) {
-	registerPromise = registerPromise.then(() => {
-		events.dispatch('registerTopButton', [text, icon, func, priority]);
+let nextTopBarPriorityNumber = 1;
+Module.registerTopButton = function(text, icon, func, priority = nextTopBarPriorityNumber++) {
+	registerPromise = registerPromise.then(editor => {
+		events.dispatch('registerTopButton', text, icon, func, priority);
+		return editor;
 	});
 };
 
 
 let registerPromise = new Promise(function(resolve) {
-	events.listen('registerModules', function() {
-		registerPromise.then(() => {
+	events.listen('registerModules', function(editor) {
+		registerPromise.then(editor => {
 			events.dispatch('modulesRegistered');
+			return editor;
 		});
-		resolve();
+		resolve(editor);
 	});
 });

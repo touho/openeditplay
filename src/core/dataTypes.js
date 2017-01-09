@@ -23,7 +23,7 @@ addDataType({
 addDataType({
 	name: 'string',
 	validators: {
-		default: x => String(x)
+		default: x => x ? String(x) : ''
 	},
 	toJSON: x => x,
 	fromJSON: x => x

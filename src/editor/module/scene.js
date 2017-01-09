@@ -9,8 +9,7 @@ class SceneModule extends Module {
 		this.id = 'scene';
 		this.name = 'Scene';
 	}
-	update(state) {
-		super.update(state);
+	update() {
 	}
 }
 
