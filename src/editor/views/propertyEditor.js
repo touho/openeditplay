@@ -1,61 +1,60 @@
 import { el, list, mount } from 'redom';
+import events from '../events';
+
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
 
 export default class PropertyEditor {
 	constructor() {
 		this.el = el('div');
+		this.editor = null;
 	}
-	update(state) {
-		
+	update(selection) {
+		$(this.el).empty();
+		if (selection.type === 'prt' && selection.items.length === 1) {
+			let prototypeEditor = new Container();
+			prototypeEditor.update(selection.items[0]);
+			
+			mount(this.el, prototypeEditor);
+		}
 	}
 }
 
-class Prototype {
+class Container {
 	constructor() {
 		this.el = el('div',
+			this.title = el('div'),
 			this.properties = list('div', Property),
-			this.componentDatas = list('div', ComponentData) 
+			this.containers = list('div', Container),
+			this.controls = el('div')
 		);
 	}
 	update(state) {
-		this.properties.update(state.properties);
-	}
-}
-
-class ComponentData {
-	constructor() {
-		this.el = el('div',
-			this.title = el('div', 'title'),
-			this.properties = list('div', Property)
-		);
-	}
-	update(state) {
+		this.properties.update(state.getChildren('prp'));
+		let containers = [].concat(state.getChildren('cda'), state.getChildren('com'));
+		this.containers.update(containers);
+		this.controls.innerHTML = '';
 		
+		mount(this.controls, el('button', 'Press me'));
 	}
 }
 
 class Property {
 	constructor() {
-		this.el = el('div');
-	}
-	update(state) {
-		
-	}
-}
-
-class Entity {
-	constructor() {
 		this.el = el('div',
-			this.properties = list('div', Property),
-			this.components = list('div', Component)
+			this.name = el('span'),
+			this.input = el('input')
 		);
+		this.input.onchange = () => {
+			this.property.value = this.input.value;
+			events.dispatch('requestUpdate');
+		};
 	}
-}
-
-class Component {
-	constructor() {
-		this.el = el('div',
-			this.title = el('div', 'title'),
-			this.properties = list('div', Property)
-		);
+	update(property) {
+		this.property = property;
+		this.name.textContent = property.propertyType.name;
+		this.input.value = property.value;
 	}
 }

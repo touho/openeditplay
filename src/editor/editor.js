@@ -15,9 +15,12 @@ import { componentClasses } from '../core/component';
 
 window.addEventListener('load', () => {
 	let anotherGame;
+	// anotherGame = Serializable.fromJSON(JSON.parse(localStorage.anotherGameJSON));
 	try {
 		anotherGame = Serializable.fromJSON(JSON.parse(localStorage.anotherGameJSON));
-	} catch(e) {}
+	} catch(e) {
+		console.warn('game parsing failed', e);
+	}
 	editor = new Editor(anotherGame);
 	events.dispatch('registerModules', editor);
 });
@@ -28,7 +31,7 @@ events.listen('modulesRegistered', () => {
 
 let editor = null;
 class Editor {
-	constructor(game = new Game()) {
+	constructor(game = Game.create('My Game')) {
 		this.layout = new Layout();
 		
 		this.state = {
@@ -81,9 +84,7 @@ class Editor {
 		this.layout.update(this.state);
 	}
 	save() {
-		try {
-			localStorage.anotherGameJSON = JSON.stringify(this.state.game.toJSON());
-			console.log('saved');
-		} catch(e) {}
+		localStorage.anotherGameJSON = JSON.stringify(this.state.game.toJSON());
+		console.log('saved');
 	}
 }

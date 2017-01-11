@@ -96,3 +96,7 @@ export default class Entity extends Serializable {
 		});
 	}
 }
+
+Serializable.registerSerializable(Entity, 'ent', json => {
+	return new Entity(json.id);
+});

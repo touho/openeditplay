@@ -1,5 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
+import PropertyEditor from '../views/propertyEditor';
 
 let propertyTypeToEditorType = {
 	'float': 'number',
@@ -9,12 +10,17 @@ let propertyTypeToEditorType = {
 class PropertyModule extends Module {
 	constructor() {
 		super(
-			this.propertyEditor = el('div.propertyEditor', 'hei')
+			this.propertyEditor = new PropertyEditor()
 		);
 		this.id = 'type';
 		this.name = 'Type';
 	}
 	update() {
+		this.propertyEditor.update(this.state.selection);
+		
+		/*
+		
+		 
 		this.componentClasses = this.state.componentClasses; 
 
 		let schema = {
@@ -51,6 +57,7 @@ class PropertyModule extends Module {
 		});
 		
 		new PJS($(this.propertyEditor), schema, data);
+		*/
 	}
 }
 

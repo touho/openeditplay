@@ -1,47 +1,27 @@
 import Serializable from './serializable';
 import assert from '../assert';
 import { getSerializable } from './serializableManager';
-import Prop, { classProperties } from './propertyType';
+import Prop from './propertyType';
+import PropertyOwner from './propertyOwner';
 
 let propertyTypes = [
-	Prop('name', 'No name', Prop.string),
-	Prop('parent', '', Prop.string)
+	Prop('name', 'No name', Prop.string)
 ];
 
-export default class Prototype extends Serializable {
-	constructor({ properties = null, componentDatas = new Map(), predefinedId = false }) {
-		super('prt', predefinedId);
-		this.componentDatas = componentDatas; // componentId -> ComponentData
-		if (!Array.isArray(properties))
-			properties = propertyTypes.map(pt => pt.createProperty());
-		classProperties.set(this, properties);
-	}
-	getParent() {
-		return this.parentId && getSerializable(this.parentId);
-	}
+export default class Prototype extends PropertyOwner {
 	copy(constructorParameters = {}) {
 		throw new Error('broken');
+		// TODO: copy to serializable
 		return new Prototype(Object.assign({
 			name: this.name + ' copy',
 			parentId: this.parentId
 		}, constructorParameters));
 	}
-	toJSON() {
-		return Object.assign(super.toJSON(), {
-			prp: classProperties.toJSON(this)
-		});
-	}
 }
-classProperties.define(Prototype, propertyTypes);
+PropertyOwner.defineProperties(Prototype, propertyTypes);
 
-Prototype.createHelper = function(name) {
-	let nameProperty = propertyTypes.filter(pt => pt.name === 'name')[0].createProperty({ value: name });
-	return new Prototype({ properties: [nameProperty] });
+Prototype.create = function(name) {
+	return new Prototype().initWithPropertyValues({ name: name });
 };
 
-Serializable.registerSerializable('prt', json => {
-	return new Prototype({
-		properties: classProperties.fromJSON(Prototype, json.prp),
-		predefinedId: json.id
-	});
-});
+Serializable.registerSerializable(Prototype, 'prt');

@@ -17,9 +17,11 @@ class PropertyType {
 		this.initialValue = initialValue;
 	}
 	createProperty({ value, predefinedId } = {}) {
-		return new Property(this, {
+		return new Property({
+			propertyType: this,
 			value,
-			predefinedId
+			predefinedId,
+			name: this.name
 		});
 	}
 }
@@ -44,49 +46,6 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 			assert(false, 'invalid parameter ' + p);
 	});
 	return new PropertyType(propertyName, type, validator, defaultValue);
-};
-
-export let classProperties = {
-	// call after class declaration
-	define(Class, propertyTypes) {
-		Class._propertyTypes = propertyTypes;
-		propertyTypes.forEach(propertyType => {
-			assert(Class.prototype[propertyType.name] === undefined, 'Property name ' + propertyType.name + ' clashes');
-			Object.defineProperty(Class.prototype, propertyType.name, {
-				get() {
-					return this._properties[propertyType.name].value;
-				},
-				set(value) {
-					this._properties[propertyType.name].value = value;
-				}
-			});
-		});
-	},
-	// call in constructor
-	set(classInstance, properties) {
-		assert(Array.isArray(classInstance.constructor._propertyTypes), 'call defineClassProperties before setClassProperties');
-		classInstance._properties = {};
-
-		let propertyMap = {};
-		for (let i = 0; i < properties.length; i++)
-			propertyMap[properties[i].propertyType.name] = properties[i];
-		
-		classInstance.constructor._propertyTypes.forEach(propertyType => {
-			classInstance._properties[propertyType.name] = propertyMap[propertyType.name] || propertyType.createProperty();
-		});
-	},
-	toJSON(classInstance) {
-		let props = {};
-		Object.keys(classInstance._properties).map(name => classInstance._properties[name].toJSON()).forEach(p => {
-			let name = p.name;
-			delete p.name;
-			props[name] = p;
-		});
-		return props;
-	},
-	fromJSON(Class, json) {
-		return Class._propertyTypes.map(pt => pt.createProperty(Property.fromJSON(json[pt.name])));
-	}
 };
 
 export function addDataType({

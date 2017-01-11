@@ -1,20 +1,18 @@
 import Serializable from './serializable';
 import assert from '../assert';
 import Property from './property';
-import { classProperties } from './propertyType';
 export { default as Prop } from './propertyType';
 export let componentClasses = new Map();
+import PropertyOwner from './propertyOwner';
 
 // Instance of a component, see componentExample.js
-export class Component extends Serializable {
+export class Component extends PropertyOwner {
 	constructor(componentData, entity, env) {
 		super('com');
 		this.entity = entity;
 		this.env = env;
 		this.children = {}; // TODO: create children
 		this._componentData = componentData;
-
-		classProperties.set(this, []); // TODO: set properties
 	}
 	delete() {
 		assert(!this.env.entity.alive, 'Do not call Component.delete!');
@@ -32,7 +30,7 @@ export class Component extends Serializable {
 			if (typeof this.preInit === 'function')
 				this.preInit();
 		} catch(e) {
-			console.error(this.entity, this.constructor.name, 'preInit', e);
+			console.error(this.entity, this.constructor.componentName, 'preInit', e);
 		}
 	}
 	_init() {
@@ -41,7 +39,7 @@ export class Component extends Serializable {
 			if (typeof this.init === 'function')
 				this.init();
 		} catch(e) {
-			console.error(this.entity, this.constructor.name, 'init', e);
+			console.error(this.entity, this.constructor.componentName, 'init', e);
 		}
 	}
 	_sleep() {
@@ -49,7 +47,7 @@ export class Component extends Serializable {
 			if (typeof this.sleep === 'function')
 				this.sleep();
 		} catch(e) {
-			console.error(this.entity, this.constructor.name, 'sleep', e);
+			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
 		this._forEachChildComponent(c => c._sleep());
 	}
@@ -65,8 +63,7 @@ export class Component extends Serializable {
 	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {
-			prp: classProperties.toJSON(this),
-			name: this.constructor.name
+			n: this.constructor.componentName
 		});
 	}
 }
@@ -110,15 +107,14 @@ Component.register = function({
 	properties.forEach(p => {
 		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
 	});
-	classProperties.define(Class, properties); // properties means propertyTypes here
-	Object.defineProperty(Class, 'name', { get: () => name });
-	// Class.propertyTypeMap = new Map();
+	PropertyOwner.defineProperties(Class, properties); // properties means propertyTypes here
+	Class.componentName = name;
 	Class.category = category;
 	Class.requirements = requirements;
 	Class.children = children;
 	Class.description = description;
 	Class.icon = icon;
 	Object.assign(Class.prototype, prototype);
-	componentClasses.set(Class.name, Class);
+	componentClasses.set(Class.componentName, Class);
 	return Class;
 };

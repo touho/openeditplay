@@ -14,3 +14,9 @@ window.PropertyModel = PropertyModel;
 
 import { Component } from './core/component';
 window.Component = Component;
+
+import Serializable from './core/serializable';
+window.Serializable = Serializable;
+
+import { getSerializable } from './core/serializableManager';
+window.getSerializable = getSerializable;

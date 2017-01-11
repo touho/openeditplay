@@ -17,8 +17,9 @@ class Types extends Module {
 		this.name = 'Types';
 
 		this.addButton.onclick = () => {
-			this.state.game.prototypes.push(Prototype.createHelper('' + Math.random()));
+			this.state.game.addChild(Prototype.create('' + Math.random()));
 			this.editor.update();
+			this.editor.save();
 		};
 		
 		let searchTimeout = false;
@@ -34,11 +35,15 @@ class Types extends Module {
 	update() {
 		if (this.skipUpdate) return;
 		
-		let data = this.state.game.prototypes.map(p => ({
-			text: p.name,
-			id: p.id,
-			parent: p.parent || '#'
-		}));
+		let data = [];
+		this.state.game.forEachChild('prt', prototype => {
+			let parent = prototype.getParent();
+			data.push({
+				text: prototype.name,
+				id: prototype.id,
+				parent: parent._threeLetterType === 'prt' ? parent.id : '#'
+			});
+		}, true);
 		
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
@@ -51,7 +56,7 @@ class Types extends Module {
 				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
 				// console.log(jstree, selNode);
 				if (this.state.selection.type === 'none') {
-					jstree.select_node();
+					//jstree.select_node();
 				}
 				if (this.state.selection.type === 'prt') {
 					// jstree.select_node(this.state.selection.items.map(i => i.id));
@@ -62,7 +67,7 @@ class Types extends Module {
 					data,
 					force_text: true
 				},
-				plugins: ['types', 'dnd', 'sort', 'search'],
+				plugins: ['types', 'dnd', 'sort', 'search', 'state'],
 				types: {
 					default: {
 						icon: 'fa fa-book'
@@ -92,7 +97,6 @@ class Types extends Module {
 }
 
 $(document).on('dnd_stop.vakata', function (e, data) {
-	console.log('dnd_stop start', e, data);
 	let jstree = $('#types-jstree').jstree(true);
 	let typesModule = $('#types-jstree').data('typesModule');
 	
@@ -101,16 +105,19 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 		let node = jstree.get_node(data.data.obj);
 		let nodes = data.data.nodes; // these prototypes will move
-		
-		let newParent = node.parent;
-		if (newParent === '#')
-			newParent = null;
+		let newParent;
+		if (node.parent === '#')
+			newParent = typesModule.state.game;
+		else
+			newParent = getSerializable(node.parent);
 		
 		let nodeObjects = nodes.map(getSerializable);
 		nodeObjects.forEach(assert);
-		nodeObjects.forEach(prototype => prototype.parent = newParent);
+		nodeObjects.forEach(prototype => {
+			newParent.addChild(prototype.detach());
+		});
 		
-		console.log('dnd stopped from', nodes, 'to', newParent);
+		// console.log('dnd stopped from', nodes, 'to', newParent);
 		
 		typesModule.editor.save();
 	});
