@@ -68,6 +68,8 @@ class Editor {
 		});
 	}
 	select(items) {
+		if (!Array.isArray(items))
+			items = [items];
 		this.state.selection.items = items;
 		
 		let types = Array.from(new Set(items.map(i => i.id.substring(0, 3))));
@@ -86,5 +88,27 @@ class Editor {
 	save() {
 		localStorage.anotherGameJSON = JSON.stringify(this.state.game.toJSON());
 		console.log('saved');
+	}
+	setPackedComponent(id, packed) {
+		this.loadPackedComponent();
+		this.packedComponent[id] = !!packed;
+		try {
+			localStorage.anotherPackedComponent = JSON.stringify(this.packedComponent);
+		} catch(e) {
+			console.log('wtf', e);
+		}
+	}
+	getPackedComponent(id) {
+		this.loadPackedComponent();
+		return this.packedComponent[id];
+	}
+	loadPackedComponent() {
+		if (!this.packedComponent) {
+			try {
+				this.packedComponent = JSON.parse(localStorage.anotherPackedComponent);
+			} catch(e) {
+				this.packedComponent = {};
+			}
+		}
 	}
 }

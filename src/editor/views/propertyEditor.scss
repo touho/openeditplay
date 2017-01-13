@@ -1,0 +1,106 @@
+div.propertyEditor div.container[type='icd'] {
+  border: 1px solid $editor-effect-color;
+  box-shadow: 0 0 13px 0px black;
+  border-right: none;
+  padding: 5px;
+  padding-right: 0;
+  margin: 5px 0;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  transition: opacity 0.5s;
+}
+div.propertyEditor div.container.packed[type='icd'] {
+  opacity: 0.6;
+  filter: saturate(0.8);
+}
+
+div.propertyEditor div.container[type='icd'] .containerContent {
+  overflow: auto;
+  height: auto;
+  transition: opacity 0.4s, max-height 0.3s cubic-bezier(1, 0, 1, 1);
+  max-height: 500px;
+}
+div.propertyEditor div.container.packed .containerContent {
+  opacity: 0;
+  max-height: 0;
+  transition: opacity 0.4s, max-height 0.3s cubic-bezier(0, 1, 1, 1);
+}
+
+.propertyEditor {
+  padding-left: 5px;
+  padding-bottom: 5px;
+}
+
+div.propertyEditor div.containerTitle {
+  cursor: pointer;
+  border-radius: 3px;
+  position: relative;
+  padding-left: 23px;
+  margin-bottom: 5px;
+}
+div.propertyEditor .packed div.containerTitle {
+}
+div.propertyEditor div.containerTitle:hover {
+  color: $editor-effect-color;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+div.propertyEditor div.containerTitle .icon {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+}
+
+div.propertyEditor table {
+  border-collapse: collapse;
+}
+
+tr.property {
+  border-bottom: 3px solid;
+  border-color: $other-backround;
+  color: $editor-text-color;
+  transition: opacity 0.4s;
+}
+td.nameCell {
+  width: 10px;
+  white-space: nowrap;
+  padding: 3px 5px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top-left-radius: 5px;
+}
+td.propertyContent {
+  width: 99%;
+  padding: 3px 5px;
+  background: rgba(0, 0, 0, 0.2);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.property:not(.ownProperty) {
+  opacity: 0.65;
+}
+.container[type='icd'] .property.ownProperty .propertyContent {
+  padding-right: 30px;
+}
+.property .removeButton {
+  position: absolute;
+  top: 3px;
+  right: 7px;
+  color: #997d7d;
+}
+.property .removeButton:hover {
+  color: #ff6969;
+}
+
+.property input {
+  background: #272727;
+  border: 1px inset #444;
+  padding: 2px 3px;
+  outline: none;
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.property input[error] {
+  color: #ff738d;
+}

@@ -3,9 +3,11 @@ import assert from '../assert';
 
 // Instance of a property
 export default class Property extends Serializable {
-	constructor({ value, predefinedId, name, propertyType }) {
+	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
+	constructor({ value, predefinedId, name, propertyType, skipSerializableRegistering = false }) {
 		assert(name, 'Property without a name can not exist');
-		super(predefinedId);
+		if (!skipSerializableRegistering)
+			super(predefinedId);
 		this._initialValue = value;
 		if (propertyType)
 			this.setPropertyType(propertyType);
@@ -14,8 +16,21 @@ export default class Property extends Serializable {
 	}
 	setPropertyType(propertyType) {
 		this.propertyType = propertyType;
-		this.value = this._initialValue !== undefined ? this._initialValue : propertyType.initialValue;
+		try {
+			this.value = this._initialValue !== undefined ? this._initialValue : propertyType.initialValue;
+		} catch(e) {
+			console.log('Invalid value', e, propertyType, this);
+			this.value = propertyType.initialValue;
+		}
 		this.name = propertyType.name;
+	}
+	clone(skipSerializableRegistering = false) {
+		return new Property({
+			value: this.value,
+			name: this.name,
+			propertyType: this.propertyType,
+			skipSerializableRegistering
+		});
 	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {

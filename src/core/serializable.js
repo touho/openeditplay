@@ -21,9 +21,9 @@ export default class Serializable {
 		// this._dirty = true;
 		// this._parent = null;
 		
-		assert(this._threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
+		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		this._children = new Map(); // threeLetterType -> array
-		this.id = predefinedId || createStringId(this._threeLetterType);
+		this.id = predefinedId || createStringId(this.threeLetterType);
 		if (this.id.startsWith('?'))
 			throw new Error('?');
 		serializableManager.addSerializable(this);
@@ -33,6 +33,10 @@ export default class Serializable {
 			this._parent.deleteChild(this);
 			return;
 		}
+		this.deleteChildren();
+		serializableManager.removeSerializable(this.id);
+	}
+	deleteChildren() {
 		this._children.forEach(array => {
 			array.forEach(child => {
 				child._parent = null;
@@ -40,7 +44,6 @@ export default class Serializable {
 			});
 		});
 		this._children.clear();
-		serializableManager.removeSerializable(this.id);
 	}
 	addChildren(children) {
 		for (let i = 0; i < children.length; i++)
@@ -48,10 +51,10 @@ export default class Serializable {
 		return this;
 	}
 	addChild(child) {
-		let array = this._children.get(child._threeLetterType);
+		let array = this._children.get(child.threeLetterType);
 		if (array === undefined) {
 			array = [];
-			this._children.set(child._threeLetterType, array);
+			this._children.set(child.threeLetterType, array);
 		}
 		array.push(child);
 		child._parent = this;
@@ -61,19 +64,18 @@ export default class Serializable {
 		let array = this._children.get(threeLetterType);
 		return array && array.find(filterFunction) || null;
 	}
-	getChildrenByType(threeLetterType) {
-		return this._children.get(threeLetterType) || [];
-	}
 	deleteChild(child) {
 		this.detachChild(child);
 		child.delete();
 		return this;
 	}
 	detachChild(child) {
-		let array = this._children.get(child._threeLetterType);
+		let array = this._children.get(child.threeLetterType);
 		let idx = array.indexOf(child);
 		assert(idx >= 0, 'child not found');
 		array.splice(idx, 1);
+		if (array.length === 0)
+			this._children.delete(child.threeLetterType);
 		child._parent = null;
 		return this;
 	}
@@ -89,6 +91,7 @@ export default class Serializable {
 		} else {
 			this._children.forEach(processArray);
 		}
+		return this;
 	}
 	detach() {
 		this._parent && this._parent.detachChild(this);
@@ -115,8 +118,17 @@ export default class Serializable {
 		return JSON.stringify(this.toJSON(), null, 4);
 	}
 	markDirty() {
-		this._dirty = true;
-		this._parent && this._parent.markDirty();
+		this._dirty || (this._dirty = true) && this._parent && this._parent.markDirty();
+		return this;
+	}
+	clone() {
+		let obj = new this.constructor();
+		let children = [];
+		this.forEachChild(null, child => {
+			children.push(child.clone());
+		});
+		obj.addChildren(children);
+		return obj;
 	}
 	static fromJSON(json) {
 		assert(typeof json.id === 'string' && json.id.length > 3);
@@ -127,7 +139,7 @@ export default class Serializable {
 		return obj;
 	}
 	static registerSerializable(Class, threeLetterType, fromJSON = null) {
-		Class.prototype._threeLetterType = threeLetterType;
+		Class.prototype.threeLetterType = threeLetterType;
 		assert(typeof threeLetterType === 'string' && threeLetterType.length === 3);
 		if (!fromJSON)
 			fromJSON = json => new Class(json.id);

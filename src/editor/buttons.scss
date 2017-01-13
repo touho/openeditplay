@@ -1,0 +1,47 @@
+.button {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.3s;
+}
+.button:hover {
+  opacity: 1;
+}
+
+.iconButton {
+  border-radius: 3px;
+  padding: 1px;
+  margin: 0px;
+  font-size: 1.3em;
+}
+
+button.button {
+  background: #9c9c9c;
+  background: linear-gradient(to bottom right, #a0a0a0, #3a3a3a);
+  border: 1px outset #8e8e8e;
+  border-radius: 6px;
+  color: #dddddd;
+  outline: none;
+  box-shadow: 0 0 3px black;
+  margin: 3px;
+  padding: 2px 8px;
+  opacity: 0.85;
+  font-size: 12px;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.76);
+}
+
+button.button:hover {
+  color: $editor-effect-color;
+}
+button.button:active {
+  color: $editor-effect-color;
+  border-style: inset;
+}
+
+button.button.dangerButton {
+  color: #ffbcc1;
+  //text-shadow: 0 0 1px rgba(0, 0, 0, 0.66);
+}
+button.button.dangerButton:hover {
+  color: #ffb6bf;
+  text-shadow: 0 0 2px red;
+}

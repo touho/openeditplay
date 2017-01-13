@@ -16,12 +16,13 @@ class PropertyType {
 		this.validator = validator;
 		this.initialValue = initialValue;
 	}
-	createProperty({ value, predefinedId } = {}) {
+	createProperty({ value, predefinedId, skipSerializableRegistering = false } = {}) {
 		return new Property({
 			propertyType: this,
 			value,
 			predefinedId,
-			name: this.name
+			name: this.name,
+			skipSerializableRegistering
 		});
 	}
 }

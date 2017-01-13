@@ -25,7 +25,9 @@ img.logo {
   margin: 0 7px;
   height: 100%;
   transform: translateY(50%);
+  color: $editor-effect-color;
 }
+
 .topIconTextButton i {
   display: block;
   font-size: 25px;

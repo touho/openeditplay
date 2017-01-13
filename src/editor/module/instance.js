@@ -50,7 +50,7 @@ class PropertyModule extends Module {
 			data[c.name] = componentData;
 		});
 
-		new PJS($(this.propertyEditor), schema, data);
+		// new PJS($(this.propertyEditor), schema, data);
 	}
 }
 

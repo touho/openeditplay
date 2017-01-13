@@ -1,4 +1,5 @@
 let serializables = {};
+window.serializables = serializables;
 
 export function addSerializable(serializable) {
 	if (serializables[serializable.id]) throw new Error('Serializable id clash!');

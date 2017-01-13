@@ -1,0 +1,47 @@
+div.popup {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+div.popup div.popupLayer {
+  background: black;
+  width: 100%;
+  height: 100%;
+  opacity: 0.3;
+}
+
+div.popup div.popupContent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 400px;
+  min-height: 80px;
+  max-width: 90%;
+  max-height: 90%;
+  display: inline-block;
+  background: gray;
+  background: linear-gradient(to bottom right, #858585, #606060);
+  border-radius: 20px;
+  padding: 10px;
+  border: 1px solid $editor-effect-color;
+  box-shadow: 1px 8px 22px 4px black;
+}
+
+div.popup div.popupText {
+  color: $editor-effect-color;
+  margin: 15px;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+div.popup div.popupButtons {
+}
+
+div.popup div.buttonContainer {
+  display: flex;
+}

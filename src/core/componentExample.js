@@ -5,7 +5,7 @@ export default Component.register({
 	name: 'Example',
 	description: 'Description of what this component does',
 	category: 'Core', // You can also make up new categories.
-	icon: 'fa-circle', // Font Awesome id
+	icon: 'fa-bars', // Font Awesome id
 	requirements: ['Position'], // These shared components are autofilled. Error if component is not found.
 	children: ['Image', 'Image', 'Sound'], // These private components are also autofilled. Error if component is not found.
 	properties: [

@@ -27,9 +27,9 @@ function startJsWatch(SOURCE, DESTINATION, callback) {
 			
 			 rollupBuble({
 			 	transforms: { dangerousForOf: true }
-			 }),
+			 })/*,
 
-			rollupUglify()
+			rollupUglify()*/
 		]
 	};
 	let rollupWatcher = rollupWatch(rollup, rollupOptions);
@@ -141,13 +141,12 @@ if (process.argv[2] === '--production') {
 
 	concat([
 		'node_modules/jquery/dist/jquery.min.js',
-		'node_modules/propertiesjs/dist/propertiesJS.min.js',
-		'src/external/jstree.js'
+		'src/external/jstree.js',
+		'src/external/victor.min.js'
 		],
 		'dev/explore.dev.dependencies.min.js'
 	);
 	concat([
-			'node_modules/propertiesjs/dist/propertiesJS.css',
 			'src/external/font-awesome.min.css'
 		],
 		'dev/css/explore.dev.dependencies.css'

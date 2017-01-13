@@ -20,7 +20,7 @@ export default class ModuleContainer {
 		}
 
 		events.listen('registerModule_' + moduleContainerName.split('.')[0], (moduleClass, editor) => {
-			let module = new moduleClass();
+			let module = new moduleClass(editor);
 			module.editor = editor;
 			module.state = editor.state;
 			module.el.classList.add('module-' + module.id);

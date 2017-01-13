@@ -1,9 +1,10 @@
 import Serializable from './serializable';
 import assert from '../assert';
 import Property from './property';
+import PropertyOwner from './propertyOwner';
+
 export { default as Prop } from './propertyType';
 export let componentClasses = new Map();
-import PropertyOwner from './propertyOwner';
 
 // Instance of a component, see componentExample.js
 export class Component extends PropertyOwner {
@@ -74,7 +75,8 @@ Component.register = function({
 	name = '', // required
 	description = '',
 	category = 'Other',
-	icon = 'fa-bars',
+	icon = 'fa-puzzle-piece', // in editor
+	color = '', // in editor
 	properties = [],
 	requirements = [],
 	children = [],
@@ -114,6 +116,10 @@ Component.register = function({
 	Class.children = children;
 	Class.description = description;
 	Class.icon = icon;
+	
+	let num = name.split('').reduce((prev, curr) => prev + curr.charCodeAt(0), 0);
+	Class.color = color || `hsla(${ num % 360 }, 40%, 60%, 1)`;
+	
 	Object.assign(Class.prototype, prototype);
 	componentClasses.set(Class.componentName, Class);
 	return Class;

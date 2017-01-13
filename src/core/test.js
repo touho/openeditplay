@@ -14,6 +14,7 @@ import Serializable from './serializable';
 	s.delete();
 	s = Serializable.fromJSON(json);
 	assert(typeof s.id === 'string' && s.id.length > 10 && s.id === id);
+	s.delete();
 	console.log('Serializable tests OK');
 })();
 
@@ -23,6 +24,7 @@ import Entity from './entity';
 	assert(i.components.size === 0);
 	assert(i.getComponent('moi') === null);
 	assert(i.getComponents('moi').length === 0);
+	i.delete();
 	console.log('Entity tests OK');
 })();
 

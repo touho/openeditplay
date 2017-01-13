@@ -10,7 +10,7 @@ export default class PropertyOwner extends Serializable {
 		this._properties = {};
 		
 		/*
-		let properties = children.filter(child => child._threeLetterType === 'prp');
+		let properties = children.filter(child => child.threeLetterType === 'prp');
 
 		properties.forEach(prop => {
 			if (!prop.propertyType) {
@@ -54,7 +54,7 @@ export default class PropertyOwner extends Serializable {
 		let otherChildren = [];
 		// Separate Property children and other children
 		children.forEach(child => {
-			if (child._threeLetterType === 'prp') {
+			if (child.threeLetterType === 'prp') {
 				propChildren.push(child);
 			} else {
 				otherChildren.push(child);
@@ -91,7 +91,7 @@ export default class PropertyOwner extends Serializable {
 	addChild(child) {
 		assert(this._addChildrenCalled, this.constructor.name + ' requires that addChildren will be called before addChild');
 		super.addChild(child);
-		if (child._threeLetterType === 'prp') {
+		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
 				if (!this.constructor._propertyTypesByName[child.name]) {
 					console.log('Property of that name not defined', this.id, child, this);
@@ -108,7 +108,7 @@ export default class PropertyOwner extends Serializable {
 		this._properties = {};
 	}
 	deleteChild(child) {
-		assert(child._threeLetterType !== 'prp', 'Can not delete just one Property child.');
+		assert(child.threeLetterType !== 'prp', 'Can not delete just one Property child.');
 		super.deleteChild(child);
 	}
 }

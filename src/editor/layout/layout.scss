@@ -1,5 +1,3 @@
-
-@import 'buttons.scss';
 @import 'moduleContainer.scss';
 
 .packButton {
@@ -88,13 +86,13 @@ div.center {
     background: $center-backround;
     //color: #adadad;
 }
-div.packed {
+div.moduleContainer.packed {
     border-color: $editor-effect-color-inactive;
 }
-div.packed:hover {
+div.moduleContainer.packed:hover {
     cursor: pointer;
 }
-div.packed > * {
+div.moduleContainer.packed > * {
     opacity: 0 !important;
-    visibility: hidden;
+    display: none !important;
 }

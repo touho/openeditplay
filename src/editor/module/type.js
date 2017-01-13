@@ -8,9 +8,9 @@ let propertyTypeToEditorType = {
 };
 
 class PropertyModule extends Module {
-	constructor() {
+	constructor(editor) {
 		super(
-			this.propertyEditor = new PropertyEditor()
+			this.propertyEditor = new PropertyEditor(editor)
 		);
 		this.id = 'type';
 		this.name = 'Type';

@@ -26,6 +26,7 @@
   border-right: 1px solid;
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
+  color: $editor-effect-color;
 }
 .moduleTab:not(.active) {
   filter: saturate(0);

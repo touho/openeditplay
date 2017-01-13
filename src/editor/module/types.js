@@ -41,7 +41,7 @@ class Types extends Module {
 			data.push({
 				text: prototype.name,
 				id: prototype.id,
-				parent: parent._threeLetterType === 'prt' ? parent.id : '#'
+				parent: parent.threeLetterType === 'prt' ? parent.id : '#'
 			});
 		}, true);
 		
@@ -93,6 +93,7 @@ class Types extends Module {
 		// $(this.jstree).jstree(true).select_node($('#prtF21ZLL0vsLdQI5z')[0]);//this.state.selection.items.map(i => i.id));
 		if (this.state.selection.type === 'none') {
 		}
+		// TODO: if selection changes somewhere else, follow
 	}
 }
 

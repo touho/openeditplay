@@ -2,14 +2,84 @@ import Serializable, { createStringId } from './serializable';
 import assert from '../assert';
 import { componentClasses } from './component';
 
-export class ComponentData extends Serializable {
-	constructor(componentClassName, properties) {
-		assert(componentClasses.get(componentClassName), 'Component class not defined: ' + componentClassName);
+export default class ComponentData extends Serializable {
+	constructor(componentClassName, predefinedId = false, predefinedComponentId = false) {
+		this.name = componentClassName;
+		this.componentClass = componentClasses.get(this.name);
+		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
+		super(predefinedId);
+		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
+	}
+	addChild(child) {
+		if (child.threeLetterType === 'prp') {
+			if (!child.propertyType) {
+				if (!this.componentClass._propertyTypesByName[child.name]) {
+					console.log('Property of that name not defined', this.id, child, this);
+					return;
+				}
+				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
+			}
+		}
+		super.addChild(child);
+	};
+	clone() {
+		let obj = new ComponentData(this.name);
+		let children = [];
+		this.forEachChild(null, child => {
+			children.push(child.clone());
+		});
+		obj.addChildren(children);
+		return obj;
+	}
+	toJSON() {
+		return Object.assign(super.toJSON(), {
+			cid: this.componentId,
+			n: this.name
+		});
+	}
+	/*
+	Returns a list of Properties.
+	Those which don't have an id are temporary properties generated from parents.
+	Don't set _depth.
+	 */
+	getInheritedProperties(_depth = 0) {
+		let properties = {};
+
+		// properties from parent
+		let parentComponentData = this.getParentComponentData();
+		if (parentComponentData)
+			parentComponentData.getInheritedProperties(_depth + 1).forEach(prop => properties[prop.name] = prop);
 		
-		super('cda');
-		this.componentId = createStringId('coi', 10); // what will be the id of component created from this componentData
-		this.componentClassName = componentClassName;
-		this.properties = properties;
+		// properties from this. override properties of parents
+		this.getChildren('prp').forEach(prop => {
+			if (_depth === 0)
+				properties[prop.name] = prop;
+			else
+				properties[prop.name] = prop.clone(true);
+		});
+		
+		// fill from propertyType
+		if (_depth === 0) {
+			return this.componentClass._propertyTypes.map(propertyType => {
+				return properties[propertyType.name] || propertyType.createProperty({
+					skipSerializableRegistering: true
+				});
+			});
+		} else {
+			return Object.keys(properties).map(key => properties[key]);
+		}
+	}
+	getParentComponentData() {
+		if (!this._parent) return null;
+		let parentPrototype = this._parent.getParent();
+		while (parentPrototype) {
+			let parentComponentData = parentPrototype.findChild('cda', componentData => componentData.componentId === this.componentId);
+			if (parentComponentData)
+				return parentComponentData;
+			else
+				parentPrototype = parentPrototype.getParent();
+		}
+		return null;
 	}
 	getValue(name) {
 		let property = this.properties[name];
@@ -30,3 +100,6 @@ export class ComponentData extends Serializable {
 		return this.properties[name] || this.parent && this.parent.getProperty(name) || null;
 	}
 }
+Serializable.registerSerializable(ComponentData, 'cda', json => {
+	return new ComponentData(json.n, json.id, json.cid);
+});
