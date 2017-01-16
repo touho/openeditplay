@@ -3,6 +3,7 @@ import events from '../events';
 import showPopup from './popup';
 import ComponentData from '../../core/componentData';
 import assert from '../../assert';
+import editors from './propertyEditorTypes';
 
 /*
 Reference: Unbounce
@@ -53,7 +54,7 @@ class Container {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
 		this.containers.update(inheritedComponentDatas);
 		this.properties.update(this.item.getChildren('prp'));
-		mount(this.controls, el('button.button', 'Add component', {
+		mount(this.controls, el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
 			onclick: () => {
 				let buttons = Array.from(this.editor.state.componentClasses.values()).map(c => ({
 					text: c.componentName,
@@ -69,14 +70,14 @@ class Container {
 				});
 			}
 		}));
-		mount(this.controls, el('button.button', 'Clone type', { onclick: () => {
+		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone type', { onclick: () => {
 			let clone = this.item.clone();
 			clone.name += ' clone';
 			this.item.getParent().addChild(clone);
 			this.editor.update();
 			this.editor.save();
 		} }));
-		mount(this.controls, el('button.dangerButton.button', 'Delete type', { onclick: () => {
+		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete type', { onclick: () => {
 			this.item.delete();
 			this.editor.update();
 			this.editor.save();
@@ -124,7 +125,7 @@ class Container {
 			}));
 		}
 		if (this.item.ownComponentData) {
-			mount(this.controls, el('button.button', 'Clone', {
+			mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 				onclick: () => {
 					let clone = this.item.ownComponentData.clone();
 					this.item.generatedForPrototype.addChild(clone);
@@ -134,7 +135,7 @@ class Container {
 			}));
 		}
 		if (hasOwnProperties) {
-			mount(this.controls, el('button.dangerButton.button', 'Reset', {
+			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
 				onclick: () => {
 					if (this.item.ownComponentData.getParentComponentData()) {
 						this.item.ownComponentData.delete();
@@ -147,7 +148,7 @@ class Container {
 			}));
 		}
 		if (this.item.ownComponentData && !parentComponentData) {
-			mount(this.controls, el('button.dangerButton.button', 'Delete', {
+			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
 				onclick: () => {
 					this.item.ownComponentData.delete();
 					this.editor.update();
@@ -163,59 +164,64 @@ class Property {
 		this.editor = editor;
 		this.el = el('tr.property', { name: '' },
 			this.name = el('td.nameCell'),
-			this.content = el('td.propertyContent',
-				this.input = el('input')
-			)
+			this.content = el('td.propertyContent')
 		);
-		this.input.oninput = () => {
-			try {
-				this.property.propertyType.validator.validate(this.input.value);
-				this.input.removeAttribute('error');
-			} catch(e) {
-				this.input.setAttribute('error', 'true');
+	}
+	reset() {
+		let componentData = this.property.getParent();
+		this.property.delete();
+		if (componentData._children.size === 0) {
+			if (componentData.getParentComponentData())
+				componentData.delete();
+		}
+		this.editor.update();
+		this.editor.save();
+	}
+	oninput(val) {
+		try {
+			this.property.propertyType.validator.validate(val);
+			this.el.removeAttribute('error');
+		} catch(e) {
+			this.el.setAttribute('error', 'true');
+		}
+	}
+	onchange(val) {
+		let originalValue = this.property.value;
+		try {
+			this.property.value = this.property.propertyType.validator.validate(val);
+			if (!this.property.id) {
+				// console.log('no id, create new property', this.property);
+				assert(this.property.editorParent);
+				let proto = this.property.editorParent.generatedForPrototype;
+				proto.createAndAddPropertyForComponentData(this.property.editorParent, this.property.name, this.property.value);
 			}
-		};
-		this.input.onchange = () => {
-			let originalValue = this.property.value;
-			try {
-				this.property.value = this.property.propertyType.validator.validate(this.input.value);
-				if (!this.property.id) {
-					console.log('no id, create new property', this.property);
-					assert(this.property.editorParent);
-					let proto = this.property.editorParent.generatedForPrototype;
-					proto.createAndAddPropertyForComponentData(this.property.editorParent, this.property.name, this.property.value);
-				}
-				editor.update();
-				editor.save();
-			} catch(e) {
-				console.log('Error while changing property value', this.property, this.input.value);
-				this.property.value = originalValue;
-				this.input.value = this.property.value;
-			}
-			this.input.removeAttribute('error');
-		};
+			this.editor.update();
+			this.editor.save();
+		} catch(e) {
+			// console.log('Error while changing property value', this.property, this.input.value);
+			this.property.value = originalValue;
+		}
+		this.setValue(this.property.value);
+		this.el.removeAttribute('error');
 	}
 	update(property) {
 		this.property = property;
 		this.el.setAttribute('name', property.name);
+		this.el.setAttribute('type', property.propertyType.type.name);
 		this.name.textContent = property.propertyType.name;
-		this.input.value = property.value;
+		this.content.innerHTML = '';
+		let editor = editors[this.property.propertyType.type.name] || editors.default;
+		this.setValue = editor(this.content, val => this.oninput(val), val => this.onchange(val));
+		this.setValue(this.property.value);
 		this.el.classList.toggle('ownProperty', !!this.property.id);
 		if (this.property.id) {
 			let parent = this.property.getParent();
 			if (parent.threeLetterType === 'cda') {
 				this.name.style.color = parent.componentClass.color;
 
-				mount(this.content, el('i.fa.fa-window-close.button.removeButton.iconButton', {
+				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
 					onclick: () => {
-						let componentData = this.property.getParent();
-						this.property.delete();
-						if (componentData._children.size === 0) {
-							if (componentData.getParentComponentData())
-								componentData.delete();
-						}
-						this.editor.update();
-						this.editor.save();
+						this.reset();
 					}
 				}));
 			}

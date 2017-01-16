@@ -12,10 +12,11 @@ export default class ModuleContainer {
 			this.moduleElements = el('div.moduleElements')
 		);
 		if (packButtonIcon) {
-			this.el.onclick = () => this.el.classList.contains('packed') && this.el.classList.remove('packed');
+			this.el.onclick = () => this.el.classList.contains('packed') && this.el.classList.remove('packed') || undefined;
 			this.packButton.onclick = e => {
 				this.el.classList.add('packed');
 				e.stopPropagation();
+				return false;
 			}
 		}
 

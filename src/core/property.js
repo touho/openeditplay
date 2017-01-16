@@ -4,6 +4,8 @@ import assert from '../assert';
 // Instance of a property
 export default class Property extends Serializable {
 	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
+	// if you give propertyType, value in real value form
+	// if you don't give propertyType (give it later), value as JSON form
 	constructor({ value, predefinedId, name, propertyType, skipSerializableRegistering = false }) {
 		assert(name, 'Property without a name can not exist');
 		if (!skipSerializableRegistering)
@@ -11,13 +13,18 @@ export default class Property extends Serializable {
 		this._initialValue = value;
 		if (propertyType)
 			this.setPropertyType(propertyType);
-		else
+		else {
 			this.name = name;
+			this._isJSONValue = true;
+		}
 	}
 	setPropertyType(propertyType) {
 		this.propertyType = propertyType;
 		try {
-			this.value = this._initialValue !== undefined ? this._initialValue : propertyType.initialValue;
+			if (this._initialValue !== undefined)
+				this.value = this._isJSONValue ? propertyType.type.fromJSON(this._initialValue) : this._initialValue;
+			else
+				this.value = propertyType.initialValue;
 		} catch(e) {
 			console.log('Invalid value', e, propertyType, this);
 			this.value = propertyType.initialValue;
@@ -58,12 +65,7 @@ Object.defineProperty(Property.prototype, 'value', {
 		return this._value;
 	}
 });
-Property.fromJSON = function(json) {
-	return {
-		value: json.v,
-		predefinedId: json.id
-	};
-};
+
 Serializable.registerSerializable(Property, 'prp', json => {
 	return new Property({
 		value: json.v,

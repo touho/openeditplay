@@ -1,0 +1,33 @@
+.propertyEditor .property input {
+  background: #272727;
+  border: 1px inset #444;
+  padding: 2px 3px;
+  outline: none;
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.propertyEditor .property input[error] {
+  color: #ff738d;
+}
+
+.propertyEditor .property[type='vector'] input {
+  margin-left: 2px;
+  flex: 1;
+}
+.propertyEditor .property[type='vector'] input.xInput {
+  margin-right: 12px;
+}
+.propertyEditor .property[type='vector'] div {
+  display: flex;
+  flex-direction: row;
+}
+
+.propertyEditor .property[type='bool'] label {
+  display: block;
+  cursor: pointer;
+}
+.propertyEditor .property[type='bool'] input {
+  width: auto;
+  margin-right: 10px;
+}

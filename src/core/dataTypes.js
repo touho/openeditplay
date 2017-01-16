@@ -23,12 +23,32 @@ addDataType({
 	toJSON: x => x,
 	fromJSON: x => x
 });
+addDataType({
+	name: 'int',
+	validators: {
+		default(x) {
+			x = parseInt(x);
+			assert(isValidFloat(x), 'invalid int: ' + x);
+			return x;
+		},
+		// PropertyType.float.range(min, max)
+		range(x, min, max) {
+			x = parseInt(x);
+			assert(isValidFloat(x), 'invalid int: ' + x);
+			return Math.min(max, Math.max(min, x));
+		}
+	},
+	toJSON: x => x,
+	fromJSON: x => x
+});
 
 addDataType({
 	name: 'vector',
 	validators: {
 		default(vec) {
 			assert(vec instanceof Victor);
+			vec.x = parseFloat(vec.x);
+			vec.y = parseFloat(vec.y);
 			assert(isValidFloat(vec.x) && isValidFloat(vec.y));
 			return vec;
 		}
@@ -47,10 +67,13 @@ addDataType({
 });
 
 addDataType({
-	name: 'vector',
+	name: 'bool',
 	validators: {
-		default: x => x instanceof Victor
+		default(x) {
+			assert(typeof x === 'boolean');
+			return x;
+		}
 	},
-	toJSON: vec => vec.toObject(),
-	fromJSON: Victor.fromObject
+	toJSON: x => x ? 1 : 0,
+	fromJSON: x => !!x
 });

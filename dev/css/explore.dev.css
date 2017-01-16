@@ -28,10 +28,10 @@ button.button {
   text-shadow: 0 0 1px rgba(0, 0, 0, 0.76);
 }
 button.button:hover {
-  color: #00fff1;
+  color: #ddfabc;
 }
 button.button:active {
-  color: #00fff1;
+  color: #ddfabc;
   border-style: inset;
 }
 button.button.dangerButton {
@@ -41,6 +41,12 @@ button.button.dangerButton {
 button.button.dangerButton:hover {
   color: #ffb6bf;
   text-shadow: 0 0 2px red;
+}
+button.button i.fa {
+  position: relative;
+  left: -3px;
+  top: 0px;
+  font-size: 11px;
 }
 .moduleContainer {
   display: flex;
@@ -67,7 +73,7 @@ button.button.dangerButton:hover {
   border-right: 1px solid;
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
-  color: #00fff1;
+  color: #ddfabc;
 }
 .moduleTab:not(.active) {
   filter: saturate(0);
@@ -102,7 +108,7 @@ div.nonRight {
     flex-direction: column;
 }
 div.right {
-    border-left: 1px solid #00fff1;
+    border-left: 1px solid #ddfabc;
     width: 300px;
     border-radius: 8px;
     min-width: 200px;
@@ -119,7 +125,7 @@ div.right .packButton {
 div.top {
     min-height: 60px;
     height: 10vh;
-    border-bottom: 1px solid #00fff1;
+    border-bottom: 1px solid #ddfabc;
 }
 div.middle {
     flex: 1;
@@ -132,7 +138,7 @@ div.bottomLeft {
     flex-direction: row;
 }
 div.bottom {
-    border-top: 1px solid #00fff1;
+    border-top: 1px solid #ddfabc;
     min-height: 150px;
     max-height: 300px;
     height: 25vh;
@@ -146,7 +152,7 @@ div.bottom .packButton {
     right: 0;
 }
 div.left {
-    border-right: 1px solid #00fff1;
+    border-right: 1px solid #ddfabc;
     width: 300px;
 }
 div.left.packed {
@@ -207,7 +213,7 @@ img.logo {
   margin: 0 7px;
   height: 100%;
   transform: translateY(50%);
-  color: #00fff1;
+  color: #ddfabc;
 }
 .topIconTextButton i {
   display: block;
@@ -228,7 +234,7 @@ img.logo {
   color: #b1cacb;
 }
 .module-types .addTypeButton:hover {
-  color: #00fff1;
+  color: #ddfabc;
 }
 .module-types input {
   background: transparent;
@@ -265,20 +271,20 @@ img.logo {
 .jstree-default .jstree-search::before {
   font-family: FontAwesome;
   content: '\f002';
-  color: #00fff1;
+  color: #ddfabc;
   margin-left: 5px;
   margin-right: 6px;
 }
 .jstree-default .jstree-hovered {
   background: none;
-  color: #00fff1;
+  color: #ddfabc;
 }
 .jstree-default .jstree-clicked {
   background: #223f3a;
-  color: #00fff1;
+  color: #ddfabc;
 }
 div.propertyEditor div.container[type='icd'] {
-  border: 1px solid #00fff1;
+  border: 1px solid #ddfabc;
   box-shadow: 0 0 13px 0px black;
   border-right: none;
   padding: 5px;
@@ -317,7 +323,7 @@ div.propertyEditor div.containerTitle {
 div.propertyEditor .packed div.containerTitle {
 }
 div.propertyEditor div.containerTitle:hover {
-  color: #00fff1;
+  color: #ddfabc;
   background: rgba(255, 255, 255, 0.05);
 }
 div.propertyEditor div.containerTitle .icon {
@@ -333,6 +339,7 @@ tr.property {
   border-color: #363636;
   color: #b1cacb;
   transition: opacity 0.4s;
+  position: relative;
 }
 td.nameCell {
   width: 10px;
@@ -354,16 +361,16 @@ td.propertyContent {
 .container[type='icd'] .property.ownProperty .propertyContent {
   padding-right: 30px;
 }
-.property .removeButton {
+.property .resetButton {
   position: absolute;
   top: 3px;
   right: 7px;
   color: #997d7d;
 }
-.property .removeButton:hover {
+.property .resetButton:hover {
   color: #ff6969;
 }
-.property input {
+.propertyEditor .property input {
   background: #272727;
   border: 1px inset #444;
   padding: 2px 3px;
@@ -372,8 +379,27 @@ td.propertyContent {
   width: 100%;
   box-sizing: border-box;
 }
-.property input[error] {
+.propertyEditor .property input[error] {
   color: #ff738d;
+}
+.propertyEditor .property[type='vector'] input {
+  margin-left: 2px;
+  flex: 1;
+}
+.propertyEditor .property[type='vector'] input.xInput {
+  margin-right: 12px;
+}
+.propertyEditor .property[type='vector'] div {
+  display: flex;
+  flex-direction: row;
+}
+.propertyEditor .property[type='bool'] label {
+  display: block;
+  cursor: pointer;
+}
+.propertyEditor .property[type='bool'] input {
+  width: auto;
+  margin-right: 10px;
 }
 div.popup {
   position: fixed;
@@ -402,11 +428,11 @@ div.popup div.popupContent {
   background: linear-gradient(to bottom right, #858585, #606060);
   border-radius: 20px;
   padding: 10px;
-  border: 1px solid #00fff1;
+  border: 1px solid #ddfabc;
   box-shadow: 1px 8px 22px 4px black;
 }
 div.popup div.popupText {
-  color: #00fff1;
+  color: #ddfabc;
   margin: 15px;
   margin-top: 10px;
   text-align: center;

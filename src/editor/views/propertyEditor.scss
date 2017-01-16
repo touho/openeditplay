@@ -60,6 +60,7 @@ tr.property {
   border-color: $other-backround;
   color: $editor-text-color;
   transition: opacity 0.4s;
+  position: relative;
 }
 td.nameCell {
   width: 10px;
@@ -82,25 +83,12 @@ td.propertyContent {
 .container[type='icd'] .property.ownProperty .propertyContent {
   padding-right: 30px;
 }
-.property .removeButton {
+.property .resetButton {
   position: absolute;
   top: 3px;
   right: 7px;
   color: #997d7d;
 }
-.property .removeButton:hover {
+.property .resetButton:hover {
   color: #ff6969;
-}
-
-.property input {
-  background: #272727;
-  border: 1px inset #444;
-  padding: 2px 3px;
-  outline: none;
-  color: inherit;
-  width: 100%;
-  box-sizing: border-box;
-}
-.property input[error] {
-  color: #ff738d;
 }

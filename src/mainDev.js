@@ -9,8 +9,8 @@ import './editor/editor';
 import Property from './core/property';
 window.Property = Property;
 
-import PropertyModel from './core/propertyType';
-window.PropertyModel = PropertyModel;
+import PropertyType from './core/propertyType';
+window.PropertyType = PropertyType;
 
 import { Component } from './core/component';
 window.Component = Component;

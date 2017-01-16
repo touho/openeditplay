@@ -45,3 +45,9 @@ button.button.dangerButton:hover {
   color: #ffb6bf;
   text-shadow: 0 0 2px red;
 }
+button.button i.fa {
+  position: relative;
+  left: -3px;
+  top: 0px;
+  font-size: 11px;
+}
