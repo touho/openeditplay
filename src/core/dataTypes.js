@@ -77,3 +77,20 @@ addDataType({
 	toJSON: x => x ? 1 : 0,
 	fromJSON: x => !!x
 });
+
+addDataType({
+	name: 'enum',
+	validators: {
+		default() {
+			assert(false, `also specify enum values with Prop.enum.values('value1', 'value2', ...)`);
+		},
+		values(x, ...values) {
+			assert(Array.isArray(values));
+			assert(typeof x === 'string');
+			assert(values.indexOf(x) >= 0, 'value not in enum');
+			return x;
+		}
+	},
+	toJSON: x => x,
+	fromJSON: x => x
+});

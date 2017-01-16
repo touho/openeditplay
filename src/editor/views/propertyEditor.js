@@ -88,6 +88,7 @@ class Container {
 		let icon = el('i.icon.fa.' + this.item.componentClass.icon);
 		mount(this.title, icon);
 		this.title.style.color = this.item.componentClass.color;
+		this.title.setAttribute('title', this.item.componentClass.description);
 		this.el.style['border-color'] = this.item.componentClass.color;
 		
 		let packId = this.item.generatedForPrototype.id + this.item.componentId;
@@ -209,9 +210,10 @@ class Property {
 		this.el.setAttribute('name', property.name);
 		this.el.setAttribute('type', property.propertyType.type.name);
 		this.name.textContent = property.propertyType.name;
+		this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
 		this.content.innerHTML = '';
 		let editor = editors[this.property.propertyType.type.name] || editors.default;
-		this.setValue = editor(this.content, val => this.oninput(val), val => this.onchange(val));
+		this.setValue = editor(this.content, val => this.oninput(val), val => this.onchange(val), property.propertyType);
 		this.setValue(this.property.value);
 		this.el.classList.toggle('ownProperty', !!this.property.id);
 		if (this.property.id) {

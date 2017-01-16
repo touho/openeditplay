@@ -68,6 +68,9 @@ td.nameCell {
   padding: 3px 5px;
   background: rgba(0, 0, 0, 0.2);
   border-top-left-radius: 5px;
+  max-width: 140px;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 td.propertyContent {
   width: 99%;

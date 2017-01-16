@@ -347,6 +347,9 @@ td.nameCell {
   padding: 3px 5px;
   background: rgba(0, 0, 0, 0.2);
   border-top-left-radius: 5px;
+  max-width: 140px;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 td.propertyContent {
   width: 99%;
@@ -379,15 +382,27 @@ td.propertyContent {
   width: 100%;
   box-sizing: border-box;
 }
+.propertyEditor .property select {
+  background: #404040;
+  background: linear-gradient(to bottom, #525252, #3a3a3a);
+  box-shadow: 0 0 5px -1px black;
+  border: none;
+  padding: 2px 3px;
+  outline: none;
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+}
 .propertyEditor .property input[error] {
   color: #ff738d;
 }
 .propertyEditor .property[type='vector'] input {
-  margin-left: 2px;
+  margin-left: 1px;
   flex: 1;
 }
 .propertyEditor .property[type='vector'] input.xInput {
-  margin-right: 12px;
+  margin-right: 5px;
 }
 .propertyEditor .property[type='vector'] div {
   display: flex;
@@ -395,6 +410,9 @@ td.propertyContent {
 }
 .propertyEditor .property[type='bool'] label {
   display: block;
+  cursor: pointer;
+}
+.propertyEditor .property[type='bool'] input {
   cursor: pointer;
 }
 .propertyEditor .property[type='bool'] input {

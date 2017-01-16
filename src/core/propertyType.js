@@ -6,7 +6,7 @@ import Property from './property';
 
 
 class PropertyType {
-	constructor(name, type, validator, initialValue) {
+	constructor(name, type, validator, initialValue, description) {
 		assert(typeof name === 'string');
 		assert(type && typeof type.name === 'string');
 		assert(validator && typeof validator.validate === 'function');
@@ -15,6 +15,7 @@ class PropertyType {
 		this.type = type;
 		this.validator = validator;
 		this.initialValue = initialValue;
+		this.description = description;
 	}
 	createProperty({ value, predefinedId, skipSerializableRegistering = false } = {}) {
 		return new Property({
@@ -46,7 +47,7 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 		else
 			assert(false, 'invalid parameter ' + p);
 	});
-	return new PropertyType(propertyName, type, validator, defaultValue);
+	return new PropertyType(propertyName, type, validator, defaultValue, description);
 };
 
 export function addDataType({
@@ -81,7 +82,8 @@ function createValidator(name, validatorFunction) {
 		return {
 			validatorName: name,
 			validatorParameters: parameters,
-			validate: x => validatorFunction(x, ...parameters)
+			validate: x => validatorFunction(x, ...parameters),
+			parameters
 		};
 	};
 	validator.validatorName = name;

@@ -61,3 +61,15 @@ editors.vector = (container, oninput, onchange) => {
 		yInput.value = val.y;
 	};
 };
+
+editors.enum = (container, oninput, onchange, propertyType) => {
+	console.log('params', propertyType.validator.parameters);
+	let select = el('select', ...propertyType.validator.parameters.map(p => el('option', p)));
+	select.onchange = () => {
+		onchange(select.value);
+	};
+	mount(container, select);
+	return val => {
+		select.value = val;
+	}
+};
