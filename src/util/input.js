@@ -16,9 +16,9 @@ export const key = {
 	space: 32,
 	a: 65,
 	z: 90,
+	'0': 48,
 	'1': 49,
 	'9': 57,
-	'0': 48,
 	backspace: 8,
 	enter: 13,
 	esc: 27
@@ -31,6 +31,9 @@ export const key = {
 let keys = {};
 
 window.onkeydown = event => {
+	if (document.activeElement.nodeName.toLowerCase() == "input")
+		return;
+	
 	let key = event.which || event.keyCode;
 	keys[key] = true;
 };
