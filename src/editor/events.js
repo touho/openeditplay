@@ -36,3 +36,20 @@ export default {
 		}
 	}
 };
+
+// DOM / ReDom event system
+
+export function dispatch(view, type, data) {
+	const el = view.el || view;
+	const debug = 'Debug info ' + new Error().stack;
+	el.dispatchEvent(new CustomEvent(type, {
+		detail: { data, debug },
+		bubbles: true
+	}));
+}
+export function listen(view, type, handler) {
+	const el = view.el || view;
+	el.addEventListener(type, ({ detail }) => {
+		handler(detail.data, detail.debug );
+	});
+}

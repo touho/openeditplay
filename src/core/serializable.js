@@ -17,12 +17,10 @@ let serializableClasses = new Map();
 
 export default class Serializable {
 	constructor(predefinedId = false) {
-		// defined in prototype
-		// this._dirty = true;
-		// this._parent = null;
-		
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		this._children = new Map(); // threeLetterType -> array
+		this._listeners = [];
+		
 		this.id = predefinedId || createStringId(this.threeLetterType);
 		if (this.id.startsWith('?'))
 			throw new Error('?');
@@ -33,17 +31,33 @@ export default class Serializable {
 			this._parent.deleteChild(this);
 			return;
 		}
+		// changes.push({
+		// 	type: ''
+		// });
 		this.deleteChildren();
+		this.alive = false;
+		this._listeners.length = 0;
 		serializableManager.removeSerializable(this.id);
 	}
 	deleteChildren() {
-		this._children.forEach(array => {
-			array.forEach(child => {
-				child._parent = null;
-				child.delete();
+		if (this._children.size) {
+			this._children.forEach(array => {
+				array.forEach(child => {
+					child._parent = null;
+					child.delete();
+				});
 			});
-		});
-		this._children.clear();
+			this._children.clear();
+
+			if (this._parent)
+				serializableManager.addChange(serializableManager.changeType.deleteAllChildren, this);
+		}
+	}
+	// this is called right after constructor
+	initWithChildren(children = []) {
+		if (children.length > 0)
+			this.addChildren(children);
+		return this;
 	}
 	addChildren(children) {
 		for (let i = 0; i < children.length; i++)
@@ -51,6 +65,22 @@ export default class Serializable {
 		return this;
 	}
 	addChild(child) {
+		this._addChild(child);
+
+		let parent = this;
+		while (parent) {
+			if (parent.isRoot) {
+				serializableManager.addChange(serializableManager.changeType.addSerializableToTree, child);
+				break;
+			}
+			parent = parent._parent;
+		}
+		
+		return this;
+	}
+	_addChild(child) {
+		assert(child._parent === null);
+		
 		let array = this._children.get(child.threeLetterType);
 		if (array === undefined) {
 			array = [];
@@ -58,18 +88,24 @@ export default class Serializable {
 		}
 		array.push(child);
 		child._parent = this;
+		
 		return this;
 	}
 	findChild(threeLetterType, filterFunction) {
 		let array = this._children.get(threeLetterType);
-		return array && array.find(filterFunction) || null;
+		if (!array) return null;
+		if (filterFunction)
+			return array.find(filterFunction) || null;
+		else
+			return array[0];
 	}
 	deleteChild(child) {
-		this.detachChild(child);
+		serializableManager.addChange(serializableManager.changeType.deleteSerializable, child);
+		this._detachChild(child);
 		child.delete();
 		return this;
 	}
-	detachChild(child) {
+	_detachChild(child) {
 		let array = this._children.get(child.threeLetterType);
 		let idx = array.indexOf(child);
 		assert(idx >= 0, 'child not found');
@@ -77,6 +113,7 @@ export default class Serializable {
 		if (array.length === 0)
 			this._children.delete(child.threeLetterType);
 		child._parent = null;
+		
 		return this;
 	}
 	forEachChild(threeLetterType = null, callback, deep = false) {
@@ -93,8 +130,15 @@ export default class Serializable {
 		}
 		return this;
 	}
-	detach() {
-		this._parent && this._parent.detachChild(this);
+	move(newParent) {
+		newParent._addChild(this._detach());
+
+		serializableManager.addChange(serializableManager.changeType.move, this);
+		
+		return this;
+	}
+	_detach() {
+		this._parent && this._parent._detachChild(this);
 		return this;
 	}
 	getParent() {
@@ -117,25 +161,51 @@ export default class Serializable {
 	toString() {
 		return JSON.stringify(this.toJSON(), null, 4);
 	}
-	markDirty() {
-		this._dirty || (this._dirty = true) && this._parent && this._parent.markDirty();
-		return this;
-	}
 	clone() {
 		let obj = new this.constructor();
 		let children = [];
 		this.forEachChild(null, child => {
 			children.push(child.clone());
 		});
-		obj.addChildren(children);
+		obj.initWithChildren(children);
 		return obj;
 	}
+	listen(event, callback) {
+		if (!this._listeners.hasOwnProperty(event)) {
+			this._listeners[event] = [];
+		}
+		this._listeners[event].push(callback);
+		return () => {
+			var index = this._listeners[event].indexOf(callback);
+			this._listeners[event].splice(index, 1);
+		};
+	}
+	dispatch(event, ...args) {
+		if (this._listeners.hasOwnProperty(event)) {
+			for (var i = 0; i < this._listeners[event].length; ++i) {
+				try {
+					this._listeners[event][i].apply(null, args);
+				} catch(e) {
+					console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
+				}
+			}
+		}
+	}
+	hasDescendant(child) {
+		if (!child) return false;
+		let parent = child._parent;
+		while (parent) {
+			if (parent === this) return true;
+			parent = parent._parent;
+		}
+		return false;
+	}
 	static fromJSON(json) {
-		assert(typeof json.id === 'string' && json.id.length > 3);
+		assert(typeof json.id === 'string' && json.id.length > 5, 'Invalid id.');
 		let fromJSON = serializableClasses.get(json.id.substring(0, 3));
 		assert(fromJSON);
 		let obj = fromJSON(json);
-		obj.addChildren(json.c ? json.c.map(child => Serializable.fromJSON(child)) : []);
+		obj.initWithChildren(json.c ? json.c.map(child => Serializable.fromJSON(child)) : []);
 		return obj;
 	}
 	static registerSerializable(Class, threeLetterType, fromJSON = null) {
@@ -146,5 +216,57 @@ export default class Serializable {
 		serializableClasses.set(threeLetterType, fromJSON);
 	}
 }
-Serializable.prototype._dirty = true;
+
 Serializable.prototype._parent = null;
+Serializable.prototype.alive = true;
+Serializable.prototype.isRoot = false; // If this should be a root node
+Object.defineProperty(Serializable.prototype, 'debug', {
+	get() {
+		let info = this.threeLetterType;
+
+		this._children.forEach((value, key) => {
+			info += '|';
+			if (key === 'prp')
+				info += this.getChildren('prp').map(p => `${p.name}=${p._value}`).join(', ');
+			else
+				info += `${key}(${value.length})`;
+		});
+		
+		return info;
+	}
+});
+Object.defineProperty(Serializable.prototype, 'debugChildren', {
+	get() {
+		let c = [];
+		this._children.forEach((value, key) => {
+			c = c.concat(value);
+		});
+		
+		let children = [];
+		
+		function createDebugObject(type) {
+			if (type === 'gam') return new function Game(){};
+			if (type === 'sce') return new function Scene(){};
+			if (type === 'prt') return new function Prototype(){};
+			if (type === 'prp') return new function Property(){};
+			if (type === 'cda') return new function ComponentData(){};
+			if (type === 'com') return new function Component(){};
+			if (type === 'epr') return new function EntityPrototype(){};
+			if (type === 'ent') return new function Entity(){};
+			return new function Other(){};
+		}
+
+		c.forEach(child => {
+			let obj = createDebugObject(child.threeLetterType);
+			
+			obj.debug = child.debug;
+			obj.ref = child;
+			let c = child.debugChildArray;
+			if (c && c.length > 0)
+				obj.children = c;
+			children.push(obj);
+		});
+
+		return children;
+	}
+});

@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import events from '../events';
 import Prototype from '../../core/prototype';
-import { getSerializable } from '../../core/serializableManager';
+import { getSerializable, changeType } from '../../core/serializableManager';
 import assert from '../../assert';
 
 class Types extends Module {
@@ -17,9 +17,12 @@ class Types extends Module {
 		this.name = 'Types';
 
 		this.addButton.onclick = () => {
-			this.state.game.addChild(Prototype.create('' + Math.random()));
-			this.editor.update();
-			this.editor.save();
+			let prototype = Prototype.create(' New type');
+			this.state.game.addChild(prototype);
+			this.editor.select(prototype);
+			setTimeout(() => {
+				Module.activateModule('type', true, 'focusOnProperty', 'name');
+			}, 100);
 		};
 		
 		let searchTimeout = false;
@@ -31,9 +34,47 @@ class Types extends Module {
 				$(this.jstree).jstree().search(this.search.value.trim());
 			}, 200);
 		});
+
+		events.listen('change', change => {
+			if (change.reference.threeLetterType === 'prt') {
+				if (change.type === changeType.addSerializableToTree) {
+					let jstree = $(this.jstree).jstree(true);
+					let parent = change.parent;
+					let parentNode;
+					if (parent.threeLetterType === 'gam')
+						parentNode = '#';
+					else
+						parentNode = jstree.get_node(parent.id);
+
+					jstree.create_node(parentNode, {
+						text: change.reference.getChildren('prp')[0].value,
+						id: change.reference.id
+					});
+				} else
+					this.dirty = true; // prototypes added, removed, moved or something
+			} else if (change.type === changeType.setPropertyValue) {
+				let propParent = change.reference._parent;
+				if (propParent && propParent.threeLetterType === 'prt') {
+					let jstree = $(this.jstree).jstree(true);
+					let node = jstree.get_node(propParent.id);
+					jstree.rename_node(node, change.value);
+				}
+			} else if (change.type === 'editorSelection') {
+				if (change.origin != this && change.reference.type === 'prt') {
+					let jstree = $(this.jstree).jstree(true);
+					let node = jstree.get_node(change.reference.items[0].id);
+					jstree.deselect_all();
+					jstree.select_node(node);
+				}
+			}
+		});
 	}
 	update() {
 		if (this.skipUpdate) return;
+		if (!this.jstreeInited)
+			this.dirty = true;
+
+		if (!this.dirty) return;
 		
 		let data = [];
 		this.state.game.forEachChild('prt', prototype => {
@@ -44,12 +85,12 @@ class Types extends Module {
 				parent: parent.threeLetterType === 'prt' ? parent.id : '#'
 			});
 		}, true);
-		
+
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
 				// selection changed
 				this.skipUpdate = true;
-				this.editor.select(data.selected.map(getSerializable));
+				this.editor.select(data.selected.map(getSerializable), this);
 				this.skipUpdate = false;
 			}).on('loaded.jstree refresh.jstree', () => {
 				let jstree = $(this.jstree).jstree(true);
@@ -73,6 +114,9 @@ class Types extends Module {
 						icon: 'fa fa-book'
 					}
 				},
+				sort: function (a, b) {
+					return this.get_text(a).toLowerCase() > this.get_text(b).toLowerCase() ? 1 : -1;
+				},
 				dnd: {
 					copy: false // jstree makes it way too hard to copy multiple prototypes
 				},
@@ -89,11 +133,8 @@ class Types extends Module {
 			$(this.jstree).jstree('refresh');
 		}
 		$(this.jstree).data('typesModule', this);
-		
-		// $(this.jstree).jstree(true).select_node($('#prtF21ZLL0vsLdQI5z')[0]);//this.state.selection.items.map(i => i.id));
-		if (this.state.selection.type === 'none') {
-		}
-		// TODO: if selection changes somewhere else, follow
+
+		this.dirty = false;
 	}
 }
 
@@ -115,12 +156,10 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 		let nodeObjects = nodes.map(getSerializable);
 		nodeObjects.forEach(assert);
 		nodeObjects.forEach(prototype => {
-			newParent.addChild(prototype.detach());
+			prototype.move(newParent);
 		});
 		
 		// console.log('dnd stopped from', nodes, 'to', newParent);
-		
-		typesModule.editor.save();
 	});
 });
 

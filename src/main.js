@@ -1,2 +1,3 @@
 import './core/dataTypes'
-import './game/game'
+import './core/game'
+import './util/net'

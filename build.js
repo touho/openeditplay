@@ -136,21 +136,21 @@ if (process.argv[2] === '--production') {
 	startJsWatch('./src/main.js', './dist/explore.min.js');
 	startCssWatcher('./src/', './src/main.scss', './dist/explore.css');
 } else {
-	startJsWatch('./src/mainDev.js', './dev/explore.dev.min.js');
-	startCssWatcher('./src/', './src/mainDev.scss', './dev/css/explore.dev.css');
+	startJsWatch('./src/mainDev.js', './public/explore.dev.min.js');
+	startCssWatcher('./src/', './src/mainDev.scss', './public/css/explore.dev.css');
 
 	concat([
 		'node_modules/jquery/dist/jquery.min.js',
 		'src/external/jstree.js',
 		'src/external/victor.min.js'
 		],
-		'dev/explore.dev.dependencies.min.js'
+		'public/explore.dev.dependencies.min.js'
 	);
 	concat([
 			'src/external/font-awesome.min.css'
 		],
-		'dev/css/explore.dev.dependencies.css'
+		'public/css/explore.dev.dependencies.css'
 	);
 	log('to make a distribution build, use parameter --production');
 }
-log('Build watcher started.');
+log('Build watcher started. Changes in src folder will be built automatically.');

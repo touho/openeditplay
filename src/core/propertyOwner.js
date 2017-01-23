@@ -8,31 +8,6 @@ export default class PropertyOwner extends Serializable {
 		assert(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 		super(predefinedId);
 		this._properties = {};
-		
-		/*
-		let properties = children.filter(child => child.threeLetterType === 'prp');
-
-		properties.forEach(prop => {
-			if (!prop.propertyType) {
-				if (prop.name) {
-					prop.setPropertyType(this.constructor._propertyTypesByName[prop.name]);
-				} else {
-					assert(false, 'property does not have propertyType nor name');
-				}
-			}
-		});
-		
-		this._properties = {};
-		let givenPropertiesMap = {};
-		for (let i = 0; i < properties.length; i++)
-			givenPropertiesMap[properties[i].propertyType.name] = properties[i];
-
-		this.constructor._propertyTypes.forEach(propertyType => {
-			let property = givenPropertiesMap[propertyType.name] || propertyType.createProperty();
-			classInstance._properties[propertyType.name] = property;
-			classInstance.addChild(property);
-		});
-		*/
 	}
 	// Just a helper
 	initWithPropertyValues(values = {}) {
@@ -45,11 +20,11 @@ export default class PropertyOwner extends Serializable {
 				value: values[propName]
 			}));
 		});
-		this.addChildren(children);
+		this.initWithChildren(children);
 		return this;
 	}
-	addChildren(children = []) {
-		this._addChildrenCalled = true;
+	initWithChildren(children = []) {
+		this._inited = true;
 		let propChildren = [];
 		let otherChildren = [];
 		// Separate Property children and other children
@@ -89,7 +64,7 @@ export default class PropertyOwner extends Serializable {
 		super.addChildren(propChildren);
 	};
 	addChild(child) {
-		assert(this._addChildrenCalled, this.constructor.name + ' requires that addChildren will be called before addChild');
+		assert(this._inited, this.constructor.componentName + ' requires that initWithChildren will be called before addChild');
 		super.addChild(child);
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {

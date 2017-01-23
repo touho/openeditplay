@@ -5,6 +5,8 @@ function isValidFloat(x) {
 	return !isNaN(x) && x !== Infinity && x !== -Infinity;
 }
 
+const FLOAT_JSON_PRECISION = 4;
+
 addDataType({
 	name: 'float',
 	validators: {
@@ -20,7 +22,7 @@ addDataType({
 			return Math.min(max, Math.max(min, x));
 		}
 	},
-	toJSON: x => x,
+	toJSON: x => +x.toFixed(FLOAT_JSON_PRECISION),
 	fromJSON: x => x
 });
 addDataType({
@@ -53,8 +55,12 @@ addDataType({
 			return vec;
 		}
 	},
-	toJSON: vec => vec.toObject(),
-	fromJSON: vec => Victor.fromObject(vec)
+	toJSON: vec => ({
+		x: +vec.x.toFixed(FLOAT_JSON_PRECISION),
+		y: +vec.y.toFixed(FLOAT_JSON_PRECISION)
+	}),
+	fromJSON: vec => Victor.fromObject(vec),
+	clone: vec => vec.clone()
 });
 
 addDataType({

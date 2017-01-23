@@ -2,31 +2,39 @@ import Serializable from './serializable';
 import assert from '../assert';
 import Property from './property';
 import PropertyOwner from './propertyOwner';
-
+import { scene } from './scene';
+import { game } from './game';
 export { default as Prop } from './propertyType';
 export let componentClasses = new Map();
 
 // Instance of a component, see componentExample.js
 export class Component extends PropertyOwner {
-	constructor(componentData, entity, env) {
-		super('com');
-		this.entity = entity;
-		this.env = env;
-		this.children = {}; // TODO: create children
-		this._componentData = componentData;
+	constructor(predefinedId = false) {
+		super(predefinedId);
+		this.scene = scene;
+		this.game = game;
+		this._listenRemoveFunctions = [];
 	}
 	delete() {
-		assert(!this.env.entity.alive, 'Do not call Component.delete!');
+		console.log('delete component');
+		assert(!this.entity.alive, 'Do not call Component.delete!');
 		super.delete();
 	}
 	_preInit() {
 		this.constructor.requirements.forEach(r => {
 			this[r] = this.entity.getComponent(r);
-			assert(this[r], 'required component not found');
+			assert(this[r], `${this.constructor.componentName} requires component ${r} but it is not found`);
 		});
 
-		this._forEachChildComponent(c => c._preInit());
-	
+		this.forEachChild('com', c => c._preInit());
+		
+		['onUpdate', 'onDraw'].forEach(funcName => {
+			if (typeof this[funcName] === 'function') {
+				console.log('listen ' + funcName);
+				this._listenRemoveFunctions.push(this.scene.listen(funcName, (...args) => this[funcName](...args)));
+			}
+		});
+
 		try {
 			if (typeof this.preInit === 'function')
 				this.preInit();
@@ -35,7 +43,7 @@ export class Component extends PropertyOwner {
 		}
 	}
 	_init() {
-		this._forEachChildComponent(c => c._init());
+		this.forEachChild('com', c => c._init());
 		try {
 			if (typeof this.init === 'function')
 				this.init();
@@ -50,17 +58,10 @@ export class Component extends PropertyOwner {
 		} catch(e) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
-		this._forEachChildComponent(c => c._sleep());
-	}
-	_forEachChildComponent(func) {
-		Object.keys(this.children).forEach(key => {
-			let child = this.children[key];
-			if (Array.isArray(child)) {
-				child.forEach(func);
-			} else {
-				func(child);
-			}
-		});
+		this.forEachChild('com', c => c._sleep());
+		console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
+		this._listenRemoveFunctions.forEach(f => f());
+		this._listenRemoveFunctions.length = 0;
 	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {
@@ -69,7 +70,7 @@ export class Component extends PropertyOwner {
 	}
 }
 
-Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
+Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
 Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
 Component.register = function({
 	name = '', // required
@@ -78,12 +79,14 @@ Component.register = function({
 	icon = 'fa-puzzle-piece', // in editor
 	color = '', // in editor
 	properties = [],
-	requirements = [],
+	requirements = ['Transform'],
 	children = [],
 	parentClass = Component,
-	prototype = {}
+	prototype = {},
+	allowMultiple = true
 }) {
 	assert(name, 'Component must have a name.');
+	assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
 	assert(!componentClasses.has(name), 'Duplicate component class ' + name);
 	Object.keys(prototype).forEach(k => {
 		if (Component.reservedPrototypeMembers.has(k))
@@ -94,7 +97,7 @@ Component.register = function({
 	let deleteFunction = prototype.delete;
 	delete prototype.constructor;
 	delete prototype.delete;
-	class Class extends parentClass {
+	class Com extends parentClass {
 		constructor() {
 			super(...arguments);
 			if (constructorFunction)
@@ -109,18 +112,26 @@ Component.register = function({
 	properties.forEach(p => {
 		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
 	});
-	PropertyOwner.defineProperties(Class, properties); // properties means propertyTypes here
-	Class.componentName = name;
-	Class.category = category;
-	Class.requirements = requirements;
-	Class.children = children;
-	Class.description = description;
-	Class.icon = icon;
+	PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
+	Com.componentName = name;
+	Com.category = category;
+	if (requirements.indexOf('Transform') < 0) requirements.push('Transform');
+	Com.requirements = requirements;
+	Com.children = children;
+	Com.description = description;
+	Com.allowMultiple = allowMultiple;
+	Com.icon = icon;
 	
 	let num = name.split('').reduce((prev, curr) => prev + curr.charCodeAt(0), 0);
-	Class.color = color || `hsla(${ num % 360 }, 40%, 60%, 1)`;
-	
-	Object.assign(Class.prototype, prototype);
-	componentClasses.set(Class.componentName, Class);
-	return Class;
+	Com.color = color || `hsla(${ num % 360 }, 40%, 60%, 1)`;
+
+	prototype._name = name;
+	Object.assign(Com.prototype, prototype);
+	componentClasses.set(Com.componentName, Com);
+	return Com;
 };
+
+Serializable.registerSerializable(Component, 'com', json => {
+	let component = new (componentClasses.get(json.n))(json.id);
+	return component;
+});

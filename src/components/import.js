@@ -1,0 +1,5 @@
+import './Transform'
+import './Test'
+import './Mover'
+import './Rect'
+import './PlayerSpawner'

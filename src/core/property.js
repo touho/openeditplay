@@ -1,4 +1,5 @@
 import Serializable from './serializable';
+import { addChange, changeType } from './serializableManager'; 
 import assert from '../assert';
 
 // Instance of a property
@@ -15,14 +16,14 @@ export default class Property extends Serializable {
 			this.setPropertyType(propertyType);
 		else {
 			this.name = name;
-			this._isJSONValue = true;
+			this._initialValueIsJSON = true;
 		}
 	}
 	setPropertyType(propertyType) {
 		this.propertyType = propertyType;
 		try {
 			if (this._initialValue !== undefined)
-				this.value = this._isJSONValue ? propertyType.type.fromJSON(this._initialValue) : this._initialValue;
+				this.value = this._initialValueIsJSON ? propertyType.type.fromJSON(this._initialValue) : this._initialValue;
 			else
 				this.value = propertyType.initialValue;
 		} catch(e) {
@@ -33,7 +34,7 @@ export default class Property extends Serializable {
 	}
 	clone(skipSerializableRegistering = false) {
 		return new Property({
-			value: this.value,
+			value: this.propertyType.type.clone(this.value),
 			name: this.name,
 			propertyType: this.propertyType,
 			skipSerializableRegistering
@@ -45,10 +46,6 @@ export default class Property extends Serializable {
 			n: this.propertyType.name
 		});
 	}
-	delete() {
-		super.delete();
-		this.model = null;
-	}
 }
 Property.prototype.propertyType = null;
 Object.defineProperty(Property.prototype, 'type', {
@@ -59,7 +56,9 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
-		this.markDirty();
+		
+		if (this._parent)
+			addChange(changeType.setPropertyValue, this);
 	},
 	get() {
 		return this._value;

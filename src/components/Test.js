@@ -1,4 +1,4 @@
-import { Component, Prop } from '../../core/component';
+import { Component, Prop } from '../core/component';
 
 let vari = 0;
 

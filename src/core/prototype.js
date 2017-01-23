@@ -35,6 +35,11 @@ export default class Prototype extends PropertyOwner {
 		 }
 	]
 	 */
+	addChild(child) {
+		if (child.threeLetterType === 'cda')
+			assert(this.findChild('cda', cda => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
+		super.addChild(child);
+	}
 	getInheritedComponentDatas() {
 		let originalPrototype = this;
 		
@@ -96,21 +101,16 @@ export default class Prototype extends PropertyOwner {
 		let propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
 		assert(propertyType, 'Invalid propertyName', propertyName, inheritedComponentData);
 		let componentData = this.findChild('cda', componentData => componentData.componentId === inheritedComponentData.componentId);
-		console.log('find', inheritedComponentData.componentId);
 		if (!componentData) {
 			console.log('no component data. create one', this, inheritedComponentData);
 			componentData = new ComponentData(inheritedComponentData.componentClass.componentName, false, inheritedComponentData.componentId);
 			this.addChild(componentData);
 		}
 		let property = componentData.findChild('prp', property => property.name === propertyName);
-		console.log('finding', propertyName);
 		if (property) {
-			console.log('yes property. update it', propertyValue);
 			property.value = propertyValue;
 			return property;
 		}
-
-		console.log('no property. create one', propertyType, propertyValue);
 
 		property = propertyType.createProperty({
 			value: propertyValue,

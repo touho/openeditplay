@@ -16,12 +16,12 @@ export class TopBarModule extends Module {
 }
 Module.register(TopBarModule, 'top');
 
-Module.registerTopButton('Bell Types', 'fa fa-bell-o', () => { 
+Module.registerTopButton('Bell Types', 'fa-bell-o', () => { 
 	Module.unpackModuleContainer('bottom');
 	Module.activateModule('types');
 	Module.activateModule('type');
 }, 1);
-Module.registerTopButton('Cube Instances', 'fa fa-cubes', () => {
+Module.registerTopButton('Cube Instances', 'fa-cubes', () => {
 	Module.activateModule('instances');
 	Module.activateModule('instance');
 }, 2);
@@ -40,7 +40,7 @@ export class TopButton {
 		this.callback = null;
 	}
 	update(state) {
-		this.icon.className = state.icon;
+		this.icon.className = `fa ${state.icon}`;
 		this.text.textContent = state.text;
 		this.callback = state.func;
 	}

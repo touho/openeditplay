@@ -8,6 +8,7 @@ import Property from './property';
 class PropertyType {
 	constructor(name, type, validator, initialValue, description) {
 		assert(typeof name === 'string');
+		assert(name[0] >= 'a' && name[0] <= 'z', 'Name of a property must start with lower case letter.');
 		assert(type && typeof type.name === 'string');
 		assert(validator && typeof validator.validate === 'function');
 		
@@ -54,7 +55,8 @@ export function addDataType({
 	name = '',
 	validators = { default: x => x }, // default must exist
 	toJSON = x => x,
-	fromJSON = x => x
+	fromJSON = x => x,
+	clone = x => x
 }) {
 	assert(name, 'name missing from property type');
 	assert(typeof validators.default === 'function','default validator missing from property type: ' + name);
@@ -65,7 +67,8 @@ export function addDataType({
 		name,
 		validators,
 		toJSON,
-		fromJSON
+		fromJSON,
+		clone
 	};
 	let createType = () => type;
 

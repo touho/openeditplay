@@ -6,7 +6,7 @@ export default Component.register({
 	description: 'Description of what this component does',
 	category: 'Core', // You can also make up new categories.
 	icon: 'fa-bars', // Font Awesome id
-	requirements: ['Position'], // These shared components are autofilled. Error if component is not found.
+	requirements: ['Transform'], // These shared components are autofilled. Error if component is not found.
 	children: ['Image', 'Image', 'Sound'], // These private components are also autofilled. Error if component is not found.
 	properties: [
 		Prop('variable', 0.5, Prop.float, Prop.float.range(0, 1), 'Description of the property'),
@@ -27,7 +27,7 @@ export default Component.register({
 		},
 		init() {
 			// All the components of this entity has been preInited. You can use them. Children are already inited here.
-			this.Position.x = this.Position.y + 1;
+			this.Transform.position.x = this.Transform.position.y + 1;
 
 			this.howToAccessChildren = [
 				this.children.Image[0].property,

@@ -8,6 +8,8 @@ export default class ComponentData extends Serializable {
 		this.componentClass = componentClasses.get(this.name);
 		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
 		super(predefinedId);
+		if (!this.componentClass.allowMultiple)
+			predefinedComponentId = '_' + componentClassName;
 		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
 	}
 	addChild(child) {
@@ -23,7 +25,7 @@ export default class ComponentData extends Serializable {
 		super.addChild(child);
 	};
 	clone() {
-		let obj = new ComponentData(this.name);
+		let obj = new ComponentData(this.name, false, this.componentId);
 		let children = [];
 		this.forEachChild(null, child => {
 			children.push(child.clone());
