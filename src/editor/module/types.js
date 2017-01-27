@@ -4,6 +4,7 @@ import events from '../events';
 import Prototype from '../../core/prototype';
 import { getSerializable, changeType } from '../../core/serializableManager';
 import assert from '../../assert';
+import { editor } from '../editor';
 
 class Types extends Module {
 	constructor() {
@@ -18,8 +19,8 @@ class Types extends Module {
 
 		this.addButton.onclick = () => {
 			let prototype = Prototype.create(' New type');
-			this.state.game.addChild(prototype);
-			this.editor.select(prototype);
+			editor.game.addChild(prototype);
+			editor.select(prototype);
 			setTimeout(() => {
 				Module.activateModule('type', true, 'focusOnProperty', 'name');
 			}, 100);
@@ -77,7 +78,7 @@ class Types extends Module {
 		if (!this.dirty) return;
 		
 		let data = [];
-		this.state.game.forEachChild('prt', prototype => {
+		editor.game.forEachChild('prt', prototype => {
 			let parent = prototype.getParent();
 			data.push({
 				text: prototype.name,
@@ -90,17 +91,20 @@ class Types extends Module {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
 				// selection changed
 				this.skipUpdate = true;
-				this.editor.select(data.selected.map(getSerializable), this);
+				let prototypes = data.selected.map(getSerializable);
+				editor.select(prototypes, this);
 				this.skipUpdate = false;
+				if (prototypes.length === 1)
+					events.dispatch('prototypeClicked', prototypes[0]);
 			}).on('loaded.jstree refresh.jstree', () => {
 				let jstree = $(this.jstree).jstree(true);
 				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
 				// console.log(jstree, selNode);
-				if (this.state.selection.type === 'none') {
+				if (editor.selection.type === 'none') {
 					//jstree.select_node();
 				}
-				if (this.state.selection.type === 'prt') {
-					// jstree.select_node(this.state.selection.items.map(i => i.id));
+				if (editor.selection.type === 'prt') {
+					// jstree.select_node(editor.selection.items.map(i => i.id));
 				}
 			}).jstree({
 				core: {
@@ -108,7 +112,7 @@ class Types extends Module {
 					data,
 					force_text: true
 				},
-				plugins: ['types', 'dnd', 'sort', 'search', 'state'],
+				plugins: ['types', 'dnd', 'sort', 'search'/*, 'state'*/],
 				types: {
 					default: {
 						icon: 'fa fa-book'
@@ -149,7 +153,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 		let nodes = data.data.nodes; // these prototypes will move
 		let newParent;
 		if (node.parent === '#')
-			newParent = typesModule.state.game;
+			newParent = editor.game;
 		else
 			newParent = getSerializable(node.parent);
 		

@@ -4,6 +4,7 @@ import { getSerializable } from './serializableManager';
 import Prop from './propertyType';
 import PropertyOwner from './propertyOwner';
 import ComponentData from './componentData';
+import Entity from './entity';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -128,6 +129,21 @@ export default class Prototype extends PropertyOwner {
 			return this._parent.findComponentDataByComponentId(componentId, alsoFindFromParents);
 		else
 			return null;
+	}
+	
+	createEntity() {
+		let entity = new Entity();
+		let inheritedComponentDatas = this.getInheritedComponentDatas();
+		let components = [];
+		inheritedComponentDatas.forEach(d => {
+			let component = new d.componentClass;
+			let properties = d.properties.map(p => p.clone());
+			component.initWithChildren(properties);
+			components.push(component);
+		});
+		entity.addComponents(components);
+		entity.prototype = this;
+		return entity;
 	}
 }
 PropertyOwner.defineProperties(Prototype, propertyTypes);

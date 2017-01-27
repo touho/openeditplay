@@ -3,7 +3,7 @@ import Serializable from './serializable';
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
-class EntityPrototype extends Prototype {
+export default class EntityPrototype extends Prototype {
 	constructor(predefinedId = false) {
 		super(...arguments);
 		this.prototypeId;

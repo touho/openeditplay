@@ -69,6 +69,13 @@ export class Component extends PropertyOwner {
 		});
 	}
 }
+Component.create = function(name, values = {}) {
+	let componentClass = componentClasses.get(name);
+	assert(componentClass);
+	let component = new componentClass();
+	component.initWithPropertyValues(values);
+	return component;
+}
 
 Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
 Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);

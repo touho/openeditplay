@@ -18,59 +18,76 @@ export default class Scene extends Serializable {
 		}
 		scene = this;
 
+		this.canvas = document.querySelector('canvas.anotherCanvas');
+		this.context = this.canvas.getContext('2d');
+
+		this.animationFrameId = null;
+		this.playing = false;
+		
+		setInterval(() => {
+			if (this.canvas) {
+				if (this.canvas.width !== this.canvas.offsetWidth && this.canvas.offsetWidth)
+					this.canvas.width = this.canvas.offsetWidth;
+				if (this.canvas.height !== this.canvas.offsetHeight && this.canvas.offsetHeight)
+					this.canvas.height = this.canvas.offsetHeight;
+			}
+		}, 500);
+
 		super(predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 	}
 	animFrame() {
-		if (!this.alive) return;
+		this.animationFrameId = null;
+		if (!this.alive || !this.playing) return;
 		
-		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		let t = 0.001*performance.now();
 		let dt = t-this._prevUpdate;
+		if (dt > 0.1)
+			dt = 0.1;
 		this._prevUpdate = t;
 		
 		this.dispatch('onUpdate', dt, t);
-		this.dispatch('onDraw', this.context);
+		this.draw();
 		
-		window.requestAnimationFrame(() => this.animFrame());
+		this.animationFrameId = window.requestAnimationFrame(() => this.animFrame());
+	}
+	draw() {
+		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		this.dispatch('onDraw', this.context);
 	}
 	spawn(prototype, position) {
 		assert(prototype.threeLetterType === 'prt');
-		
-		let entity = new Entity();
-		let inheritedComponentDatas = prototype.getInheritedComponentDatas();
-		let components = [];
-		inheritedComponentDatas.forEach(d => {
-			let component = new d.componentClass(null, entity, { scene: this });
-			let properties = d.properties.map(p => p.clone());
-			component.initWithChildren(properties);
-			components.push(component);
-		});
-		entity.addComponents(components);
+		let entity = prototype.createEntity();
 		this.addChild(entity);
 		return entity;
 	}
-	init() {
+	reset() {
+		this.pause();
 		this.deleteChildren();
-		game.forEachChild('prt', p => p.name !== 'Player' && this.spawn(p), true);
+		this.draw();
+	}
+	pause() {
+		if (!this.playing) return;
+		
+		this.playing = false;
+		if (this.animationFrameId)
+			window.cancelAnimationFrame(this.animationFrameId);
+		this.animationFrameId = null;
 	}
 	play() {
-		if (!this.canvas) {
-			this.canvas = document.querySelector('canvas.anotherCanvas');
-			this.context = this.canvas.getContext('2d');
-		}
-		
-		if (!this.playing) {
-			this._prevUpdate = 0.001*performance.now();
-			this.animFrame();
-		}
+		if (this.playing) return;
+	
+		this._prevUpdate = 0.001*performance.now();
 		this.playing = true;
-
+		this.animFrame();
+		
+		/*
 		let player = game.findChild('prt', p => p.name === 'Player', true);
 		if (player) {
 			console.log('Spawning player!', player);
 			this.spawn(player);
 		}
+		*/
 	}
 }
 Scene.prototype.isRoot = true;

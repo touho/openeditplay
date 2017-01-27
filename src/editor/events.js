@@ -8,7 +8,7 @@
 
 let listeners = {};
 
-export default {
+export default events = {
 	listen(event, callback) {
 		if (!listeners.hasOwnProperty(event)) {
 			listeners[event] = [];
@@ -34,13 +34,18 @@ export default {
 				*/
 			}
 		}
+	},
+	getLoadEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
 	}
 };
 
 // DOM / ReDom event system
 
 export function dispatch(view, type, data) {
-	const el = view.el || view;
+	const el = view === window ? view : view.el || view;
 	const debug = 'Debug info ' + new Error().stack;
 	el.dispatchEvent(new CustomEvent(type, {
 		detail: { data, debug },
@@ -48,8 +53,11 @@ export function dispatch(view, type, data) {
 	}));
 }
 export function listen(view, type, handler) {
-	const el = view.el || view;
-	el.addEventListener(type, ({ detail }) => {
-		handler(detail.data, detail.debug );
+	let el = view === window ? view : view.el || view;
+	el.addEventListener(type, event => {
+		if (event instanceof CustomEvent)
+			handler(event.detail.data, event.detail.debug);
+		else
+			handler(event);
 	});
 }

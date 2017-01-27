@@ -9,9 +9,6 @@ Component.register({
 		Prop('speed', 1, Prop.float)
 	],
 	prototype: {
-		init() {
-			this.originalPos = this.Transform.position.clone();
-		},
 		onUpdate(dt, t) {
 			if (this.userControlled) {
 				if (!this.entity.localMaster) return;
@@ -29,8 +26,8 @@ Component.register({
 					this.Transform.position = this.Transform.position;
 				}
 			} else {
-				let change = new Victor(1, 0).rotate(t * this.speed).multiply(this.change);
-				this.Transform.position.copy(this.originalPos).add(change);
+				let change = new Victor(dt, 0).rotate(t * this.speed).multiply(this.change);
+				this.Transform.position.copy(this.Transform.position).add(change);
 			}
 		}
 	}

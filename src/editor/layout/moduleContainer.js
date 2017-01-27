@@ -1,9 +1,9 @@
 import { el, list, mount } from 'redom';
 import events from '../events';
+import { setOption, getOption } from '../editor';
 
 export default class ModuleContainer {
 	constructor(moduleContainerName = 'unknownClass.anotherClass', packButtonIcon = 'fa-chevron-left') {
-		
 		this.modules = [];
 		this.packButtonEnabled = !!packButtonIcon;
 		this.el = el(`div.moduleContainer.packable.${moduleContainerName}`,
@@ -11,19 +11,27 @@ export default class ModuleContainer {
 			this.tabs = list('div.tabs', ModuleTab),
 			this.moduleElements = el('div.moduleElements')
 		);
+
+			
 		if (packButtonIcon) {
-			this.el.onclick = () => this.el.classList.contains('packed') && this.el.classList.remove('packed') || undefined;
+			let packId = 'moduleContainerPacked_' + moduleContainerName;
+			if (getOption(packId))
+				this.el.classList.add('packed');
+				
+			this.el.onclick = () => {
+				setOption(packId, '');
+				return this.el.classList.contains('packed') && this.el.classList.remove('packed') || undefined;
+			};
 			this.packButton.onclick = e => {
 				this.el.classList.add('packed');
+				setOption(packId, 'true');
 				e.stopPropagation();
 				return false;
-			}
+			};
 		}
 
 		events.listen('registerModule_' + moduleContainerName.split('.')[0], (moduleClass, editor) => {
 			let module = new moduleClass(editor);
-			module.editor = editor;
-			module.state = editor.state;
 			module.el.classList.add('module-' + module.id);
 			this.modules.push(module);
 			if (this.modules.length !== 1) {

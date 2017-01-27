@@ -53,64 +53,40 @@ addChangeListener(change => {
 	}
 });
 
-let editor = null;
+export let editor = null;
 class Editor {
 	constructor(game = Game.create('My Game')) {
 		this.layout = new Layout();
 		
 		this.dirty = true;
 		
-		this.state = {
-			topButtons: [],
-			selection: {
-				type: 'none',
-				items: [],
-				dirty: true
-			},
-			game
+		this.game = game;
+		this.selection = {
+			type: 'none',
+			items: [],
+			dirty: true
 		};
 
 		mount(document.body, this.layout);
-		
-		events.listen('registerTopButton', (text, icon, func, priority) => {
-			let button = { icon, text, func, priority };
-			let i = 0;
-			let topButtons = this.state.topButtons;
-			while (i < topButtons.length) {
-				let b = topButtons[i];
-				if (b.priority > priority) {
-					topButtons.splice(i, 0, button);
-					i = -1;
-					break;
-				}
-				i++;
-			}
-			if (i >= 0) topButtons.push(button);
-		});
-		
-		events.listen('requestUpdate', () => {
-			console.log('requested');
-			this.update();
-		});
 	}
 	select(items, origin) {
 		if (!Array.isArray(items))
 			items = [items];
-		this.state.selection.items = items;
+		this.selection.items = items;
 		
 		let types = Array.from(new Set(items.map(i => i.threeLetterType)));
 		if (types.length === 0)
-			this.state.selection.type = 'none';
+			this.selection.type = 'none';
 		else if (types.length === 1)
-			this.state.selection.type = types[0];
+			this.selection.type = types[0];
 		else
-			this.state.selection.type = 'mixed';
+			this.selection.type = 'mixed';
 		
 		this.dirty = true;
 		
 		events.dispatch('change', {
 			type: 'editorSelection',
-			reference: this.state.selection,
+			reference: this.selection,
 			origin
 		});
 		
@@ -118,7 +94,7 @@ class Editor {
 	}
 	update() {
 		if (!this.dirty) return;
-		this.layout.update(this.state);
+		this.layout.update();
 		
 		let logStr = 'update';
 		
@@ -133,7 +109,7 @@ class Editor {
 		console.log(logStr);
 	}
 	save() {
-		localStorage.anotherGameJSON = JSON.stringify(this.state.game.toJSON());
+		localStorage.anotherGameJSON = JSON.stringify(this.game.toJSON());
 	}
 }
 
@@ -160,3 +136,5 @@ export function getOption(id) {
 	loadOptions();
 	return options[id];
 }
+
+export let modulesRegisteredPromise = events.getLoadEventPromise('modulesRegistered');

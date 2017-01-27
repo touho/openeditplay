@@ -23,7 +23,7 @@ export default class Layout {
 			addContainer('right', 'fa-chevron-right')
 		);
 	}
-	update(state) {
-		this.moduleContainers.forEach(mc => mc.update(state));
+	update() {
+		this.moduleContainers.forEach(mc => mc.update());
 	}
 }

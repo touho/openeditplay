@@ -11,7 +11,7 @@ export default class Module {
 	// Called when this module is opened. Other modules can call Module.activateModule('Module', ...args);
 	activate() {
 	}
-	// Called when state of editor changes
+	// Called when changes happen
 	update() {
 	}
 	_show() {
@@ -36,27 +36,24 @@ Module.unpackModuleContainer = function(moduleContainerName) {
 
 // moduleContainerName = left | middle | right | bottom
 Module.register = function(moduleClass, moduleContainerName) {
-	registerPromise = registerPromise.then(editor => {
-		events.dispatch('registerModule_' + moduleContainerName, moduleClass, editor);
-		return editor;
+	registerPromise = registerPromise.then(() => {
+		events.dispatch('registerModule_' + moduleContainerName, moduleClass);
 	});
 };
 
 let nextTopBarPriorityNumber = 1;
-Module.registerTopButton = function(text, icon, func, priority = nextTopBarPriorityNumber++) {
-	registerPromise = registerPromise.then(editor => {
-		events.dispatch('registerTopButton', text, icon, func, priority);
-		return editor;
+Module.registerTopButton = function(topButton, priority = nextTopBarPriorityNumber++) {
+	registerPromise = registerPromise.then(() => {
+		events.dispatch('registerTopButton', topButton, priority);
 	});
 };
 
 
 let registerPromise = new Promise(function(resolve) {
-	events.listen('registerModules', function(editor) {
-		registerPromise.then(editor => {
+	events.listen('registerModules', function() {
+		registerPromise.then(() => {
 			events.dispatch('modulesRegistered');
-			return editor;
 		});
-		resolve(editor);
+		resolve();
 	});
 });

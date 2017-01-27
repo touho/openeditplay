@@ -1,47 +1,46 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
+import { editor, modulesRegisteredPromise } from '../editor';
 
 export class TopBarModule extends Module {
 	constructor() {
 		super(
 			this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
-			this.list = list('div.buttonContainer', TopButton)
+			this.buttons = el('div.buttonContainer')
 		);
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
-	}
-	update() {
-		this.list.update(this.state.topButtons);
+		
+		events.listen('addTopButtonToTopBar', topButton => {
+			mount(this.buttons, topButton);
+		});
 	}
 }
 Module.register(TopBarModule, 'top');
 
-Module.registerTopButton('Bell Types', 'fa-bell-o', () => { 
-	Module.unpackModuleContainer('bottom');
-	Module.activateModule('types');
-	Module.activateModule('type');
-}, 1);
-Module.registerTopButton('Cube Instances', 'fa-cubes', () => {
-	Module.activateModule('instances');
-	Module.activateModule('instance');
-}, 2);
-
 export class TopButton {
-	constructor() {
+	constructor({
+		text,
+		callback,
+		iconClass,
+		priority
+	}) {
+		this.priority = priority || 0;
+		
 		this.el = el('div.button.topIconTextButton',
 			el('div.topIconTextButtonContent',
-				this.icon = el('i.fa'),
-				this.text = el('span')
+				this.icon = el(`i.fa.${iconClass}`),
+				this.text = el('span', text)
 			)
-		)
+		);
 		this.el.onclick = () => {
-			this.callback && this.callback();
-		}
-		this.callback = null;
-	}
-	update(state) {
-		this.icon.className = `fa ${state.icon}`;
-		this.text.textContent = state.text;
-		this.callback = state.func;
+			if (callback) {
+				callback(this);
+			}
+		};
+
+		modulesRegisteredPromise.then(() => {
+			events.dispatch('addTopButtonToTopBar', this);
+		});
 	}
 }

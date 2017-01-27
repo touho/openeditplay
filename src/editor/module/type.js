@@ -8,15 +8,15 @@ let propertyTypeToEditorType = {
 };
 
 class PropertyModule extends Module {
-	constructor(editor) {
+	constructor() {
 		super(
-			this.propertyEditor = new PropertyEditor(editor)
+			this.propertyEditor = new PropertyEditor()
 		);
 		this.id = 'type';
 		this.name = 'Type';
 	}
 	update() {
-		this.propertyEditor.update(this.state.selection);
+		this.propertyEditor.update();
 	}
 	activate(command, parameter) {
 		if (command === 'focusOnProperty') {

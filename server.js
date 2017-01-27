@@ -32,11 +32,6 @@ io.on('connection', function(socket) {
 		console.log('change: ' + JSON.stringify(change));
 		broadcast(socket, 'c', change);
 	});
-	
-	socket.on('shareScene', function(scene) {
-		console.log('shareScene');
-		broadcast(socket, 'shareScene', scene);
-	});
 });
 
 http.listen(3000, function(){

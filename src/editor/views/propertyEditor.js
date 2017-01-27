@@ -7,7 +7,7 @@ import editors from './propertyEditorTypes';
 import ComponentAdder from './popup/componentAdder';
 import { changeType } from '../../core/serializableManager';
 
-import { setOption, getOption } from '../editor';
+import { setOption, getOption, editor } from '../editor';
 
 /*
 Reference: Unbounce
@@ -15,9 +15,8 @@ Reference: Unbounce
  */
 
 export default class PropertyEditor {
-	constructor(editor) {
+	constructor() {
 		this.el = el('div.propertyEditor');
-		this.editor = editor;
 		this.dirty = true;
 
 		// Change in serializable tree
@@ -47,14 +46,14 @@ export default class PropertyEditor {
 		});
 		
 		listen(this, 'propertyEditorSelect', items => {
-			this.editor.select(items, this);
+			editor.select(items, this);
 		});
 	}
-	update(selection) {
+	update() {
 		if (!this.dirty) return;
 		$(this.el).empty();
-		if (selection.type === 'prt' && selection.items.length === 1) {
-			this.item = selection.items[0];
+		if (editor.selection.type === 'prt' && editor.selection.items.length === 1) {
+			this.item = editor.selection.items[0];
 			let prototypeEditor = new Container(this);
 			prototypeEditor.update(this.item);
 			mount(this.el, prototypeEditor);
@@ -241,8 +240,8 @@ class Property {
 		this.name.textContent = property.propertyType.name;
 		this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
 		this.content.innerHTML = '';
-		let editor = editors[this.property.propertyType.type.name] || editors.default;
-		this.setValue = editor(this.content, val => this.oninput(val), val => this.onchange(val), property.propertyType);
+		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
+		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), property.propertyType);
 		this.setValue(this.property.value);
 		this.el.classList.toggle('ownProperty', !!this.property.id);
 		if (this.property.id) {

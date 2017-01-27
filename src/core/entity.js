@@ -8,7 +8,7 @@ export default class Entity extends Serializable {
 		super(predefinedId);
 		this.components = new Map(); // name -> array
 		this.sleeping = false;
-		this.prototype = null;
+		this.prototype = null; // should be set immediately after constructor
 		this.localMaster = true; // set false if entity is controlled over the net
 	}
 
@@ -26,6 +26,18 @@ export default class Entity extends Serializable {
 	getComponents(name) {
 		assert(this.alive, ALIVE_ERROR);
 		return this.components.get(name) || [];
+	}
+	
+	clone() {
+		let entity = new Entity();
+		entity.prototype = this.prototype;
+		entity.sleeping = this.sleeping;
+		let components = [];
+		this.components.forEach((value, key) => {
+			components.push(...value.map(c => c.clone()));
+		});
+		entity.addComponents(components);
+		return entity;
 	}
 
 	/*
