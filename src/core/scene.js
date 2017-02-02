@@ -60,12 +60,6 @@ export default class Scene extends Serializable {
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		this.dispatch('onDraw', this.context);
 	}
-	spawn(prototype, position) {
-		assert(prototype.threeLetterType === 'prt');
-		let entity = prototype.createEntity(this);
-		this.addChild(entity);
-		return entity;
-	}
 	isInInitialState() {
 		return !this.playing && this.time === 0;
 	}
@@ -90,7 +84,12 @@ export default class Scene extends Serializable {
 		
 		this._prevUpdate = 0.001*performance.now();
 		this.playing = true;
+		
 		this.requestAnimFrame();
+		
+		
+		if (this.time === 0)
+			this.dispatch('onStart');
 		
 		/*
 		let player = game.findChild('prt', p => p.name === 'Player', true);

@@ -223,6 +223,7 @@ class SceneModule extends Module {
 		if (scene) {
 			if (!scene.playing) {
 				scene.draw();
+				scene.dispatch('onDrawHelper', scene.context);
 				sceneEdit.drawPositionHelpers(scene.getChildren('ent'));
 				sceneEdit.drawEntityUnderMouse(this.entityUnderMouse);
 				sceneEdit.drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);

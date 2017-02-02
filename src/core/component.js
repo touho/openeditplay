@@ -30,7 +30,7 @@ export class Component extends PropertyOwner {
 
 		this.forEachChild('com', c => c._preInit());
 		
-		['onUpdate', 'onDraw'].forEach(funcName => {
+		['onUpdate', 'onDraw', 'onDrawHelper', 'onStart'].forEach(funcName => {
 			if (typeof this[funcName] === 'function') {
 				// console.log('listen ' + funcName);
 				this._listenRemoveFunctions.push(this.scene.listen(funcName, (...args) => this[funcName](...args)));

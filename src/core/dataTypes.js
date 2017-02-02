@@ -1,8 +1,9 @@
 import assert from '../assert';
 import { createDataType, dataType } from './propertyType';
 
-function isValidFloat(x) {
-	return !isNaN(x) && x !== Infinity && x !== -Infinity;
+function validateFloat(val) {
+	if (isNaN(val) || val === Infinity || val === -Infinity)
+		throw new Error('Invalid float: ' + val);
 }
 
 const FLOAT_JSON_PRECISION = 4;
@@ -13,26 +14,24 @@ dataType.float = createDataType({
 	validators: {
 		default(x) {
 			x = parseFloat(x);
-			assert(isValidFloat(x), 'invalid float: ' + x);
+			validateFloat(x);
 			return x;
 		},
 		// PropertyType.float.range(min, max)
 		range(x, min, max) {
 			x = parseFloat(x);
-			assert(isValidFloat(x), 'invalid float: ' + x);
+			validateFloat(x);
 			return Math.min(max, Math.max(min, x));
 		},
 		modulo(x, min, max) {
 			x = parseFloat(x);
-			assert(isValidFloat(x), 'invalid float: ' + x);
+			validateFloat(x);
 			
 			let range = max - min;
 			
 			if (x < min) {
-				console.log(`${x} < ${min} so add ${(((min - x) / range | 0) + 1) * range}`);
 				x += (((min - x) / range | 0) + 1) * range;
 			} else if (x > max - FLOAT_DELTA) {
-				console.log(`${x} > ${max} so remove ${(((x - max) / range | 0) + 1) * range}`);
 				x -= (((x - max) / range | 0) + 1) * range;
 			}
 			
@@ -47,13 +46,13 @@ dataType.int = createDataType({
 	validators: {
 		default(x) {
 			x = parseInt(x);
-			assert(isValidFloat(x), 'invalid int: ' + x);
+			validateFloat(x);
 			return x;
 		},
 		// PropertyType.float.range(min, max)
 		range(x, min, max) {
 			x = parseInt(x);
-			assert(isValidFloat(x), 'invalid int: ' + x);
+			validateFloat(x);
 			return Math.min(max, Math.max(min, x));
 		}
 	},
@@ -65,10 +64,12 @@ dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default(vec) {
-			assert(vec instanceof Victor);
+			if (!(vec instanceof Victor))
+				throw new Error();
 			vec.x = parseFloat(vec.x);
 			vec.y = parseFloat(vec.y);
-			assert(isValidFloat(vec.x) && isValidFloat(vec.y));
+			validateFloat(vec.x);
+			validateFloat(vec.y);
 			return vec;
 		}
 	},
@@ -93,7 +94,8 @@ dataType.bool = createDataType({
 	name: 'bool',
 	validators: {
 		default(x) {
-			assert(typeof x === 'boolean');
+			if (typeof x !== 'boolean')
+				throw new Error();
 			return x;
 		}
 	},
@@ -108,9 +110,12 @@ dataType.enum = createDataType({
 			assert(false, `also specify enum values with Prop.enum.values('value1', 'value2', ...)`);
 		},
 		values(x, ...values) {
-			assert(Array.isArray(values));
-			assert(typeof x === 'string');
-			assert(values.indexOf(x) >= 0, 'value not in enum');
+			if (!Array.isArray(values))
+				throw new Error();
+			if (typeof x !== 'string')
+				throw new Error('val should be string');
+			if (values.indexOf(x) < 0)
+				throw new Error('value not in enum');
 			return x;
 		}
 	},

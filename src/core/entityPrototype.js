@@ -4,6 +4,7 @@ import Serializable from './serializable';
 import { getSerializable } from './serializableManager';
 import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
+import { scene } from './scene';
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
@@ -69,6 +70,17 @@ export default class EntityPrototype extends Prototype {
 
 		Transform.getChildren('prp').forEach(handleProperty);
 		return json;
+	}
+	spawnEntityToScene(position) {
+		if (!scene)
+			return;
+		
+		if (position) {
+			this.getTransform().getPropertyOrCreate('position').value = position;
+		}
+		
+		let entity = this.createEntity();
+		scene.addChild(entity);
 	}
 }
 Object.defineProperty(EntityPrototype.prototype, 'position', {
