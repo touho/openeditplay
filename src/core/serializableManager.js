@@ -4,8 +4,10 @@ import Serializable from './serializable';
 export let serializables = {};
 window.serializables = serializables;
 
+let DEBUG_CHANGES = 0;
+
 export function addSerializable(serializable) {
-	if (serializables[serializable.id]) throw new Error('Serializable id clash!');
+	assert(serializables[serializable.id] === undefined, 'Serializable id clash');
 	serializables[serializable.id] = serializable;
 }
 
@@ -27,7 +29,7 @@ export function removeSerializable(id) {
 // reference parameters are not sent over net. they are helpers in local game instance
 export let changeType = {
 	addSerializableToTree: 'a', // parentId, reference
-	setPropertyValue: 's', // id, value, 
+	setPropertyValue: 's', // id, value
 	deleteSerializable: 'd', // id
 	move: 'm', // id, parentId
 	deleteAllChildren: 'c', // id
@@ -43,15 +45,33 @@ Object.keys(keyToShortKey).forEach(k => {
 	shortKeyToKey[keyToShortKey[k]] = k;
 });
 
+let origin;
+let previousVisualOrigin;
+function resetOrigin() {
+	origin = null;
+}
+export function setChangeOrigin(_origin) {
+	if (_origin !== origin) {
+		origin = _origin;
+		if (DEBUG_CHANGES && _origin && _origin !== previousVisualOrigin) {
+			console.log('origin', previousVisualOrigin);
+			previousVisualOrigin = _origin;
+		}
+		setTimeout(resetOrigin);
+	}
+}
+
 let externalChange = false;
 export function addChange(type, reference) {
+	assert(origin, 'Change without origin!');
 	if (!reference.id) return;
 	
 	let change = {
 		type,
 		reference,
 		id: reference.id,
-		external: externalChange
+		external: externalChange,
+		origin
 	};
 	if (type === changeType.setPropertyValue) {
 		change.value = reference._value;
@@ -61,11 +81,15 @@ export function addChange(type, reference) {
 		change.parent = reference._parent;
 		delete change.id;
 	}
+	
+	if (DEBUG_CHANGES)
+		console.log('change', change);
+	
 	listeners.forEach(l => l(change));
-	console.log('change', change);
 }
 
 export function executeExternal(callback) {
+	setChangeOrigin('external');
 	if (externalChange) return callback();
 	externalChange = true;
 	callback();

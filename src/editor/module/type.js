@@ -1,13 +1,9 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
 import PropertyEditor from '../views/propertyEditor';
+import { editor } from '../editor';
 
-let propertyTypeToEditorType = {
-	'float': 'number',
-	'string': 'text'
-};
-
-class PropertyModule extends Module {
+class Type extends Module {
 	constructor() {
 		super(
 			this.propertyEditor = new PropertyEditor()
@@ -16,7 +12,13 @@ class PropertyModule extends Module {
 		this.name = 'Type';
 	}
 	update() {
-		this.propertyEditor.update();
+		if (editor.selection.type === 'prt') {
+			this.propertyEditor.update(editor.selection.items, editor.selection.type);
+		} else if (editor.selection.type === 'ent') {
+			this.propertyEditor.update(editor.selection.items.map(e => e.prototype.prototype), editor.selection.type);
+		} else {
+			return false; // hide
+		}
 	}
 	activate(command, parameter) {
 		if (command === 'focusOnProperty') {
@@ -27,4 +29,4 @@ class PropertyModule extends Module {
 	}
 }
 
-Module.register(PropertyModule, 'right');
+Module.register(Type, 'right');

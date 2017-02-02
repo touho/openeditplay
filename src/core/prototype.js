@@ -11,6 +11,21 @@ let propertyTypes = [
 ];
 
 export default class Prototype extends PropertyOwner {
+	constructor() {
+		super(...arguments);
+		
+		this.previouslyCreatedEntity = null;
+	}
+	
+	addChild(child) {
+		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
+			assert(this.findChild('cda', cda => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
+		super.addChild(child);
+	}
+	getParentPrototype() {
+		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
+	}
+	
 	/*
 	Returns JSON:
 	[
@@ -36,19 +51,15 @@ export default class Prototype extends PropertyOwner {
 		 }
 	]
 	 */
-	addChild(child) {
-		if (child.threeLetterType === 'cda')
-			assert(this.findChild('cda', cda => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
-		super.addChild(child);
-	}
 	getInheritedComponentDatas() {
 		let originalPrototype = this;
 		
 		function getDataFromPrototype(prototype, _depth = 0) {
 			let data;
 			
-			if (prototype._parent && prototype._parent.threeLetterType === 'prt')
-				data = getDataFromPrototype(prototype._parent, _depth + 1);
+			let parentPrototype = prototype.getParentPrototype();
+			if (parentPrototype)
+				data = getDataFromPrototype(parentPrototype, _depth + 1);
 			else
 				data = {}; // Top level
 			
@@ -125,10 +136,33 @@ export default class Prototype extends PropertyOwner {
 		let child = this.findChild('cda', componentData => componentData.componentId === componentId);
 		if (child)
 			return child;
-		if (this._parent)
-			return this._parent.findComponentDataByComponentId(componentId, alsoFindFromParents);
-		else
-			return null;
+		if (alsoFindFromParents) {
+			let parent = this.getParentPrototype();
+			if (parent)
+				return parent.findComponentDataByComponentId(componentId, alsoFindFromParents);
+		}
+		return null;
+	}
+	
+	getOwnComponentDataOrInherit(componentId) {
+		let componentData = this.findComponentDataByComponentId(componentId, false);
+		if (!componentData) {
+			let inheritedComponentData = this.findComponentDataByComponentId(componentId, true);
+			if (!inheritedComponentData)
+				return null;
+			
+			componentData = new ComponentData(inheritedComponentData.name, false, componentId);
+			this.addChild(componentData);
+		}
+		return componentData
+	}
+	
+	findOwnProperty(componentId, propertyName) {
+		let componentData = this.findComponentDataByComponentId(componentId);
+		if (componentData) {
+			return componentData.getProperty(propertyName);
+		}
+		return null;
 	}
 	
 	createEntity() {
@@ -137,12 +171,15 @@ export default class Prototype extends PropertyOwner {
 		let components = [];
 		inheritedComponentDatas.forEach(d => {
 			let component = new d.componentClass;
+			component._componentId = d.componentId;
 			let properties = d.properties.map(p => p.clone());
 			component.initWithChildren(properties);
 			components.push(component);
 		});
 		entity.addComponents(components);
 		entity.prototype = this;
+		
+		this.previouslyCreatedEntity = entity;
 		return entity;
 	}
 }

@@ -34,6 +34,7 @@ export default class ModuleContainer {
 			let module = new moduleClass(editor);
 			module.el.classList.add('module-' + module.id);
 			this.modules.push(module);
+			this.el.classList.remove('noModules');
 			if (this.modules.length !== 1) {
 				module._hide();
 			}
@@ -49,7 +50,13 @@ export default class ModuleContainer {
 		this._updateTabs();
 	}
 	update() {
-		this.modules.forEach(m => m.update());
+		this.modules.forEach(m => {
+			if (m.update() !== false) {
+				this._enableModule(m);
+			} else
+				this._disableModule(m);
+		});
+		this._updateTabs();
 	}
 	_updateTabs() {
 		if (!this.tabs) return;
@@ -60,28 +67,42 @@ export default class ModuleContainer {
 			this.tabs.el.style.display = 'none';
 		else
 			this.tabs.el.style.display = 'block';
+		
+		let noModules = !this.modules.find(m => m._enabled);
+		this.el.classList.toggle('noModules', noModules);
 	}
 	_activateModule(module, args) {
-		let idx = this.modules.indexOf(module);
 		this.modules.forEach(m => {
 			if (m !== module) {
 				m._hide();
 			}
 		});
+		module._enabled = true;
 		module.activate(...args);
 		module._show();
 		this._updateTabs();
-		
-		/*
-		this.modules.splice(idx, 1);
-		this.modules.unshift(module);
-		this._updateTabs();
-		for (let i = 1; i < this.modules.length; i++) {
-			this.modules[i].el.style.display = 'none';
+	}
+	_enableModule(module) {
+		if (!module._enabled) {
+			module._enabled = true;
+			let selectedModule = this.modules.find(m => m._selected);
+			if (!selectedModule)
+				this._activateModule(module);
+			this._updateTabs();
 		}
-		module.activate(...args);
-		module.el.style.display = 'block';
-		*/
+	}
+	_disableModule(module) {
+		if (module._enabled) {
+			module._enabled = false;
+			if (module._selected) {
+				module._selected = false;
+				let enabledModule = this.modules.find(m => m._enabled);
+				if (enabledModule)
+					this._activateModule(enabledModule);
+			}
+			module._hide();
+			this._updateTabs();
+		}
 	}
 }
 
@@ -96,6 +117,7 @@ class ModuleTab {
 	update(module) {
 		this.module = module;
 		this.el.textContent = module.name;
-		this.el.classList.toggle('active', module._visible);
+		this.el.classList.toggle('moduleSelected', module._selected);
+		this.el.classList.toggle('moduleEnabled', module._enabled);
 	}
 }

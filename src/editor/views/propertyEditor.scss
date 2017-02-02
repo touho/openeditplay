@@ -1,4 +1,5 @@
-div.propertyEditor div.container[type='icd'] {
+div.propertyEditor div.container[type='icd'],
+div.propertyEditor div.container[type='com'] {
   border: 1px solid $editor-effect-color;
   box-shadow: 0 0 13px 0px black;
   border-right: none;
@@ -9,12 +10,15 @@ div.propertyEditor div.container[type='icd'] {
   border-bottom-left-radius: 3px;
   transition: opacity 0.5s;
 }
-div.propertyEditor div.container.packed[type='icd'] {
+div.propertyEditor div.container.packed[type='icd'],
+div.propertyEditor div.container.packed[type='com'] {
   opacity: 0.6;
   filter: saturate(0.8);
 }
 
-div.propertyEditor div.container[type='icd'] .containerContent {
+
+div.propertyEditor div.container[type='icd'] .containerContent,
+div.propertyEditor div.container[type='com'] .containerContent{
   overflow: auto;
   height: auto;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(1, 0, 1, 1);
@@ -24,6 +28,10 @@ div.propertyEditor div.container.packed .containerContent {
   opacity: 0;
   max-height: 0;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(0, 1, 1, 1);
+}
+
+div.propertyEditor div.container {
+  position: relative;
 }
 
 .propertyEditor {
@@ -83,7 +91,8 @@ td.propertyContent {
 .property:not(.ownProperty) {
   opacity: 0.65;
 }
-.container[type='icd'] .property.ownProperty .propertyContent {
+.container[type='icd'] .property.ownProperty .propertyContent,
+.container[type='com'] .property.ownProperty .propertyContent{
   padding-right: 30px;
 }
 .property .resetButton {
@@ -94,4 +103,11 @@ td.propertyContent {
 }
 .property .resetButton:hover {
   color: #ff6969;
+}
+
+.logButton {
+  position: absolute;
+  top: 5px;
+  right: 2px;
+  opacity: 0.3;
 }

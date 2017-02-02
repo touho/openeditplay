@@ -20,8 +20,12 @@ Component.register({
 				y = this.Transform.position.y - this.size.y/2 * this.Transform.scale.y,
 				w = this.size.x * this.Transform.scale.x,
 				h = this.size.y * this.Transform.scale.y;
+			context.save();
 			context.fillStyle = this.style;
-			context.fillRect(x, y, w, h);
+			context.translate(x+w/2, y+h/2);
+			context.rotate(this.Transform.rotation);
+			context.fillRect(-w/2, -h/2, w, h);
+			context.restore();
 		}
 	}
 });

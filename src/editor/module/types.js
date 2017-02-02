@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import events from '../events';
 import Prototype from '../../core/prototype';
-import { getSerializable, changeType } from '../../core/serializableManager';
+import { getSerializable, changeType, setChangeOrigin } from '../../core/serializableManager';
 import assert from '../../assert';
 import { editor } from '../editor';
 
@@ -18,6 +18,7 @@ class Types extends Module {
 		this.name = 'Types';
 
 		this.addButton.onclick = () => {
+			setChangeOrigin(this);
 			let prototype = Prototype.create(' New type');
 			editor.game.addChild(prototype);
 			editor.select(prototype);
@@ -160,6 +161,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 		let nodeObjects = nodes.map(getSerializable);
 		nodeObjects.forEach(assert);
 		nodeObjects.forEach(prototype => {
+			setChangeOrigin(jstree);
 			prototype.move(newParent);
 		});
 		

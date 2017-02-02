@@ -11,7 +11,7 @@ let propertyTypes = [
 export let game = null; // only one game at the time
 
 export default class Game extends PropertyOwner {
-	constructor() {
+	constructor(predefinedId) {
 		if (game) {
 			try {
 				game.delete();
@@ -21,7 +21,18 @@ export default class Game extends PropertyOwner {
 		}
 		game = this;
 		
+		if (predefinedId)
+			console.log('game import');
+		else
+			console.log('game created');
+		
 		super(...arguments);
+	}
+	delete() {
+		if (game === this)
+			game = null;
+		super.delete();
+		console.log('game.delete');
 	}
 }
 PropertyOwner.defineProperties(Game, propertyTypes);

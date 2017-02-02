@@ -5,9 +5,11 @@ import ComponentData from '../../core/componentData';
 import assert from '../../assert';
 import editors from './propertyEditorTypes';
 import ComponentAdder from './popup/componentAdder';
-import { changeType } from '../../core/serializableManager';
-
+import { changeType, setChangeOrigin } from '../../core/serializableManager';
+import { Prop } from '../../core/component';
 import { setOption, getOption, editor } from '../editor';
+import { scene } from '../../core/scene';
+import * as sceneEdit from '../util/sceneEdit';
 
 /*
 Reference: Unbounce
@@ -18,14 +20,23 @@ export default class PropertyEditor {
 	constructor() {
 		this.el = el('div.propertyEditor');
 		this.dirty = true;
+		this.editingProperty = false;
 
 		// Change in serializable tree
 		events.listen('change', change => {
 			if (change.type === 'editorSelection') {
 				this.dirty = true;
 			} else if (change.type === changeType.setPropertyValue) {
-				if (this.item && this.item.hasDescendant(change.reference))
-					this.dirty = true;
+				if (this.item && this.item.hasDescendant(change.reference)) {
+					if (change.origin === this) {
+						if (this.item.threeLetterType === 'ent') {
+							this.item.dispatch('changedInEditor');
+							sceneEdit.entityModifiedInEditor(this.item, change);
+						}
+					} else {
+						this.dirty = true;
+					}
+				}
 			} else if (change.type === changeType.addSerializableToTree) {
 				if (change.parent === this.item || this.item && this.item.hasDescendant(change.parent))
 					this.dirty = true;
@@ -40,8 +51,12 @@ export default class PropertyEditor {
 			}
 		});
 		
+		listen(this, 'makingChanges', () => {
+			setChangeOrigin(this);
+		});
+		
 		// Change in this editor
-		listen(this, 'propertyEditorChange', () => {
+		listen(this, 'markPropertyEditorDirty', () => {
 			this.dirty = true;
 		});
 		
@@ -49,12 +64,14 @@ export default class PropertyEditor {
 			editor.select(items, this);
 		});
 	}
-	update() {
+	update(items, threeLetterType) {
 		if (!this.dirty) return;
 		$(this.el).empty();
-		if (editor.selection.type === 'prt' && editor.selection.items.length === 1) {
-			this.item = editor.selection.items[0];
-			let prototypeEditor = new Container(this);
+		if (!items) return;
+		
+		if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1) {
+			this.item = items[0];
+			let prototypeEditor = new Container();
 			prototypeEditor.update(this.item);
 			mount(this.el, prototypeEditor);
 		}
@@ -66,10 +83,22 @@ class Container {
 	constructor() {
 		this.el = el('div.container',
 			this.title = el('div.containerTitle'),
-			el('div.containerContent',
+			this.content = el('div.containerContent',
 				this.properties = list('table', Property, null, this.propertyEditor),
 				this.containers = list('div', Container, null, this.propertyEditor),
-				this.controls = el('div')
+				this.controls = el('div'),
+				el('i.button.logButton.fa.fa-eye', {
+					onclick: () => {
+						console.log(this.item);
+						window.item = this.item;
+						console.log(`you can use variable 'item'`);
+						let element = el('span', ' logged to console');
+						mount(this.title, element);
+						setTimeout(() => {
+							this.title.removeChild(element);
+						}, 500);
+					}
+				})
 			)
 		);
 		this.titleClickedCallback = null;
@@ -82,7 +111,7 @@ class Container {
 			// this.item is inheritedComponentData
 			let proto = this.item.generatedForPrototype;
 			proto.createAndAddPropertyForComponentData(this.item, property.name, property.value);
-			dispatch(this, 'propertyEditorChange');
+			dispatch(this, 'markPropertyEditorDirty');
 		});
 	}
 	update(state) {
@@ -91,8 +120,11 @@ class Container {
 		this.controls.innerHTML = '';
 		this.titleClickedCallback = null;
 
-		if (this.item.threeLetterType === 'prt') this.updatePrototype();
-		else if (this.item.threeLetterType === 'icd') this.updateInheritedComponentData();
+		if (this.item.threeLetterType === 'icd') this.updateInheritedComponentData();
+		else if (this.item.threeLetterType === 'ent') this.updateEntity();
+		else if (this.item.threeLetterType === 'com') this.updateComponent();
+		else if (this.item.threeLetterType === 'prt') this.updatePrototype();
+		else if (this.item.threeLetterType === 'epr') this.updateEntityPrototype();
 	}
 	updatePrototype() {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
@@ -104,6 +136,8 @@ class Container {
 			}
 		}));
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone type', { onclick: () => {
+			dispatch(this, 'makingChanges');
+			
 			let clone = this.item.clone();
 
 			let endingNumberMatch = clone.name.match(/\d+$/); // ending number
@@ -118,19 +152,24 @@ class Container {
 			dispatch(this, 'propertyEditorSelect', clone);
 		} }));
 		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete type', { onclick: () => {
+			dispatch(this, 'makingChanges');
 			this.item.delete();
 		} }));
 	}
+	updateEntityPrototype() {
+		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
+		this.containers.update(inheritedComponentDatas);
+		this.properties.update(this.item.getChildren('prp'));
+		mount(this.controls, el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+			onclick: () => {
+				new ComponentAdder(this.item);
+			}
+		}));
+	}
 	updateInheritedComponentData() {
-		this.title.textContent = this.item.componentClass.componentName;
-		let icon = el('i.icon.fa.' + this.item.componentClass.icon);
-		mount(this.title, icon);
-		this.title.style.color = this.item.componentClass.color;
-		this.title.setAttribute('title', this.item.componentClass.description);
-		this.el.style['border-color'] = this.item.componentClass.color;
+		this.updateComponentKindOfThing(this.item.componentClass);
 		
 		let packId = 'pack' + this.item.generatedForPrototype.id + this.item.componentId;
-		
 		let packedStatus = getOption(packId);
 		if (packedStatus === 'true') {
 			this.el.classList.add('packed');
@@ -156,25 +195,32 @@ class Container {
 		if (!this.item.ownComponentData || parentComponentData) {
 			mount(this.controls, el('button.button', 'Show parent', {
 				onclick: () => {
-					let componentData = this.item.generatedForPrototype.getParent().findComponentDataByComponentId(this.item.componentId, true);
+					let componentData = this.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(this.item.componentId, true);
 					dispatch(this, 'propertyEditorSelect', componentData.getParent());
-					dispatch(this, 'propertyEditorChange');
+					dispatch(this, 'markPropertyEditorDirty');
 				}
 			}));
 		}
-		if (this.item.ownComponentData) {
+
+		if (this.item.componentClass.componentName === 'Transform'
+			&& this.item.generatedForPrototype.threeLetterType === 'epr')
+			return;
+		
+		if (this.item.componentClass.allowMultiple) {
 			mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 				onclick: () => {
+					dispatch(this, 'makingChanges');
 					let clone = this.item.ownComponentData.clone();
 					this.item.generatedForPrototype.addChild(clone);
-					dispatch(this, 'propertyEditorChange');
+					dispatch(this, 'markPropertyEditorDirty');
 				}
 			}));
 		}
 		if (hasOwnProperties) {
 			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
 				onclick: () => {
-					dispatch(this, 'propertyEditorChange', 'fromReset');
+					dispatch(this, 'makingChanges');
+					dispatch(this, 'markPropertyEditorDirty', 'fromReset');
 					if (this.item.ownComponentData.getParentComponentData()) {
 						this.item.ownComponentData.delete();
 					} else {
@@ -186,11 +232,30 @@ class Container {
 		if (this.item.ownComponentData && !parentComponentData) {
 			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
 				onclick: () => {
-					dispatch(this, 'propertyEditorChange');
+					dispatch(this, 'makingChanges');
+					dispatch(this, 'markPropertyEditorDirty');
 					this.item.ownComponentData.delete();
 				}
 			}));
 		}
+	}
+	updateEntity() {
+		this.title.textContent = this.item.prototype.name;
+		this.containers.update(this.item.getListOfAllComponents());
+		// this.properties.update(this.item.getChildren('prp'));
+	}
+	updateComponent() {
+		this.updateComponentKindOfThing(this.item.constructor);
+		this.properties.update(this.item.getChildren('prp'));
+	}
+	updateComponentKindOfThing(componentClass) {
+		this.title.textContent = componentClass.componentName;
+
+		let icon = el('i.icon.fa.' + componentClass.icon);
+		mount(this.title, icon);
+		this.title.style.color = componentClass.color;
+		this.title.setAttribute('title', componentClass.description);
+		this.el.style['border-color'] = componentClass.color;
 	}
 }
 
@@ -209,11 +274,11 @@ class Property {
 				componentData.delete();
 		}
 		
-		dispatch(this, 'propertyEditorChange');
+		dispatch(this, 'markPropertyEditorDirty');
 	}
 	oninput(val) {
 		try {
-			this.property.propertyType.validator.validate(val);
+			this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
 			this.el.removeAttribute('error');
 		} catch(e) {
 			this.el.setAttribute('error', 'true');
@@ -222,7 +287,8 @@ class Property {
 	onchange(val) {
 		let originalValue = this.property.value;
 		try {
-			this.property.value = this.property.propertyType.validator.validate(val);
+			dispatch(this, 'makingChanges');
+			this.property.value = this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
 			if (!this.property.id) {
 				dispatch(this, 'propertyInherited', this.property);
 			}
@@ -230,8 +296,21 @@ class Property {
 			// console.log('Error while changing property value', this.property, this.input.value);
 			this.property.value = originalValue;
 		}
-		this.setValue(this.property.value);
+		this.setValueFromProperty();
 		this.el.removeAttribute('error');
+	}
+	setValueFromProperty() {
+		let val = this.property.value;
+		console.log('mo');
+		if (this.property.propertyType.getFlag(Prop.flagDegreesInEditor))
+			val = +(val * 180 / Math.PI).toFixed(1);
+		this.setValue(val);
+	}
+	convertFromInputToPropertyValue(val) {
+		if (this.property.propertyType.getFlag(Prop.flagDegreesInEditor))
+			return val * Math.PI / 180;
+		else
+			return val;
 	}
 	update(property) {
 		this.property = property;
@@ -242,18 +321,24 @@ class Property {
 		this.content.innerHTML = '';
 		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
 		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), property.propertyType);
-		this.setValue(this.property.value);
+		this.setValueFromProperty();
 		this.el.classList.toggle('ownProperty', !!this.property.id);
 		if (this.property.id) {
 			let parent = this.property.getParent();
-			if (parent.threeLetterType === 'cda') {
+			if (parent.threeLetterType === 'cda'
+				&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
+				// Can not delete anything from entity prototype transform 
+			{
 				this.name.style.color = parent.componentClass.color;
 
 				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
 					onclick: () => {
+						dispatch(this, 'makingChanges');
 						this.reset();
 					}
 				}));
+			} else if (parent.threeLetterType === 'com') {
+				this.name.style.color = parent.constructor.color;
 			}
 		} else
 			this.name.style.color = 'inherit';

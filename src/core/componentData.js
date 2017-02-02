@@ -23,9 +23,10 @@ export default class ComponentData extends Serializable {
 			}
 		}
 		super.addChild(child);
+		return this;
 	};
 	clone() {
-		let obj = new ComponentData(this.name, false, this.componentId);
+		let obj = new ComponentData(this.name);
 		let children = [];
 		this.forEachChild(null, child => {
 			children.push(child.clone());
@@ -73,15 +74,30 @@ export default class ComponentData extends Serializable {
 	}
 	getParentComponentData() {
 		if (!this._parent) return null;
-		let parentPrototype = this._parent.getParent();
+		let parentPrototype = this._parent.getParentPrototype();
 		while (parentPrototype) {
 			let parentComponentData = parentPrototype.findChild('cda', componentData => componentData.componentId === this.componentId);
 			if (parentComponentData)
 				return parentComponentData;
 			else
-				parentPrototype = parentPrototype.getParent();
+				parentPrototype = parentPrototype.getParentPrototype();
 		}
 		return null;
+	}
+	getPropertyOrCreate(name) {
+		let property = this.findChild('prp', prp => prp.name === name);
+		if (!property) {
+			property = this.componentClass._propertyTypesByName[name].createProperty();
+			this.addChild(property);
+		}
+		return property;
+	}
+	getProperty(name) {
+		return this.findChild('prp', prp => prp.name === name);
+	}
+	setValue(propertyName, value) {
+		this.getPropertyOrCreate(propertyName).value = value;
+		return this;
 	}
 	getValue(name) {
 		let property = this.properties[name];
@@ -95,8 +111,6 @@ export default class ComponentData extends Serializable {
 			|| componentClasses.get(this.componentClassName).propertyTypeMap.get(name).initialValue
 			|| assert(false, 'Value of this name does not exist in this');
 		if (property) return property.value;
-		
-		
 		
 		// return property && property.value || this.componentClass.propertyTypes.;
 		return this.properties[name] || this.parent && this.parent.getProperty(name) || null;

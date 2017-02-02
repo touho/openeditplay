@@ -14,7 +14,7 @@ export default class Entity extends Serializable {
 
 	// Get the first component of given name
 	getComponent(name) {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		let components = this.components.get(name);
 		if (components !== undefined)
 			return components[0];
@@ -24,8 +24,16 @@ export default class Entity extends Serializable {
 
 	// Get all components with given name
 	getComponents(name) {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		return this.components.get(name) || [];
+	}
+	
+	getListOfAllComponents() {
+		let components = [];
+		this.components.forEach((value, key) => {
+			components.push(...value);
+		});
+		return components;
 	}
 	
 	clone() {
@@ -46,13 +54,14 @@ export default class Entity extends Serializable {
 	Initializes components after all components are added.
 	*/
 	addComponents(components) {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		assert(Array.isArray(components), 'Parameter is not an array.');
 
 		for (let i = 0; i < components.length; i++) {
 			let componentList = this.components.get(components[i]._name) || this.components.set(components[i]._name, []).get(components[i]._name);
 			componentList.push(components[i]);
 			components[i].entity = this;
+			components[i]._parent = this;
 		}
 		
 		if (!this.sleeping)
@@ -74,7 +83,7 @@ export default class Entity extends Serializable {
 			components[i].delete();
 	}
 	sleep() {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		if (this.sleeping) return false;
 		
 		this.components.forEach((value, key) => Entity.makeComponentsSleep(value));
@@ -83,7 +92,7 @@ export default class Entity extends Serializable {
 		return true;
 	}
 	wakeUp() {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) return false;
 
 		this.components.forEach((value, key) => Entity.initComponents(value));
@@ -92,14 +101,23 @@ export default class Entity extends Serializable {
 		return true;
 	}
 	delete() {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		this.sleep();
 		super.delete();
 		this.components.forEach((value, key) => Entity.deleteComponents(value));
 		this.components.clear();
 	}
+	setInTreeStatus(isInTree) {
+		if (this._isInTree === isInTree)
+			return;
+
+		this._isInTree = isInTree;
+		this.components.forEach((value, key) => {
+			value.forEach(component => component.setInTreeStatus(isInTree));
+		});
+	}
 	toJSON() {
-		assert(this.alive, ALIVE_ERROR);
+		assert(this._alive, ALIVE_ERROR);
 		
 		let components = [];
 		this.components.forEach(compArray => {
@@ -109,14 +127,24 @@ export default class Entity extends Serializable {
 		});
 		
 		return Object.assign(super.toJSON(), {
-			comp: components
+			comp: components,
+			proto: this.prototype.id
 		});
 	}
 }
+Object.defineProperty(Entity.prototype, 'position', {
+	get() {
+		return this.getComponent('Transform').position;
+	},
+	set(position) {
+		this.getComponent('Transform').position = position;
+	}
+});
 
 Serializable.registerSerializable(Entity, 'ent', json => {
 	console.log('creating entity from json', json);
 	let entity = new Entity(json.id);
+	entity.prototype = getSerializable(json.proto);
 	console.log('created entity from json', entity);
 	if (json.comp) {
 		entity.addComponents(json.comp.map(Serializable.fromJSON));

@@ -3,6 +3,7 @@ import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
 import { list, el } from 'redom';
 import assert from '../../../assert';
+import { setChangeOrigin } from '../../../core/serializableManager';
 
 export default class ComponentAdder extends Popup {
 	constructor(parent, callback) {
@@ -30,7 +31,8 @@ export default class ComponentAdder extends Popup {
 		this.update(components);
 	}
 	addComponentToParent(componentName) {
-		if (this.parent.threeLetterType === 'prt') {
+		setChangeOrigin(this);
+		if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
 			let component = new ComponentData(componentName);
 			this.parent.addChild(component);
 			return component;

@@ -76,13 +76,16 @@ button.button i.fa {
   border-top-right-radius: 5px;
   color: #fae900;
 }
-.moduleTab:not(.active) {
+.moduleTab:not(.moduleSelected) {
   filter: saturate(0);
   /*opacity: 0.5;*/
   background: #2c2c2c;
 }
-.moduleTab.active {
+.moduleTab.moduleSelected {
   opacity: 1;
+}
+.moduleTab:not(.moduleEnabled) {
+  display: none;
 }
 .packButton {
     position: absolute;
@@ -171,12 +174,18 @@ div.center {
 div.moduleContainer.packed {
     border-color: #908f4d;
 }
+div.moduleContainer.noModules {
+    border-color: #333;
+}
 div.moduleContainer.packed:hover {
     cursor: pointer;
 }
 div.moduleContainer.packed > * {
     opacity: 0 !important;
     display: none !important;
+}
+div.moduleContainer.noModules {
+    background: #111;
 }
 .module {
   opacity: 1;
@@ -185,6 +194,7 @@ div.moduleContainer.packed > * {
   height: 100%;
   overflow: auto;
   visibility: visible;
+  position: absolute;
 }
 .module.hidden {
   opacity: 0.0;
@@ -264,6 +274,59 @@ img.logo {
   margin: 0;
   padding: 0
 }
+.module-scene .pauseSignContainer {
+  /*
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  */
+}
+.module-scene.hidePauseButtons .pauseInfo {
+  display: none;
+}
+.module-scene .pauseInfo {
+  -webkit-user-select: none;  /* Chrome all / Safari all */
+  -moz-user-select: none;     /* Firefox all */
+  -ms-user-select: none;      /* IE 10+ */
+  user-select: none;          /* Likely future */
+  cursor: default;
+}
+.module-scene i.pauseInfo {
+  position: absolute;
+  border: 3px solid;
+  padding: 3px 5px;
+  margin: 5px;
+  font-size: 40px;
+  color: rgba(100, 100, 100, 0.4);
+}
+.module-scene .topLeft {
+  top: 0;
+  left: 0;
+}
+.module-scene .topRight {
+  top: 0;
+  right: 0;
+}
+.module-scene .bottomLeft {
+  bottom: 0;
+  left: 0;
+}
+.module-scene .bottomRight {
+  bottom: 0;
+  right: 0;
+}
+.module-scene div.pauseInfo {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  text-align: center;
+  width: 100%;
+  color: rgb(255, 255, 255);
+  text-shadow: 0 0 3px black;
+  opacity: 0.7;
+}
 .jstree-default .jstree-search {
   color: #b1cacb;
   left: 10px;
@@ -290,7 +353,7 @@ img.logo {
   background: #393928;
   color: #fae900;
 }
-div.propertyEditor div.container[type='icd'] {
+div.propertyEditor div.container[type='icd'], div.propertyEditor div.container[type='com'] {
   border: 1px solid #fae900;
   box-shadow: 0 0 13px 0px black;
   border-right: none;
@@ -301,11 +364,11 @@ div.propertyEditor div.container[type='icd'] {
   border-bottom-left-radius: 3px;
   transition: opacity 0.5s;
 }
-div.propertyEditor div.container.packed[type='icd'] {
+div.propertyEditor div.container.packed[type='icd'], div.propertyEditor div.container.packed[type='com'] {
   opacity: 0.6;
   filter: saturate(0.8);
 }
-div.propertyEditor div.container[type='icd'] .containerContent {
+div.propertyEditor div.container[type='icd'] .containerContent, div.propertyEditor div.container[type='com'] .containerContent{
   overflow: auto;
   height: auto;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(1, 0, 1, 1);
@@ -315,6 +378,9 @@ div.propertyEditor div.container.packed .containerContent {
   opacity: 0;
   max-height: 0;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(0, 1, 1, 1);
+}
+div.propertyEditor div.container {
+  position: relative;
 }
 .propertyEditor {
   padding-left: 5px;
@@ -368,7 +434,7 @@ td.propertyContent {
 .property:not(.ownProperty) {
   opacity: 0.65;
 }
-.container[type='icd'] .property.ownProperty .propertyContent {
+.container[type='icd'] .property.ownProperty .propertyContent, .container[type='com'] .property.ownProperty .propertyContent{
   padding-right: 30px;
 }
 .property .resetButton {
@@ -379,6 +445,12 @@ td.propertyContent {
 }
 .property .resetButton:hover {
   color: #ff6969;
+}
+.logButton {
+  position: absolute;
+  top: 5px;
+  right: 2px;
+  opacity: 0.3;
 }
 .propertyEditor .property input {
   background: #272727;

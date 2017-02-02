@@ -1,13 +1,14 @@
 import assert from '../assert';
-import { addDataType } from './propertyType';
+import { createDataType, dataType } from './propertyType';
 
 function isValidFloat(x) {
 	return !isNaN(x) && x !== Infinity && x !== -Infinity;
 }
 
 const FLOAT_JSON_PRECISION = 4;
+const FLOAT_DELTA = 0.0000001;
 
-addDataType({
+dataType.float = createDataType({
 	name: 'float',
 	validators: {
 		default(x) {
@@ -20,12 +21,28 @@ addDataType({
 			x = parseFloat(x);
 			assert(isValidFloat(x), 'invalid float: ' + x);
 			return Math.min(max, Math.max(min, x));
+		},
+		modulo(x, min, max) {
+			x = parseFloat(x);
+			assert(isValidFloat(x), 'invalid float: ' + x);
+			
+			let range = max - min;
+			
+			if (x < min) {
+				console.log(`${x} < ${min} so add ${(((min - x) / range | 0) + 1) * range}`);
+				x += (((min - x) / range | 0) + 1) * range;
+			} else if (x > max - FLOAT_DELTA) {
+				console.log(`${x} > ${max} so remove ${(((x - max) / range | 0) + 1) * range}`);
+				x -= (((x - max) / range | 0) + 1) * range;
+			}
+			
+			return x;
 		}
 	},
 	toJSON: x => +x.toFixed(FLOAT_JSON_PRECISION),
 	fromJSON: x => x
 });
-addDataType({
+dataType.int = createDataType({
 	name: 'int',
 	validators: {
 		default(x) {
@@ -44,7 +61,7 @@ addDataType({
 	fromJSON: x => x
 });
 
-addDataType({
+dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default(vec) {
@@ -63,7 +80,7 @@ addDataType({
 	clone: vec => vec.clone()
 });
 
-addDataType({
+dataType.string = createDataType({
 	name: 'string',
 	validators: {
 		default: x => x ? String(x) : ''
@@ -72,7 +89,7 @@ addDataType({
 	fromJSON: x => x
 });
 
-addDataType({
+dataType.bool = createDataType({
 	name: 'bool',
 	validators: {
 		default(x) {
@@ -84,7 +101,7 @@ addDataType({
 	fromJSON: x => !!x
 });
 
-addDataType({
+dataType.enum = createDataType({
 	name: 'enum',
 	validators: {
 		default() {

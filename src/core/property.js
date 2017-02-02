@@ -57,7 +57,7 @@ Object.defineProperty(Property.prototype, 'value', {
 	set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
 		
-		if (this._parent)
+		if (this._isInTree)
 			addChange(changeType.setPropertyValue, this);
 	},
 	get() {
@@ -71,4 +71,10 @@ Serializable.registerSerializable(Property, 'prp', json => {
 		predefinedId: json.id,
 		name: json.n
 	});
+});
+
+Object.defineProperty(Property.prototype, 'debug', {
+	get() {
+		return `prp ${this.name}=${this.value}`;
+	}
 });

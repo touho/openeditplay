@@ -20,24 +20,29 @@ export default class Serializable {
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		this._children = new Map(); // threeLetterType -> array
 		this._listeners = [];
-		
-		this.id = predefinedId || createStringId(this.threeLetterType);
+		this._isInTree = this.isRoot;
+		if (predefinedId) {
+			this._state |= Serializable.STATE_PREDEFINEDID;
+			this.id = predefinedId;
+		} else {
+			this.id = createStringId(this.threeLetterType);
+		}
 		if (this.id.startsWith('?'))
 			throw new Error('?');
 		serializableManager.addSerializable(this);
+		this._state |= Serializable.STATE_CONSTRUCTOR;
 	}
 	delete() {
 		if (this._parent) {
 			this._parent.deleteChild(this);
 			return;
 		}
-		// changes.push({
-		// 	type: ''
-		// });
 		this.deleteChildren();
-		this.alive = false;
+		this._alive = false;
+		this._isInTree = false;
 		this._listeners.length = 0;
 		serializableManager.removeSerializable(this.id);
+		this._state |= Serializable.STATE_DESTROY;
 	}
 	deleteChildren() {
 		if (this._children.size) {
@@ -49,12 +54,16 @@ export default class Serializable {
 			});
 			this._children.clear();
 
-			if (this._parent)
+			if (this._parent) {
+				
 				serializableManager.addChange(serializableManager.changeType.deleteAllChildren, this);
+			}
 		}
 	}
 	// this is called right after constructor
 	initWithChildren(children = []) {
+		assert(!(this._state & Serializable.STATE_INIT), 'init already done');
+		this._state |= Serializable.STATE_INIT;
 		if (children.length > 0)
 			this.addChildren(children);
 		return this;
@@ -65,17 +74,14 @@ export default class Serializable {
 		return this;
 	}
 	addChild(child) {
-		this._addChild(child);
-
-		let parent = this;
-		while (parent) {
-			if (parent.isRoot) {
-				serializableManager.addChange(serializableManager.changeType.addSerializableToTree, child);
-				break;
-			}
-			parent = parent._parent;
-		}
 		
+		this._addChild(child);
+		
+		
+		this._state |= Serializable.STATE_ADDCHILD;
+		
+		if (this._isInTree)
+			serializableManager.addChange(serializableManager.changeType.addSerializableToTree, child);
 		return this;
 	}
 	_addChild(child) {
@@ -88,6 +94,8 @@ export default class Serializable {
 		}
 		array.push(child);
 		child._parent = this;
+		child._state |= Serializable.STATE_ADDPARENT;
+		child.setInTreeStatus(this._isInTree);
 		
 		return this;
 	}
@@ -99,7 +107,23 @@ export default class Serializable {
 		else
 			return array[0];
 	}
+	findParent(threeLetterType, filterFunction = null) {
+		let parent = this;
+		while (parent) {
+			if (parent.threeLetterType === threeLetterType && (!filterFunction || filterFunction(parent)))
+				return parent;
+			parent = parent._parent;
+		}
+		return null;
+	}
+	getRoot() {
+		let element = this;
+		while (element._parent)
+			element = element._parent;
+		return element;
+	}
 	deleteChild(child) {
+		
 		serializableManager.addChange(serializableManager.changeType.deleteSerializable, child);
 		this._detachChild(child);
 		child.delete();
@@ -113,6 +137,7 @@ export default class Serializable {
 		if (array.length === 0)
 			this._children.delete(child.threeLetterType);
 		child._parent = null;
+		child.setInTreeStatus(false);
 		
 		return this;
 	}
@@ -131,6 +156,7 @@ export default class Serializable {
 		return this;
 	}
 	move(newParent) {
+		
 		newParent._addChild(this._detach());
 
 		serializableManager.addChange(serializableManager.changeType.move, this);
@@ -153,8 +179,10 @@ export default class Serializable {
 		};
 		if (this._children.size > 0) {
 			let arrays = [];
-			this._children.forEach(child => arrays.push(child));
-			json.c = [].concat(...arrays);
+			// prototypes must come before a level
+			Array.from(this._children.keys()).sort((a, b) => a === 'prt' ? -1 : 1)
+				.forEach(key => arrays.push(this._children.get(key)));
+			json.c = [].concat(...arrays).map(child => child.toJSON());
 		}
 		return json;
 	}
@@ -168,6 +196,7 @@ export default class Serializable {
 			children.push(child.clone());
 		});
 		obj.initWithChildren(children);
+		this._state |= Serializable.STATE_CLONE;
 		return obj;
 	}
 	listen(event, callback) {
@@ -200,12 +229,36 @@ export default class Serializable {
 		}
 		return false;
 	}
+	setInTreeStatus(isInTree) {
+		if (this._isInTree === isInTree)
+			return;
+		
+		this._isInTree = isInTree;
+		this._children.forEach(array => {
+			array.forEach(child => child.setInTreeStatus(isInTree));
+		});
+	}
 	static fromJSON(json) {
 		assert(typeof json.id === 'string' && json.id.length > 5, 'Invalid id.');
 		let fromJSON = serializableClasses.get(json.id.substring(0, 3));
 		assert(fromJSON);
-		let obj = fromJSON(json);
-		obj.initWithChildren(json.c ? json.c.map(child => Serializable.fromJSON(child)) : []);
+		let obj;
+		try {
+			obj = fromJSON(json);
+		} catch(e) {
+			if (!window.force)
+				debugger; // Type 'force = true' in console to ignore failed imports.
+			
+			if (!window.force)
+				throw new Error();
+			return null;
+		}
+		let children = json.c ? json.c.map(child => Serializable.fromJSON(child)).filter(Boolean) : [];
+		if (obj._state & Serializable.STATE_INIT)
+			obj.addChildren(children);
+		else
+			obj.initWithChildren(children);
+		obj._state |= Serializable.STATE_FROMJSON;
 		return obj;
 	}
 	static registerSerializable(Class, threeLetterType, fromJSON = null) {
@@ -218,7 +271,18 @@ export default class Serializable {
 }
 
 Serializable.prototype._parent = null;
-Serializable.prototype.alive = true;
+Serializable.prototype._alive = true;
+Serializable.prototype._state = 0;
+
+Serializable.STATE_CONSTRUCTOR = 1;
+Serializable.STATE_INIT = 2;
+Serializable.STATE_ADDCHILD = 4;
+Serializable.STATE_ADDPARENT = 8;
+Serializable.STATE_CLONE = 16;
+Serializable.STATE_DESTROY = 32;
+Serializable.STATE_FROMJSON = 64;
+Serializable.STATE_PREDEFINEDID = 128;
+
 Serializable.prototype.isRoot = false; // If this should be a root node
 Object.defineProperty(Serializable.prototype, 'debug', {
 	get() {
@@ -231,6 +295,25 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 			else
 				info += `${key}(${value.length})`;
 		});
+		
+		info += '|state: ';
+		
+		let states = [];
+		let logState = (state, stateString) => {
+			if (this._state & state)
+				states.push(stateString);
+		};
+		
+		logState(Serializable.STATE_CONSTRUCTOR, 'constructor');
+		logState(Serializable.STATE_INIT, 'init');
+		logState(Serializable.STATE_ADDCHILD, 'add child');
+		logState(Serializable.STATE_ADDPARENT, 'add parent');
+		logState(Serializable.STATE_CLONE, 'clone');
+		logState(Serializable.STATE_DESTROY, 'destroy');
+		logState(Serializable.STATE_FROMJSON, 'from json');
+		logState(Serializable.STATE_PREDEFINEDID, 'predefined id');
+		
+		info += states.join(', ');
 		
 		return info;
 	}
@@ -253,6 +336,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 			if (type === 'com') return new function Component(){};
 			if (type === 'epr') return new function EntityPrototype(){};
 			if (type === 'ent') return new function Entity(){};
+			if (type === 'lvl') return new function Level(){};
 			return new function Other(){};
 		}
 

@@ -46,14 +46,14 @@ export function listenMouseMove(element, handler) {
 		
 		element._mx = x;
 		element._my = y;
-		handler(x, y);
+		handler(new Victor(x, y));
 	});
 }
 
 export function listenMouseDown(element, handler) {
 	element.addEventListener('mousedown', event => {
 		if (typeof element._mx === 'number')
-			handler(element._mx, element._my);
+			handler(new Victor(element._mx, element._my));
 		else
 			handler();
 	});
@@ -61,7 +61,7 @@ export function listenMouseDown(element, handler) {
 export function listenMouseUp(element, handler) {
 	element.addEventListener('mouseup', event => {
 		if (typeof element._mx === 'number')
-			handler(element._mx, element._my);
+			handler(new Victor(element._mx, element._my));
 		else
 			handler();
 	});

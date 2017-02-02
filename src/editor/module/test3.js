@@ -10,6 +10,7 @@ class TestModule extends Module {
 		this.name = 'Test3';
 	}
 	update() {
+		return false;
 	}
 }
 

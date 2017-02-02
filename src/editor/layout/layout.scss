@@ -89,10 +89,16 @@ div.center {
 div.moduleContainer.packed {
     border-color: $editor-effect-color-inactive;
 }
+div.moduleContainer.noModules {
+    border-color: #333;
+}
 div.moduleContainer.packed:hover {
     cursor: pointer;
 }
 div.moduleContainer.packed > * {
     opacity: 0 !important;
     display: none !important;
+}
+div.moduleContainer.noModules {
+    background: #111;
 }

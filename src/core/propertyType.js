@@ -6,7 +6,7 @@ import Property from './property';
 
 
 class PropertyType {
-	constructor(name, type, validator, initialValue, description) {
+	constructor(name, type, validator, initialValue, description, flags = []) {
 		assert(typeof name === 'string');
 		assert(name[0] >= 'a' && name[0] <= 'z', 'Name of a property must start with lower case letter.');
 		assert(type && typeof type.name === 'string');
@@ -17,6 +17,11 @@ class PropertyType {
 		this.validator = validator;
 		this.initialValue = initialValue;
 		this.description = description;
+		this.flags = {};
+		flags.forEach(f => this.flags[f.type] = f);
+	}
+	getFlag(flag) {
+		return this.flags[flag.type];
 	}
 	createProperty({ value, predefinedId, skipSerializableRegistering = false } = {}) {
 		return new Property({
@@ -40,18 +45,31 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 	type = type();
 	let validator = type.validators.default();
 	let description = '';
+	let flags = [];
 	optionalParameters.forEach(p => {
 		if (typeof p === 'string')
 			description = p;
 		else if (p && p.validate)
 			validator = p;
-		else
+		else if (p && p.isFlag) {
+			flags.push(p);
+		} else
 			assert(false, 'invalid parameter ' + p);
 	});
-	return new PropertyType(propertyName, type, validator, defaultValue, description);
+	return new PropertyType(propertyName, type, validator, defaultValue, description, flags);
 };
 
-export function addDataType({
+export { createPropertyType as dataType };
+
+function createFlag(type, func = {}) {
+	func.isFlag = true;
+	func.type = type;
+	return func;
+}
+
+createPropertyType.flagDegreesInEditor = createFlag('degreesInEditor');
+
+export function createDataType({
 	name = '',
 	validators = { default: x => x }, // default must exist
 	toJSON = x => x,
@@ -76,7 +94,7 @@ export function addDataType({
 		createType[validatorName] = createValidator(validatorName, validators[validatorName]);
 		validators[validatorName] = createType[validatorName];
 	});
-	createPropertyType[name] = createType;
+	return createType;
 }
 
 function createValidator(name, validatorFunction) {

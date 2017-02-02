@@ -21,7 +21,7 @@ editors.float = editors.int = (container, oninput, onchange) => {
 		onchange: () => onchange(+input.value)
 	});
 	mount(container, input);
-	return val => input.value = val;
+	return val => input.value = +(+val).toFixed(4);
 };
 
 editors.bool = (container, oninput, onchange) => {
@@ -56,8 +56,8 @@ editors.vector = (container, oninput, onchange) => {
 	});
 	mount(container, el('div', el('span', 'x:'), xInput, el('span', 'y:'), yInput));
 	return val => {
-		xInput.value = val.x;
-		yInput.value = val.y;
+		xInput.value = +val.x.toFixed(4);
+		yInput.value = +val.y.toFixed(4);
 	};
 };
 

@@ -6,18 +6,20 @@ import { scene } from './scene';
 import { game } from './game';
 export { default as Prop } from './propertyType';
 export let componentClasses = new Map();
+import ComponentData from './componentData';
 
 // Instance of a component, see componentExample.js
 export class Component extends PropertyOwner {
 	constructor(predefinedId = false) {
 		super(predefinedId);
+		this._componentId = null; // Creator will fill this
 		this.scene = scene;
 		this.game = game;
 		this._listenRemoveFunctions = [];
 	}
 	delete() {
-		console.log('delete component');
-		assert(!this.entity.alive, 'Do not call Component.delete!');
+		assert(!this.entity._alive, 'Do not call Component.delete!');
+		this._parent = null;
 		super.delete();
 	}
 	_preInit() {
@@ -30,7 +32,7 @@ export class Component extends PropertyOwner {
 		
 		['onUpdate', 'onDraw'].forEach(funcName => {
 			if (typeof this[funcName] === 'function') {
-				console.log('listen ' + funcName);
+				// console.log('listen ' + funcName);
 				this._listenRemoveFunctions.push(this.scene.listen(funcName, (...args) => this[funcName](...args)));
 			}
 		});
@@ -59,13 +61,27 @@ export class Component extends PropertyOwner {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
 		this.forEachChild('com', c => c._sleep());
-		console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
+		// console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
 		this._listenRemoveFunctions.forEach(f => f());
 		this._listenRemoveFunctions.length = 0;
 	}
+	createComponentData() {
+		let componentName = this.constructor.componentName;
+		let propertyTypes = this.constructor._propertyTypes;
+		let componentData = new ComponentData(componentName);
+		let children = [];
+		propertyTypes.forEach(pt => {
+			children.push(pt.createProperty({
+				value: this[pt.name]
+			}));
+		});
+		componentData.initWithChildren(children);
+		return componentData;
+	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {
-			n: this.constructor.componentName
+			n: this.constructor.componentName,
+			cid: this._componentId
 		});
 	}
 }
@@ -140,5 +156,6 @@ Component.register = function({
 
 Serializable.registerSerializable(Component, 'com', json => {
 	let component = new (componentClasses.get(json.n))(json.id);
+	component._componentId = json.cid || null;
 	return component;
 });

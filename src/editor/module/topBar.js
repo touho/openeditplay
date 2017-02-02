@@ -1,6 +1,7 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, modulesRegisteredPromise } from '../editor';
+import Level from '../../core/level';
 
 export class TopBarModule extends Module {
 	constructor() {
@@ -14,17 +15,26 @@ export class TopBarModule extends Module {
 		events.listen('addTopButtonToTopBar', topButton => {
 			mount(this.buttons, topButton);
 		});
+		
+		let createLevelButton = new TopButton({
+			text: 'New level',
+			callback: () => {
+				let lvl = new Level();
+				editor.game.addChild(lvl);
+				editor.setLevel(lvl);
+			}
+		});
 	}
 }
 Module.register(TopBarModule, 'top');
 
 export class TopButton {
 	constructor({
-		text,
+		text = 'Button',
 		callback,
-		iconClass,
-		priority
-	}) {
+		iconClass = 'fa-circle',
+		priority = 1
+	} = {}) {
 		this.priority = priority || 0;
 		
 		this.el = el('div.button.topIconTextButton',

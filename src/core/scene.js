@@ -2,7 +2,7 @@ import Serializable from './serializable';
 import Entity from './entity';
 import assert from '../assert';
 import { game } from './game';
-import { addChange, changeType } from './serializableManager';
+import { addChange, changeType, setChangeOrigin } from './serializableManager';
 
 export let scene = null;
 
@@ -10,7 +10,6 @@ export default class Scene extends Serializable {
 	constructor(predefinedId = false) {
 		if (scene) {
 			try {
-				console.log('DEL SCENE');
 				scene.delete();
 			} catch(e) {
 				console.warn('Deleting old scene failed', e);
@@ -21,34 +20,40 @@ export default class Scene extends Serializable {
 		this.canvas = document.querySelector('canvas.anotherCanvas');
 		this.context = this.canvas.getContext('2d');
 
+		this.level = null;
+		
 		this.animationFrameId = null;
 		this.playing = false;
-		
-		setInterval(() => {
-			if (this.canvas) {
-				if (this.canvas.width !== this.canvas.offsetWidth && this.canvas.offsetWidth)
-					this.canvas.width = this.canvas.offsetWidth;
-				if (this.canvas.height !== this.canvas.offsetHeight && this.canvas.offsetHeight)
-					this.canvas.height = this.canvas.offsetHeight;
-			}
-		}, 500);
+		this.time = 0;
 
 		super(predefinedId);
 		addChange(changeType.addSerializableToTree, this);
+
+		if (predefinedId)
+			console.log('scene import');
+		else
+			console.log('scene created');
+		
+		this.draw();
 	}
-	animFrame() {
+	animFrame(playCalled) {
 		this.animationFrameId = null;
-		if (!this.alive || !this.playing) return;
+		if (!this._alive || !this.playing) return;
 		
 		let t = 0.001*performance.now();
 		let dt = t-this._prevUpdate;
 		if (dt > 0.1)
 			dt = 0.1;
 		this._prevUpdate = t;
-		
-		this.dispatch('onUpdate', dt, t);
+		this.time += dt;
+
+		setChangeOrigin(this);
+		this.dispatch('onUpdate', dt, this.time);
 		this.draw();
 		
+		this.requestAnimFrame();
+	}
+	requestAnimFrame() {
 		this.animationFrameId = window.requestAnimationFrame(() => this.animFrame());
 	}
 	draw() {
@@ -57,13 +62,19 @@ export default class Scene extends Serializable {
 	}
 	spawn(prototype, position) {
 		assert(prototype.threeLetterType === 'prt');
-		let entity = prototype.createEntity();
+		let entity = prototype.createEntity(this);
 		this.addChild(entity);
 		return entity;
+	}
+	isInInitialState() {
+		return !this.playing && this.time === 0;
 	}
 	reset() {
 		this.pause();
 		this.deleteChildren();
+		if (this.level)
+			this.level.createScene(this);
+		this.time = 0;
 		this.draw();
 	}
 	pause() {
@@ -76,10 +87,10 @@ export default class Scene extends Serializable {
 	}
 	play() {
 		if (this.playing) return;
-	
+		
 		this._prevUpdate = 0.001*performance.now();
 		this.playing = true;
-		this.animFrame();
+		this.requestAnimFrame();
 		
 		/*
 		let player = game.findChild('prt', p => p.name === 'Player', true);
@@ -88,6 +99,12 @@ export default class Scene extends Serializable {
 			this.spawn(player);
 		}
 		*/
+	}
+	delete() {
+		if (scene === this)
+			scene = null;
+		super.delete();
+		console.log('scene.delete');
 	}
 }
 Scene.prototype.isRoot = true;

@@ -24,7 +24,9 @@ export default class PropertyOwner extends Serializable {
 		return this;
 	}
 	initWithChildren(children = []) {
-		this._inited = true;
+		assert(!(this._state & Serializable.STATE_INIT), 'init already done');
+		this._state |= Serializable.STATE_INIT;
+		
 		let propChildren = [];
 		let otherChildren = [];
 		// Separate Property children and other children
@@ -36,7 +38,6 @@ export default class PropertyOwner extends Serializable {
 			}
 		});
 		super.addChildren(otherChildren);
-		if (propChildren.length === 0) return;
 		
 		let invalidPropertiesCount = 0;
 		
@@ -64,7 +65,7 @@ export default class PropertyOwner extends Serializable {
 		super.addChildren(propChildren);
 	};
 	addChild(child) {
-		assert(this._inited, this.constructor.componentName + ' requires that initWithChildren will be called before addChild');
+		assert(this._state & Serializable.STATE_INIT, this.constructor.componentName + ' requires that initWithChildren will be called before addChild');
 		super.addChild(child);
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
