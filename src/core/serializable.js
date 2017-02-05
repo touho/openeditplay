@@ -35,7 +35,7 @@ export default class Serializable {
 	delete() {
 		if (this._parent) {
 			this._parent.deleteChild(this);
-			return;
+			return false;
 		}
 		this.deleteChildren();
 		this._alive = false;
@@ -43,6 +43,7 @@ export default class Serializable {
 		this._listeners.length = 0;
 		serializableManager.removeSerializable(this.id);
 		this._state |= Serializable.STATE_DESTROY;
+		return true;
 	}
 	deleteChildren() {
 		if (this._children.size) {

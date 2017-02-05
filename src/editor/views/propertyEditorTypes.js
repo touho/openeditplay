@@ -58,7 +58,7 @@ editors.vector = (container, oninput, onchange) => {
 	mount(container, el('div', el('span', 'x:'), xInput, el('span', 'y:'), yInput));
 	return val => {
 		xInput.value = Math.round(val.x*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
-		yInput.value = Math.round(val.x*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
+		yInput.value = Math.round(val.y*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
 	};
 };
 

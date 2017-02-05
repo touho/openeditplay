@@ -80,8 +80,9 @@ export default class PropertyOwner extends Serializable {
 		}
 	};
 	delete() {
-		super.delete();
+		if (!super.delete()) return false;
 		this._properties = {};
+		return true;
 	}
 	deleteChild(child) {
 		assert(child.threeLetterType !== 'prp', 'Can not delete just one Property child.');

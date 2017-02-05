@@ -103,9 +103,12 @@ export default class Entity extends Serializable {
 	delete() {
 		assert(this._alive, ALIVE_ERROR);
 		this.sleep();
-		super.delete();
+		if (!super.delete()) return false;
+		
 		this.components.forEach((value, key) => Entity.deleteComponents(value));
 		this.components.clear();
+		
+		return true;
 	}
 	deleteComponent(component) {
 		let array = this.getComponents(component.constructor.componentName);

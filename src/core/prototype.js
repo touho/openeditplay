@@ -5,6 +5,7 @@ import Prop from './propertyType';
 import PropertyOwner from './propertyOwner';
 import ComponentData from './componentData';
 import Entity from './entity';
+import { game } from './game';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -189,6 +190,27 @@ export default class Prototype extends PropertyOwner {
 			return componentData.getValue(propertyName);
 		else
 			return undefined;
+	}
+	
+	delete() {
+		// let name = this.name;
+		if (!super.delete()) return false;
+		if (this.threeLetterType === 'prt') {
+			game.forEachChild('lvl', lvl => {
+				let itemsToDelete = [];
+				lvl.forEachChild('epr', epr => {
+					if (epr.prototype === this)
+						itemsToDelete.push(epr);
+				});
+				itemsToDelete.forEach(epr => {
+					lvl.deleteChild(epr);
+				});
+			});
+		}
+		this.previouslyCreatedEntity = null;
+		console.log('deleting done');
+		
+		return true;
 	}
 }
 PropertyOwner.defineProperties(Prototype, propertyTypes);

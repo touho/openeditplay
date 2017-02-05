@@ -29,10 +29,13 @@ export default class Game extends PropertyOwner {
 		super(...arguments);
 	}
 	delete() {
+		if (!super.delete()) return false;
+		
 		if (game === this)
 			game = null;
-		super.delete();
 		console.log('game.delete');
+		
+		return true;
 	}
 }
 PropertyOwner.defineProperties(Game, propertyTypes);

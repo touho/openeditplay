@@ -100,10 +100,13 @@ export default class Scene extends Serializable {
 		*/
 	}
 	delete() {
+		if (!super.delete()) return false;
+		
 		if (scene === this)
 			scene = null;
-		super.delete();
+		
 		console.log('scene.delete');
+		return true;
 	}
 }
 Scene.prototype.isRoot = true;

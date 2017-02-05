@@ -19,9 +19,11 @@ export class Component extends PropertyOwner {
 		this.entity = null;
 	}
 	delete() {
+		// Component.delete never returns false because entity doesn't have components as children
 		this._parent = null;
 		this.entity = null;
 		super.delete();
+		return true;
 	}
 	_preInit() {
 		this.constructor.requirements.forEach(r => {
@@ -135,9 +137,12 @@ Component.register = function({
 				constructorFunction();
 		}
 		delete() {
-			super.delete(...arguments);
+			if (!super.delete()) return false;
+			
 			if (deleteFunction)
 				deleteFunction();
+			
+			return true;
 		}
 	}
 	properties.forEach(p => {

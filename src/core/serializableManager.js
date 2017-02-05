@@ -60,6 +60,7 @@ export function setChangeOrigin(_origin) {
 		setTimeout(resetOrigin);
 	}
 }
+window.orig = o => setChangeOrigin(o);
 
 let externalChange = false;
 export function addChange(type, reference) {
