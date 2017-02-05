@@ -13,6 +13,9 @@ class Instance extends Module {
 		this.name = 'Instance';
 	}
 	update() {
+		if (editor.selection.items.length != 1)
+			return false; // multiedit not supported yet
+		
 		if (editor.selection.type === 'ent') {
 			if (scene.isInInitialState()) {
 				this.propertyEditor.update(editor.selection.items.map(entity => entity.prototype), 'epr');
@@ -20,6 +23,7 @@ class Instance extends Module {
 				this.propertyEditor.update(editor.selection.items, editor.selection.type);
 			}
 		} else {
+			console.log('hide', this.id);
 			return false; // hide module
 		}
 	}

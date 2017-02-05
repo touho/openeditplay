@@ -16,10 +16,11 @@ export class Component extends PropertyOwner {
 		this.scene = scene;
 		this.game = game;
 		this._listenRemoveFunctions = [];
+		this.entity = null;
 	}
 	delete() {
-		assert(!this.entity._alive, 'Do not call Component.delete!');
 		this._parent = null;
+		this.entity = null;
 		super.delete();
 	}
 	_preInit() {
@@ -91,7 +92,14 @@ Component.create = function(name, values = {}) {
 	let component = new componentClass();
 	component.initWithPropertyValues(values);
 	return component;
-}
+};
+Component.createWithInheritedComponentData = function(inheritedComponentData) {
+	let component = new inheritedComponentData.componentClass;
+	component._componentId = inheritedComponentData.componentId;
+	let properties = inheritedComponentData.properties.map(p => p.clone());
+	component.initWithChildren(properties);
+	return component;
+};
 
 Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
 Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);

@@ -21,7 +21,7 @@ export default class PropertyEditor {
 		this.el = el('div.propertyEditor');
 		this.dirty = true;
 		this.editingProperty = false;
-
+	
 		// Change in serializable tree
 		events.listen('change', change => {
 			if (change.type === 'editorSelection') {
@@ -301,9 +301,8 @@ class Property {
 	}
 	setValueFromProperty() {
 		let val = this.property.value;
-		console.log('mo');
 		if (this.property.propertyType.getFlag(Prop.flagDegreesInEditor))
-			val = +(val * 180 / Math.PI).toFixed(1);
+			val = Math.round(val * 180 / Math.PI * 10) / 10;
 		this.setValue(val);
 	}
 	convertFromInputToPropertyValue(val) {

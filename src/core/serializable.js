@@ -123,7 +123,6 @@ export default class Serializable {
 		return element;
 	}
 	deleteChild(child) {
-		
 		serializableManager.addChange(serializableManager.changeType.deleteSerializable, child);
 		this._detachChild(child);
 		child.delete();

@@ -7,6 +7,7 @@ function validateFloat(val) {
 }
 
 const FLOAT_JSON_PRECISION = 4;
+const FLOAT_JSON_PRECISION_MULTIPLIER = Math.pow(10, FLOAT_JSON_PRECISION);
 const FLOAT_DELTA = 0.0000001;
 
 dataType.float = createDataType({
@@ -38,7 +39,7 @@ dataType.float = createDataType({
 			return x;
 		}
 	},
-	toJSON: x => +x.toFixed(FLOAT_JSON_PRECISION),
+	toJSON: x => Math.round(x*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER,
 	fromJSON: x => x
 });
 dataType.int = createDataType({
@@ -66,6 +67,7 @@ dataType.vector = createDataType({
 		default(vec) {
 			if (!(vec instanceof Victor))
 				throw new Error();
+			vec = vec.clone();
 			vec.x = parseFloat(vec.x);
 			vec.y = parseFloat(vec.y);
 			validateFloat(vec.x);
@@ -74,8 +76,8 @@ dataType.vector = createDataType({
 		}
 	},
 	toJSON: vec => ({
-		x: +vec.x.toFixed(FLOAT_JSON_PRECISION),
-		y: +vec.y.toFixed(FLOAT_JSON_PRECISION)
+		x: Math.round(vec.x*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER,
+		y: Math.round(vec.y*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER
 	}),
 	fromJSON: vec => Victor.fromObject(vec),
 	clone: vec => vec.clone()

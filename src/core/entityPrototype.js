@@ -5,6 +5,7 @@ import { getSerializable } from './serializableManager';
 import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
 import { scene } from './scene';
+import assert from '../assert';
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
@@ -21,9 +22,48 @@ export default class EntityPrototype extends Prototype {
 		return this.prototype;
 	}
 	clone() {
-		let clone = super.clone();
-		clone.prototype = this.prototype;
-		return clone;
+		let obj = new EntityPrototype();
+		obj.prototype = this.prototype;
+		let id = obj.id;
+		let children = [];
+		this.forEachChild(null, child => {
+			if (child.threeLetterType === 'prp' && child.name === 'name') {
+				let property = new Property({
+					value: child.propertyType.type.clone(child.value),
+					name: child.name,
+					propertyType: this.propertyType,
+					predefinedId: id + '_n'
+				});
+				children.push(property);
+			} else if (child.threeLetterType === 'cda' && child.name === 'Transform') {
+				let transform = new ComponentData('Transform', id + '_t');
+
+				let position = transform.componentClass._propertyTypesByName.position.createProperty({
+					value: child.findChild('prp', prp => prp.name === 'position').value,
+					predefinedId: id + '_p'
+				});
+				transform.addChild(position);
+
+				let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+					value: child.findChild('prp', prp => prp.name === 'scale').value,
+					predefinedId: id + '_s'
+				});
+				transform.addChild(scale);
+
+				let rotation = transform.componentClass._propertyTypesByName.rotation.createProperty({
+					value: child.findChild('prp', prp => prp.name === 'rotation').value,
+					predefinedId: id + '_r'
+				});
+				transform.addChild(rotation);
+				
+				children.push(transform);
+			} else {
+				children.push(child.clone());
+			}
+		});
+		obj.initWithChildren(children);
+		this._state |= Serializable.STATE_CLONE;
+		return obj;
 	}
 	toJSON() {
 		// return super.toJSON();
@@ -94,26 +134,41 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 
 // If Transform or Transform.position is missing, they are added.
 EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
-	let transform = componentDatas.find(cda => cda.name === 'Transform');
-	if (!transform) {
-		transform = new ComponentData('Transform');
-		componentDatas.push(transform);
-	}
-	
-	let position = transform.findChild('prp', prp => prp.name === 'position');
-	if (!position) {
-		position = transform.componentClass._propertyTypesByName.position.createProperty({
-			value: new Victor(0, 0)
-		});
-		transform.addChild(position);
-	}
-	
+
 	let entityPrototype = new EntityPrototype();
 	entityPrototype.prototype = prototype;
-	entityPrototype.initWithPropertyValues({
-		name: prototype.name
+	let id = entityPrototype.id;
+	
+	assert(!componentDatas.find(cda => cda.name === 'Transform'), 'Prototype (prt) can not have a Transform component');
+	
+	let transform = new ComponentData('Transform', id + '_t');
+	componentDatas.push(transform);
+	
+	let position = transform.componentClass._propertyTypesByName.position.createProperty({
+		value: new Victor(0, 0),
+		predefinedId: id + '_p'
 	});
-	entityPrototype.addChildren(componentDatas);
+	transform.addChild(position);
+
+	let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+		value: new Victor(1, 1),
+		predefinedId: id + '_s'
+	});
+	transform.addChild(scale);
+
+	let rotation = transform.componentClass._propertyTypesByName.rotation.createProperty({
+		value: 0,
+		predefinedId: id + '_r'
+	});
+	transform.addChild(rotation);
+
+	let name = EntityPrototype._propertyTypesByName.name.createProperty({
+		value: prototype.name,
+		predefinedId: id + '_n'
+	});
+	
+	entityPrototype.initWithChildren([name, ...componentDatas])
+
 	return entityPrototype;
 };
 

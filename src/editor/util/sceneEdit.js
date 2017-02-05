@@ -17,6 +17,34 @@ function setEntityPropertyValue(entity, componentName, componentId, sourceProper
 		component._properties[sourceProperty.name].value = sourceProperty.value;
 }
 
+function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null) {
+	let affectedPrototypes = new Set();
+
+	function goThroughChildren(prototype) {
+		prototype.getChildren('prt').forEach(proto => {
+			if (typeof prototypeFilter === 'function') {
+				if (prototypeFilter(proto)) {
+					affectedPrototypes.add(proto);
+					goThroughChildren(proto);
+				}
+			} else {
+				affectedPrototypes.add(proto);
+				goThroughChildren(proto);
+			}
+		});
+	}
+
+	affectedPrototypes.add(prototypeOrEntityPrototype);
+	goThroughChildren(prototypeOrEntityPrototype);
+
+	let entities = scene.level.getChildren('epr').filter(epr => {
+		return affectedPrototypes.has(epr.prototype)
+			&& (!prototypeFilter || prototypeFilter(epr));
+	}).map(epr => epr.previouslyCreatedEntity).filter(ent => ent && ent._alive);
+	console.log('returning', entities);
+	return entities;
+}
+
 // Call setChangeOrigin(this) before calling this
 export function syncAChangeBetweenSceneAndLevel(change) {
 	if (!scene || !scene.level) return;
@@ -39,6 +67,44 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 		if (threeLetterType === 'epr') {
 			let epr = ref;
 			scene.addChild(epr.createEntity());
+		} else if (threeLetterType === 'cda') {
+			let parent = ref.getParent();
+			let entities;
+			if (parent.threeLetterType === 'prt') {
+				entities = getAffectedEntities(parent);
+			} else {
+				// epr
+				entities = [parent.previouslyCreatedEntity].filter(ent => ent && ent._alive);
+			}
+			
+			entities.forEach(entity => {
+				
+				let oldComponent = entity.getComponents(ref.name).find(com => com._componentId === ref.componentId);
+				console.log('delete old component', oldComponent+'');
+				if (oldComponent)
+					entity.deleteComponent(oldComponent);
+				
+				
+				let proto = entity.prototype;
+				let componentData = proto.findComponentDataByComponentId(ref.componentId, true);
+				console.log('new componentData', componentData+'');
+				if (componentData) {
+					let component = componentData.createComponent();
+					console.log('add new component', component+'');
+					entity.addComponents([component]);
+				}
+			});
+		} else if (threeLetterType === 'prp') {
+			let property = ref;
+			let componentData = property.findParent('cda');
+			let prototype = componentData.getParent();
+			let entities = getAffectedEntities(prototype);
+			entities.forEach(entity => {
+				let epr = entity.prototype;
+				let value = epr.getValue(componentData.componentId, property.name);
+				let component = entity.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
+				component._properties[property.name].value = value;
+			})
 		}
 	} else if (change.type === changeType.setPropertyValue) {
 		let property = ref;
@@ -54,45 +120,76 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 			}
 		} else {
 			// Prototype
-			console.log('syncAChangeBetweenSceneAndLevel');
 			
-			let affectedPrototypes = new Set();
-			
-			function goThroughChildren(prototype) {
-				prototype.getChildren('prt').forEach(proto => {
-					if (proto.findOwnProperty(cda.componentId, property.name) === null) {
-						// Doesn't override property. Therefore prototype is affected
-						affectedPrototypes.add(proto);
-						goThroughChildren(proto);
-					}
-				});
-			}
-			
-			affectedPrototypes.add(prototype);
-			goThroughChildren(prototype);
-			
-			let entities = scene.level.getChildren('epr').filter(epr => {
-				return affectedPrototypes.has(epr.prototype) 
-					&& epr.findOwnProperty(cda.componentId, property.name) === null;
-			}).map(epr => epr.previouslyCreatedEntity).filter(ent => ent && ent._alive);
+			let entities = getAffectedEntities(prototype, prt => prt.findOwnProperty(cda.componentId, property.name) === null);
 
-			console.log('syncAChangeBetweenSceneAndLevel entities', entities);
-			console.log('poi', scene.level.getChildren('epr').filter(epr => {
-				console.log(affectedPrototypes.has(epr.prototype), epr.findOwnProperty(cda.componentId, property.name));
-				return affectedPrototypes.has(epr.prototype)
-					&& epr.findOwnProperty(cda.componentId, property.name) === null;
-			}));
 			entities.forEach(ent => {
 				setEntityPropertyValue(ent, cda.name, cda.componentId, property);
 			});
 		}
 	} else if (change.type === changeType.deleteAllChildren) {
-		
+		if (threeLetterType === 'cda') {
+			let componentData = ref;
+			let prototype = componentData.getParent();
+			let entities = getAffectedEntities(prototype);
+			entities.forEach(entity => {
+				let epr = entity.prototype;
+				let oldComponent = entity.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
+				entity.deleteComponent(oldComponent);
+
+				let inheritedComponentDatas = epr.getInheritedComponentDatas();
+				let icd = inheritedComponentDatas.find(i => i.componentId === componentData.componentId);
+				if (icd) {
+					let newComponent = Component.createWithInheritedComponentData(icd);
+					entity.addComponents([newComponent]);
+				}
+			});
+		}
 	} else if (change.type === changeType.deleteSerializable) {
 		if (threeLetterType === 'epr') {
 			let epr = ref;
 			if (epr.previouslyCreatedEntity)
 				epr.previouslyCreatedEntity.delete();
+		} else if (threeLetterType === 'prp') {
+			let property = ref;
+			let componentData = property.findParent('cda');
+			let prototype = componentData.getParent();
+			let entities = getAffectedEntities(prototype);
+			entities.forEach(ent => {
+				let epr = ent.prototype;
+				let cda = epr.findComponentDataByComponentId(componentData.componentId, true);
+				let componentClass = cda.componentClass;
+				let valueProperty = cda.getProperty(property.name);
+				let value;
+				if (valueProperty === property) {
+					cda = cda.getParentComponentData();
+					if (cda)
+						value = cda.getValue(property.name);
+					else
+						value = componentClass._propertyTypesByName[property.name].initialValue;
+				} else {
+					value = valueProperty.value;
+				}
+				let component = ent.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
+				if (component)
+					component._properties[property.name].value = value;
+			});
+		} else if (threeLetterType === 'cda') {
+			let componentData = ref;
+			let prototype = componentData.getParent();
+			let entities = getAffectedEntities(prototype);
+			entities.forEach(entity => {
+				let epr = entity.prototype;
+				let oldComponent = entity.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
+				entity.deleteComponent(oldComponent);
+				
+				let inheritedComponentDatas = epr.getInheritedComponentDatas(cda => cda !== componentData);
+				let icd = inheritedComponentDatas.find(i => i.componentId === componentData.componentId);
+				if (icd) {
+					let newComponent = Component.createWithInheritedComponentData(icd);
+					entity.addComponents([newComponent]);
+				}
+			});
 		}
 	} else if (change.type === changeType.move) {
 		
@@ -104,7 +201,7 @@ export function copyEntitiesToScene(entities) {
 		if (shouldSyncLevelAndScene()) {
 			let entityPrototypes = entities.map(entity => {
 				let epr = entity.prototype.clone();
-				epr.position = entity.position.clone();
+				epr.position = entity.position;
 				return epr;
 			});
 			editor.selectedLevel.addChildren(entityPrototypes);
@@ -157,7 +254,7 @@ export function getEntitiesInSelection(start, end) {
 export function copyPositionFromEntitiesToEntityPrototypes(entities) {
 	if (shouldSyncLevelAndScene()) {
 		entities.forEach(e => {
-			e.prototype.position = e.position.clone();
+			e.prototype.position = e.position;
 		});
 	}
 }
@@ -177,7 +274,7 @@ export function setEntityPositions(entities, position) {
 		return;
 
 	entities.forEach(entity => {
-		entity.position = position.clone();
+		entity.position = position;
 	});
 }
 

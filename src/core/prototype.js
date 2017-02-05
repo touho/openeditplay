@@ -51,7 +51,7 @@ export default class Prototype extends PropertyOwner {
 		 }
 	]
 	 */
-	getInheritedComponentDatas() {
+	getInheritedComponentDatas(filter = null) {
 		let originalPrototype = this;
 		
 		function getDataFromPrototype(prototype, _depth = 0) {
@@ -65,6 +65,9 @@ export default class Prototype extends PropertyOwner {
 			
 			let componentDatas = prototype.getChildren('cda');
 			componentDatas.forEach(componentData => {
+				if (filter && !filter(componentData))
+					return;
+				
 				if (!data[componentData.componentId]) {
 					// Most parent version of this componentId
 					data[componentData.componentId] = {
@@ -113,10 +116,11 @@ export default class Prototype extends PropertyOwner {
 		let propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
 		assert(propertyType, 'Invalid propertyName', propertyName, inheritedComponentData);
 		let componentData = this.findChild('cda', componentData => componentData.componentId === inheritedComponentData.componentId);
+		let componentDataIsNew = false;
 		if (!componentData) {
 			console.log('no component data. create one', this, inheritedComponentData);
 			componentData = new ComponentData(inheritedComponentData.componentClass.componentName, false, inheritedComponentData.componentId);
-			this.addChild(componentData);
+			componentDataIsNew = true;
 		}
 		let property = componentData.findChild('prp', property => property.name === propertyName);
 		if (property) {
@@ -128,6 +132,9 @@ export default class Prototype extends PropertyOwner {
 			value: propertyValue,
 		});
 		componentData.addChild(property);
+		
+		if (componentDataIsNew)
+			this.addChild(componentData);
 		
 		return property;
 	}
@@ -168,19 +175,20 @@ export default class Prototype extends PropertyOwner {
 	createEntity() {
 		let entity = new Entity();
 		let inheritedComponentDatas = this.getInheritedComponentDatas();
-		let components = [];
-		inheritedComponentDatas.forEach(d => {
-			let component = new d.componentClass;
-			component._componentId = d.componentId;
-			let properties = d.properties.map(p => p.clone());
-			component.initWithChildren(properties);
-			components.push(component);
-		});
+		let components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
 		entity.addComponents(components);
 		entity.prototype = this;
 		
 		this.previouslyCreatedEntity = entity;
 		return entity;
+	}
+	
+	getValue(componentId, propertyName) {
+		let componentData = this.findComponentDataByComponentId(componentId, true);
+		if (componentData)
+			return componentData.getValue(propertyName);
+		else
+			return undefined;
 	}
 }
 PropertyOwner.defineProperties(Prototype, propertyTypes);

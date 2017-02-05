@@ -451,6 +451,7 @@ td.propertyContent {
   top: 5px;
   right: 2px;
   opacity: 0.3;
+  z-index: 10;
 }
 .propertyEditor .property input {
   background: #272727;

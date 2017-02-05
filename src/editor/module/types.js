@@ -36,8 +36,12 @@ class Types extends Module {
 				$(this.jstree).jstree().search(this.search.value.trim());
 			}, 200);
 		});
+		
+		this.externalChange = false;
 
 		events.listen('change', change => {
+			this.externalChange = true;
+			
 			if (change.reference.threeLetterType === 'prt') {
 				if (change.type === changeType.addSerializableToTree) {
 					let jstree = $(this.jstree).jstree(true);
@@ -62,16 +66,31 @@ class Types extends Module {
 					jstree.rename_node(node, change.value);
 				}
 			} else if (change.type === 'editorSelection') {
-				if (change.origin != this && change.reference.type === 'prt') {
-					let jstree = $(this.jstree).jstree(true);
-					let node = jstree.get_node(change.reference.items[0].id);
-					jstree.deselect_all();
-					jstree.select_node(node);
+				if (change.origin != this) {
+					if (change.reference.type === 'prt') {
+						let jstree = $(this.jstree).jstree(true);
+						let node = jstree.get_node(change.reference.items[0].id);
+						jstree.deselect_all();
+						jstree.select_node(node);
+					} else if (change.reference.type === 'epr') {
+						let jstree = $(this.jstree).jstree(true);
+						let node = jstree.get_node(change.reference.items[0].getParentPrototype().id);
+						jstree.deselect_all();
+						jstree.select_node(node);
+					} else if (change.reference.type === 'ent') {
+						let jstree = $(this.jstree).jstree(true);
+						let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
+						jstree.deselect_all();
+						jstree.select_node(node);
+					}
 				}
 			}
+
+			this.externalChange = false;
 		});
 	}
 	update() {
+		console.log('types update', this.skipUpdate, this.dirty);
 		if (this.skipUpdate) return;
 		if (!this.jstreeInited)
 			this.dirty = true;
@@ -90,13 +109,15 @@ class Types extends Module {
 
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
+				if (this.externalChange)
+					return;
+				
 				// selection changed
-				this.skipUpdate = true;
 				let prototypes = data.selected.map(getSerializable);
 				editor.select(prototypes, this);
-				this.skipUpdate = false;
 				if (prototypes.length === 1)
 					events.dispatch('prototypeClicked', prototypes[0]);
+				
 			}).on('loaded.jstree refresh.jstree', () => {
 				let jstree = $(this.jstree).jstree(true);
 				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');

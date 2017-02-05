@@ -12,6 +12,9 @@ class Type extends Module {
 		this.name = 'Type';
 	}
 	update() {
+		if (editor.selection.items.length != 1)
+			return false;
+		
 		if (editor.selection.type === 'prt') {
 			this.propertyEditor.update(editor.selection.items, editor.selection.type);
 		} else if (editor.selection.type === 'ent') {

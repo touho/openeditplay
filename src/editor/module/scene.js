@@ -59,8 +59,6 @@ class SceneModule extends Module {
 		this.selectionEnd = null;
 		this.entitiesInSelection = [];
 		
-		this.entityListeners = [];
-		
 		this.playButton = new TopButton({
 			text: 'Play',
 			iconClass: 'fa-play',
@@ -187,6 +185,7 @@ class SceneModule extends Module {
 			if (this.entitiesInSelection.length > 0) {
 				this.selectedEntities.push(...this.entitiesInSelection);
 				this.entitiesInSelection.length = 0;
+				this.selectSelectedEntitiesInEditor();
 			}
 			
 			this.draw();
@@ -260,18 +259,8 @@ class SceneModule extends Module {
 		this.newEntities.length = 0;
 	}
 	
-	clearEntityListeners() {
-		this.entityListeners.forEach(listener => listener());
-		this.entityListeners.length = 0;
-	}
-	
 	selectSelectedEntitiesInEditor() {
-		this.clearEntityListeners();
-		let draw = () => this.draw();
 		editor.select(this.selectedEntities, this);
-		this.selectedEntities.forEach(ent => {
-			this.entityListeners.push(ent.listen('changedInEditor', draw));
-		});
 	}
 	
 	stopAndReset() {

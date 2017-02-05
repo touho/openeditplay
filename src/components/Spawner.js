@@ -33,7 +33,7 @@ Component.register({
 			if (!prototype)
 				return;
 
-			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position.clone());
+			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
 		}
 	}
 });

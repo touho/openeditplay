@@ -1,6 +1,6 @@
 import Serializable, { createStringId } from './serializable';
 import assert from '../assert';
-import { componentClasses } from './component';
+import { componentClasses, Component } from './component';
 
 export default class ComponentData extends Serializable {
 	constructor(componentClassName, predefinedId = false, predefinedComponentId = false) {
@@ -31,7 +31,8 @@ export default class ComponentData extends Serializable {
 		this.forEachChild(null, child => {
 			children.push(child.clone());
 		});
-		obj.addChildren(children);
+		obj.initWithChildren(children);
+		this._state |= Serializable.STATE_CLONE;
 		return obj;
 	}
 	toJSON() {
@@ -100,20 +101,25 @@ export default class ComponentData extends Serializable {
 		return this;
 	}
 	getValue(name) {
-		let property = this.properties[name];
-		if (property) return property.value;
+		let property = this.getProperty(name);
+		if (property)
+			return property.value;
+		let parent = this.getParentComponentData();
 		
-		let propertyType = componentClasses.get(this.componentClassName).propertyTypeMap.get(name);
-		assert(classDef, '');
-		if (classDef) return classDef.propertyTypeMap.get(name);
+		if (parent)
+			return parent.getValue(name);
 		
-		return property && property.value
-			|| componentClasses.get(this.componentClassName).propertyTypeMap.get(name).initialValue
-			|| assert(false, 'Value of this name does not exist in this');
-		if (property) return property.value;
-		
-		// return property && property.value || this.componentClass.propertyTypes.;
-		return this.properties[name] || this.parent && this.parent.getProperty(name) || null;
+		return this.componentClass._propertyTypesByName[name].initialValue;
+	}
+	createComponent() {
+		let properties = this.getInheritedProperties();
+		let values = {};
+		properties.forEach(prop => {
+			values[prop.name] = prop.value;
+		});
+		let component = Component.create(this.name, values);
+		component._componentId = this.componentId;
+		return component;
 	}
 }
 Serializable.registerSerializable(ComponentData, 'cda', json => {

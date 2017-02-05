@@ -107,6 +107,16 @@ export default class Entity extends Serializable {
 		this.components.forEach((value, key) => Entity.deleteComponents(value));
 		this.components.clear();
 	}
+	deleteComponent(component) {
+		let array = this.getComponents(component.constructor.componentName);
+		let idx = array.indexOf(component);
+		assert(idx >= 0);
+		if (!this.sleeping)
+			component._sleep();
+		component.delete();
+		array.splice(idx, 1);
+		return this;
+	}
 	setInTreeStatus(isInTree) {
 		if (this._isInTree === isInTree)
 			return;

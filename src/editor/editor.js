@@ -53,7 +53,7 @@ addChangeListener(change => {
 	events.dispatch('change', change);
 	if (editor) {
 		editor.dirty = true;
-		if (change.type !== 'editorSelection' && loaded)
+		if (change.type !== 'editorSelection' && loaded && change.reference.getRoot().threeLetterType === 'gam')
 			editor.saveNeeded = true;
 	}
 });

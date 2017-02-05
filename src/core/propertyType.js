@@ -59,7 +59,7 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 	return new PropertyType(propertyName, type, validator, defaultValue, description, flags);
 };
 
-export { createPropertyType as dataType };
+export let dataType = createPropertyType;
 
 function createFlag(type, func = {}) {
 	func.isFlag = true;
@@ -71,7 +71,7 @@ createPropertyType.flagDegreesInEditor = createFlag('degreesInEditor');
 
 export function createDataType({
 	name = '',
-	validators = { default: x => x }, // default must exist
+	validators = { default: x => x }, // default must exist. if value is a reference(object), validator should copy the value.
 	toJSON = x => x,
 	fromJSON = x => x,
 	clone = x => x

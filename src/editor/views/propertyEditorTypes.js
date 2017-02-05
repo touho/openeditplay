@@ -1,5 +1,6 @@
 import { el, list, mount } from 'redom';
 
+const EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 
 // <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
 export default editors = {};
@@ -21,7 +22,7 @@ editors.float = editors.int = (container, oninput, onchange) => {
 		onchange: () => onchange(+input.value)
 	});
 	mount(container, input);
-	return val => input.value = +(+val).toFixed(4);
+	return val => input.value = Math.round(val*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
 };
 
 editors.bool = (container, oninput, onchange) => {
@@ -56,8 +57,8 @@ editors.vector = (container, oninput, onchange) => {
 	});
 	mount(container, el('div', el('span', 'x:'), xInput, el('span', 'y:'), yInput));
 	return val => {
-		xInput.value = +val.x.toFixed(4);
-		yInput.value = +val.y.toFixed(4);
+		xInput.value = Math.round(val.x*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
+		yInput.value = Math.round(val.x*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
 	};
 };
 
