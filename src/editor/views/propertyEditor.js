@@ -153,7 +153,13 @@ class Container {
 		} }));
 		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete type', { onclick: () => {
 			dispatch(this, 'makingChanges');
-			this.item.delete();
+			let entityPrototypeCount = this.item.countEntityPrototypes(true);
+			if (entityPrototypeCount) {
+				if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} instances that are using it?`))
+					this.item.delete();
+			} else {
+				this.item.delete();
+			}
 		} }));
 	}
 	updateEntityPrototype() {

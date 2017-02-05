@@ -192,24 +192,39 @@ export default class Prototype extends PropertyOwner {
 			return undefined;
 	}
 	
+	countEntityPrototypes(findParents = false) {
+		if (this.threeLetterType !== 'prt')
+			return 0;
+		
+		let count = 0;
+		let levels = game.getChildren('lvl');
+		for (let i = levels.length-1; i >= 0; i--) {
+			let entityPrototypes = levels[i].getChildren('epr');
+			for (let j = entityPrototypes.length-1; j >= 0; j--) {
+				if (entityPrototypes[j].prototype === this)
+					count++;
+			}
+		}
+		
+		if (findParents)
+			this.forEachChild('prt', prt => count += prt.countEntityPrototypes(true));
+		
+		return count;
+	}
+	
 	delete() {
-		// let name = this.name;
 		if (!super.delete()) return false;
 		if (this.threeLetterType === 'prt') {
 			game.forEachChild('lvl', lvl => {
-				let itemsToDelete = [];
-				lvl.forEachChild('epr', epr => {
-					if (epr.prototype === this)
-						itemsToDelete.push(epr);
-				});
-				itemsToDelete.forEach(epr => {
-					lvl.deleteChild(epr);
-				});
+				let items = lvl.getChildren('epr');
+				for (let i = items.length-1; i >= 0; i--) {
+					if (items[i].prototype === this) {
+						lvl.deleteChild(items[i], i);
+					}
+				}
 			});
 		}
 		this.previouslyCreatedEntity = null;
-		console.log('deleting done');
-		
 		return true;
 	}
 }

@@ -123,15 +123,19 @@ export default class Serializable {
 			element = element._parent;
 		return element;
 	}
-	deleteChild(child) {
+	// idx is optional
+	deleteChild(child, idx) {
 		serializableManager.addChange(serializableManager.changeType.deleteSerializable, child);
-		this._detachChild(child);
+		this._detachChild(child, idx);
 		child.delete();
 		return this;
 	}
-	_detachChild(child) {
+	// idx is optional
+	_detachChild(child, idx = 0) {
 		let array = this._children.get(child.threeLetterType);
-		let idx = array.indexOf(child);
+		assert(array, 'child not found');
+		if (array[idx] !== child)
+			idx = array.indexOf(child);
 		assert(idx >= 0, 'child not found');
 		array.splice(idx, 1);
 		if (array.length === 0)
