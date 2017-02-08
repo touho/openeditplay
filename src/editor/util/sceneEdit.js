@@ -1,7 +1,7 @@
 import { scene } from '../../core/scene';
 import { editor } from '../editor';
 import { changeType } from '../../core/serializableManager';
-import assert from '../../assert';
+import assert from '../../util/assert';
 
 let radius = 10;
 

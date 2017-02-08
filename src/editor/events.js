@@ -8,7 +8,7 @@
 
 let listeners = {};
 
-export default events = {
+let events = {
 	listen(event, callback) {
 		if (!listeners.hasOwnProperty(event)) {
 			listeners[event] = [];
@@ -41,6 +41,7 @@ export default events = {
 		});
 	}
 };
+export default events;
 
 // DOM / ReDom event system
 

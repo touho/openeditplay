@@ -1,5 +1,5 @@
 import Serializable from './serializable';
-import assert from '../assert';
+import assert from '../util/assert';
 
 const ALIVE_ERROR = 'entity is already dead';
 

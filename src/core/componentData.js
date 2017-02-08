@@ -1,5 +1,5 @@
 import Serializable, { createStringId } from './serializable';
-import assert from '../assert';
+import assert from '../util/assert';
 import { componentClasses, Component } from './component';
 
 export default class ComponentData extends Serializable {

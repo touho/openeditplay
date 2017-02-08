@@ -2,7 +2,7 @@ import Popup, { Button } from './popup';
 import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
 import { list, el } from 'redom';
-import assert from '../../../assert';
+import assert from '../../../util/assert';
 import { setChangeOrigin } from '../../../core/serializableManager';
 
 export default class ComponentAdder extends Popup {

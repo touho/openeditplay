@@ -3,26 +3,34 @@
   "version": "0.0.1",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "dev": "node watch",
+    "build": "rollup -m -c -n explore -f umd -i src/main.js -o dist/explore.js && uglifyjs dist/explore.js -cmo dist/explore.min.js --source-map dist/explore.min.js.map && cp dist/explore.j* public/ && cp dist/explore.min.j* public/",
+    "build-editor-dependencies": "cat node_modules/jquery/dist/jquery.min.js src/external/jstree.min.js > dist/explore.editor.dependencies.js && cp dist/explore.editor.dependencies.js public/",
+    "build-editor": "rollup -m -c -n explore -f umd -i src/editorMain.js -o dist/explore.editor.js && cp dist/explore.editor.j* public/",
+    "build-server": "rollup -m -c -n explore -f cjs -i src/serverMain.js -o dist/explore.server.js",
+    "build-editor-css-dependencies": "cat src/external/font-awesome.min.css > dist/explore.editor.dependencies.css && cp dist/explore.editor.dependencies.css public/css/",
+    "build-editor-scss": "node buildScss src/editorMain.scss dist/explore.editor.css && cp dist/explore.editor.cs* public/css/",
+    "build-all": "npm run build && npm run build-editor && npm run build-server && npm run build-editor-dependencies && npm run build-editor-scss && npm run build-editor-css-dependencies",
+    "build-dev": "npm run build-editor && npm run build-server",
+    "server": "node server",
+    "clean": "rm dist/* && rm public/explore* && rm public/css/explore*"
+  },
   "devDependencies": {
     "chokidar": "^1.6.1",
     "rollup": "^0.38.0",
-    "rollup-plugin-babel": "^2.7.1",
+    "rollup-plugin-buble": "^0.15.0",
     "rollup-plugin-node-resolve": "^2.0.0",
-    "rollup-watch": "^2.5.0"
-  },
-  "dependencies": {
-    "assert": "^1.4.1",
-    "concat-files": "^0.1.1",
-    "express": "^4.14.0",
-    "jquery": "^3.1.1",
+    "uglify": "^0.1.5",
     "postcss": "^5.2.8",
     "postcss-import": "^9.0.0",
     "postcss-scss": "^0.4.0",
     "precss": "^1.4.0",
-    "propertiesjs": "^1.6.0",
-    "redom": "^1.8.0",
-    "rollup-plugin-buble": "^0.15.0",
-    "rollup-plugin-uglify": "^1.0.1",
+    "jquery": "^3.1.1",
+    "redom": "^1.8.0"
+  },
+  "dependencies": {
+    "express": "^4.14.0",
     "socket.io": "^1.7.2"
   }
 }

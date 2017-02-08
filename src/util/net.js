@@ -66,4 +66,5 @@ function tryToLoad() {
 	});
 }
 
-tryToLoad();
+if (typeof window !== 'undefined')
+	tryToLoad();

@@ -1,10 +1,11 @@
 import { Component, Prop } from '../core/component';
 import { key, keyPressed } from '../util/input';
+import Vector from '../util/vector';
 
 Component.register({
 	name: 'Mover',
 	properties: [
-		Prop('change', new Victor(10, 10), Prop.vector),
+		Prop('change', new Vector(10, 10), Prop.vector),
 		Prop('userControlled', false, Prop.bool),
 		Prop('speed', 1, Prop.float),
 		Prop('rotationSpeed', 0, Prop.float, 'Degrees per second', Prop.flagDegreesInEditor)
@@ -30,7 +31,7 @@ Component.register({
 					this.Transform.rotation += dt * dx * this.rotationSpeed;
 				}
 			} else {
-				let change = new Victor(dt, 0).rotate(t * this.speed).multiply(this.change);
+				let change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
 				this.Transform.position.copy(this.Transform.position).add(change);
 				
 				if (this.rotationSpeed)

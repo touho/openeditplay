@@ -1,4 +1,4 @@
-import assert from '../assert';
+import assert from '../util/assert';
 import * as serializableManager from './serializableManager';
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars

@@ -2,6 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, modulesRegisteredPromise } from '../editor';
 import Level from '../../core/level';
+import events from '../events';
 
 export class TopBarModule extends Module {
 	constructor() {

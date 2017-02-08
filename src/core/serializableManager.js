@@ -1,8 +1,7 @@
-import assert from '../assert';
+import assert from '../util/assert';
 import Serializable from './serializable';
 
 export let serializables = {};
-window.serializables = serializables;
 
 let DEBUG_CHANGES = 0;
 
@@ -60,7 +59,6 @@ export function setChangeOrigin(_origin) {
 		setTimeout(resetOrigin);
 	}
 }
-window.orig = o => setChangeOrigin(o);
 
 let externalChange = false;
 export function addChange(type, reference) {

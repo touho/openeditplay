@@ -1,6 +1,6 @@
 import Serializable from './serializable';
 import Entity from './entity';
-import assert from '../assert';
+import assert from '../util/assert';
 import { game } from './game';
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
 

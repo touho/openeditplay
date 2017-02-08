@@ -1,4 +1,4 @@
-import assert from '../assert';
+import assert from '../util/assert';
 import Property from './property';
 
 // info about type, validator, validatorParameters, initialValue

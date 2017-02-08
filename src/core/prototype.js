@@ -1,5 +1,5 @@
 import Serializable from './serializable';
-import assert from '../assert';
+import assert from '../util/assert';
 import { getSerializable } from './serializableManager';
 import Prop from './propertyType';
 import PropertyOwner from './propertyOwner';

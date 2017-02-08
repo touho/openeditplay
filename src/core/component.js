@@ -1,5 +1,5 @@
 import Serializable from './serializable';
-import assert from '../assert';
+import assert from '../util/assert';
 import Property from './property';
 import PropertyOwner from './propertyOwner';
 import { scene } from './scene';

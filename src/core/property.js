@@ -1,6 +1,6 @@
 import Serializable from './serializable';
 import { addChange, changeType } from './serializableManager'; 
-import assert from '../assert';
+import assert from '../util/assert';
 
 // Instance of a property
 export default class Property extends Serializable {

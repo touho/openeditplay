@@ -5,7 +5,8 @@ import { getSerializable } from './serializableManager';
 import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
 import { scene } from './scene';
-import assert from '../assert';
+import assert from '../util/assert';
+import Vector from '../util/vector';
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
@@ -97,7 +98,7 @@ export default class EntityPrototype extends Prototype {
 				json.x = floatToJSON(prp.value.x);
 				json.y = floatToJSON(prp.value.y);
 			} else if (prp.name === 'scale') {
-				if (!prp.value.isEqualTo(new Victor(1, 1))) {
+				if (!prp.value.isEqualTo(new Vector(1, 1))) {
 					json.w = floatToJSON(prp.value.x);
 					json.h = floatToJSON(prp.value.y);
 				}
@@ -145,13 +146,13 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
 	componentDatas.push(transform);
 	
 	let position = transform.componentClass._propertyTypesByName.position.createProperty({
-		value: new Victor(0, 0),
+		value: new Vector(0, 0),
 		predefinedId: id + '_p'
 	});
 	transform.addChild(position);
 
 	let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-		value: new Victor(1, 1),
+		value: new Vector(1, 1),
 		predefinedId: id + '_s'
 	});
 	transform.addChild(scale);
@@ -191,13 +192,13 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let transformClass = componentClasses.get('Transform');
 	
 	let position = transformClass._propertyTypesByName.position.createProperty({
-		value: new Victor(json.x, json.y),
+		value: new Vector(json.x, json.y),
 		predefinedId: positionId
 	});
 	transformData.addChild(position, 'fromJSON');
 
 	let scale = transformClass._propertyTypesByName.scale.createProperty({
-		value: new Victor(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
+		value: new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
 		predefinedId: scaleId
 	});
 	transformData.addChild(scale, 'fromJSON');

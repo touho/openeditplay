@@ -1,5 +1,6 @@
-import assert from '../assert';
+import assert from '../util/assert';
 import { createDataType, dataType } from './propertyType';
+import Vector from '../util/vector';
 
 function validateFloat(val) {
 	if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -65,7 +66,7 @@ dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default(vec) {
-			if (!(vec instanceof Victor))
+			if (!(vec instanceof Vector))
 				throw new Error();
 			vec = vec.clone();
 			vec.x = parseFloat(vec.x);
@@ -79,7 +80,7 @@ dataType.vector = createDataType({
 		x: Math.round(vec.x*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER,
 		y: Math.round(vec.y*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER
 	}),
-	fromJSON: vec => Victor.fromObject(vec),
+	fromJSON: vec => Vector.fromObject(vec),
 	clone: vec => vec.clone()
 });
 

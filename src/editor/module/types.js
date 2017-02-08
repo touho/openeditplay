@@ -3,7 +3,7 @@ import Module from './module';
 import events from '../events';
 import Prototype from '../../core/prototype';
 import { getSerializable, changeType, setChangeOrigin } from '../../core/serializableManager';
-import assert from '../../assert';
+import assert from '../../util/assert';
 import { editor } from '../editor';
 
 class Types extends Module {
@@ -90,7 +90,6 @@ class Types extends Module {
 		});
 	}
 	update() {
-		console.log('types update', this.skipUpdate, this.dirty);
 		if (this.skipUpdate) return;
 		if (!this.jstreeInited)
 			this.dirty = true;

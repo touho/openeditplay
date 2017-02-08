@@ -1,11 +1,12 @@
 import { Component, Prop } from '../core/component';
+import Vector from '../util/vector';
 
 Component.register({
 	name: 'Rect',
 	icon: 'fa-stop',
 	allowMultiple: true,
 	properties: [
-		Prop('size', new Victor(10, 10), Prop.vector),
+		Prop('size', new Vector(10, 10), Prop.vector),
 		Prop('style', 'red', Prop.string),
 		Prop('randomStyle', false, Prop.bool)
 	],

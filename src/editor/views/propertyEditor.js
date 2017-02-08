@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import events, { listen, dispatch } from '../events';
 import showPopup from './popup/popup';
 import ComponentData from '../../core/componentData';
-import assert from '../../assert';
+import assert from '../../util/assert';
 import editors from './propertyEditorTypes';
 import ComponentAdder from './popup/componentAdder';
 import { changeType, setChangeOrigin } from '../../core/serializableManager';

@@ -1,9 +1,11 @@
 import { el, list, mount } from 'redom';
+import Vector from '../../util/vector';
 
 const EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 
 // <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
-export default editors = {};
+let editors = {};
+export default editors;
 
 editors.default = editors.string = (container, oninput, onchange) => {
 	let input = el('input', {
@@ -43,7 +45,7 @@ editors.bool = (container, oninput, onchange) => {
 
 editors.vector = (container, oninput, onchange) => {
 	function getValue() {
-		return new Victor(+xInput.value, +yInput.value);
+		return new Vector(+xInput.value, +yInput.value);
 	}
 	let xInput = el('input.xInput', {
 		type: 'number',

@@ -1,3 +1,4 @@
+import Vector from '../util/vector';
 
 export function keyPressed(key) {
 	return keys[key] || false;
@@ -46,14 +47,14 @@ export function listenMouseMove(element, handler) {
 		
 		element._mx = x;
 		element._my = y;
-		handler(new Victor(x, y));
+		handler(new Vector(x, y));
 	});
 }
 
 export function listenMouseDown(element, handler) {
 	element.addEventListener('mousedown', event => {
 		if (typeof element._mx === 'number')
-			handler(new Victor(element._mx, element._my));
+			handler(new Vector(element._mx, element._my));
 		else
 			handler();
 	});
@@ -61,7 +62,7 @@ export function listenMouseDown(element, handler) {
 export function listenMouseUp(element, handler) {
 	element.addEventListener('mouseup', event => {
 		if (typeof element._mx === 'number')
-			handler(new Victor(element._mx, element._my));
+			handler(new Vector(element._mx, element._my));
 		else
 			handler();
 	});
@@ -74,17 +75,21 @@ let keys = {};
 let keyDownListeners = [];
 let keyUpListeners = [];
 
-window.onkeydown = event => {
-	let keyCode = event.which || event.keyCode;
-	
-	if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
-		return;
-	
-	keys[keyCode] = true;
-	keyDownListeners.forEach(l => l(keyCode));
-};
-window.onkeyup = event => {
-	let key = event.which || event.keyCode;
-	keys[key] = false;
-	keyUpListeners.forEach(l => l(key));
-};
+
+if (typeof window !== 'undefined') {
+
+	window.onkeydown = event => {
+		let keyCode = event.which || event.keyCode;
+
+		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
+			return;
+
+		keys[keyCode] = true;
+		keyDownListeners.forEach(l => l(keyCode));
+	};
+	window.onkeyup = event => {
+		let key = event.which || event.keyCode;
+		keys[key] = false;
+		keyUpListeners.forEach(l => l(key));
+	};
+}

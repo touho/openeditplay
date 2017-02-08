@@ -1,7 +1,7 @@
 import Serializable from './serializable'
 import '../components/import'
 import Prototype from '../core/prototype'
-import assert from '../assert'
+import assert from '../util/assert'
 import PropertyOwner, { Prop } from '../core/propertyOwner';
 
 let propertyTypes = [

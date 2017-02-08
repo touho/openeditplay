@@ -11,7 +11,7 @@ import { el, list, mount } from 'redom';
 import Game from '../core/game';
 import Serializable from '../core/serializable';
 import { addChangeListener, serializables, executeExternal, setChangeOrigin } from '../core/serializableManager';
-import assert from '../assert';
+import assert from '../util/assert';
 import { setNetworkEnabled } from '../util/net';
 
 let loaded = false;

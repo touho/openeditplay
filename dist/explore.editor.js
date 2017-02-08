@@ -1,3 +1,9 @@
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
+  typeof define === 'function' && define.amd ? define(factory) :
+  (factory());
+}(this, (function () { 'use strict';
+
 function assert(condition, message) {
 	if (!condition) {
 		debugger;
@@ -6,7 +12,6 @@ function assert(condition, message) {
 }
 
 var serializables = {};
-window.serializables = serializables;
 
 var DEBUG_CHANGES = 0;
 
@@ -62,7 +67,6 @@ function setChangeOrigin(_origin) {
 		setTimeout(resetOrigin);
 	}
 }
-window.orig = function (o) { return setChangeOrigin(o); };
 
 var externalChange = false;
 function addChange(type, reference) {
@@ -565,6 +569,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 	}
 });
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -652,6 +657,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags) {
 	var this$1 = this;
@@ -774,6 +783,99 @@ function createValidator(name, validatorFunction) {
 	return validator;
 }
 
+var Vector = function Vector(x, y) {
+	this.x = x || 0;
+	this.y = y || 0;
+};
+Vector.prototype.add = function add (vec) {
+	this.x += vec.x;
+	this.y += vec.y;
+	return this;
+};
+Vector.prototype.subtract = function subtract (vec) {
+	this.x -= vec.x;
+	this.y -= vec.y;
+	return this;
+};
+Vector.prototype.multiply = function multiply (vec) {
+	this.x *= vec.x;
+	this.y *= vec.y;
+	return this;
+};
+Vector.prototype.multiplyScalar = function multiplyScalar (scalar) {
+	this.x *= scalar;
+	this.y *= scalar;
+	return this;
+};
+Vector.prototype.divide = function divide (vec) {
+	this.x /= vec.x;
+	this.y /= vec.y;
+	return this;
+};
+Vector.prototype.divideScalar = function divideScalar (scalar) {
+	this.x /= scalar;
+	this.y /= scalar;
+	return this;
+};
+Vector.prototype.length = function length () {
+	return Math.sqrt(this.x * this.x + this.y * this.y);
+};
+Vector.prototype.lengthSq = function lengthSq () {
+	return this.x * this.x + this.y * this.y;
+};
+Vector.prototype.distance = function distance (vec) {
+	var dx = this.x - vec.x,
+		dy = this.y - vec.y;
+	return Math.sqrt(dx * dx + dy * dy);		
+};
+Vector.prototype.distanceSq = function distanceSq (vec) {
+	var dx = this.x - vec.x,
+		dy = this.y - vec.y;
+	return dx * dx + dy * dy;
+};
+Vector.prototype.normalize = function normalize () {
+	var length = this.length();
+	
+	if (length === 0) {
+		this.x = 1;
+		this.y = 0;
+	} else {
+		this.divideScalar(length);
+	}
+	return this;
+};
+Vector.prototype.horizontalAngle = function horizontalAngle () {
+	return Math.atan2(this.y, this.x);
+};
+Vector.prototype.verticalAngle = function verticalAngle () {
+	return Math.atan2(this.x, this.y);
+};
+Vector.prototype.rotate = function rotate (angle) {
+	var nx = (this.x * Math.cos(angle)) - (this.y * Math.sin(angle));
+	var ny = (this.x * Math.sin(angle)) + (this.y * Math.cos(angle));
+
+	this.x = nx;
+	this.y = ny;
+
+	return this;
+};
+Vector.prototype.rotateTo = function rotateTo (rotation) {
+	return this.rotate(rotation-this.verticalAngle());
+};
+Vector.prototype.isEqualTo = function isEqualTo (vec) {
+	return this.x === vec.x && this.y === vec.y;
+};
+Vector.prototype.clone = function clone () {
+	return new Vector(this.x, this.y);
+};
+Vector.prototype.toString = function toString () {
+	return ("[" + (this.x) + ", " + (this.y) + "]");
+};
+
+Vector.fromObject = function(obj) {
+	return new Vector(obj.x, obj.y);
+};
+
 function validateFloat(val) {
 	if (isNaN(val) || val === Infinity || val === -Infinity)
 		{ throw new Error('Invalid float: ' + val); }
@@ -838,7 +940,7 @@ dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default: function default$3(vec) {
-			if (!(vec instanceof Victor))
+			if (!(vec instanceof Vector))
 				{ throw new Error(); }
 			vec = vec.clone();
 			vec.x = parseFloat(vec.x);
@@ -852,7 +954,7 @@ dataType.vector = createDataType({
 		x: Math.round(vec.x*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER,
 		y: Math.round(vec.y*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER
 	}); },
-	fromJSON: function (vec) { return Victor.fromObject(vec); },
+	fromJSON: function (vec) { return Vector.fromObject(vec); },
 	clone: function (vec) { return vec.clone(); }
 });
 
@@ -1454,6 +1556,7 @@ Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 });
 
 var componentClasses = new Map();
+// Instance of a component, see componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -1650,8 +1753,8 @@ Component$1.register({
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
-		createPropertyType('position', new Victor(0, 0), createPropertyType.vector),
-		createPropertyType('scale', new Victor(1, 1), createPropertyType.vector),
+		createPropertyType('position', new Vector(0, 0), createPropertyType.vector),
+		createPropertyType('scale', new Vector(1, 1), createPropertyType.vector),
 		createPropertyType('rotation', 0, createPropertyType.float, createPropertyType.float.modulo(0, Math.PI * 2), createPropertyType.flagDegreesInEditor)
 	]
 });
@@ -1664,7 +1767,7 @@ Component$1.register({
 	properties: [
 		createPropertyType('name', 'Oh right', createPropertyType.string),
 		createPropertyType('enum', 'yksi', createPropertyType.enum, createPropertyType.enum.values('yksi', 'kaksi', 'kolme', 'neljä')),
-		createPropertyType('topBarHelper', new Victor(0, 1), createPropertyType.vector),
+		createPropertyType('topBarHelper', new Vector(0, 1), createPropertyType.vector),
 		createPropertyType('test' + ++vari, vari, createPropertyType.int),
 		createPropertyType('test' + ++vari, false, createPropertyType.bool),
 		createPropertyType('test' + ++vari, true, createPropertyType.bool)
@@ -1715,14 +1818,14 @@ function listenMouseMove(element, handler) {
 		
 		element._mx = x;
 		element._my = y;
-		handler(new Victor(x, y));
+		handler(new Vector(x, y));
 	});
 }
 
 function listenMouseDown(element, handler) {
 	element.addEventListener('mousedown', function (event) {
 		if (typeof element._mx === 'number')
-			{ handler(new Victor(element._mx, element._my)); }
+			{ handler(new Vector(element._mx, element._my)); }
 		else
 			{ handler(); }
 	});
@@ -1730,7 +1833,7 @@ function listenMouseDown(element, handler) {
 function listenMouseUp(element, handler) {
 	element.addEventListener('mouseup', function (event) {
 		if (typeof element._mx === 'number')
-			{ handler(new Victor(element._mx, element._my)); }
+			{ handler(new Vector(element._mx, element._my)); }
 		else
 			{ handler(); }
 	});
@@ -1743,25 +1846,29 @@ var keys = {};
 var keyDownListeners = [];
 var keyUpListeners = [];
 
-window.onkeydown = function (event) {
-	var keyCode = event.which || event.keyCode;
-	
-	if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
-		{ return; }
-	
-	keys[keyCode] = true;
-	keyDownListeners.forEach(function (l) { return l(keyCode); });
-};
-window.onkeyup = function (event) {
-	var key = event.which || event.keyCode;
-	keys[key] = false;
-	keyUpListeners.forEach(function (l) { return l(key); });
-};
+
+if (typeof window !== 'undefined') {
+
+	window.onkeydown = function (event) {
+		var keyCode = event.which || event.keyCode;
+
+		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
+			{ return; }
+
+		keys[keyCode] = true;
+		keyDownListeners.forEach(function (l) { return l(keyCode); });
+	};
+	window.onkeyup = function (event) {
+		var key = event.which || event.keyCode;
+		keys[key] = false;
+		keyUpListeners.forEach(function (l) { return l(key); });
+	};
+}
 
 Component$1.register({
 	name: 'Mover',
 	properties: [
-		createPropertyType('change', new Victor(10, 10), createPropertyType.vector),
+		createPropertyType('change', new Vector(10, 10), createPropertyType.vector),
 		createPropertyType('userControlled', false, createPropertyType.bool),
 		createPropertyType('speed', 1, createPropertyType.float),
 		createPropertyType('rotationSpeed', 0, createPropertyType.float, 'Degrees per second', createPropertyType.flagDegreesInEditor)
@@ -1787,7 +1894,7 @@ Component$1.register({
 					this.Transform.rotation += dt * dx * this.rotationSpeed;
 				}
 			} else {
-				var change = new Victor(dt, 0).rotate(t * this.speed).multiply(this.change);
+				var change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
 				this.Transform.position.copy(this.Transform.position).add(change);
 				
 				if (this.rotationSpeed)
@@ -1802,7 +1909,7 @@ Component$1.register({
 	icon: 'fa-stop',
 	allowMultiple: true,
 	properties: [
-		createPropertyType('size', new Victor(10, 10), createPropertyType.vector),
+		createPropertyType('size', new Vector(10, 10), createPropertyType.vector),
 		createPropertyType('style', 'red', createPropertyType.string),
 		createPropertyType('randomStyle', false, createPropertyType.bool)
 	],
@@ -2074,6 +2181,8 @@ Prototype.create = function(name) {
 
 Serializable.registerSerializable(Prototype, 'prt');
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2172,7 +2281,7 @@ var EntityPrototype = (function (Prototype$$1) {
 				json.x = floatToJSON(prp.value.x);
 				json.y = floatToJSON(prp.value.y);
 			} else if (prp.name === 'scale') {
-				if (!prp.value.isEqualTo(new Victor(1, 1))) {
+				if (!prp.value.isEqualTo(new Vector(1, 1))) {
 					json.w = floatToJSON(prp.value.x);
 					json.h = floatToJSON(prp.value.y);
 				}
@@ -2226,13 +2335,13 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 	componentDatas.push(transform);
 	
 	var position = transform.componentClass._propertyTypesByName.position.createProperty({
-		value: new Victor(0, 0),
+		value: new Vector(0, 0),
 		predefinedId: id + '_p'
 	});
 	transform.addChild(position);
 
 	var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-		value: new Victor(1, 1),
+		value: new Vector(1, 1),
 		predefinedId: id + '_s'
 	});
 	transform.addChild(scale);
@@ -2272,13 +2381,13 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var transformClass = componentClasses.get('Transform');
 	
 	var position = transformClass._propertyTypesByName.position.createProperty({
-		value: new Victor(json.x, json.y),
+		value: new Vector(json.x, json.y),
 		predefinedId: positionId
 	});
 	transformData.addChild(position, 'fromJSON');
 
 	var scale = transformClass._propertyTypesByName.scale.createProperty({
-		value: new Victor(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
+		value: new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
 		predefinedId: scaleId
 	});
 	transformData.addChild(scale, 'fromJSON');
@@ -2449,7 +2558,8 @@ function tryToLoad() {
 	});
 }
 
-tryToLoad();
+if (typeof window !== 'undefined')
+	{ tryToLoad(); }
 
 (function () {
 	var S = (function (Serializable$$1) {
@@ -2493,6 +2603,7 @@ tryToLoad();
 	console.log('PropertyType tests OK');
 })();
 
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Example',
 	description: 'Description of what this component does',
@@ -2551,7 +2662,7 @@ Component$1.register({
 
 var listeners$1 = {};
 
-var events$1 = events = {
+var events = {
 	listen: function listen(event, callback) {
 		if (!listeners$1.hasOwnProperty(event)) {
 			listeners$1[event] = [];
@@ -2587,7 +2698,6 @@ var events$1 = events = {
 		});
 	}
 };
-
 // DOM / ReDom event system
 
 function dispatch(view, type, data) {
@@ -2607,6 +2717,132 @@ function listen(view, type, handler) {
 			{ handler(event); }
 	});
 }
+
+var text = function (str) { return doc.createTextNode(str); };
+
+function mount (parent, child, before) {
+  var parentEl = parent.el || parent;
+  var childEl = child.el || child;
+
+  if (isList(childEl)) {
+    childEl = childEl.el;
+  }
+
+  if (child === childEl && childEl.__redom_view) {
+    // try to look up the view if not provided
+    child = childEl.__redom_view;
+  }
+
+  if (child !== childEl) {
+    childEl.__redom_view = child;
+  }
+  if (child.isMounted) {
+    child.remount && child.remount();
+  } else {
+    child.mount && child.mount();
+  }
+  if (before) {
+    parentEl.insertBefore(childEl, before.el || before);
+  } else {
+    parentEl.appendChild(childEl);
+  }
+  if (child.isMounted) {
+    child.remounted && child.remounted();
+  } else {
+    child.isMounted = true;
+    child.mounted && child.mounted();
+  }
+
+  return child;
+}
+
+function unmount (parent, child) {
+  var parentEl = parent.el || parent;
+  var childEl = child.el || child;
+
+  if (child === childEl && childEl.__redom_view) {
+    // try to look up the view if not provided
+    child = childEl.__redom_view;
+  }
+
+  child.unmount && child.unmount();
+
+  parentEl.removeChild(childEl);
+
+  child.isMounted = false;
+  child.unmounted && child.unmounted();
+
+  return child;
+}
+
+function setStyle (view, arg1, arg2) {
+  var el = view.el || view;
+
+  if (arguments.length > 2) {
+    el.style[arg1] = arg2;
+  } else if (isString(arg1)) {
+    el.setAttribute('style', arg1);
+  } else {
+    for (var key in arg1) {
+      setStyle(el, key, arg1[key]);
+    }
+  }
+}
+
+function setAttr (view, arg1, arg2) {
+  var el = view.el || view;
+  var isSVG = el instanceof window.SVGElement;
+
+  if (arguments.length > 2) {
+    if (arg1 === 'style') {
+      setStyle(el, arg2);
+    } else if (isSVG && isFunction(arg2)) {
+      el[arg1] = arg2;
+    } else if (!isSVG && (arg1 in el || isFunction(arg2))) {
+      el[arg1] = arg2;
+    } else {
+      el.setAttribute(arg1, arg2);
+    }
+  } else {
+    for (var key in arg1) {
+      setAttr(el, key, arg1[key]);
+    }
+  }
+}
+
+function parseArguments (element, args) {
+  for (var i = 0; i < args.length; i++) {
+    var arg = args[i];
+
+    if (!arg) {
+      continue;
+    }
+
+    // support middleware
+    if (typeof arg === 'function') {
+      arg(element);
+    } else if (isString(arg) || isNumber(arg)) {
+      element.appendChild(text(arg));
+    } else if (isNode(arg) || isNode(arg.el) || isList(arg.el)) {
+      mount(element, arg);
+    } else if (arg.length) {
+      parseArguments(element, arg);
+    } else if (typeof arg === 'object') {
+      setAttr(element, arg);
+    }
+  }
+}
+
+var is = function (type) { return function (a) { return typeof a === type; }; };
+
+var isString = is('string');
+var isNumber = is('number');
+var isFunction = is('function');
+
+var isNode = function (a) { return a && a.nodeType; };
+var isList = function (a) { return a && a.__redom_list; };
+
+var doc = document;
 
 var HASH = '#'.charCodeAt(0);
 var DOT = '.'.charCodeAt(0);
@@ -2653,147 +2889,59 @@ function createElement (query, ns) {
     }
   }
 
-  var element = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
+  var element = ns ? doc.createElementNS(ns, tag) : doc.createElement(tag);
 
   if (id) {
     element.id = id;
   }
 
   if (className) {
-    element.className = className;
+    if (ns) {
+      element.setAttribute('class', className);
+    } else {
+      element.className = className;
+    }
   }
 
   return element;
 }
 
-function text (content) {
-  return document.createTextNode(content);
-}
-
-function mount (parent, child, before) {
-  var parentEl = parent.el || parent;
-  var childEl = child.el || child;
-
-  if (childEl.__redom_list) {
-    childEl = childEl.el;
-  }
-
-  if (child === childEl && childEl.__redom_view) {
-    // try to look up the view if not provided
-    child = childEl.__redom_view;
-  }
-
-  if (child !== childEl) {
-    childEl.__redom_view = child;
-  }
-  if (child.isMounted) {
-    child.remount && child.remount();
-  } else {
-    child.mount && child.mount();
-  }
-  if (before) {
-    parentEl.insertBefore(childEl, before.el || before);
-  } else {
-    parentEl.appendChild(childEl);
-  }
-  if (child.isMounted) {
-    child.remounted && child.remounted();
-  } else {
-    child.isMounted = true;
-    child.mounted && child.mounted();
-  }
-}
-
-function unmount (parent, child) {
-  var parentEl = parent.el || parent;
-  var childEl = child.el || child;
-
-  if (child === childEl && childEl.__redom_view) {
-    // try to look up the view if not provided
-    child = childEl.__redom_view;
-  }
-
-  child.unmount && child.unmount();
-
-  parentEl.removeChild(childEl);
-
-  child.isMounted = false;
-  child.unmounted && child.unmounted();
-}
-
 var elcache = {};
+
+var memoizeEl = function (query) { return elcache[query] || createElement(query); };
 
 function el (query) {
   var arguments$1 = arguments;
 
+  var args = [], len = arguments.length - 1;
+  while ( len-- > 0 ) { args[ len ] = arguments$1[ len + 1 ]; }
+
   var element;
 
-  if (typeof query === 'string') {
-    element = (elcache[query] || (elcache[query] = createElement(query))).cloneNode(false);
-  } else if (query && query.nodeType) {
+  if (isString(query)) {
+    element = memoizeEl(query).cloneNode(false);
+  } else if (isNode(query)) {
     element = query.cloneNode(false);
   } else {
     throw new Error('At least one argument required');
   }
 
-  var empty = true;
-
-  for (var i = 1; i < arguments.length; i++) {
-    var arg = arguments$1[i];
-
-    if (!arg) {
-      continue;
-    }
-
-    // support middleware
-    if (typeof arg === 'function') {
-      arg(element);
-    } else if (typeof arg === 'string' || typeof arg === 'number') {
-      if (empty) {
-        empty = false;
-        element.textContent = arg;
-      } else {
-        element.appendChild(text(arg));
-      }
-    } else if (arg.nodeType || (arg.el && arg.el.nodeType)) {
-      empty = false;
-      mount(element, arg);
-    } else if (arg.length) {
-      empty = false;
-      for (var j = 0; j < arg.length; j++) {
-        mount(element, arg[j]);
-      }
-    } else if (typeof arg === 'object') {
-      for (var key in arg) {
-        var value = arg[key];
-
-        if (key === 'style') {
-          if (typeof value === 'string') {
-            element.setAttribute(key, value);
-          } else {
-            for (var cssKey in value) {
-              element.style[cssKey] = value[cssKey];
-            }
-          }
-        } else if (key in element || typeof value === 'function') {
-          element[key] = value;
-        } else {
-          element.setAttribute(key, value);
-        }
-      }
-    }
-  }
+  parseArguments(element, args);
 
   return element;
 }
 
 el.extend = function (query) {
-  var clone = (elcache[query] || (elcache[query] = createElement(query)));
+  var clone = memoizeEl(query);
 
   return el.bind(this, clone);
 };
 
 function setChildren (parent, children) {
+  if (children.length === undefined) {
+    return setChildren(parent, [children]);
+  }
+
   var parentEl = parent.el || parent;
   var traverse = parentEl.firstChild;
 
@@ -2805,6 +2953,10 @@ function setChildren (parent, children) {
     }
 
     var childEl = child.el || child;
+
+    if (isList(childEl)) {
+      childEl = childEl.el;
+    }
 
     if (childEl === traverse) {
       traverse = traverse.nextSibling;
@@ -2833,7 +2985,7 @@ function List (parent, View, key, initData) {
   this.key = key;
   this.initData = initData;
   this.views = [];
-  this.el = typeof parent === 'string' ? el(parent) : parent;
+  this.el = getParentEl(parent);
 
   if (key) {
     this.lookup = {};
@@ -2851,7 +3003,7 @@ List.prototype.update = function (data) {
 
   var View = this.View;
   var key = this.key;
-  var functionKey = typeof key === 'function';
+  var functionKey = isFunction(key);
   var initData = this.initData;
   var newViews = new Array(data.length);
   var oldViews = this.views;
@@ -2886,8 +3038,18 @@ List.prototype.update = function (data) {
   this.views = newViews;
 };
 
+function getParentEl (parent) {
+  if (isString(parent)) {
+    return el(parent);
+  } else if (isNode(parent.el)) {
+    return parent.el;
+  } else {
+    return parent;
+  }
+}
+
 var Router = function Router (parent, Views) {
-  this.el = typeof parent === 'string' ? el(parent) : parent;
+  this.el = isString(parent) ? el(parent) : parent;
   this.Views = Views;
 };
 Router.prototype.update = function update (route, data) {
@@ -2902,6 +3064,12 @@ Router.prototype.update = function update (route, data) {
   }
   this.view && this.view.update && this.view.update(data);
 };
+
+var SVG = 'http://www.w3.org/2000/svg';
+
+var svgcache = {};
+
+var memoizeSVG = function (query) { return svgcache[query] || createElement(query, SVG); };
 
 var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIcon) {
 	var this$1 = this;
@@ -2934,7 +3102,7 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 		};
 	}
 
-	events$1.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor$$1) {
+	events.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor$$1) {
 		var module = new moduleClass(editor$$1);
 		module.el.classList.add('module-' + module.id);
 		this$1.modules.push(module);
@@ -2945,7 +3113,7 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 		mount(this$1.moduleElements, module.el);
 		this$1._updateTabs();
 			
-		events$1.listen('activateModule_' + module.id, function (unpackModuleView) {
+		events.listen('activateModule_' + module.id, function (unpackModuleView) {
 			var args = [], len = arguments.length - 1;
 			while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
 
@@ -3021,7 +3189,7 @@ var ModuleTab = function ModuleTab() {
 	this.el = el('span.moduleTab.button');
 	this.module = null;
 	this.el.onclick = function () {
-		events$1.dispatch('activateModule_' + this$1.module.id);
+		events.dispatch('activateModule_' + this$1.module.id);
 	};
 };
 ModuleTab.prototype.update = function update (module) {
@@ -3088,12 +3256,13 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
 
 	if ( unpackModuleView === void 0 ) unpackModuleView=true;
-	events$1.dispatch.apply(events$1, [ 'activateModule_' + moduleId, unpackModuleView ].concat( args ));
+	events.dispatch.apply(events, [ 'activateModule_' + moduleId, unpackModuleView ].concat( args ));
 };
 Module.packModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll((".moduleContainer." + moduleContainerName))[0].classList.add('packed');
@@ -3105,7 +3274,7 @@ Module.unpackModuleContainer = function(moduleContainerName) {
 // moduleContainerName = left | middle | right | bottom
 Module.register = function(moduleClass, moduleContainerName) {
 	registerPromise = registerPromise.then(function () {
-		events$1.dispatch('registerModule_' + moduleContainerName, moduleClass);
+		events.dispatch('registerModule_' + moduleContainerName, moduleClass);
 	});
 };
 
@@ -3114,15 +3283,15 @@ Module.registerTopButton = function(topButton, priority) {
 	if ( priority === void 0 ) priority = nextTopBarPriorityNumber++;
 
 	registerPromise = registerPromise.then(function () {
-		events$1.dispatch('registerTopButton', topButton, priority);
+		events.dispatch('registerTopButton', topButton, priority);
 	});
 };
 
 
 var registerPromise = new Promise(function(resolve) {
-	events$1.listen('registerModules', function() {
+	events.listen('registerModules', function() {
 		registerPromise.then(function () {
-			events$1.dispatch('modulesRegistered');
+			events.dispatch('modulesRegistered');
 		});
 		resolve();
 	});
@@ -3277,8 +3446,7 @@ var Layer = function Layer(popup) {
 var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 
 // <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
-var editors$1 = editors = {};
-
+var editors = {};
 editors.default = editors.string = function (container, oninput, onchange) {
 	var input = el('input', {
 		oninput: function () { return oninput(input.value); },
@@ -3317,7 +3485,7 @@ editors.bool = function (container, oninput, onchange) {
 
 editors.vector = function (container, oninput, onchange) {
 	function getValue() {
-		return new Victor(+xInput.value, +yInput.value);
+		return new Vector(+xInput.value, +yInput.value);
 	}
 	var xInput = el('input.xInput', {
 		type: 'number',
@@ -3791,7 +3959,7 @@ var PropertyEditor = function PropertyEditor() {
 	this.editingProperty = false;
 	
 	// Change in serializable tree
-	events$1.listen('change', function (change) {
+	events.listen('change', function (change) {
 		if (change.type === 'editorSelection') {
 			this$1.dirty = true;
 		} else if (change.type === changeType.setPropertyValue) {
@@ -4098,7 +4266,7 @@ Property$2.prototype.update = function update (property) {
 	this.name.textContent = property.propertyType.name;
 	this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
 	this.content.innerHTML = '';
-	var propertyEditorInstance = editors$1[this.property.propertyType.type.name] || editors$1.default;
+	var propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
 	this.setValue = propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, property.propertyType);
 	this.setValueFromProperty();
 	this.el.classList.toggle('ownProperty', !!this.property.id);
@@ -4271,7 +4439,7 @@ var SceneModule = (function (Module$$1) {
 			}
 		});
 		
-		events$1.listen('setLevel', function (lvl) {
+		events.listen('setLevel', function (lvl) {
 			if (lvl)
 				{ lvl.createScene(false, this$1); }
 			else if (scene) {
@@ -4283,20 +4451,20 @@ var SceneModule = (function (Module$$1) {
 		});
 
 		// Change in serializable tree
-		events$1.listen('prototypeClicked', function (prototype) {
+		events.listen('prototypeClicked', function (prototype) {
 			if (!scene)
 				{ return; }
 			
 			this$1.clearState();
 			
 			var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
-			entityPrototype.position = new Victor(this$1.canvas.width/2, this$1.canvas.height/2);
+			entityPrototype.position = new Vector(this$1.canvas.width/2, this$1.canvas.height/2);
 			var newEntity = entityPrototype.createEntity(this$1);
 			this$1.newEntities.push(newEntity);
 			this$1.draw();
 		});
 		
-		events$1.listen('change', function (change) {
+		events.listen('change', function (change) {
 			// console.log('sceneModule change', change);
 			if (change.origin !== this$1) {
 				setChangeOrigin(this$1);
@@ -4505,7 +4673,7 @@ var Types = (function (Module$$1) {
 		
 		this.externalChange = false;
 
-		events$1.listen('change', function (change) {
+		events.listen('change', function (change) {
 			this$1.externalChange = true;
 			
 			if (change.reference.threeLetterType === 'prt') {
@@ -4562,7 +4730,6 @@ var Types = (function (Module$$1) {
 	Types.prototype.update = function update () {
 		var this$1 = this;
 
-		console.log('types update', this.skipUpdate, this.dirty);
 		if (this.skipUpdate) { return; }
 		if (!this.jstreeInited)
 			{ this.dirty = true; }
@@ -4588,7 +4755,7 @@ var Types = (function (Module$$1) {
 				var prototypes = data.selected.map(getSerializable$1);
 				editor.select(prototypes, this$1);
 				if (prototypes.length === 1)
-					{ events$1.dispatch('prototypeClicked', prototypes[0]); }
+					{ events.dispatch('prototypeClicked', prototypes[0]); }
 				
 			}).on('loaded.jstree refresh.jstree', function () {
 				var jstree = $(this$1.jstree).jstree(true);
@@ -4709,7 +4876,6 @@ Module.register(TestModule$1, 'bottom');
 
 var loaded = false;
 
-// let gameJSON = {"id":"gamX3PlJ95bNpPKDgD","c":[{"id":"prt5TRc7kWUc4MqW76","c":[{"id":"cdaFcPiee9ZC3aYiYf","c":[{"id":"prp9SPJcczIfgDhNGw","v":{"x":100,"y":100},"n":"position"}],"cid":"_Transform","n":"Transform"},{"id":"cdaepjxpza0YFHIEiA","c":[{"id":"prp5vwerDeG6SL2i5A","v":1,"n":"userControlled"},{"id":"prpuGPnQvgmaTvN6MI","v":400,"n":"speed"}],"cid":"cidcEyuD7qDX","n":"Mover"},{"id":"cday0v75SoMQXxAFOt","c":[{"id":"prp6RjrKUmssxP60ZD","v":{"x":29,"y":30},"n":"size"},{"id":"prp1PomSBAMwvbgbsW","v":"green","n":"style"}],"cid":"_Rect","n":"Rect"},{"id":"prpEajDLAUPnDJ14xL","v":"Player","n":"name"}]},{"id":"prtS4rWsWzGekFUeM4","c":[{"id":"prpSDVDvkIuXFnRlxp","v":"Object","n":"name"},{"id":"cdaCWRIexho11JGDmG","c":[{"id":"prp022Xuf0XPeAZWSp","v":{"x":300,"y":200},"n":"position"}],"cid":"_Transform","n":"Transform"},{"id":"cdaMfmfhIWKXd9wDwr","c":[{"id":"prpEqUd69FxjArJKVL","v":3,"n":"speed"}],"cid":"cidBDsPAcjlJ","n":"Mover"},{"id":"cdarRyJAVxP6V1sVDS","c":[{"id":"prpeBoK1W9EzKhypNy","v":{"x":100,"y":10},"n":"size"},{"id":"prpEd9zAV77OTlU5g1","v":"brown","n":"style"}],"cid":"cidjJubEoscl","n":"Rect"}]},{"id":"prpZAysxUUZI41t8f2","v":"My Game","n":"name"}]};
 window.addEventListener('load', function () {
 	setChangeOrigin('editor');
 	var anotherGame;
@@ -4727,11 +4893,11 @@ window.addEventListener('load', function () {
 		}
 	}
 	editor = new Editor(anotherGame);
-	events$1.dispatch('registerModules', editor);
+	events.dispatch('registerModules', editor);
 });
-events$1.listen('modulesRegistered', function () {
+events.listen('modulesRegistered', function () {
 	loaded = true;
-	events$1.dispatch('loaded');
+	events.dispatch('loaded');
 
 	setNetworkEnabled(true);
 });
@@ -4741,7 +4907,7 @@ setInterval(function () {
 }, 200);
 
 addChangeListener(function (change) {
-	events$1.dispatch('change', change);
+	events.dispatch('change', change);
 	if (editor) {
 		editor.dirty = true;
 		if (change.type !== 'editorSelection' && loaded && change.reference.getRoot().threeLetterType === 'gam')
@@ -4779,7 +4945,7 @@ Editor.prototype.setLevel = function setLevel (level) {
 		{ this.selectedLevel = null; }
 		
 	this.select([], this);
-	events$1.dispatch('setLevel', this.selectedLevel);
+	events.dispatch('setLevel', this.selectedLevel);
 };
 Editor.prototype.select = function select (items, origin) {
 	if (!Array.isArray(items))
@@ -4796,7 +4962,7 @@ Editor.prototype.select = function select (items, origin) {
 		
 	this.dirty = true;
 		
-	events$1.dispatch('change', {
+	events.dispatch('change', {
 		type: 'editorSelection',
 		reference: this.selection,
 		origin: origin
@@ -4848,8 +5014,8 @@ function getOption(id) {
 	return options[id];
 }
 
-var modulesRegisteredPromise = events$1.getLoadEventPromise('modulesRegistered');
-var loadedPromise = events$1.getLoadEventPromise('loaded');
+var modulesRegisteredPromise = events.getLoadEventPromise('modulesRegistered');
+var loadedPromise = events.getLoadEventPromise('loaded');
 
 window.Property = Property;
 
@@ -4861,80 +5027,7 @@ window.Prop = createPropertyType;
 window.Serializable = Serializable;
 
 window.getSerializable = getSerializable$1;
+window.serializables = serializables;
 
-
-if (false && 'perf test') {
-	function measure(func, n) {
-		var start = performance.now();
-
-		for (var i = 0; i < n; i++)
-			{ func(i); }
-
-		console.log(performance.now() - start);
-	}
-
-	var N = 100000;
-
-	function createThing() {
-		return {id: '' + Math.random()};
-	}
-
-	var things = [];
-	measure(function (idx) {
-		things.push(createThing());
-	}, N);
-
-
-	var arr = [];
-	measure(function (idx) {
-		arr.push(things[idx]);
-	}, N);
-	console.log(arr.length);
-	measure(function (idx) {
-		arr.indexOf(things[idx]);
-	}, N);
-	measure(function (idx) {
-		arr.splice(arr.indexOf(things[idx]), 1);
-	}, N);
-	console.log(arr);
-
-	var obj = {};
-	measure(function (idx) {
-		obj[things[idx].id] = things[idx];
-	}, N);
-	console.log(Object.keys(obj).length);
-	measure(function (idx) {
-		obj[things[idx].id];
-	}, N);
-	measure(function (idx) {
-		delete obj[things[idx].id];
-	}, N);
-	console.log(obj);
-
-	var set = new Set();
-	measure(function (idx) {
-		set.add(things[idx]);
-	}, N);
-	console.log(set.size);
-	measure(function (idx) {
-		set.has(things[idx]);
-	}, N);
-	measure(function (idx) {
-		set.delete(things[idx]);
-	}, N);
-	console.log(set);
-
-	var map = new Map();
-	measure(function (idx) {
-		map.set(things[idx].id, things[idx]);
-	}, N);
-	console.log(map.size);
-	measure(function (idx) {
-		map.get(things[idx].id);
-	}, N);
-	measure(function (idx) {
-		map.delete(things[idx].id);
-	}, N);
-	console.log(map);
-}
-//# sourceMappingURL=explore.dev.min.js.map
+})));
+//# sourceMappingURL=explore.editor.js.map

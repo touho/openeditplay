@@ -5,13 +5,14 @@ import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, ke
 import Scene, { scene } from '../../core/scene';
 import EntityPrototype from '../../core/entityPrototype';
 import ComponentData from '../../core/componentData';
-import assert from '../../assert';
+import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
 import { TopButton } from './topBar';
 import { editor, loadedPromise } from '../editor';
 import { changeType, setChangeOrigin } from '../../core/serializableManager';
 import * as sceneEdit from '../util/sceneEdit';
+import Vector from '../../util/vector';
 
 class SceneModule extends Module {
 	constructor() {
@@ -106,7 +107,7 @@ class SceneModule extends Module {
 			this.clearState();
 			
 			let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
-			entityPrototype.position = new Victor(this.canvas.width/2, this.canvas.height/2);
+			entityPrototype.position = new Vector(this.canvas.width/2, this.canvas.height/2);
 			let newEntity = entityPrototype.createEntity(this);
 			this.newEntities.push(newEntity);
 			this.draw();
