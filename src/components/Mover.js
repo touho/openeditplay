@@ -22,8 +22,8 @@ Component.register({
 				if (keyPressed(key.right)) dx += 1;
 				if (keyPressed(key.up)) dy -= 1;
 				if (keyPressed(key.down)) dy += 1;
-				if (dx) this.Transform.position.addScalarX(dx * this.speed * dt);
-				if (dy) this.Transform.position.addScalarY(dy * this.speed * dt);
+				if (dx) this.Transform.position.x += dx * this.speed * dt;
+				if (dy) this.Transform.position.y += dy * this.speed * dt;
 				if (dx || dy) {
 					this.Transform.position = this.Transform.position;
 				}
