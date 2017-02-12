@@ -1,6 +1,7 @@
 import fs from 'fs';
 import Game from '../core/game';
 import Serializable from '../core/serializable';
+import { getConnectionsForGameServer } from './connection';
 import { executeChange, setChangeOrigin, addChangeListener } from '../core/serializableManager';
 
 let idToGameServer = {}; // gameId => GameServer
@@ -12,6 +13,7 @@ addChangeListener(change => {
 		let gameServer = idToGameServer[root.id];
 		if (gameServer) {
 			gameServer.saveNeeded = true;
+			gameServer.lastUsed = new Date();
 			return;
 		} else {
 			// console.log('Invalid change, gameServer does not exist', change, root.id);
@@ -23,7 +25,7 @@ addChangeListener(change => {
 
 function gameIdToFilename(gameId) {
 	// File system can be case-insensitive. Add '_' before every uppercase letter.
-	return gameId.replace(/([A-B])/g, '_$1') + '.txt';
+	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
 }
 
 class GameServer {
@@ -31,7 +33,7 @@ class GameServer {
 		this.id = game.id;
 		this.game = game;
 		console.log('open GameServer', game.id);
-		this.connections = new Set();
+		this.connections = getConnectionsForGameServer(game.id);
 		this.lastUsed = new Date();
 		this.saveNeeded = false;
 		
@@ -44,17 +46,13 @@ class GameServer {
 		this.connections.delete(connection);
 	}
 	applyChange(change, origin) {
-		this.saveNeeded = true;
-		
-		console.log('apply change', this.connections);
-		
 		if (change)
 			executeChange(change);
 		
 		for (let connection of this.connections) {
-			console.log('apply change. not me?:', connection !== origin);
-			if (connection !== origin)
+			if (connection !== origin) {
 				connection.sendChangeToOwner(change);
+			}
 		}
 	}
 	save() {
@@ -63,9 +61,6 @@ class GameServer {
 		this.saveNeeded = false;
 	}
 	delete() {
-		for (let connection of this.connections) {
-			connection.setGameServer(null);
-		}
 		this.connections.clear = 0;
 		
 		if (this.game) {
@@ -80,7 +75,7 @@ class GameServer {
 setInterval(() => {
 	console.log('srvrs', Object.keys(idToGameServer));
 	Object.keys(idToGameServer).map(key => idToGameServer[key]).forEach(gameServer => {
-		if (new Date() - gameServer.lastUsed > 1000*100) {
+		if (new Date() - gameServer.lastUsed > 1000*5) {
 			console.log('GameServer delete', gameServer.id);
 			gameServer.delete();
 		} else if (gameServer.saveNeeded) {
@@ -88,7 +83,7 @@ setInterval(() => {
 			gameServer.save();
 		}
 	});
-}, 2000);
+}, 3000);
 
 function createGame(gameId) {
 	let game = new Game(gameId);

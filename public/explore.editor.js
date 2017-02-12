@@ -6,16 +6,14 @@
 
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
-function char() {
-	return CHARACTERS[Math.random() * CHAR_COUNT | 0];
-}
+
 function createStringId(threeLetterPrefix, characters) {
 	if ( threeLetterPrefix === void 0 ) threeLetterPrefix = '???';
 	if ( characters === void 0 ) characters = 16;
 
 	var id = threeLetterPrefix;
 	for (var i = characters - 1; i !== 0; --i)
-		{ id += char(); }
+		{ id += CHARACTERS[Math.random() * CHAR_COUNT | 0]; }
 	return id;
 }
 
@@ -498,22 +496,34 @@ function addChangeListener(callback) {
 }
 
 function packChange(change) {
-	if (change.parent)
-		{ change.parentId = change.parent.id; }
-	if (change.value)
-		{ change.value = change.reference.propertyType.type.toJSON(change.value); }
-	if (change.type === changeType.addSerializableToTree) {
-		change.value = change.reference.toJSON();
-	}
-	
+	console.log('start packing');
 	var packed = {};
-	
-	Object.keys(keyToShortKey).forEach(function (key) {
-		if (change[key]) {
-			if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
-			packed[keyToShortKey[key]] = change[key];
+	try {
+		if (change.parent)
+			{ change.parentId = change.parent.id; }
+		
+		if (change.type === changeType.addSerializableToTree) {
+			if (change.reference) {
+				change.value = change.reference.toJSON();
+			} else if (change.value) {
+				// change.value = change.value; // no changes
+			} else {
+				assert(false, 'invalid change of type addSerializableToTree', change);
+			}
+		} else if (change.value) {
+			change.value = change.reference.propertyType.type.toJSON(change.value);
 		}
-	});
+
+		Object.keys(keyToShortKey).forEach(function (key) {
+			if (change[key]) {
+				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
+				packed[keyToShortKey[key]] = change[key];
+			}
+		});
+	} catch(e) {
+		console.log('PACK ERROR', e);
+	}
+	console.log('end packing');
 	return packed;
 }
 
@@ -525,13 +535,20 @@ function unpackChange(packedChange) {
 	});
 	if (!change.type)
 		{ change.type = changeType.setPropertyValue; }
-	change.reference = getSerializable$1(change.id);
+	
 	if (change.type === changeType.addSerializableToTree) {
-		
-	} else if (!change.reference) {
-		console.error('received a change with unknown id', change, 'packed:', packedChange);
-		return null;
+		// reference does not exist because it has not been created yet
+		change.id = change.value.id;
+	} else {
+		change.reference = getSerializable$1(change.id);
+		if (change.reference) {
+			change.id = change.reference.id;
+		} else {
+			console.error('received a change with unknown id', change, 'packed:', packedChange);
+			return null;
+		}
 	}
+	
 	if (change.parentId)
 		{ change.parent = getSerializable$1(change.parentId); }
 	return change;
@@ -2617,6 +2634,7 @@ function tryToLoad() {
 	}, 100);
 
 	socket.on('c', function (packedChanges) {
+		console.log('RECEIVE,', networkEnabled);
 		if (!networkEnabled)
 			{ return; }
 		

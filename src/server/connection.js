@@ -26,7 +26,6 @@ export class Connection {
 						console.log('ERROR, Client should not create a game.');
 						return; // Should not happen. Server creates all the games
 					} else if (gameServer) {
-						console.log('Yey');
 						gameServer.applyChange(change, this);
 					} else {
 						console.log('ERROR, No gameServer for', this.gameId);
@@ -53,11 +52,12 @@ export class Connection {
 		this.requestGameId();
 	}
 	sendChangeToOwner(change) {
-		console.log('SENDING', change);
+		console.log('SENDING', change.type);
 		change = packChange(change);
 		this.socket.emit('c', [change]);
 	}
 	setGameServer(gameId) {
+		
 		if (gameId !== this.gameId) {
 			if (idToGameServer[this.gameId])
 				idToGameServer[this.gameId].removeConnection(this);
@@ -75,4 +75,13 @@ setInterval(() => {
 
 export function addSocket(socket) {
 	new Connection(socket);
+}
+
+export function getConnectionsForGameServer(gameId) {
+	let set = new Set();
+	for (let connection of connections) {
+		if (connection.gameId === gameId)
+			set.add(connection);
+	}
+	return set;
 }

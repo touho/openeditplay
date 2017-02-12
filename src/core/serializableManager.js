@@ -111,22 +111,34 @@ export function addChangeListener(callback) {
 }
 
 export function packChange(change) {
-	if (change.parent)
-		change.parentId = change.parent.id;
-	if (change.value)
-		change.value = change.reference.propertyType.type.toJSON(change.value);
-	if (change.type === changeType.addSerializableToTree) {
-		change.value = change.reference.toJSON();
-	}
-	
+	console.log('start packing');
 	let packed = {};
-	
-	Object.keys(keyToShortKey).forEach(key => {
-		if (change[key]) {
-			if (key === 'type' && change[key] === changeType.setPropertyValue) return; // optimize most common type
-			packed[keyToShortKey[key]] = change[key];
+	try {
+		if (change.parent)
+			change.parentId = change.parent.id;
+		
+		if (change.type === changeType.addSerializableToTree) {
+			if (change.reference) {
+				change.value = change.reference.toJSON();
+			} else if (change.value) {
+				// change.value = change.value; // no changes
+			} else {
+				assert(false, 'invalid change of type addSerializableToTree', change);
+			}
+		} else if (change.value) {
+			change.value = change.reference.propertyType.type.toJSON(change.value);
 		}
-	});
+
+		Object.keys(keyToShortKey).forEach(key => {
+			if (change[key]) {
+				if (key === 'type' && change[key] === changeType.setPropertyValue) return; // optimize most common type
+				packed[keyToShortKey[key]] = change[key];
+			}
+		});
+	} catch(e) {
+		console.log('PACK ERROR', e);
+	}
+	console.log('end packing');
 	return packed;
 }
 
@@ -138,13 +150,20 @@ export function unpackChange(packedChange) {
 	});
 	if (!change.type)
 		change.type = changeType.setPropertyValue;
-	change.reference = getSerializable(change.id);
+	
 	if (change.type === changeType.addSerializableToTree) {
-		
-	} else if (!change.reference) {
-		console.error('received a change with unknown id', change, 'packed:', packedChange);
-		return null;
+		// reference does not exist because it has not been created yet
+		change.id = change.value.id;
+	} else {
+		change.reference = getSerializable(change.id);
+		if (change.reference) {
+			change.id = change.reference.id;
+		} else {
+			console.error('received a change with unknown id', change, 'packed:', packedChange);
+			return null;
+		}
 	}
+	
 	if (change.parentId)
 		change.parent = getSerializable(change.parentId);
 	return change;

@@ -63,6 +63,7 @@ function tryToLoad() {
 	}, 100);
 
 	socket.on('c', packedChanges => {
+		console.log('RECEIVE,', networkEnabled);
 		if (!networkEnabled)
 			return;
 		

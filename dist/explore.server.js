@@ -6,16 +6,14 @@ var fs = _interopDefault(require('fs'));
 
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
-function char() {
-	return CHARACTERS[Math.random() * CHAR_COUNT | 0];
-}
+
 function createStringId(threeLetterPrefix, characters) {
 	if ( threeLetterPrefix === void 0 ) threeLetterPrefix = '???';
 	if ( characters === void 0 ) characters = 16;
 
 	var id = threeLetterPrefix;
 	for (var i = characters - 1; i !== 0; --i)
-		{ id += char(); }
+		{ id += CHARACTERS[Math.random() * CHAR_COUNT | 0]; }
 	return id;
 }
 
@@ -498,22 +496,34 @@ function addChangeListener(callback) {
 }
 
 function packChange(change) {
-	if (change.parent)
-		{ change.parentId = change.parent.id; }
-	if (change.value)
-		{ change.value = change.reference.propertyType.type.toJSON(change.value); }
-	if (change.type === changeType.addSerializableToTree) {
-		change.value = change.reference.toJSON();
-	}
-	
+	console.log('start packing');
 	var packed = {};
-	
-	Object.keys(keyToShortKey).forEach(function (key) {
-		if (change[key]) {
-			if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
-			packed[keyToShortKey[key]] = change[key];
+	try {
+		if (change.parent)
+			{ change.parentId = change.parent.id; }
+		
+		if (change.type === changeType.addSerializableToTree) {
+			if (change.reference) {
+				change.value = change.reference.toJSON();
+			} else if (change.value) {
+				// change.value = change.value; // no changes
+			} else {
+				assert(false, 'invalid change of type addSerializableToTree', change);
+			}
+		} else if (change.value) {
+			change.value = change.reference.propertyType.type.toJSON(change.value);
 		}
-	});
+
+		Object.keys(keyToShortKey).forEach(function (key) {
+			if (change[key]) {
+				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
+				packed[keyToShortKey[key]] = change[key];
+			}
+		});
+	} catch(e) {
+		console.log('PACK ERROR', e);
+	}
+	console.log('end packing');
 	return packed;
 }
 
@@ -525,13 +535,20 @@ function unpackChange(packedChange) {
 	});
 	if (!change.type)
 		{ change.type = changeType.setPropertyValue; }
-	change.reference = getSerializable$1(change.id);
+	
 	if (change.type === changeType.addSerializableToTree) {
-		
-	} else if (!change.reference) {
-		console.error('received a change with unknown id', change, 'packed:', packedChange);
-		return null;
+		// reference does not exist because it has not been created yet
+		change.id = change.value.id;
+	} else {
+		change.reference = getSerializable$1(change.id);
+		if (change.reference) {
+			change.id = change.reference.id;
+		} else {
+			console.error('received a change with unknown id', change, 'packed:', packedChange);
+			return null;
+		}
 	}
+	
 	if (change.parentId)
 		{ change.parent = getSerializable$1(change.parentId); }
 	return change;
@@ -2581,6 +2598,7 @@ function tryToLoad() {
 	}, 100);
 
 	socket.on('c', function (packedChanges) {
+		console.log('RECEIVE,', networkEnabled);
 		if (!networkEnabled)
 			{ return; }
 		
@@ -2626,6 +2644,7 @@ addChangeListener(function (change) {
 		var gameServer = idToGameServer[root.id];
 		if (gameServer) {
 			gameServer.saveNeeded = true;
+			gameServer.lastUsed = new Date();
 			return;
 		} else {
 			// console.log('Invalid change, gameServer does not exist', change, root.id);
@@ -2637,14 +2656,14 @@ addChangeListener(function (change) {
 
 function gameIdToFilename(gameId) {
 	// File system can be case-insensitive. Add '_' before every uppercase letter.
-	return gameId.replace(/([A-B])/g, '_$1') + '.txt';
+	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
 }
 
 var GameServer = function GameServer(game$$1) {
 	this.id = game$$1.id;
 	this.game = game$$1;
 	console.log('open GameServer', game$$1.id);
-	this.connections = new Set();
+	this.connections = getConnectionsForGameServer(game$$1.id);
 	this.lastUsed = new Date();
 	this.saveNeeded = false;
 		
@@ -2659,17 +2678,13 @@ GameServer.prototype.removeConnection = function removeConnection (connection) {
 GameServer.prototype.applyChange = function applyChange (change, origin) {
 		var this$1 = this;
 
-	this.saveNeeded = true;
-		
-	console.log('apply change', this.connections);
-		
 	if (change)
 		{ executeChange(change); }
 		
 	for (var connection of this$1.connections) {
-		console.log('apply change. not me?:', connection !== origin);
-		if (connection !== origin)
-			{ connection.sendChangeToOwner(change); }
+		if (connection !== origin) {
+			connection.sendChangeToOwner(change);
+		}
 	}
 };
 GameServer.prototype.save = function save () {
@@ -2678,11 +2693,6 @@ GameServer.prototype.save = function save () {
 	this.saveNeeded = false;
 };
 GameServer.prototype.delete = function delete$1 () {
-		var this$1 = this;
-
-	for (var connection of this$1.connections) {
-		connection.setGameServer(null);
-	}
 	this.connections.clear = 0;
 		
 	if (this.game) {
@@ -2696,7 +2706,7 @@ GameServer.prototype.delete = function delete$1 () {
 setInterval(function () {
 	console.log('srvrs', Object.keys(idToGameServer));
 	Object.keys(idToGameServer).map(function (key) { return idToGameServer[key]; }).forEach(function (gameServer) {
-		if (new Date() - gameServer.lastUsed > 1000*100) {
+		if (new Date() - gameServer.lastUsed > 1000*5) {
 			console.log('GameServer delete', gameServer.id);
 			gameServer.delete();
 		} else if (gameServer.saveNeeded) {
@@ -2704,7 +2714,7 @@ setInterval(function () {
 			gameServer.save();
 		}
 	});
-}, 2000);
+}, 3000);
 
 function createGame(gameId) {
 	var game$$1 = new Game(gameId);
@@ -2770,7 +2780,6 @@ var Connection = function Connection(socket) {
 					console.log('ERROR, Client should not create a game.');
 					return; // Should not happen. Server creates all the games
 				} else if (gameServer) {
-					console.log('Yey');
 					gameServer.applyChange(change, this$1);
 				} else {
 					console.log('ERROR, No gameServer for', this$1.gameId);
@@ -2797,11 +2806,12 @@ var Connection = function Connection(socket) {
 	this.requestGameId();
 };
 Connection.prototype.sendChangeToOwner = function sendChangeToOwner (change) {
-	console.log('SENDING', change);
+	console.log('SENDING', change.type);
 	change = packChange(change);
 	this.socket.emit('c', [change]);
 };
 Connection.prototype.setGameServer = function setGameServer (gameId) {
+		
 	if (gameId !== this.gameId) {
 		if (idToGameServer[this.gameId])
 			{ idToGameServer[this.gameId].removeConnection(this); }
@@ -2818,6 +2828,15 @@ setInterval(function () {
 
 function addSocket(socket) {
 	new Connection(socket);
+}
+
+function getConnectionsForGameServer(gameId) {
+	var set = new Set();
+	for (var connection of connections) {
+		if (connection.gameId === gameId)
+			{ set.add(connection); }
+	}
+	return set;
 }
 
 var express = require('express');
