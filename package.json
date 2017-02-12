@@ -8,7 +8,7 @@
     "build": "rollup -m -c -n explore -f umd -i src/main.js -o dist/explore.js && uglifyjs dist/explore.js -cmo dist/explore.min.js --source-map dist/explore.min.js.map && cp dist/explore.j* public/ && cp dist/explore.min.j* public/",
     "build-editor-dependencies": "cat node_modules/jquery/dist/jquery.min.js src/external/jstree.min.js > dist/explore.editor.dependencies.js && cp dist/explore.editor.dependencies.js public/",
     "build-editor": "rollup -m -c -n explore -f umd -i src/editorMain.js -o dist/explore.editor.js && cp dist/explore.editor.j* public/",
-    "build-server": "rollup -m -c -n explore -f cjs -i src/serverMain.js -o dist/explore.server.js",
+    "build-server": "rollup -m -c rollup.config.server.js -n explore -f cjs -i src/serverMain.js -o dist/explore.server.js",
     "build-editor-css-dependencies": "cat src/external/font-awesome.min.css > dist/explore.editor.dependencies.css && cp dist/explore.editor.dependencies.css public/css/",
     "build-editor-scss": "node buildScss src/editorMain.scss dist/explore.editor.css && cp dist/explore.editor.cs* public/css/",
     "build-all": "npm run build && npm run build-editor && npm run build-server && npm run build-editor-dependencies && npm run build-editor-scss && npm run build-editor-css-dependencies",

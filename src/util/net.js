@@ -1,5 +1,6 @@
 import { addChangeListener, packChange, unpackChange, executeChange, executeExternal, changeType } from '../core/serializableManager'
 import Serializable from '../core/serializable';
+import { game } from '../core/game';
 
 import { lzw_decode, lzw_encode } from './compression';
 
@@ -10,12 +11,20 @@ export function setNetworkEnabled(enabled = true) {
 
 let socket;
 
-let sceneTreeThreeLetterTypes = {
-	sce: true,
-	
-};
 function isInSceneTree(change) {
 	return change.reference.getRoot().threeLetterType === 'sce';
+}
+
+function getQueryVariable(variable) {
+	var query = window.location.search.substring(1);
+	var vars = query.split('&');
+	for (var i = 0; i < vars.length; i++) {
+		var pair = vars[i].split('=');
+		if (decodeURIComponent(pair[0]) == variable) {
+			return decodeURIComponent(pair[1]);
+		}
+	}
+	console.log('Query variable %s not found', variable);
 }
 
 function tryToLoad() {
@@ -60,10 +69,33 @@ function tryToLoad() {
 		console.log('received', packedChanges);
 		packedChanges.forEach(change => {
 			change = unpackChange(change);
-			if (change)
+			if (change) {
 				executeChange(change);
+			}
 		});
 	});
+
+	socket.on('requestGameId', () => {
+		if (game)
+			socket.emit('gameId', game.id);
+	});
+	
+	socket.on('gameData', gameData => {
+		console.log('gameData', gameData);
+		executeExternal(() => {
+			Serializable.fromJSON(gameData);
+		});
+		localStorage.anotherGameId = gameData.id;
+		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
+		history.replaceState({}, null, `?gameId=${gameData.id}`);
+		console.log('replaced with', `${location.origin}${location.pathname}?gameId=${gameData.id}`);
+	});
+	
+	setTimeout(() => {
+		let gameId = getQueryVariable('gameId') || localStorage.anotherGameId;
+		console.log('requestGameData', gameId);
+		socket.emit('requestGameData', gameId);
+	}, 100);
 }
 
 if (typeof window !== 'undefined')

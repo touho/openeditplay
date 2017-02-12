@@ -4,22 +4,26 @@ import assert from '../util/assert';
 import { game } from './game';
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
 
-export let scene = null;
+let scene = null;
+export { scene };
+
+let isClient = typeof window !== 'undefined';
 
 export default class Scene extends Serializable {
 	constructor(predefinedId = false) {
-		if (scene) {
-			try {
-				scene.delete();
-			} catch(e) {
-				console.warn('Deleting old scene failed', e);
+		if (isClient) {
+			if (scene) {
+				try {
+					scene.delete();
+				} catch (e) {
+					console.warn('Deleting old scene failed', e);
+				}
 			}
+			scene = this;
+			
+			this.canvas = document.querySelector('canvas.anotherCanvas');
+			this.context = this.canvas.getContext('2d');
 		}
-		scene = this;
-
-		this.canvas = document.querySelector('canvas.anotherCanvas');
-		this.context = this.canvas.getContext('2d');
-
 		this.level = null;
 		
 		this.animationFrameId = null;

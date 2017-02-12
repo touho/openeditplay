@@ -56,7 +56,6 @@ export default class Serializable {
 			this._children.clear();
 
 			if (this._parent) {
-				
 				serializableManager.addChange(serializableManager.changeType.deleteAllChildren, this);
 			}
 		}

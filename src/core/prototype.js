@@ -213,9 +213,10 @@ export default class Prototype extends PropertyOwner {
 	}
 	
 	delete() {
+		this._game = this._game || this.getRoot();
 		if (!super.delete()) return false;
 		if (this.threeLetterType === 'prt') {
-			game.forEachChild('lvl', lvl => {
+			this._game.forEachChild('lvl', lvl => {
 				let items = lvl.getChildren('epr');
 				for (let i = items.length-1; i >= 0; i--) {
 					if (items[i].prototype === this) {

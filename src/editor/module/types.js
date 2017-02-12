@@ -40,11 +40,14 @@ class Types extends Module {
 		this.externalChange = false;
 
 		events.listen('change', change => {
+			let jstree = $(this.jstree).jstree(true);
+			if (!jstree)
+				return;
+			
 			this.externalChange = true;
 			
 			if (change.reference.threeLetterType === 'prt') {
 				if (change.type === changeType.addSerializableToTree) {
-					let jstree = $(this.jstree).jstree(true);
 					let parent = change.parent;
 					let parentNode;
 					if (parent.threeLetterType === 'gam')
@@ -61,14 +64,12 @@ class Types extends Module {
 			} else if (change.type === changeType.setPropertyValue) {
 				let propParent = change.reference._parent;
 				if (propParent && propParent.threeLetterType === 'prt') {
-					let jstree = $(this.jstree).jstree(true);
 					let node = jstree.get_node(propParent.id);
 					jstree.rename_node(node, change.value);
 				}
 			} else if (change.type === 'editorSelection') {
 				if (change.origin != this) {
 					if (change.reference.type === 'prt') {
-						let jstree = $(this.jstree).jstree(true);
 						let node = jstree.get_node(change.reference.items[0].id);
 						jstree.deselect_all();
 						jstree.select_node(node);
@@ -78,7 +79,6 @@ class Types extends Module {
 						jstree.deselect_all();
 						jstree.select_node(node);
 					} else if (change.reference.type === 'ent') {
-						let jstree = $(this.jstree).jstree(true);
 						let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
 						jstree.deselect_all();
 						jstree.select_node(node);

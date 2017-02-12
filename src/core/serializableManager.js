@@ -6,7 +6,7 @@ export let serializables = {};
 let DEBUG_CHANGES = 0;
 
 export function addSerializable(serializable) {
-	assert(serializables[serializable.id] === undefined, 'Serializable id clash');
+	assert(serializables[serializable.id] === undefined, `Serializable id clash ${serializable.id}`);
 	serializables[serializable.id] = serializable;
 }
 
@@ -49,6 +49,9 @@ let previousVisualOrigin;
 function resetOrigin() {
 	origin = null;
 }
+export function getChangeOrigin() {
+	return origin;
+}
 export function setChangeOrigin(_origin) {
 	if (_origin !== origin) {
 		origin = _origin;
@@ -84,7 +87,12 @@ export function addChange(type, reference) {
 	if (DEBUG_CHANGES)
 		console.log('change', change);
 	
+	let previousOrigin = origin;
 	listeners.forEach(l => l(change));
+	if (origin !== previousOrigin) {
+		console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin);
+		origin = previousOrigin;
+	}
 }
 
 export function executeExternal(callback) {
@@ -132,9 +140,9 @@ export function unpackChange(packedChange) {
 		change.type = changeType.setPropertyValue;
 	change.reference = getSerializable(change.id);
 	if (change.type === changeType.addSerializableToTree) {
-	}
-	else if (!change.reference) {
-		console.error('received a change with unknown id', change);
+		
+	} else if (!change.reference) {
+		console.error('received a change with unknown id', change, 'packed:', packedChange);
 		return null;
 	}
 	if (change.parentId)
@@ -146,7 +154,7 @@ export function executeChange(change) {
 	let newScene;
 	
 	executeExternal(() => {
-		console.log('execute change', change);
+		console.log('execute change', change.type, change.id || change.value);
 		if (change.type === changeType.setPropertyValue) {
 			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
 		} else if (change.type === changeType.addSerializableToTree) {

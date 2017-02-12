@@ -117,6 +117,7 @@ class SceneModule extends Module {
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
+				console.log('scene');
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
 				
 				this.draw();
@@ -124,6 +125,9 @@ class SceneModule extends Module {
 		});
 		
 		listenKeyDown(k => {
+			if (!scene)
+				return;
+			
 			setChangeOrigin(this);
 			if (k === key.esc) {
 				this.clearState();
@@ -136,6 +140,9 @@ class SceneModule extends Module {
 		});
 
 		listenMouseMove(this.el, mousePos => {
+			if (!scene)
+				return;
+			
 			setChangeOrigin(this);
 			let change = this.previousMousePos ? mousePos.clone().subtract(this.previousMousePos) : mousePos;
 			this.entityUnderMouse = null;
@@ -158,6 +165,9 @@ class SceneModule extends Module {
 			this.draw();
 		});
 		listenMouseDown(this.el, mousePos => {
+			if (!scene)
+				return;
+			
 			setChangeOrigin(this);
 			if (this.newEntities.length > 0)
 				sceneEdit.copyEntitiesToScene(this.newEntities);
@@ -179,6 +189,9 @@ class SceneModule extends Module {
 			this.draw();
 		});
 		listenMouseUp(this.el, mousePos => {
+			if (!scene)
+				return;
+			
 			this.selectionStart = null;
 			this.selectionEnd = null;
 			this.entitiesToMove.length = 0;
@@ -193,6 +206,8 @@ class SceneModule extends Module {
 		});
 	}
 	updatePlayPauseButtonStates() {
+		if (!scene)
+			return;
 		if (scene.playing) {
 			this.el.classList.add('hidePauseButtons');
 			this.playButton.icon.className = 'fa fa-pause';

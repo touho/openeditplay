@@ -18,6 +18,10 @@ window.Prop = Prop;
 import Serializable from './core/serializable';
 window.Serializable = Serializable;
 
-import { getSerializable, serializables } from './core/serializableManager';
+import { getSerializable, serializables, setChangeOrigin } from './core/serializableManager';
 window.getSerializable = getSerializable;
 window.serializables = serializables;
+window.setChangeOrigin = setChangeOrigin;
+
+import { default as Game } from './core/game';
+window.Game = Game;

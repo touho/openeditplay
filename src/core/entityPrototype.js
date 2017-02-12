@@ -176,6 +176,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
 Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let entityPrototype = new EntityPrototype(json.id);
 	entityPrototype.prototype = getSerializable(json.p);
+	assert(entityPrototype.prototype, `Prototype ${json.p} not found`);
 	
 	let nameId = json.id + '_n';
 	let transformId = json.id + '_t';
@@ -195,21 +196,21 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 		value: new Vector(json.x, json.y),
 		predefinedId: positionId
 	});
-	transformData.addChild(position, 'fromJSON');
+	transformData.addChild(position);
 
 	let scale = transformClass._propertyTypesByName.scale.createProperty({
 		value: new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
 		predefinedId: scaleId
 	});
-	transformData.addChild(scale, 'fromJSON');
+	transformData.addChild(scale);
 
 	let rotation = transformClass._propertyTypesByName.rotation.createProperty({
 		value: json.a || 0,
 		predefinedId: rotationId
 	});
-	transformData.addChild(rotation, 'fromJSON');
+	transformData.addChild(rotation);
 	
 	
-	entityPrototype.initWithChildren([name, transformData], 'fromJSON');
+	entityPrototype.initWithChildren([name, transformData]);
 	return entityPrototype;
 });

@@ -65,7 +65,7 @@ export default class PropertyOwner extends Serializable {
 		super.addChildren(propChildren);
 	};
 	addChild(child) {
-		assert(this._state & Serializable.STATE_INIT, this.constructor.componentName + ' requires that initWithChildren will be called before addChild');
+		assert(this._state & Serializable.STATE_INIT, this.constructor.componentName || this.constructor + ' requires that initWithChildren will be called before addChild');
 		super.addChild(child);
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
