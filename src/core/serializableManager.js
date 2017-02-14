@@ -90,7 +90,8 @@ export function addChange(type, reference) {
 	let previousOrigin = origin;
 	listeners.forEach(l => l(change));
 	if (origin !== previousOrigin) {
-		console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin);
+		if (DEBUG_CHANGES)
+			console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin);
 		origin = previousOrigin;
 	}
 }
@@ -111,7 +112,9 @@ export function addChangeListener(callback) {
 }
 
 export function packChange(change) {
-	console.log('start packing');
+	if (change.packedChange)
+		return change.packedChange; // optimization
+	
 	let packed = {};
 	try {
 		if (change.parent)
@@ -138,12 +141,13 @@ export function packChange(change) {
 	} catch(e) {
 		console.log('PACK ERROR', e);
 	}
-	console.log('end packing');
 	return packed;
 }
 
 export function unpackChange(packedChange) {
-	let change = {};
+	let change = {
+		packedChange // optimization
+	};
 	Object.keys(packedChange).forEach(shortKey => {
 		let key = shortKeyToKey[shortKey];
 		change[key] = packedChange[shortKey];

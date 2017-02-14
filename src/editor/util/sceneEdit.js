@@ -18,6 +18,18 @@ function setEntityPropertyValue(entity, componentName, componentId, sourceProper
 }
 
 function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null) {
+	if (prototypeOrEntityPrototype.threeLetterType === 'epr') {
+		// EntityPrototype
+		
+		let entity = prototypeOrEntityPrototype.previouslyCreatedEntity;
+		if (entity && entity._alive)
+			return [entity];
+		else
+			return [];
+	}
+	
+	// Prototype
+	
 	let affectedPrototypes = new Set();
 
 	function goThroughChildren(prototype) {
@@ -178,6 +190,7 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 			let componentData = ref;
 			let prototype = componentData.getParent();
 			let entities = getAffectedEntities(prototype);
+			console.log('pissaa', componentData, prototype, entities);
 			entities.forEach(entity => {
 				let epr = entity.prototype;
 				let oldComponent = entity.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
@@ -191,6 +204,7 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 				}
 			});
 		}
+		// If Prototype is deleted, all entity prototypes are also deleted so we can ignore Prototype here
 	} else if (change.type === changeType.move) {
 		
 	}	

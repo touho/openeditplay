@@ -75,7 +75,7 @@ class GameServer {
 setInterval(() => {
 	console.log('srvrs', Object.keys(idToGameServer));
 	Object.keys(idToGameServer).map(key => idToGameServer[key]).forEach(gameServer => {
-		if (new Date() - gameServer.lastUsed > 1000*5) {
+		if (new Date() - gameServer.lastUsed > 1000*10) {
 			console.log('GameServer delete', gameServer.id);
 			gameServer.delete();
 		} else if (gameServer.saveNeeded) {

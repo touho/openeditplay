@@ -12,7 +12,7 @@ function createStringId(threeLetterPrefix, characters) {
 	if ( characters === void 0 ) characters = 16;
 
 	var id = threeLetterPrefix;
-	for (var i = characters - 1; i !== 0; --i)
+	for (var i = characters - 1; i >= 0; --i)
 		{ id += CHARACTERS[Math.random() * CHAR_COUNT | 0]; }
 	return id;
 }
@@ -475,7 +475,8 @@ function addChange(type, reference) {
 	var previousOrigin = origin;
 	listeners.forEach(function (l) { return l(change); });
 	if (origin !== previousOrigin) {
-		console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin);
+		if (DEBUG_CHANGES)
+			{ console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin); }
 		origin = previousOrigin;
 	}
 }
@@ -496,7 +497,9 @@ function addChangeListener(callback) {
 }
 
 function packChange(change) {
-	console.log('start packing');
+	if (change.packedChange)
+		{ return change.packedChange; } // optimization
+	
 	var packed = {};
 	try {
 		if (change.parent)
@@ -523,12 +526,13 @@ function packChange(change) {
 	} catch(e) {
 		console.log('PACK ERROR', e);
 	}
-	console.log('end packing');
 	return packed;
 }
 
 function unpackChange(packedChange) {
-	var change = {};
+	var change = {
+		packedChange: packedChange // optimization
+	};
 	Object.keys(packedChange).forEach(function (shortKey) {
 		var key = shortKeyToKey[shortKey];
 		change[key] = packedChange[shortKey];
@@ -3657,6 +3661,18 @@ function setEntityPropertyValue(entity, componentName, componentId, sourceProper
 function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter) {
 	if ( prototypeFilter === void 0 ) prototypeFilter = null;
 
+	if (prototypeOrEntityPrototype.threeLetterType === 'epr') {
+		// EntityPrototype
+		
+		var entity = prototypeOrEntityPrototype.previouslyCreatedEntity;
+		if (entity && entity._alive)
+			{ return [entity]; }
+		else
+			{ return []; }
+	}
+	
+	// Prototype
+	
 	var affectedPrototypes = new Set();
 
 	function goThroughChildren(prototype) {
@@ -3817,6 +3833,7 @@ function syncAChangeBetweenSceneAndLevel(change) {
 			var componentData$3 = ref;
 			var prototype$4 = componentData$3.getParent();
 			var entities$5 = getAffectedEntities(prototype$4);
+			console.log('pissaa', componentData$3, prototype$4, entities$5);
 			entities$5.forEach(function (entity) {
 				var epr = entity.prototype;
 				var oldComponent = entity.getComponents(componentData$3.name).find(function (com) { return com._componentId === componentData$3.componentId; });
@@ -3830,6 +3847,7 @@ function syncAChangeBetweenSceneAndLevel(change) {
 				}
 			});
 		}
+		// If Prototype is deleted, all entity prototypes are also deleted so we can ignore Prototype here
 	} else if (change.type === changeType.move) {
 		
 	}	
@@ -4236,8 +4254,15 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 			onclick: function () {
 				dispatch(this$1, 'makingChanges');
-				var clone = this$1.item.ownComponentData.clone();
-				this$1.item.generatedForPrototype.addChild(clone);
+				if (this$1.item.ownComponentData) {
+					var clone = this$1.item.ownComponentData.clone();
+					this$1.item.generatedForPrototype.addChild(clone);
+				} else {
+					// Is empty component data
+					var componentData = new ComponentData(this$1.item.componentClass.componentName);
+					componentData.initWithChildren();
+					this$1.item.generatedForPrototype.addChild(componentData);
+				}
 				dispatch(this$1, 'markPropertyEditorDirty');
 			}
 		}));
@@ -4441,6 +4466,32 @@ var Instance = (function (Module$$1) {
 
 Module.register(Instance, 'right');
 
+function removeTheDeadFromArray(array) {
+	for (var i = array.length - 1; i >= 0; --i) {
+		if (array[i]._alive === false)
+			{ array.splice(i, 1); }
+	}
+}
+
+var Help = function Help () {};
+
+var prototypeAccessors = { game: {},level: {},scene: {} };
+
+prototypeAccessors.game.get = function () {
+	return game;
+};
+prototypeAccessors.level.get = function () {
+	return editor.level;
+};
+prototypeAccessors.scene.get = function () {
+	return scene;
+};
+
+Object.defineProperties( Help.prototype, prototypeAccessors );
+
+var help = new Help;
+window.help = help;
+
 var SceneModule = (function (Module$$1) {
 	function SceneModule() {
 		var this$1 = this;
@@ -4468,6 +4519,8 @@ var SceneModule = (function (Module$$1) {
 		
 		this.id = 'scene';
 		this.name = 'Scene';
+		
+		help.sceneModule = this;
 
 		/*
 		loadedPromise.then(() => {
@@ -4546,9 +4599,7 @@ var SceneModule = (function (Module$$1) {
 			// console.log('sceneModule change', change);
 			if (change.origin !== this$1) {
 				setChangeOrigin(this$1);
-				console.log('scene');
 				syncAChangeBetweenSceneAndLevel(change);
-				
 				this$1.draw();
 			}
 		});
@@ -4672,6 +4723,8 @@ var SceneModule = (function (Module$$1) {
 	SceneModule.prototype.draw = function draw () {
 		if (scene) {
 			if (!scene.playing) {
+				this.filterDeadSelection();
+				
 				scene.draw();
 				scene.dispatch('onDrawHelper', scene.context);
 				drawPositionHelpers(scene.getChildren('ent'));
@@ -4724,6 +4777,21 @@ var SceneModule = (function (Module$$1) {
 		this.playButton.icon.className = 'fa fa-play';
 		this.updatePlayPauseButtonStates();
 		this.draw();
+	};
+	
+	SceneModule.prototype.filterDeadSelection = function filterDeadSelection () {
+		var this$1 = this;
+
+		removeTheDeadFromArray(this.selectedEntities);
+		removeTheDeadFromArray(this.entitiesToMove);
+
+		for (var i = this.newEntities.length - 1; i >= 0; --i) {
+			if (this$1.newEntities[i].prototype.prototype._alive === false) {
+				var entity = this$1.newEntities.splice(i, 1)[0];
+				entity.prototype.delete();
+				entity.delete();
+			}
+		}
 	};
 
 	return SceneModule;
@@ -4966,21 +5034,6 @@ var TestModule$1 = (function (Module$$1) {
 }(Module));
 
 Module.register(TestModule$1, 'bottom');
-
-var Help = function Help () {};
-
-var prototypeAccessors = { game: {},level: {} };
-
-prototypeAccessors.game.get = function () {
-	return game;
-};
-prototypeAccessors.level.get = function () {
-	return editor.level;
-};
-
-Object.defineProperties( Help.prototype, prototypeAccessors );
-
-window.help = new Help;
 
 var loaded = false;
 

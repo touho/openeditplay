@@ -12,7 +12,7 @@ function createStringId(threeLetterPrefix, characters) {
 	if ( characters === void 0 ) characters = 16;
 
 	var id = threeLetterPrefix;
-	for (var i = characters - 1; i !== 0; --i)
+	for (var i = characters - 1; i >= 0; --i)
 		{ id += CHARACTERS[Math.random() * CHAR_COUNT | 0]; }
 	return id;
 }
@@ -475,7 +475,8 @@ function addChange(type, reference) {
 	var previousOrigin = origin;
 	listeners.forEach(function (l) { return l(change); });
 	if (origin !== previousOrigin) {
-		console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin);
+		if (DEBUG_CHANGES)
+			{ console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin); }
 		origin = previousOrigin;
 	}
 }
@@ -496,7 +497,9 @@ function addChangeListener(callback) {
 }
 
 function packChange(change) {
-	console.log('start packing');
+	if (change.packedChange)
+		{ return change.packedChange; } // optimization
+	
 	var packed = {};
 	try {
 		if (change.parent)
@@ -523,12 +526,13 @@ function packChange(change) {
 	} catch(e) {
 		console.log('PACK ERROR', e);
 	}
-	console.log('end packing');
 	return packed;
 }
 
 function unpackChange(packedChange) {
-	var change = {};
+	var change = {
+		packedChange: packedChange // optimization
+	};
 	Object.keys(packedChange).forEach(function (shortKey) {
 		var key = shortKeyToKey[shortKey];
 		change[key] = packedChange[shortKey];
@@ -2706,7 +2710,7 @@ GameServer.prototype.delete = function delete$1 () {
 setInterval(function () {
 	console.log('srvrs', Object.keys(idToGameServer));
 	Object.keys(idToGameServer).map(function (key) { return idToGameServer[key]; }).forEach(function (gameServer) {
-		if (new Date() - gameServer.lastUsed > 1000*5) {
+		if (new Date() - gameServer.lastUsed > 1000*10) {
 			console.log('GameServer delete', gameServer.id);
 			gameServer.delete();
 		} else if (gameServer.saveNeeded) {
@@ -2774,7 +2778,7 @@ var Connection = function Connection(socket) {
 	socket.on('c', function (changes) {
 		getOrCreateGameServer(this$1.gameId).then(function (gameServer) {
 			setChangeOrigin(this$1);
-			console.log('changes', changes);
+			// console.log('changes', changes);
 			changes.map(unpackChange).forEach(function (change) {
 				if (change.type === changeType.addSerializableToTree && change.value.id.startsWith('gam')) {
 					console.log('ERROR, Client should not create a game.');

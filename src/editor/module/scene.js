@@ -13,6 +13,8 @@ import { editor, loadedPromise } from '../editor';
 import { changeType, setChangeOrigin } from '../../core/serializableManager';
 import * as sceneEdit from '../util/sceneEdit';
 import Vector from '../../util/vector';
+import { removeTheDeadFromArray, removeAndDeleteFromArray } from '../../util/algorithm';
+import { help } from '../help';
 
 class SceneModule extends Module {
 	constructor() {
@@ -39,6 +41,8 @@ class SceneModule extends Module {
 		
 		this.id = 'scene';
 		this.name = 'Scene';
+		
+		help.sceneModule = this;
 
 		/*
 		loadedPromise.then(() => {
@@ -117,9 +121,7 @@ class SceneModule extends Module {
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
-				console.log('scene');
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
-				
 				this.draw();
 			}
 		});
@@ -237,6 +239,8 @@ class SceneModule extends Module {
 	draw() {
 		if (scene) {
 			if (!scene.playing) {
+				this.filterDeadSelection();
+				
 				scene.draw();
 				scene.dispatch('onDrawHelper', scene.context);
 				sceneEdit.drawPositionHelpers(scene.getChildren('ent'));
@@ -289,6 +293,19 @@ class SceneModule extends Module {
 		this.playButton.icon.className = 'fa fa-play';
 		this.updatePlayPauseButtonStates();
 		this.draw();
+	}
+	
+	filterDeadSelection() {
+		removeTheDeadFromArray(this.selectedEntities);
+		removeTheDeadFromArray(this.entitiesToMove);
+
+		for (let i = this.newEntities.length - 1; i >= 0; --i) {
+			if (this.newEntities[i].prototype.prototype._alive === false) {
+				let entity = this.newEntities.splice(i, 1)[0];
+				entity.prototype.delete();
+				entity.delete();
+			}
+		}
 	}
 }
 

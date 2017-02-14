@@ -216,8 +216,15 @@ class Container {
 			mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 				onclick: () => {
 					dispatch(this, 'makingChanges');
-					let clone = this.item.ownComponentData.clone();
-					this.item.generatedForPrototype.addChild(clone);
+					if (this.item.ownComponentData) {
+						let clone = this.item.ownComponentData.clone();
+						this.item.generatedForPrototype.addChild(clone);
+					} else {
+						// Is empty component data
+						let componentData = new ComponentData(this.item.componentClass.componentName);
+						componentData.initWithChildren();
+						this.item.generatedForPrototype.addChild(componentData);
+					}
 					dispatch(this, 'markPropertyEditorDirty');
 				}
 			}));

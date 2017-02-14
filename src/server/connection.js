@@ -20,7 +20,7 @@ export class Connection {
 		socket.on('c', changes => {
 			getOrCreateGameServer(this.gameId).then(gameServer => {
 				setChangeOrigin(this);
-				console.log('changes', changes);
+				// console.log('changes', changes);
 				changes.map(unpackChange).forEach(change => {
 					if (change.type === changeType.addSerializableToTree && change.value.id.startsWith('gam')) {
 						console.log('ERROR, Client should not create a game.');

@@ -6,7 +6,7 @@ const CHAR_COUNT = CHARACTERS.length;
 
 export function createStringId(threeLetterPrefix = '???', characters = 16) {
 	let id = threeLetterPrefix;
-	for (let i = characters - 1; i !== 0; --i)
+	for (let i = characters - 1; i >= 0; --i)
 		id += CHARACTERS[Math.random() * CHAR_COUNT | 0];
 	return id;
 }
