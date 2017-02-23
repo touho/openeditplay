@@ -19,13 +19,17 @@ function createStringId(threeLetterPrefix, characters) {
 
 var serializableClasses = new Map();
 
-var Serializable = function Serializable(predefinedId) {
+var Serializable = function Serializable(predefinedId, skipSerializableRegistering) {
 	if ( predefinedId === void 0 ) predefinedId = false;
+	if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
 
 	assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 	this._children = new Map(); // threeLetterType -> array
 	this._listeners = [];
 	this._isInTree = this.isRoot;
+	this._state |= Serializable.STATE_CONSTRUCTOR;
+	if (skipSerializableRegistering)
+		{ return; }
 	if (predefinedId) {
 		this._state |= Serializable.STATE_PREDEFINEDID;
 		this.id = predefinedId;
@@ -35,7 +39,6 @@ var Serializable = function Serializable(predefinedId) {
 	if (this.id.startsWith('?'))
 		{ throw new Error('?'); }
 	addSerializable(this);
-	this._state |= Serializable.STATE_CONSTRUCTOR;
 };
 Serializable.prototype.delete = function delete$1 () {
 	if (this._parent) {
@@ -227,7 +230,7 @@ Serializable.prototype.listen = function listen (event, callback) {
 	if (!this._listeners.hasOwnProperty(event)) {
 		this._listeners[event] = [];
 	}
-	this._listeners[event].push(callback);
+	this._listeners[event].unshift(callback);
 	return function () {
 		var index = this$1._listeners[event].indexOf(callback);
 		this$1._listeners[event].splice(index, 1);
@@ -239,7 +242,7 @@ Serializable.prototype.dispatch = function dispatch (event) {
 		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
 
 	if (this._listeners.hasOwnProperty(event)) {
-		for (var i = 0; i < this._listeners[event].length; ++i) {
+		for (var i = this._listeners[event].length - 1; i >= 0; --i) {
 			try {
 				this$1._listeners[event][i].apply(null, args);
 			} catch(e) {
@@ -608,8 +611,7 @@ var Property = (function (Serializable$$1) {
 		var skipSerializableRegistering = ref.skipSerializableRegistering; if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
 
 		assert(name, 'Property without a name can not exist');
-		if (!skipSerializableRegistering)
-			{ Serializable$$1.call(this, predefinedId); }
+		Serializable$$1.call(this, predefinedId, skipSerializableRegistering);
 		this._initialValue = value;
 		if (propertyType)
 			{ this.setPropertyType(propertyType); }
@@ -664,7 +666,7 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
-		
+		this.dispatch('change', this._value);
 		if (this._isInTree)
 			{ addChange(changeType.setPropertyValue, this); }
 	},
@@ -691,7 +693,7 @@ Object.defineProperty(Property.prototype, 'debug', {
 
 
 
-var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags) {
+var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
 
@@ -705,6 +707,7 @@ var PropertyType = function PropertyType(name, type, validator, initialValue, de
 	this.validator = validator;
 	this.initialValue = initialValue;
 	this.description = description;
+	this.visibleIf = visibleIf;
 	this.flags = {};
 	flags.forEach(function (f) { return this$1.flags[f.type] = f; });
 };
@@ -741,20 +744,33 @@ function createPropertyType(propertyName, defaultValue, type) {
 	var validator = type.validators.default();
 	var description = '';
 	var flags = [];
-	optionalParameters.forEach(function (p) {
+	var visibleIf = null;
+	optionalParameters.forEach(function (p, idx) {
 		if (typeof p === 'string')
 			{ description = p; }
 		else if (p && p.validate)
 			{ validator = p; }
-		else if (p && p.isFlag) {
-			flags.push(p);
-		} else
-			{ assert(false, 'invalid parameter ' + p); }
+		else if (p && p.isFlag)
+			{ flags.push(p); }
+		else if (p && p.visibleIf)
+			{ visibleIf = p; }
+		else
+			{ assert(false, 'invalid parameter ' + p + ' idx ' + idx); }
 	});
-	return new PropertyType(propertyName, type, validator, defaultValue, description, flags);
+	return new PropertyType(propertyName, type, validator, defaultValue, description, flags, visibleIf);
 }
 
 var dataType = createPropertyType;
+
+dataType.visibleIf = function(propertyName, value) {
+	assert(typeof propertyName === 'string' && propertyName.length);
+	assert(typeof value !== 'undefined');
+	return {
+		visibleIf: true,
+		propertyName: propertyName,
+		value: value
+	};
+};
 
 function createFlag(type, func) {
 	if ( func === void 0 ) func = {};
@@ -1767,9 +1783,6 @@ var Game = (function (PropertyOwner$$1) {
 
 PropertyOwner.defineProperties(Game, propertyTypes);
 
-Game.create = function(name) {
-	return new Game().initWithPropertyValues({ name: name });
-};
 Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
@@ -1796,6 +1809,9 @@ var Scene = (function (Serializable$$1) {
 		}
 		this.level = null;
 		
+		// To make component based entity search fast:
+		this.components = new Map(); // componentName -> Set of components
+		
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
@@ -1814,6 +1830,15 @@ var Scene = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+	Scene.prototype.win = function win () {
+		var this$1 = this;
+
+		setTimeout(function () {
+			setChangeOrigin(this$1);
+			this$1.reset();
+			game.dispatch('levelCompleted');
+		});
+	};
 	Scene.prototype.animFrame = function animFrame (playCalled) {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
@@ -1889,6 +1914,21 @@ var Scene = (function (Serializable$$1) {
 		return true;
 	};
 
+	// To make component based entity search fast:
+	Scene.prototype.addComponent = function addComponent (component) {
+		var set = this.components.get(component.constructor.componentName);
+		if (!set) {
+			set = new Set();
+			this.components.set(component.constructor.componentName, set);
+		}
+		set.add(component);
+	};
+	Scene.prototype.removeComponent = function removeComponent (component) {
+		var set = this.components.get(component.constructor.componentName);
+		assert(set);
+		assert(set.delete(component));
+	};
+
 	return Scene;
 }(Serializable));
 
@@ -1943,6 +1983,9 @@ var Component$1 = (function (PropertyOwner$$1) {
 			}
 		});
 
+		if (this.constructor.componentName !== 'Transform')
+			{ this.scene.addComponent(this); }
+		
 		try {
 			if (typeof this.preInit === 'function')
 				{ this.preInit(); }
@@ -1966,6 +2009,10 @@ var Component$1 = (function (PropertyOwner$$1) {
 		} catch(e) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
+
+		if (this.constructor.componentName !== 'Transform')
+			{ this.scene.removeComponent(this); }
+		
 		this.forEachChild('com', function (c) { return c._sleep(); });
 		// console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
 		this._listenRemoveFunctions.forEach(function (f) { return f(); });
@@ -2315,9 +2362,9 @@ var propertyTypes$2 = [
 	createPropertyType('name', 'No name', createPropertyType.string)
 ];
 
-var Level = (function (Serializable$$1) {
+var Level = (function (PropertyOwner$$1) {
 	function Level(predefinedId) {
-		Serializable$$1.apply(this, arguments);
+		PropertyOwner$$1.apply(this, arguments);
 
 		if (predefinedId)
 			{ console.log('level import'); }
@@ -2325,8 +2372,8 @@ var Level = (function (Serializable$$1) {
 			{ console.log('level created'); }
 	}
 
-	if ( Serializable$$1 ) Level.__proto__ = Serializable$$1;
-	Level.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	if ( PropertyOwner$$1 ) Level.__proto__ = PropertyOwner$$1;
+	Level.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
 	Level.prototype.constructor = Level;
 	Level.prototype.createScene = function createScene (predefinedSceneObject) {
 		if ( predefinedSceneObject === void 0 ) predefinedSceneObject = false;
@@ -2340,7 +2387,7 @@ var Level = (function (Serializable$$1) {
 	};
 
 	return Level;
-}(Serializable));
+}(PropertyOwner));
 
 PropertyOwner.defineProperties(Level, propertyTypes$2);
 
@@ -2568,6 +2615,57 @@ Component$1.register({
 				{ return; }
 
 			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+		}
+	}
+});
+
+Component$1.register({
+	name: 'Trigger',
+	allowMultiple: true,
+	properties: [
+		createPropertyType('trigger', 'playerComesClose', createPropertyType.enum, createPropertyType.enum.values('playerComesClose', 'other')),
+		createPropertyType('triggerInfo', 'heh', createPropertyType.string, createPropertyType.visibleIf('trigger', 'other')),
+		createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win')),
+		createPropertyType('safetyIntervalSeconds', 5, createPropertyType.float) ],
+	prototype: {
+		onDrawHelper: function onDrawHelper(context) {
+			var size = 30;
+			var
+				x = this.Transform.position.x - size * this.Transform.scale.x/2,
+				y = this.Transform.position.y - size * this.Transform.scale.y/2,
+				w = size * this.Transform.scale.x,
+				h = size * this.Transform.scale.y;
+			context.save();
+			context.fillStyle = 'blue';
+			context.strokeStyle = 'white';
+			context.lineWidth = 1;
+			context.font = '40px FontAwesome';
+			context.textAlign = 'center';
+			context.fillText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
+			context.strokeText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
+
+			context.restore();
+		},
+		onUpdate: function onUpdate() {
+			var this$1 = this;
+
+			if (this.trigger === 'playerComesClose') {
+				var componentSet = this.scene.components.get('Mover');
+				if (componentSet) {
+					var entities = [];
+					componentSet.forEach(function (c) { return entities.push(c.entity); });
+					var dist = 20;
+					var distSq = dist*dist;
+					var pos = this.Transform.position;
+					entities.forEach(function (entity) {
+						if (entity.position.distanceSq(pos) < distSq)
+							{ this$1.launchTrigger(entity); }
+					});
+				}
+			}
+		},
+		launchTrigger: function launchTrigger(entity) {
+			this.scene.win();
 		}
 	}
 });
@@ -3413,67 +3511,6 @@ var registerPromise = new Promise(function(resolve) {
 	});
 });
 
-var TopBarModule = (function (Module$$1) {
-	function TopBarModule() {
-		var this$1 = this;
-
-		Module$$1.call(
-			this, this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
-			this.buttons = el('div.buttonContainer')
-		);
-		this.id = 'topbar';
-		this.name = 'TopBar'; // not visible
-		
-		events.listen('addTopButtonToTopBar', function (topButton) {
-			mount(this$1.buttons, topButton);
-		});
-		
-		var createLevelButton = new TopButton({
-			text: 'New level',
-			callback: function () {
-				setChangeOrigin(this$1);
-				var lvl = new Level();
-				editor.game.addChild(lvl);
-				editor.setLevel(lvl);
-			}
-		});
-	}
-
-	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
-	TopBarModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	TopBarModule.prototype.constructor = TopBarModule;
-
-	return TopBarModule;
-}(Module));
-Module.register(TopBarModule, 'top');
-
-var TopButton = function TopButton(ref) {
-	var this$1 = this;
-	if ( ref === void 0 ) ref = {};
-	var text$$1 = ref.text; if ( text$$1 === void 0 ) text$$1 = 'Button';
-	var callback = ref.callback;
-	var iconClass = ref.iconClass; if ( iconClass === void 0 ) iconClass = 'fa-circle';
-	var priority = ref.priority; if ( priority === void 0 ) priority = 1;
-
-	this.priority = priority || 0;
-		
-	this.el = el('div.button.topIconTextButton',
-		el('div.topIconTextButtonContent',
-			this.icon = el(("i.fa." + iconClass)),
-			this.text = el('span', text$$1)
-		)
-	);
-	this.el.onclick = function () {
-		if (callback) {
-			callback(this$1);
-		}
-	};
-
-	modulesRegisteredPromise.then(function () {
-		events.dispatch('addTopButtonToTopBar', this$1);
-	});
-};
-
 var popupDepth = 0;
 
 var Popup = function Popup(ref) {
@@ -3513,6 +3550,7 @@ Button.prototype.update = function update (button) {
 			{ icon.style.color = button.color; }
 		mount(this.el, icon, this.el.firstChild);
 	}
+	this.el.className = button.class ? ("button " + (button.class)) : 'button';
 	this.callback = button.callback;
 	if (button.color)
 		{ this.el.style['border-color'] = button.color; }
@@ -3523,6 +3561,160 @@ var Layer = function Layer(popup) {
 		popup.remove();
 		popup.cancelCallback && popup.cancelCallback();
 	} });
+};
+
+var LevelSelector = (function (Popup$$1) {
+	function LevelSelector() {
+		var this$1 = this;
+
+		Popup$$1.call(this, {
+			title: 'Levels',
+			width: '500px',
+			content: el('div.levelSelectorButtons',
+				this.buttons = list('div.levelSelectorButtons', LevelItem),
+				'Create: ',
+				this.createButton = new Button
+			)
+		});
+
+		this.parent = parent;
+		
+		this.buttons.update(game.getChildren('lvl'));
+
+		this.createButton.update({
+			text: 'New level',
+			icon: 'fa-area-chart',
+			callback: function () {
+				setChangeOrigin(this$1);
+				var lvl = new Level();
+				lvl.initWithPropertyValues({
+					name: 'New level'
+				});
+				editor.game.addChild(lvl);
+				editor.setLevel(lvl);
+				editor.select(lvl, this$1);
+				
+				this$1.remove();
+
+				setTimeout(function () {
+					Module.activateModule('level', true, 'focusOnProperty', 'name');
+				}, 100);
+			}
+		});
+
+		listen(this.el, 'selectLevel', function (level) { 
+			editor.setLevel(level);
+
+			this$1.remove();
+			editor.select(level, this$1);
+		});
+		
+		listen(this.el, 'deleteLevel', function (level) {
+			if (confirm('Are you sure you want to delete level: ' + level.name)) {
+				setChangeOrigin(this$1);
+				level.delete();
+				
+				this$1.remove();
+				new LevelSelector();
+			}
+		});
+	}
+
+	if ( Popup$$1 ) LevelSelector.__proto__ = Popup$$1;
+	LevelSelector.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
+	LevelSelector.prototype.constructor = LevelSelector;
+
+	return LevelSelector;
+}(Popup));
+
+var LevelItem = function LevelItem() {
+	this.el = el('div.levelItem',
+		this.number = el('span'),
+		this.selectButton = new Button,
+		this.deleteButton = new Button
+	);
+};
+LevelItem.prototype.selectClicked = function selectClicked () {
+	dispatch(this, 'selectLevel', this.level);
+};
+LevelItem.prototype.deleteClicked = function deleteClicked () {
+	dispatch(this, 'deleteLevel', this.level);
+};
+LevelItem.prototype.update = function update (level, idx) {
+		var this$1 = this;
+
+	this.level = level;
+	this.number.textContent = (idx+1) + '.';
+	this.selectButton.update({
+		text: level.name,
+		icon: 'fa-area-chart',
+		callback: function () { return this$1.selectClicked(); }
+	});
+	this.deleteButton.update({
+		text: 'Delete',
+		class: 'dangerButton',
+		icon: 'fa-cross',
+		callback: function () { return this$1.deleteClicked(); }
+	});
+};
+
+var TopBarModule = (function (Module$$1) {
+	function TopBarModule() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
+			this.buttons = el('div.buttonContainer')
+		);
+		this.id = 'topbar';
+		this.name = 'TopBar'; // not visible
+		
+		events.listen('addTopButtonToTopBar', function (topButton) {
+			mount(this$1.buttons, topButton);
+		});
+		
+		new TopButton({
+			text: 'Levels',
+			iconClass: 'fa-area-chart',
+			callback: function () {
+				new LevelSelector();
+			}
+		});
+	}
+
+	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
+	TopBarModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	TopBarModule.prototype.constructor = TopBarModule;
+
+	return TopBarModule;
+}(Module));
+Module.register(TopBarModule, 'top');
+
+var TopButton = function TopButton(ref) {
+	var this$1 = this;
+	if ( ref === void 0 ) ref = {};
+	var text$$1 = ref.text; if ( text$$1 === void 0 ) text$$1 = 'Button';
+	var callback = ref.callback;
+	var iconClass = ref.iconClass; if ( iconClass === void 0 ) iconClass = 'fa-circle';
+	var priority = ref.priority; if ( priority === void 0 ) priority = 1;
+
+	this.priority = priority || 0;
+		
+	this.el = el('div.button.topIconTextButton',
+		el('div.topIconTextButtonContent',
+			this.icon = el(("i.fa." + iconClass)),
+			this.text = el('span', text$$1)
+		)
+	);
+	this.el.onclick = function () {
+		if (callback) {
+			callback(this$1);
+		}
+	};
+
+	modulesRegisteredPromise.then(function () {
+		events.dispatch('addTopButtonToTopBar', this$1);
+	});
 };
 
 var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
@@ -3721,7 +3913,8 @@ function syncAChangeBetweenSceneAndLevel(change) {
 	if (change.type === changeType.addSerializableToTree) {
 		if (threeLetterType === 'epr') {
 			var epr = ref;
-			scene.addChild(epr.createEntity());
+			if (epr.findParent('lvl') === editor.selectedLevel)
+				{ scene.addChild(epr.createEntity()); }
 		} else if (threeLetterType === 'cda') {
 			var parent = ref.getParent();
 			var entities;
@@ -4101,7 +4294,8 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 	$(this.el).empty();
 	if (!items) { return; }
 		
-	if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1) {
+	if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
+	|| items.length === 1 && items[0] instanceof PropertyOwner) {
 		this.item = items[0];
 		var prototypeEditor = new Container();
 		prototypeEditor.update(this.item);
@@ -4151,12 +4345,13 @@ Container.prototype.update = function update (state) {
 	this.el.setAttribute('type', this.item.threeLetterType);
 	this.controls.innerHTML = '';
 	this.titleClickedCallback = null;
-
+		
 	if (this.item.threeLetterType === 'icd') { this.updateInheritedComponentData(); }
 	else if (this.item.threeLetterType === 'ent') { this.updateEntity(); }
 	else if (this.item.threeLetterType === 'com') { this.updateComponent(); }
 	else if (this.item.threeLetterType === 'prt') { this.updatePrototype(); }
 	else if (this.item.threeLetterType === 'epr') { this.updateEntityPrototype(); }
+	else if (this.item instanceof PropertyOwner) { this.updatePropertyOwner(); }
 };
 Container.prototype.updatePrototype = function updatePrototype () {
 		var this$1 = this;
@@ -4233,6 +4428,9 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 	this.item.properties.forEach(function (prop) {
 		if (prop.id)
 			{ hasOwnProperties = true; }
+		if (prop.propertyType.visibleIf) {
+			prop._editorVisibleIfTarget = this$1.item.properties.find(function (p) { return p.name === prop.propertyType.visibleIf.propertyName; });
+		}
 	});
 	this.properties.update(this.item.properties);
 		
@@ -4308,6 +4506,9 @@ Container.prototype.updateComponentKindOfThing = function updateComponentKindOfT
 	this.title.setAttribute('title', componentClass.description);
 	this.el.style['border-color'] = componentClass.color;
 };
+Container.prototype.updatePropertyOwner = function updatePropertyOwner () {
+	this.properties.update(this.item.getChildren('prp'));
+};
 
 var Property$2 = function Property() {
 	this.el = el('tr.property', { name: '' },
@@ -4360,9 +4561,18 @@ Property$2.prototype.convertFromInputToPropertyValue = function convertFromInput
 	else
 		{ return val; }
 };
+Property$2.prototype.updateVisibleIf = function updateVisibleIf () {
+	if (!this.property._editorVisibleIfTarget)
+		{ return; }
+	$(this.el).toggleClass('hidden', this.property._editorVisibleIfTarget.value !== this.property.propertyType.visibleIf.value);
+};
 Property$2.prototype.update = function update (property) {
 		var this$1 = this;
 
+	if (this.visibleIfListener) {
+		this.visibleIfListener(); // unlisten
+		this.visibleIfListener = null;
+	}
 	this.property = property;
 	this.el.setAttribute('name', property.name);
 	this.el.setAttribute('type', property.propertyType.type.name);
@@ -4372,6 +4582,18 @@ Property$2.prototype.update = function update (property) {
 	var propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
 	this.setValue = propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, property.propertyType);
 	this.setValueFromProperty();
+	this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
+	if (property._editorVisibleIfTarget) {
+		this.updateVisibleIf();
+		this.visibleIfListener = property._editorVisibleIfTarget.listen('change', function (_) {
+			if (!isInDom(this$1.el)) {
+				this$1.visibleIfListener();
+				this$1.visibleIfListener = null;
+				return;
+			}
+			return this$1.updateVisibleIf()
+		});
+	}
 	this.el.classList.toggle('ownProperty', !!this.property.id);
 	if (this.property.id) {
 		var parent = this.property.getParent();
@@ -4393,6 +4615,10 @@ Property$2.prototype.update = function update (property) {
 	} else
 		{ this.name.style.color = 'inherit'; }
 };
+
+function isInDom(element) {
+	return $.contains(document.documentElement, element);
+}
 
 var Type = (function (Module$$1) {
 	function Type() {
@@ -4475,13 +4701,16 @@ function removeTheDeadFromArray(array) {
 
 var Help = function Help () {};
 
-var prototypeAccessors = { game: {},level: {},scene: {} };
+var prototypeAccessors = { game: {},editor: {},level: {},scene: {} };
 
 prototypeAccessors.game.get = function () {
 	return game;
 };
+prototypeAccessors.editor.get = function () {
+	return editor;
+};
 prototypeAccessors.level.get = function () {
-	return editor.level;
+	return editor.selectedLevel;
 };
 prototypeAccessors.scene.get = function () {
 	return scene;
@@ -4569,13 +4798,21 @@ var SceneModule = (function (Module$$1) {
 				this$1.stopAndReset();
 			}
 		});
+
+		game.listen('levelCompleted', function () {
+			this$1.updatePlayPauseButtonStates();
+			this$1.draw();
+		});
 		
 		events.listen('setLevel', function (lvl) {
+			console.log('scenemodule.setLevel');
 			if (lvl)
 				{ lvl.createScene(false, this$1); }
 			else if (scene) {
 				scene.delete(this$1);
 			}
+			
+			this$1.updatePlayPauseButtonStates();
 			
 			this$1.clearState();
 			this$1.draw();
@@ -4645,7 +4882,7 @@ var SceneModule = (function (Module$$1) {
 			this$1.draw();
 		});
 		listenMouseDown(this.el, function (mousePos) {
-			if (!scene)
+			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
 				{ return; }
 			
 			setChangeOrigin(this$1);
@@ -4738,6 +4975,7 @@ var SceneModule = (function (Module$$1) {
 	};
 	
 	SceneModule.prototype.drawInvalidScene = function drawInvalidScene () {
+		this.canvas.width = this.canvas.width; 
 		var context = this.canvas.getContext('2d');
 		context.font = '30px arial';
 		context.fillStyle = 'white';
@@ -4994,6 +5232,35 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
+var Level$2 = (function (Module$$1) {
+	function Level() {
+		Module$$1.call(
+			this, this.propertyEditor = new PropertyEditor()
+		);
+		this.id = 'level';
+		this.name = 'Level';
+	}
+
+	if ( Module$$1 ) Level.__proto__ = Module$$1;
+	Level.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Level.prototype.constructor = Level;
+	Level.prototype.update = function update () {
+		if (editor.selectedLevel)
+			{ this.propertyEditor.update([editor.selectedLevel], 'lvl'); }
+		else
+			{ return false; }
+	};
+	Level.prototype.activate = function activate (command, parameter) {
+		if (command === 'focusOnProperty') {
+			this.propertyEditor.el.querySelector((".property[name='" + parameter + "'] input")).select();
+		}
+	};
+
+	return Level;
+}(Module));
+
+Module.register(Level$2, 'right');
+
 var TestModule = (function (Module$$1) {
 	function TestModule() {
 		Module$$1.call(
@@ -5037,36 +5304,17 @@ Module.register(TestModule$1, 'bottom');
 
 var loaded = false;
 
-// let gameJSON = {"id":"gamX3PlJ95bNpPKDgD","c":[{"id":"prt5TRc7kWUc4MqW76","c":[{"id":"cdaFcPiee9ZC3aYiYf","c":[{"id":"prp9SPJcczIfgDhNGw","v":{"x":100,"y":100},"n":"position"}],"cid":"_Transform","n":"Transform"},{"id":"cdaepjxpza0YFHIEiA","c":[{"id":"prp5vwerDeG6SL2i5A","v":1,"n":"userControlled"},{"id":"prpuGPnQvgmaTvN6MI","v":400,"n":"speed"}],"cid":"cidcEyuD7qDX","n":"Mover"},{"id":"cday0v75SoMQXxAFOt","c":[{"id":"prp6RjrKUmssxP60ZD","v":{"x":29,"y":30},"n":"size"},{"id":"prp1PomSBAMwvbgbsW","v":"green","n":"style"}],"cid":"_Rect","n":"Rect"},{"id":"prpEajDLAUPnDJ14xL","v":"Player","n":"name"}]},{"id":"prtS4rWsWzGekFUeM4","c":[{"id":"prpSDVDvkIuXFnRlxp","v":"Object","n":"name"},{"id":"cdaCWRIexho11JGDmG","c":[{"id":"prp022Xuf0XPeAZWSp","v":{"x":300,"y":200},"n":"position"}],"cid":"_Transform","n":"Transform"},{"id":"cdaMfmfhIWKXd9wDwr","c":[{"id":"prpEqUd69FxjArJKVL","v":3,"n":"speed"}],"cid":"cidBDsPAcjlJ","n":"Mover"},{"id":"cdarRyJAVxP6V1sVDS","c":[{"id":"prpeBoK1W9EzKhypNy","v":{"x":100,"y":10},"n":"size"},{"id":"prpEd9zAV77OTlU5g1","v":"brown","n":"style"}],"cid":"cidjJubEoscl","n":"Rect"}]},{"id":"prpZAysxUUZI41t8f2","v":"My Game","n":"name"}]};
-// let gameJSON = {"id":"gamX3PlJ95bNpPKDgD","c":[{"id":"prt5TRc7kWUc4MqW76","c":[{"id":"prpEajDLAUPnDJ14xL","v":"Player","n":"name"},{"id":"cdaepjxpza0YFHIEiA","c":[{"id":"prp5vwerDeG6SL2i5A","v":1,"n":"userControlled"},{"id":"prpuGPnQvgmaTvN6MI","v":200,"n":"speed"}],"cid":"cidcEyuD7qDX","n":"Mover"},{"id":"cday0v75SoMQXxAFOt","c":[{"id":"prp6RjrKUmssxP60ZD","v":{"x":27,"y":30},"n":"size"},{"id":"prp1PomSBAMwvbgbsW","v":"green","n":"style"}],"cid":"_Rect","n":"Rect"}]},{"id":"prtS4rWsWzGekFUeM4","c":[{"id":"prpSDVDvkIuXFnRlxp","v":"Object","n":"name"},{"id":"cdaCWRIexho11JGDmG","c":[{"id":"prp022Xuf0XPeAZWSp","v":{"x":320,"y":200},"n":"position"}],"cid":"_Transform","n":"Transform"},{"id":"cdaMfmfhIWKXd9wDwr","c":[{"id":"prpEqUd69FxjArJKVL","v":3,"n":"speed"},{"id":"prp21B9MfFP157IuDe","v":{"x":200,"y":10},"n":"change"}],"cid":"cidBDsPAcjlJ","n":"Mover"},{"id":"cdarRyJAVxP6V1sVDS","c":[{"id":"prpEd9zAV77OTlU5g1","v":"pink","n":"style"},{"id":"prpsUjpCfC8EAEfQFi","v":{"x":201,"y":20},"n":"size"},{"id":"prpBy12pct8db7TMnp","v":0,"n":"randomStyle"}],"cid":"cidjJubEoscl","n":"Rect"}]},{"id":"prpZAysxUUZI41t8f2","v":"My Game","n":"name"},{"id":"lvlSHQxuStFIeIxRXv","c":[{"id":"eprVdD3ZJc2pVJipVB","p":"prtS4rWsWzGekFUeM4","c":[{"id":"cdafDxuhz72Ndbkugh","c":[{"id":"prp55l9n2mHIFsxMyN","v":"gray","n":"style"},{"id":"prpbmcTKg6ADOFc0Wj","v":{"x":100,"y":10},"n":"size"},{"id":"prpohtPa75nKevc5hQ","v":1,"n":"randomStyle"}],"cid":"cidjJubEoscl","n":"Rect"}],"x":449,"y":129},{"id":"epr7OAmiXsv4fwa788","p":"prtS4rWsWzGekFUeM4","c":[{"id":"cdar4cz8bpRbA9ugrX","c":[{"id":"prpVtH5R9efpaqLHOj","v":{"x":300,"y":40},"n":"size"},{"id":"prpE4TgmrKB1cYHrwH","v":"white","n":"style"}],"cid":"cidjJubEoscl","n":"Rect"}],"n":"Objecti","x":255,"y":256},{"id":"eprQ6RevaMgpSH48Ge","p":"prtS4rWsWzGekFUeM4","x":576,"y":313},{"id":"eprYbXpvrVagTW1WDu","p":"prt5TRc7kWUc4MqW76","x":405,"y":281},{"id":"eprkTfTfI2qD1njj5b","p":"prtS4rWsWzGekFUeM4","x":169,"y":61},{"id":"epra9FKWwaTdn0ESt7","p":"prtS4rWsWzGekFUeM4","x":127,"y":116},{"id":"eprD7nE1RFLxKL1qIK","p":"prtS4rWsWzGekFUeM4","x":141,"y":158},{"id":"eprn74UxMemnAiDlc6","p":"prtS4rWsWzGekFUeM4","x":126,"y":205},{"id":"eprOpWzKUJyUYgoEEk","p":"prtS4rWsWzGekFUeM4","x":306,"y":137},{"id":"epr1vZ5JFHy0PL2elM","p":"prtS4rWsWzGekFUeM4","x":523,"y":45}]},{"id":"lvlZ4ROEjqZfMUwjiI"},{"id":"lvlxP0GdNC37hoKy4N"},{"id":"lvlIZlQQPH2tLG6B46"},{"id":"lvlJVs96mjimfsLLqq","c":[{"id":"epreoHypBlS46HcXH6","p":"prtS4rWsWzGekFUeM4","x":226,"y":27},{"id":"eprLjXWzx0ZVNF4Vmt","p":"prtS4rWsWzGekFUeM4","x":243,"y":42},{"id":"eprnjuzVDFkORdr1Zh","p":"prtS4rWsWzGekFUeM4","x":268,"y":55},{"id":"eprVRrbJncfySK7gal","p":"prtS4rWsWzGekFUeM4","x":286,"y":67},{"id":"eprMQyVCGBU7wffA8p","p":"prtS4rWsWzGekFUeM4","x":310,"y":81}]},{"id":"lvlztAqS2kgqClv7s8"},{"id":"lvlutj7lrdcFquLh3L"}]};
+var modulesRegisteredPromise = events.getLoadEventPromise('modulesRegistered');
+var loadedPromise = events.getLoadEventPromise('loaded');
 
-window.addEventListener('load', function () {
-	/*
-	setChangeOrigin('editor');
-	let anotherGame;
-	try {
-		executeExternal(() => {
-			// anotherGame = Serializable.fromJSON(gameJSON, 'editorInit');
-			anotherGame = Serializable.fromJSON(JSON.parse(localStorage.anotherGameJSON));
-		});
-	} catch(e) {
-		if (confirm('Game parsing failed. Do you want to clear the game? Press cancel to see the error.')) {
-			console.warn('game parsing failed', e);
-		} else {
-			Object.keys(serializables).forEach(key => delete serializables[key]);
-			anotherGame = Serializable.fromJSON(JSON.parse(localStorage.anotherGameJSON), 'editorInit');
-		}
-	}
-	editor = new Editor(anotherGame);
-	*/
-	editor = new Editor();
-	events.dispatch('registerModules', editor);
-});
-events.listen('modulesRegistered', function () {
+modulesRegisteredPromise.then(function () {
 	loaded = true;
 	events.dispatch('loaded');
-
 	setNetworkEnabled(true);
+});
+
+loadedPromise.then(function () {
+	editor.setLevel(game.getChildren('lvl')[0]);
 });
 
 setInterval(function () {
@@ -5075,10 +5323,16 @@ setInterval(function () {
 
 addChangeListener(function (change) {
 	events.dispatch('change', change);
+	if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
+		var game$$1 = change.reference;
+		editor = new Editor(game$$1);
+		events.dispatch('registerModules', editor);
+	}
 	if (editor) {
-		if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
-			editor.game = change.reference;
-			editor.setLevel(editor.game.getChildren('lvl')[0]);
+		if (change.type === changeType.deleteSerializable && change.reference.threeLetterType === 'lvl') {
+			if (editor && editor.selectedLevel === change.reference) {
+				editor.setLevel(null);
+			}
 		}
 		editor.dirty = true;
 		if (change.type !== 'editorSelection' && loaded && change.reference.getRoot().threeLetterType === 'gam')
@@ -5088,19 +5342,13 @@ addChangeListener(function (change) {
 
 var editor = null;
 var Editor = function Editor(game$$1) {
-	var this$1 = this;
-	if ( game$$1 === void 0 ) game$$1 = null;
-
+	assert(game$$1);
+		
 	this.layout = new Layout();
 		
 	this.dirty = true;
-		
 	this.game = game$$1;
 	this.selectedLevel = null;
-	loadedPromise.then(function () {
-		if (game$$1)
-			{ this$1.setLevel(game$$1.getChildren('lvl')[0]); }
-	});
 		
 	this.selection = {
 		type: 'none',
@@ -5186,9 +5434,6 @@ function getOption(id) {
 	loadOptions();
 	return options[id];
 }
-
-var modulesRegisteredPromise = events.getLoadEventPromise('modulesRegistered');
-var loadedPromise = events.getLoadEventPromise('loaded');
 
 window.Property = Property;
 

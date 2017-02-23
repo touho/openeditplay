@@ -40,6 +40,7 @@ export class Button {
 				icon.style.color = button.color;
 			mount(this.el, icon, this.el.firstChild);
 		}
+		this.el.className = button.class ? `button ${button.class}` : 'button';
 		this.callback = button.callback;
 		if (button.color)
 			this.el.style['border-color'] = button.color;

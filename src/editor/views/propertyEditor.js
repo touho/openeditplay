@@ -10,6 +10,7 @@ import { Prop } from '../../core/component';
 import { setOption, getOption, editor } from '../editor';
 import { scene } from '../../core/scene';
 import * as sceneEdit from '../util/sceneEdit';
+import PropertyOwner from '../../core/propertyOwner';
 
 /*
 Reference: Unbounce
@@ -69,7 +70,8 @@ export default class PropertyEditor {
 		$(this.el).empty();
 		if (!items) return;
 		
-		if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1) {
+		if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
+		|| items.length === 1 && items[0] instanceof PropertyOwner) {
 			this.item = items[0];
 			let prototypeEditor = new Container();
 			prototypeEditor.update(this.item);
@@ -119,12 +121,13 @@ class Container {
 		this.el.setAttribute('type', this.item.threeLetterType);
 		this.controls.innerHTML = '';
 		this.titleClickedCallback = null;
-
+		
 		if (this.item.threeLetterType === 'icd') this.updateInheritedComponentData();
 		else if (this.item.threeLetterType === 'ent') this.updateEntity();
 		else if (this.item.threeLetterType === 'com') this.updateComponent();
 		else if (this.item.threeLetterType === 'prt') this.updatePrototype();
 		else if (this.item.threeLetterType === 'epr') this.updateEntityPrototype();
+		else if (this.item instanceof PropertyOwner) this.updatePropertyOwner();
 	}
 	updatePrototype() {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
@@ -195,6 +198,9 @@ class Container {
 		this.item.properties.forEach(prop => {
 			if (prop.id)
 				hasOwnProperties = true;
+			if (prop.propertyType.visibleIf) {
+				prop._editorVisibleIfTarget = this.item.properties.find(p => p.name === prop.propertyType.visibleIf.propertyName);
+			}
 		});
 		this.properties.update(this.item.properties);
 		
@@ -270,6 +276,9 @@ class Container {
 		this.title.setAttribute('title', componentClass.description);
 		this.el.style['border-color'] = componentClass.color;
 	}
+	updatePropertyOwner() {
+		this.properties.update(this.item.getChildren('prp'));
+	}
 }
 
 class Property {
@@ -324,7 +333,16 @@ class Property {
 		else
 			return val;
 	}
+	updateVisibleIf() {
+		if (!this.property._editorVisibleIfTarget)
+			return;
+		$(this.el).toggleClass('hidden', this.property._editorVisibleIfTarget.value !== this.property.propertyType.visibleIf.value);
+	}
 	update(property) {
+		if (this.visibleIfListener) {
+			this.visibleIfListener(); // unlisten
+			this.visibleIfListener = null;
+		}
 		this.property = property;
 		this.el.setAttribute('name', property.name);
 		this.el.setAttribute('type', property.propertyType.type.name);
@@ -334,6 +352,18 @@ class Property {
 		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
 		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), property.propertyType);
 		this.setValueFromProperty();
+		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
+		if (property._editorVisibleIfTarget) {
+			this.updateVisibleIf();
+			this.visibleIfListener = property._editorVisibleIfTarget.listen('change', _ => {
+				if (!isInDom(this.el)) {
+					this.visibleIfListener();
+					this.visibleIfListener = null;
+					return;
+				}
+				return this.updateVisibleIf()
+			});
+		}
 		this.el.classList.toggle('ownProperty', !!this.property.id);
 		if (this.property.id) {
 			let parent = this.property.getParent();
@@ -355,4 +385,8 @@ class Property {
 		} else
 			this.name.style.color = 'inherit';
 	}
+}
+
+function isInDom(element) {
+	return $.contains(document.documentElement, element);
 }

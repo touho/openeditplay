@@ -19,13 +19,17 @@ function createStringId(threeLetterPrefix, characters) {
 
 var serializableClasses = new Map();
 
-var Serializable = function Serializable(predefinedId) {
+var Serializable = function Serializable(predefinedId, skipSerializableRegistering) {
 	if ( predefinedId === void 0 ) predefinedId = false;
+	if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
 
 	assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 	this._children = new Map(); // threeLetterType -> array
 	this._listeners = [];
 	this._isInTree = this.isRoot;
+	this._state |= Serializable.STATE_CONSTRUCTOR;
+	if (skipSerializableRegistering)
+		{ return; }
 	if (predefinedId) {
 		this._state |= Serializable.STATE_PREDEFINEDID;
 		this.id = predefinedId;
@@ -35,7 +39,6 @@ var Serializable = function Serializable(predefinedId) {
 	if (this.id.startsWith('?'))
 		{ throw new Error('?'); }
 	addSerializable(this);
-	this._state |= Serializable.STATE_CONSTRUCTOR;
 };
 Serializable.prototype.delete = function delete$1 () {
 	if (this._parent) {
@@ -227,7 +230,7 @@ Serializable.prototype.listen = function listen (event, callback) {
 	if (!this._listeners.hasOwnProperty(event)) {
 		this._listeners[event] = [];
 	}
-	this._listeners[event].push(callback);
+	this._listeners[event].unshift(callback);
 	return function () {
 		var index = this$1._listeners[event].indexOf(callback);
 		this$1._listeners[event].splice(index, 1);
@@ -239,7 +242,7 @@ Serializable.prototype.dispatch = function dispatch (event) {
 		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
 
 	if (this._listeners.hasOwnProperty(event)) {
-		for (var i = 0; i < this._listeners[event].length; ++i) {
+		for (var i = this._listeners[event].length - 1; i >= 0; --i) {
 			try {
 				this$1._listeners[event][i].apply(null, args);
 			} catch(e) {
@@ -608,8 +611,7 @@ var Property = (function (Serializable$$1) {
 		var skipSerializableRegistering = ref.skipSerializableRegistering; if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
 
 		assert(name, 'Property without a name can not exist');
-		if (!skipSerializableRegistering)
-			{ Serializable$$1.call(this, predefinedId); }
+		Serializable$$1.call(this, predefinedId, skipSerializableRegistering);
 		this._initialValue = value;
 		if (propertyType)
 			{ this.setPropertyType(propertyType); }
@@ -664,7 +666,7 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
-		
+		this.dispatch('change', this._value);
 		if (this._isInTree)
 			{ addChange(changeType.setPropertyValue, this); }
 	},
@@ -691,7 +693,7 @@ Object.defineProperty(Property.prototype, 'debug', {
 
 
 
-var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags) {
+var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
 
@@ -705,6 +707,7 @@ var PropertyType = function PropertyType(name, type, validator, initialValue, de
 	this.validator = validator;
 	this.initialValue = initialValue;
 	this.description = description;
+	this.visibleIf = visibleIf;
 	this.flags = {};
 	flags.forEach(function (f) { return this$1.flags[f.type] = f; });
 };
@@ -741,20 +744,33 @@ function createPropertyType(propertyName, defaultValue, type) {
 	var validator = type.validators.default();
 	var description = '';
 	var flags = [];
-	optionalParameters.forEach(function (p) {
+	var visibleIf = null;
+	optionalParameters.forEach(function (p, idx) {
 		if (typeof p === 'string')
 			{ description = p; }
 		else if (p && p.validate)
 			{ validator = p; }
-		else if (p && p.isFlag) {
-			flags.push(p);
-		} else
-			{ assert(false, 'invalid parameter ' + p); }
+		else if (p && p.isFlag)
+			{ flags.push(p); }
+		else if (p && p.visibleIf)
+			{ visibleIf = p; }
+		else
+			{ assert(false, 'invalid parameter ' + p + ' idx ' + idx); }
 	});
-	return new PropertyType(propertyName, type, validator, defaultValue, description, flags);
+	return new PropertyType(propertyName, type, validator, defaultValue, description, flags, visibleIf);
 }
 
 var dataType = createPropertyType;
+
+dataType.visibleIf = function(propertyName, value) {
+	assert(typeof propertyName === 'string' && propertyName.length);
+	assert(typeof value !== 'undefined');
+	return {
+		visibleIf: true,
+		propertyName: propertyName,
+		value: value
+	};
+};
 
 function createFlag(type, func) {
 	if ( func === void 0 ) func = {};
@@ -1767,9 +1783,6 @@ var Game = (function (PropertyOwner$$1) {
 
 PropertyOwner.defineProperties(Game, propertyTypes);
 
-Game.create = function(name) {
-	return new Game().initWithPropertyValues({ name: name });
-};
 Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
@@ -1796,6 +1809,9 @@ var Scene = (function (Serializable$$1) {
 		}
 		this.level = null;
 		
+		// To make component based entity search fast:
+		this.components = new Map(); // componentName -> Set of components
+		
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
@@ -1814,6 +1830,15 @@ var Scene = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+	Scene.prototype.win = function win () {
+		var this$1 = this;
+
+		setTimeout(function () {
+			setChangeOrigin(this$1);
+			this$1.reset();
+			game.dispatch('levelCompleted');
+		});
+	};
 	Scene.prototype.animFrame = function animFrame (playCalled) {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
@@ -1889,6 +1914,21 @@ var Scene = (function (Serializable$$1) {
 		return true;
 	};
 
+	// To make component based entity search fast:
+	Scene.prototype.addComponent = function addComponent (component) {
+		var set = this.components.get(component.constructor.componentName);
+		if (!set) {
+			set = new Set();
+			this.components.set(component.constructor.componentName, set);
+		}
+		set.add(component);
+	};
+	Scene.prototype.removeComponent = function removeComponent (component) {
+		var set = this.components.get(component.constructor.componentName);
+		assert(set);
+		assert(set.delete(component));
+	};
+
 	return Scene;
 }(Serializable));
 
@@ -1943,6 +1983,9 @@ var Component$1 = (function (PropertyOwner$$1) {
 			}
 		});
 
+		if (this.constructor.componentName !== 'Transform')
+			{ this.scene.addComponent(this); }
+		
 		try {
 			if (typeof this.preInit === 'function')
 				{ this.preInit(); }
@@ -1966,6 +2009,10 @@ var Component$1 = (function (PropertyOwner$$1) {
 		} catch(e) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
+
+		if (this.constructor.componentName !== 'Transform')
+			{ this.scene.removeComponent(this); }
+		
 		this.forEachChild('com', function (c) { return c._sleep(); });
 		// console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
 		this._listenRemoveFunctions.forEach(function (f) { return f(); });
@@ -2315,9 +2362,9 @@ var propertyTypes$2 = [
 	createPropertyType('name', 'No name', createPropertyType.string)
 ];
 
-var Level = (function (Serializable$$1) {
+var Level = (function (PropertyOwner$$1) {
 	function Level(predefinedId) {
-		Serializable$$1.apply(this, arguments);
+		PropertyOwner$$1.apply(this, arguments);
 
 		if (predefinedId)
 			{ console.log('level import'); }
@@ -2325,8 +2372,8 @@ var Level = (function (Serializable$$1) {
 			{ console.log('level created'); }
 	}
 
-	if ( Serializable$$1 ) Level.__proto__ = Serializable$$1;
-	Level.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	if ( PropertyOwner$$1 ) Level.__proto__ = PropertyOwner$$1;
+	Level.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
 	Level.prototype.constructor = Level;
 	Level.prototype.createScene = function createScene (predefinedSceneObject) {
 		if ( predefinedSceneObject === void 0 ) predefinedSceneObject = false;
@@ -2340,7 +2387,7 @@ var Level = (function (Serializable$$1) {
 	};
 
 	return Level;
-}(Serializable));
+}(PropertyOwner));
 
 PropertyOwner.defineProperties(Level, propertyTypes$2);
 
@@ -2536,6 +2583,57 @@ Component$1.register({
 				{ return; }
 
 			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+		}
+	}
+});
+
+Component$1.register({
+	name: 'Trigger',
+	allowMultiple: true,
+	properties: [
+		createPropertyType('trigger', 'playerComesClose', createPropertyType.enum, createPropertyType.enum.values('playerComesClose', 'other')),
+		createPropertyType('triggerInfo', 'heh', createPropertyType.string, createPropertyType.visibleIf('trigger', 'other')),
+		createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win')),
+		createPropertyType('safetyIntervalSeconds', 5, createPropertyType.float) ],
+	prototype: {
+		onDrawHelper: function onDrawHelper(context) {
+			var size = 30;
+			var
+				x = this.Transform.position.x - size * this.Transform.scale.x/2,
+				y = this.Transform.position.y - size * this.Transform.scale.y/2,
+				w = size * this.Transform.scale.x,
+				h = size * this.Transform.scale.y;
+			context.save();
+			context.fillStyle = 'blue';
+			context.strokeStyle = 'white';
+			context.lineWidth = 1;
+			context.font = '40px FontAwesome';
+			context.textAlign = 'center';
+			context.fillText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
+			context.strokeText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
+
+			context.restore();
+		},
+		onUpdate: function onUpdate() {
+			var this$1 = this;
+
+			if (this.trigger === 'playerComesClose') {
+				var componentSet = this.scene.components.get('Mover');
+				if (componentSet) {
+					var entities = [];
+					componentSet.forEach(function (c) { return entities.push(c.entity); });
+					var dist = 20;
+					var distSq = dist*dist;
+					var pos = this.Transform.position;
+					entities.forEach(function (entity) {
+						if (entity.position.distanceSq(pos) < distSq)
+							{ this$1.launchTrigger(entity); }
+					});
+				}
+			}
+		},
+		launchTrigger: function launchTrigger(entity) {
+			this.scene.win();
 		}
 	}
 });

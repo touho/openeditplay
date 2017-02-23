@@ -14,11 +14,14 @@ export function createStringId(threeLetterPrefix = '???', characters = 16) {
 let serializableClasses = new Map();
 
 export default class Serializable {
-	constructor(predefinedId = false) {
+	constructor(predefinedId = false, skipSerializableRegistering = false) {
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		this._children = new Map(); // threeLetterType -> array
 		this._listeners = [];
 		this._isInTree = this.isRoot;
+		this._state |= Serializable.STATE_CONSTRUCTOR;
+		if (skipSerializableRegistering)
+			return;
 		if (predefinedId) {
 			this._state |= Serializable.STATE_PREDEFINEDID;
 			this.id = predefinedId;
@@ -28,7 +31,6 @@ export default class Serializable {
 		if (this.id.startsWith('?'))
 			throw new Error('?');
 		serializableManager.addSerializable(this);
-		this._state |= Serializable.STATE_CONSTRUCTOR;
 	}
 	delete() {
 		if (this._parent) {
@@ -204,7 +206,7 @@ export default class Serializable {
 		if (!this._listeners.hasOwnProperty(event)) {
 			this._listeners[event] = [];
 		}
-		this._listeners[event].push(callback);
+		this._listeners[event].unshift(callback);
 		return () => {
 			var index = this._listeners[event].indexOf(callback);
 			this._listeners[event].splice(index, 1);
@@ -212,7 +214,7 @@ export default class Serializable {
 	}
 	dispatch(event, ...args) {
 		if (this._listeners.hasOwnProperty(event)) {
-			for (var i = 0; i < this._listeners[event].length; ++i) {
+			for (var i = this._listeners[event].length - 1; i >= 0; --i) {
 				try {
 					this._listeners[event][i].apply(null, args);
 				} catch(e) {

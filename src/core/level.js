@@ -6,7 +6,7 @@ let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
 ];
 
-export default class Level extends Serializable {
+export default class Level extends PropertyOwner {
 	constructor(predefinedId) {
 		super(...arguments);
 

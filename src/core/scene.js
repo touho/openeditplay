@@ -26,6 +26,9 @@ export default class Scene extends Serializable {
 		}
 		this.level = null;
 		
+		// To make component based entity search fast:
+		this.components = new Map(); // componentName -> Set of components
+		
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
@@ -39,6 +42,13 @@ export default class Scene extends Serializable {
 			console.log('scene created');
 		
 		this.draw();
+	}
+	win() {
+		setTimeout(() => {
+			setChangeOrigin(this);
+			this.reset();
+			game.dispatch('levelCompleted');
+		})
 	}
 	animFrame(playCalled) {
 		this.animationFrameId = null;
@@ -111,6 +121,21 @@ export default class Scene extends Serializable {
 		
 		console.log('scene.delete');
 		return true;
+	}
+
+	// To make component based entity search fast:
+	addComponent(component) {
+		let set = this.components.get(component.constructor.componentName);
+		if (!set) {
+			set = new Set();
+			this.components.set(component.constructor.componentName, set);
+		}
+		set.add(component);
+	}
+	removeComponent(component) {
+		let set = this.components.get(component.constructor.componentName);
+		assert(set);
+		assert(set.delete(component));
 	}
 }
 Scene.prototype.isRoot = true;

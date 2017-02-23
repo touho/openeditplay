@@ -4,33 +4,25 @@ import PropertyEditor from '../views/propertyEditor';
 import { editor } from '../editor';
 import PropertyOwner from '../../core/propertyOwner'
 
-class Type extends Module {
+class Level extends Module {
 	constructor() {
 		super(
 			this.propertyEditor = new PropertyEditor()
 		);
-		this.id = 'type';
-		this.name = 'Type';
+		this.id = 'level';
+		this.name = 'Level';
 	}
 	update() {
-		if (editor.selection.items.length != 1)
+		if (editor.selectedLevel)
+			this.propertyEditor.update([editor.selectedLevel], 'lvl');
+		else
 			return false;
-		
-		if (editor.selection.type === 'prt') {
-			this.propertyEditor.update(editor.selection.items, editor.selection.type);
-		} else if (editor.selection.type === 'ent') {
-			this.propertyEditor.update(editor.selection.items.map(e => e.prototype.prototype), editor.selection.type);
-		} else {
-			return false; // hide
-		}
 	}
 	activate(command, parameter) {
 		if (command === 'focusOnProperty') {
-			
 			this.propertyEditor.el.querySelector(`.property[name='${parameter}'] input`).select();
-			// console.log(nameProp);
 		}
 	}
 }
 
-Module.register(Type, 'right');
+Module.register(Level, 'right');

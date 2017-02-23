@@ -6,8 +6,11 @@ class Help {
 	get game() {
 		return game;
 	}
+	get editor() {
+		return editor;
+	}
 	get level() {
-		return editor.level;
+		return editor.selectedLevel;
 	}
 	get scene() {
 		return scene;

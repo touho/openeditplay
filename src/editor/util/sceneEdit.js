@@ -78,7 +78,8 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 	if (change.type === changeType.addSerializableToTree) {
 		if (threeLetterType === 'epr') {
 			let epr = ref;
-			scene.addChild(epr.createEntity());
+			if (epr.findParent('lvl') === editor.selectedLevel)
+				scene.addChild(epr.createEntity());
 		} else if (threeLetterType === 'cda') {
 			let parent = ref.getParent();
 			let entities;

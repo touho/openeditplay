@@ -6,7 +6,7 @@ import Property from './property';
 
 
 class PropertyType {
-	constructor(name, type, validator, initialValue, description, flags = []) {
+	constructor(name, type, validator, initialValue, description, flags = [], visibleIf) {
 		assert(typeof name === 'string');
 		assert(name[0] >= 'a' && name[0] <= 'z', 'Name of a property must start with lower case letter.');
 		assert(type && typeof type.name === 'string');
@@ -17,6 +17,7 @@ class PropertyType {
 		this.validator = validator;
 		this.initialValue = initialValue;
 		this.description = description;
+		this.visibleIf = visibleIf;
 		this.flags = {};
 		flags.forEach(f => this.flags[f.type] = f);
 	}
@@ -46,20 +47,33 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 	let validator = type.validators.default();
 	let description = '';
 	let flags = [];
-	optionalParameters.forEach(p => {
+	let visibleIf = null;
+	optionalParameters.forEach((p, idx) => {
 		if (typeof p === 'string')
 			description = p;
 		else if (p && p.validate)
 			validator = p;
-		else if (p && p.isFlag) {
+		else if (p && p.isFlag)
 			flags.push(p);
-		} else
-			assert(false, 'invalid parameter ' + p);
+		else if (p && p.visibleIf)
+			visibleIf = p;
+		else
+			assert(false, 'invalid parameter ' + p + ' idx ' + idx);
 	});
-	return new PropertyType(propertyName, type, validator, defaultValue, description, flags);
+	return new PropertyType(propertyName, type, validator, defaultValue, description, flags, visibleIf);
 };
 
 export let dataType = createPropertyType;
+
+dataType.visibleIf = function(propertyName, value) {
+	assert(typeof propertyName === 'string' && propertyName.length);
+	assert(typeof value !== 'undefined');
+	return {
+		visibleIf: true,
+		propertyName,
+		value
+	};
+};
 
 function createFlag(type, func = {}) {
 	func.isFlag = true;

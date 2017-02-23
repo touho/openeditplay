@@ -60,7 +60,7 @@ div.propertyEditor div.containerTitle .icon {
 }
 
 div.propertyEditor table {
-  border-collapse: collapse;
+  border-spacing: 0px 2px;
 }
 
 tr.property {
@@ -79,6 +79,12 @@ td.nameCell {
   max-width: 140px;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+tr.property.visibleIf.hidden {
+  display: none;
+}
+tr.property.visibleIf .nameCell {
+  border-left: 15px solid $other-backround;
 }
 td.propertyContent {
   width: 99%;

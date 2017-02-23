@@ -3,17 +3,18 @@ import Module from './module';
 import events, { dispatch, listen } from '../events';
 import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed } from '../../util/input';
 import Scene, { scene } from '../../core/scene';
+import { game } from '../../core/game';
 import EntityPrototype from '../../core/entityPrototype';
 import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
 import { TopButton } from './topBar';
-import { editor, loadedPromise } from '../editor';
+import { editor } from '../editor';
 import { changeType, setChangeOrigin } from '../../core/serializableManager';
 import * as sceneEdit from '../util/sceneEdit';
 import Vector from '../../util/vector';
-import { removeTheDeadFromArray, removeAndDeleteFromArray } from '../../util/algorithm';
+import { removeTheDeadFromArray } from '../../util/algorithm';
 import { help } from '../help';
 
 class SceneModule extends Module {
@@ -91,13 +92,21 @@ class SceneModule extends Module {
 				this.stopAndReset();
 			}
 		});
+
+		game.listen('levelCompleted', () => {
+			this.updatePlayPauseButtonStates();
+			this.draw();
+		});
 		
 		events.listen('setLevel', lvl => {
+			console.log('scenemodule.setLevel');
 			if (lvl)
 				lvl.createScene(false, this);
 			else if (scene) {
 				scene.delete(this);
 			}
+			
+			this.updatePlayPauseButtonStates();
 			
 			this.clearState();
 			this.draw();
@@ -167,7 +176,7 @@ class SceneModule extends Module {
 			this.draw();
 		});
 		listenMouseDown(this.el, mousePos => {
-			if (!scene)
+			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
 				return;
 			
 			setChangeOrigin(this);
@@ -254,6 +263,7 @@ class SceneModule extends Module {
 	}
 	
 	drawInvalidScene() {
+		this.canvas.width = this.canvas.width; 
 		let context = this.canvas.getContext('2d');
 		context.font = '30px arial';
 		context.fillStyle = 'white';

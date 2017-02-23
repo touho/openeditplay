@@ -405,7 +405,7 @@ div.propertyEditor div.containerTitle .icon {
   left: 4px;
 }
 div.propertyEditor table {
-  border-collapse: collapse;
+  border-spacing: 0px 2px;
 }
 tr.property {
   border-bottom: 3px solid;
@@ -423,6 +423,12 @@ td.nameCell {
   max-width: 140px;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+tr.property.visibleIf.hidden {
+  display: none;
+}
+tr.property.visibleIf .nameCell {
+  border-left: 15px solid #363636;
 }
 td.propertyContent {
   width: 99%;

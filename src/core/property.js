@@ -9,8 +9,7 @@ export default class Property extends Serializable {
 	// if you don't give propertyType (give it later), value as JSON form
 	constructor({ value, predefinedId, name, propertyType, skipSerializableRegistering = false }) {
 		assert(name, 'Property without a name can not exist');
-		if (!skipSerializableRegistering)
-			super(predefinedId);
+		super(predefinedId, skipSerializableRegistering);
 		this._initialValue = value;
 		if (propertyType)
 			this.setPropertyType(propertyType);
@@ -56,7 +55,7 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
-		
+		this.dispatch('change', this._value);
 		if (this._isInTree)
 			addChange(changeType.setPropertyValue, this);
 	},

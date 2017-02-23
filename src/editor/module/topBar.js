@@ -4,6 +4,7 @@ import { editor, modulesRegisteredPromise } from '../editor';
 import Level from '../../core/level';
 import events from '../events';
 import { setChangeOrigin } from '../../core/serializableManager';
+import LevelSelector from '../views/popup/levelSelector';
 
 export class TopBarModule extends Module {
 	constructor() {
@@ -18,13 +19,11 @@ export class TopBarModule extends Module {
 			mount(this.buttons, topButton);
 		});
 		
-		let createLevelButton = new TopButton({
-			text: 'New level',
+		new TopButton({
+			text: 'Levels',
+			iconClass: 'fa-area-chart',
 			callback: () => {
-				setChangeOrigin(this);
-				let lvl = new Level();
-				editor.game.addChild(lvl);
-				editor.setLevel(lvl);
+				new LevelSelector();
 			}
 		});
 	}

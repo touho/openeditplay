@@ -40,6 +40,9 @@ export class Component extends PropertyOwner {
 			}
 		});
 
+		if (this.constructor.componentName !== 'Transform')
+			this.scene.addComponent(this);
+		
 		try {
 			if (typeof this.preInit === 'function')
 				this.preInit();
@@ -63,6 +66,10 @@ export class Component extends PropertyOwner {
 		} catch(e) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
+
+		if (this.constructor.componentName !== 'Transform')
+			this.scene.removeComponent(this);
+		
 		this.forEachChild('com', c => c._sleep());
 		// console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
 		this._listenRemoveFunctions.forEach(f => f());
