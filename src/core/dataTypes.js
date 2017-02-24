@@ -118,7 +118,7 @@ dataType.enum = createDataType({
 			if (typeof x !== 'string')
 				throw new Error('val should be string');
 			if (values.indexOf(x) < 0)
-				throw new Error('value not in enum');
+				throw new Error(`value ${x} not in enum: [${values}]`);
 			return x;
 		}
 	},

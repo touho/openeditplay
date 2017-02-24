@@ -1,5 +1,5 @@
 import Serializable from './serializable';
-import { addChange, changeType } from './serializableManager'; 
+import { addChange, changeType, setChangeOrigin } from './serializableManager'; 
 import assert from '../util/assert';
 
 // Instance of a property

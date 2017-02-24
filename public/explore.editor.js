@@ -868,6 +868,17 @@ Vector.prototype.length = function length () {
 Vector.prototype.lengthSq = function lengthSq () {
 	return this.x * this.x + this.y * this.y;
 };
+Vector.prototype.setLength = function setLength (newLength) {
+	var oldLength = this.length();
+
+	if (oldLength === 0) {
+		this.x = newLength;
+		this.y = 0;
+	} else {
+		this.multiplyScalar(newLength / oldLength);
+	}
+	return this;
+};
 Vector.prototype.distance = function distance (vec) {
 	var dx = this.x - vec.x,
 		dy = this.y - vec.y;
@@ -879,15 +890,7 @@ Vector.prototype.distanceSq = function distanceSq (vec) {
 	return dx * dx + dy * dy;
 };
 Vector.prototype.normalize = function normalize () {
-	var length = this.length();
-	
-	if (length === 0) {
-		this.x = 1;
-		this.y = 0;
-	} else {
-		this.divideScalar(length);
-	}
-	return this;
+	return this.setLength(1);
 };
 Vector.prototype.horizontalAngle = function horizontalAngle () {
 	return Math.atan2(this.y, this.x);
@@ -896,11 +899,9 @@ Vector.prototype.verticalAngle = function verticalAngle () {
 	return Math.atan2(this.x, this.y);
 };
 Vector.prototype.rotate = function rotate (angle) {
-	var nx = (this.x * Math.cos(angle)) - (this.y * Math.sin(angle));
-	var ny = (this.x * Math.sin(angle)) + (this.y * Math.cos(angle));
-
-	this.x = nx;
-	this.y = ny;
+	var x = this.x * Math.cos(angle) - this.y * Math.sin(angle);
+	this.y = this.x * Math.sin(angle) + this.y * Math.cos(angle);
+	this.x = x;
 
 	return this;
 };
@@ -1045,7 +1046,7 @@ dataType.enum = createDataType({
 			if (typeof x !== 'string')
 				{ throw new Error('val should be string'); }
 			if (values.indexOf(x) < 0)
-				{ throw new Error('value not in enum'); }
+				{ throw new Error(("value " + x + " not in enum: [" + values + "]")); }
 			return x;
 		}
 	},
@@ -1928,6 +1929,9 @@ var Scene = (function (Serializable$$1) {
 		assert(set);
 		assert(set.delete(component));
 	};
+	Scene.prototype.getComponents = function getComponents (componentName) {
+		return this.components.get(componentName) || new Set;
+	};
 
 	return Scene;
 }(Serializable));
@@ -2623,10 +2627,10 @@ Component$1.register({
 	name: 'Trigger',
 	allowMultiple: true,
 	properties: [
-		createPropertyType('trigger', 'playerComesClose', createPropertyType.enum, createPropertyType.enum.values('playerComesClose', 'other')),
-		createPropertyType('triggerInfo', 'heh', createPropertyType.string, createPropertyType.visibleIf('trigger', 'other')),
-		createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win')),
-		createPropertyType('safetyIntervalSeconds', 5, createPropertyType.float) ],
+		createPropertyType('trigger', 'playerComesNear', createPropertyType.enum, createPropertyType.enum.values('playerComesNear')),
+		createPropertyType('radius', 40, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('trigger', 'playerComesNear')),
+		createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win'))
+	],
 	prototype: {
 		onDrawHelper: function onDrawHelper(context) {
 			var size = 30;
@@ -2643,29 +2647,40 @@ Component$1.register({
 			context.textAlign = 'center';
 			context.fillText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
 			context.strokeText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-
+			
 			context.restore();
+		},
+		preInit: function preInit() {
+			this.storeProp = "__Trigger_" + (this._componentId);
 		},
 		onUpdate: function onUpdate() {
 			var this$1 = this;
 
-			if (this.trigger === 'playerComesClose') {
-				var componentSet = this.scene.components.get('Mover');
-				if (componentSet) {
-					var entities = [];
-					componentSet.forEach(function (c) { return entities.push(c.entity); });
-					var dist = 20;
-					var distSq = dist*dist;
-					var pos = this.Transform.position;
-					entities.forEach(function (entity) {
-						if (entity.position.distanceSq(pos) < distSq)
-							{ this$1.launchTrigger(entity); }
-					});
+			if (this.trigger === 'playerComesNear') {
+				var componentSet = this.scene.getComponents('Mover');
+				var entities = [];
+				componentSet.forEach(function (c) { return entities.push(c.entity); });
+				var distSq = this.radius * this.radius;
+				var pos = this.Transform.position;
+				for (var i = 0; i < entities.length; ++i) {
+					if (entities[i].position.distanceSq(pos) < distSq) {
+						if (!entities[i][this$1.storeProp] && this$1.launchTrigger(entities[i]) === false)
+							{ break; }
+						entities[i][this$1.storeProp] = true;
+					} else {
+						entities[i][this$1.storeProp] = false;
+					}
 				}
 			}
 		},
+		
+		// Return false if other triggers should not be checked
 		launchTrigger: function launchTrigger(entity) {
-			this.scene.win();
+			if (this.action === 'win') {
+				this.scene.win();
+				return false;
+			}
+			return false;
 		}
 	}
 });

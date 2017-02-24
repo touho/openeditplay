@@ -39,6 +39,17 @@ export default class Vector {
 	lengthSq() {
 		return this.x * this.x + this.y * this.y;
 	}
+	setLength(newLength) {
+		let oldLength = this.length();
+
+		if (oldLength === 0) {
+			this.x = newLength;
+			this.y = 0;
+		} else {
+			this.multiplyScalar(newLength / oldLength);
+		}
+		return this;
+	}
 	distance(vec) {
 		let dx = this.x - vec.x,
 			dy = this.y - vec.y;
@@ -50,15 +61,7 @@ export default class Vector {
 		return dx * dx + dy * dy;
 	}
 	normalize() {
-		let length = this.length();
-	
-		if (length === 0) {
-			this.x = 1;
-			this.y = 0;
-		} else {
-			this.divideScalar(length);
-		}
-		return this;
+		return this.setLength(1);
 	}
 	horizontalAngle() {
 		return Math.atan2(this.y, this.x);
@@ -67,11 +70,9 @@ export default class Vector {
 		return Math.atan2(this.x, this.y);
 	}
 	rotate(angle) {
-		let nx = (this.x * Math.cos(angle)) - (this.y * Math.sin(angle));
-		let ny = (this.x * Math.sin(angle)) + (this.y * Math.cos(angle));
-
-		this.x = nx;
-		this.y = ny;
+		let x = this.x * Math.cos(angle) - this.y * Math.sin(angle);
+		this.y = this.x * Math.sin(angle) + this.y * Math.cos(angle);
+		this.x = x;
 
 		return this;
 	}

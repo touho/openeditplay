@@ -137,6 +137,9 @@ export default class Scene extends Serializable {
 		assert(set);
 		assert(set.delete(component));
 	}
+	getComponents(componentName) {
+		return this.components.get(componentName) || new Set;
+	}
 }
 Scene.prototype.isRoot = true;
 
