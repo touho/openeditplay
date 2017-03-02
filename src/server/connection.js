@@ -4,6 +4,15 @@ import { getOrCreateGameServer, idToGameServer } from './gameServer';
 let connections = new Set();
 export { connections };
 
+let requiredClientTime = Date.now();
+
+process.on('message', msg => {
+	console.log(msg);
+	requiredClientTime = Date.now();
+	for (let connection of connections)
+		connection.refreshIfOld();
+});
+
 export class Connection {
 	constructor(socket) {
 		this.socket = socket;
@@ -50,6 +59,7 @@ export class Connection {
 		console.log('socket count', connections.size);
 		
 		this.requestGameId();
+		this.refreshIfOld();
 	}
 	sendChangeToOwner(change) {
 		console.log('SENDING', change.type);
@@ -66,6 +76,9 @@ export class Connection {
 	}
 	requestGameId() {
 		this.socket.emit('requestGameId');
+	}
+	refreshIfOld() {
+		this.socket.emit('refreshIfOlderThan', requiredClientTime);
 	}
 }
 

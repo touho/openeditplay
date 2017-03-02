@@ -33,6 +33,9 @@ export default class Vector {
 		this.y /= scalar;
 		return this;
 	}
+	dot(vec) {
+		return this.x * vec.x + this.y * vec.y;
+	}
 	length() {
 		return Math.sqrt(this.x * this.x + this.y * this.y);
 	}
@@ -50,10 +53,17 @@ export default class Vector {
 		}
 		return this;
 	}
+	getProjectionOn(vec) {
+		let length = vec.length();
+		if (length === 0)
+			return this.clone();
+		else
+			return vec.clone().multiplyScalar(this.dot(vec) / (length * length));
+	}
 	distance(vec) {
 		let dx = this.x - vec.x,
 			dy = this.y - vec.y;
-		return Math.sqrt(dx * dx + dy * dy);		
+		return Math.sqrt(dx * dx + dy * dy);
 	}
 	distanceSq(vec) {
 		let dx = this.x - vec.x,
@@ -85,7 +95,7 @@ export default class Vector {
 	clone() {
 		return new Vector(this.x, this.y);
 	}
-	copy(vec) {
+	set(vec) {
 		this.x = vec.x;
 		this.y = vec.y;
 		return this;

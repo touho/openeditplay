@@ -601,7 +601,6 @@ function assert(condition, message) {
 	}
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -688,10 +687,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -862,6 +857,9 @@ Vector.prototype.divideScalar = function divideScalar (scalar) {
 	this.y /= scalar;
 	return this;
 };
+Vector.prototype.dot = function dot (vec) {
+	return this.x * vec.x + this.y * vec.y;
+};
 Vector.prototype.length = function length () {
 	return Math.sqrt(this.x * this.x + this.y * this.y);
 };
@@ -879,10 +877,17 @@ Vector.prototype.setLength = function setLength (newLength) {
 	}
 	return this;
 };
+Vector.prototype.getProjectionOn = function getProjectionOn (vec) {
+	var length = vec.length();
+	if (length === 0)
+		{ return this.clone(); }
+	else
+		{ return vec.clone().multiplyScalar(this.dot(vec) / (length * length)); }
+};
 Vector.prototype.distance = function distance (vec) {
 	var dx = this.x - vec.x,
 		dy = this.y - vec.y;
-	return Math.sqrt(dx * dx + dy * dy);		
+	return Math.sqrt(dx * dx + dy * dy);
 };
 Vector.prototype.distanceSq = function distanceSq (vec) {
 	var dx = this.x - vec.x,
@@ -914,7 +919,7 @@ Vector.prototype.isEqualTo = function isEqualTo (vec) {
 Vector.prototype.clone = function clone () {
 	return new Vector(this.x, this.y);
 };
-Vector.prototype.copy = function copy (vec) {
+Vector.prototype.set = function set (vec) {
 	this.x = vec.x;
 	this.y = vec.y;
 	return this;
@@ -1941,7 +1946,6 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
-// Instance of a component, see componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2139,8 +2143,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2513,7 +2515,7 @@ Component$1.register({
 				}
 			} else {
 				var change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
-				this.Transform.position.copy(this.Transform.position).add(change);
+				this.Transform.position.set(this.Transform.position).add(change);
 				
 				if (this.rotationSpeed)
 					{ this.Transform.rotation += dt * this.rotationSpeed; }
@@ -2727,10 +2729,16 @@ function tryToLoad() {
 			}
 		});
 	});
-
-	socket.on('requestGameId', function () {
+	
+	socket.on('requestGameId', function (serverStartTime) {
 		if (game)
 			{ socket.emit('gameId', game.id); }
+	});
+
+	var clientStartTime = Date.now();
+	socket.on('refreshIfOlderThan', function (requiredClientTime) {
+		if (clientStartTime < requiredClientTime)
+			{ location.reload(); }
 	});
 	
 	socket.on('gameData', function (gameData) {
@@ -2874,6 +2882,15 @@ function getOrCreateGameServer(gameId) {
 }
 
 var connections = new Set();
+var requiredClientTime = Date.now();
+
+process.on('message', function (msg) {
+	console.log(msg);
+	requiredClientTime = Date.now();
+	for (var connection of connections)
+		connection.refreshIfOld();
+});
+
 var Connection = function Connection(socket) {
 	var this$1 = this;
 
@@ -2921,6 +2938,7 @@ var Connection = function Connection(socket) {
 	console.log('socket count', connections.size);
 		
 	this.requestGameId();
+	this.refreshIfOld();
 };
 Connection.prototype.sendChangeToOwner = function sendChangeToOwner (change) {
 	console.log('SENDING', change.type);
@@ -2937,6 +2955,9 @@ Connection.prototype.setGameServer = function setGameServer (gameId) {
 };
 Connection.prototype.requestGameId = function requestGameId () {
 	this.socket.emit('requestGameId');
+};
+Connection.prototype.refreshIfOld = function refreshIfOld () {
+	this.socket.emit('refreshIfOlderThan', requiredClientTime);
 };
 
 setInterval(function () {
@@ -2969,7 +2990,6 @@ io$1.on('connection', function(socket) {
 http.listen(3000, function(){
 	console.log('listening on *:3000');
 });
-
 
 process.on('uncaughtException', function (err) {
 	console.error("Node.js Exception. " + err + " - " + err.stack);

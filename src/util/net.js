@@ -75,10 +75,16 @@ function tryToLoad() {
 			}
 		});
 	});
-
-	socket.on('requestGameId', () => {
+	
+	socket.on('requestGameId', serverStartTime => {
 		if (game)
 			socket.emit('gameId', game.id);
+	});
+
+	let clientStartTime = Date.now();
+	socket.on('refreshIfOlderThan', requiredClientTime => {
+		if (clientStartTime < requiredClientTime)
+			location.reload();
 	});
 	
 	socket.on('gameData', gameData => {

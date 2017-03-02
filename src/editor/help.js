@@ -1,6 +1,7 @@
 import { game } from '../core/game'
 import { editor } from './editor'
 import { scene } from '../core/scene'
+import Vector from '../util/vector'
 
 class Help {
 	get game() {
@@ -14,6 +15,9 @@ class Help {
 	}
 	get scene() {
 		return scene;
+	}
+	get Vector() {
+		return Vector;
 	}
 }
 

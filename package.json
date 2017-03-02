@@ -18,16 +18,21 @@
   },
   "devDependencies": {
     "chokidar": "^1.6.1",
-    "rollup": "^0.38.0",
-    "rollup-plugin-buble": "^0.15.0",
-    "rollup-plugin-node-resolve": "^2.0.0",
-    "uglify": "^0.1.5",
+    "concat-files": "^0.1.1",
+    "glob": "^7.1.1",
+    "jquery": "^3.1.1",
+    "kexec": "^3.0.0",
     "postcss": "^5.2.8",
     "postcss-import": "^9.0.0",
     "postcss-scss": "^0.4.0",
     "precss": "^1.4.0",
-    "jquery": "^3.1.1",
-    "redom": "^1.8.0"
+    "redom": "^1.8.0",
+    "rollup": "^0.38.0",
+    "rollup-plugin-buble": "^0.15.0",
+    "rollup-plugin-node-resolve": "^2.0.0",
+    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-watch": "^3.2.2",
+    "uglify": "^0.1.5"
   },
   "dependencies": {
     "express": "^4.14.0",

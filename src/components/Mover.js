@@ -32,7 +32,7 @@ Component.register({
 				}
 			} else {
 				let change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
-				this.Transform.position.copy(this.Transform.position).add(change);
+				this.Transform.position.set(this.Transform.position).add(change);
 				
 				if (this.rotationSpeed)
 					this.Transform.rotation += dt * this.rotationSpeed;
