@@ -25,8 +25,9 @@ export default class ComponentData extends Serializable {
 		super.addChild(child);
 		return this;
 	};
-	clone() {
-		let obj = new ComponentData(this.name);
+	clone(options) {
+		let newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+		let obj = new ComponentData(this.name, false, newComponentId);
 		let children = [];
 		this.forEachChild(null, child => {
 			children.push(child.clone());

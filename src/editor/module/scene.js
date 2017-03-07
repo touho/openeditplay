@@ -54,11 +54,11 @@ class SceneModule extends Module {
 		});
 		*/
 		
-		this.newEntities = [];
-		this.entityUnderMouse = null;
+		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
+		this.entityUnderMouse = null; // Link to entity in tree.
 		this.previousMousePos = null;
 		
-		this.entitiesToMove = [];
+		this.entitiesToMove = []; 
 		this.selectedEntities = [];
 		
 		this.selectionStart = null;
@@ -147,6 +147,13 @@ class SceneModule extends Module {
 				sceneEdit.deleteEntities(this.selectedEntities);
 				this.clearState();
 				this.draw();
+			} else if (k === key.c) {
+				if (this.selectedEntities.length > 0) {
+					this.deleteNewEntities();
+					let entityPrototypes = this.selectedEntities.map(e => e.prototype.clone());
+					entityPrototypes.forEach(ep => this.newEntities.push(ep.createEntity()));
+					this.selectedEntities.length = 0;
+				}
 			}
 		});
 

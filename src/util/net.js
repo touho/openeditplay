@@ -1,12 +1,18 @@
 import { addChangeListener, packChange, unpackChange, executeChange, executeExternal, changeType } from '../core/serializableManager'
 import Serializable from '../core/serializable';
 import { game } from '../core/game';
+import { isClient } from './environment';
 
 import { lzw_decode, lzw_encode } from './compression';
 
 let networkEnabled = false;
 export function setNetworkEnabled(enabled = true) {
 	networkEnabled = enabled;
+}
+
+let shouldStartSceneWhenGameLoaded = false;
+export function startSceneWhenGameLoaded() {
+	shouldStartSceneWhenGameLoaded = true;
 }
 
 let socket;
@@ -96,6 +102,15 @@ function tryToLoad() {
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, `?gameId=${gameData.id}`);
 		console.log('replaced with', `${location.origin}${location.pathname}?gameId=${gameData.id}`);
+		
+		if (shouldStartSceneWhenGameLoaded) {
+			let scene = game.getChildren('lvl')[0].createScene();
+			scene.play();
+			
+			game.listen('levelCompleted', () => {
+				scene.play();
+			});
+		}
 	});
 	
 	setTimeout(() => {
@@ -105,5 +120,5 @@ function tryToLoad() {
 	}, 100);
 }
 
-if (typeof window !== 'undefined')
+if (isClient)
 	tryToLoad();

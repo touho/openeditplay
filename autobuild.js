@@ -17,12 +17,18 @@ const concat = require('concat-files');
 
 const ROOT = path.join(__dirname, './');
 
-const cssDependencies = [
+const editorCssDependencies = [
 	'src/external/font-awesome.min.css'
 ];
-const jsDependencies = [
+const editorJsDependencies = [
 	'node_modules/jquery/dist/jquery.min.js',
-	'src/external/jstree.min.js'
+	'src/external/jstree.min.js',
+	'src/external/matter.js',
+	'src/external/verlet-1.0.0.min.js'
+];
+const jsDependencies = [
+	'src/external/matter.min.js',
+	'src/external/verlet-1.0.0.min.js'
 ];
 
 // Editor CSS
@@ -33,27 +39,43 @@ watch('src/**/*.scss', () => {
 }, true);
 
 // Editor CSS Dependencies
-concat(cssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.css`, () => {
+concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.css`, err => {
+	if (err) throw new Error(err);
 	console.log(`Built dist/explore.editor.dependencies.css`);
 	copy('dist/explore.editor.dependencies.css', 'public/css/');
 });
+
 // Editor JS Dependencies
-concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.js`, () => {
+concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.js`, err => {
+	if (err) throw new Error(err);
 	console.log(`Built dist/explore.editor.dependencies.js`);
 	copy('dist/explore.editor.dependencies.js', 'public/');
 });
 
+// Game engine JS Dependencies
+concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
+	if (err) throw new Error(err);
+	console.log(`Built dist/explore.dependencies.js`);
+	copy('dist/explore.dependencies.js', 'public/');
+});
+
 // Game engine JS
-autobuildJs('src/main.js', 'dist/explore.js');
+// autobuildJs('src/main.js', 'dist/explore.js', {
+// 	copyTo: 'public/'
+// });
 autobuildJs('src/main.js', 'dist/explore.min.js', {
-	uglify: true
+	uglify: true,
+	copyTo: 'public/'
 });
 
 // Editor JS
-autobuildJs('src/editorMain.js', 'dist/explore.editor.js');
-autobuildJs('src/editorMain.js', 'dist/explore.editor.min.js', {
-	uglify: true
+autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {
+	copyTo: 'public/'
 });
+// autobuildJs('src/editorMain.js', 'dist/explore.editor.min.js', {
+// 	uglify: true,
+// 	copyTo: 'public/'
+// });
 
 watch(['dist/explore.editor.js', 'dist/explore.editor.css'], () => {
 	if (serverProcess)
@@ -63,7 +85,6 @@ watch(['dist/explore.editor.js', 'dist/explore.editor.css'], () => {
 // Server JS
 autobuildJs('src/serverMain.js', 'dist/explore.server.js', {
 	format: 'cjs',
-	copyTo: false,
 	allowForOf: true, // node supports for-of
 	externalDependencies: ['fs']
 });
@@ -91,6 +112,8 @@ function exec(cmd) {
 
 function copy(pattern, destination) {
 	glob(`${ROOT}${pattern}`, (err, files) => {
+		if (files.length === 0)
+			return;
 		exec(`cp ${files.join(' ')} ${ROOT}${destination}`);
 	});
 }
@@ -126,7 +149,7 @@ function autobuildJs(entry, destination, options) {
 	options = Object.assign({
 		uglify: false,
 		format: 'umd',
-		copyTo: 'public/',
+		copyTo: false, // 'public/'
 		allowForOf: false,
 		externalDependencies: []
 	}, options);

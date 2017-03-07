@@ -6,6 +6,7 @@ import PropertyOwner from './propertyOwner';
 import ComponentData from './componentData';
 import Entity from './entity';
 import { game } from './game';
+import { Component } from './component';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)

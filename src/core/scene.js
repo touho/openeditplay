@@ -3,11 +3,15 @@ import Entity from './entity';
 import assert from '../util/assert';
 import { game } from './game';
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
+import { isClient } from '../util/environment';
+import { createWorld, deleteWorld, updateWorld } from '../feature/physics';
 
 let scene = null;
 export { scene };
 
-let isClient = typeof window !== 'undefined';
+const physicsOptions = {
+	enableSleeping: true
+};
 
 export default class Scene extends Serializable {
 	constructor(predefinedId = false) {
@@ -33,6 +37,8 @@ export default class Scene extends Serializable {
 		this.playing = false;
 		this.time = 0;
 
+		this.physicsWorld = null;
+		
 		super(predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 
@@ -40,6 +46,8 @@ export default class Scene extends Serializable {
 			console.log('scene import');
 		else
 			console.log('scene created');
+
+		createWorld(this, physicsOptions);
 		
 		this.draw();
 	}
@@ -62,7 +70,9 @@ export default class Scene extends Serializable {
 		this.time += dt;
 
 		setChangeOrigin(this);
+		
 		this.dispatch('onUpdate', dt, this.time);
+		updateWorld(this, dt);
 		this.draw();
 		
 		this.requestAnimFrame();
@@ -80,6 +90,10 @@ export default class Scene extends Serializable {
 	reset() {
 		this.pause();
 		this.deleteChildren();
+
+		deleteWorld(this);
+		createWorld(this, physicsOptions);
+		
 		if (this.level)
 			this.level.createScene(this);
 		this.time = 0;
@@ -115,6 +129,8 @@ export default class Scene extends Serializable {
 	}
 	delete() {
 		if (!super.delete()) return false;
+
+		deleteWorld(this);
 		
 		if (scene === this)
 			scene = null;

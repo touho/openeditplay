@@ -2,6 +2,7 @@ import { scene } from '../../core/scene';
 import { editor } from '../editor';
 import { changeType } from '../../core/serializableManager';
 import assert from '../../util/assert';
+import Vector from '../../util/vector';
 
 let radius = 10;
 
@@ -287,9 +288,19 @@ export function moveEntities(entities, change) {
 export function setEntityPositions(entities, position) {
 	if (entities.length === 0)
 		return;
+	
+	let averagePosition = new Vector();
 
 	entities.forEach(entity => {
-		entity.position = position;
+		averagePosition.add(entity.position);
+	});
+	
+	averagePosition.divideScalar(entities.length);
+	
+	let change = averagePosition.multiplyScalar(-1).add(position);
+	
+	entities.forEach(entity => {
+		entity.position = entity.position.add(change);
 	});
 }
 

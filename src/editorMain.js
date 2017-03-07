@@ -1,4 +1,6 @@
-import './main';
+import './core'
+import './components'
+import './util/net'
 
 import './core/test';
 import './core/componentExample'; // temp

@@ -1383,8 +1383,9 @@ var ComponentData = (function (Serializable$$1) {
 		Serializable$$1.prototype.addChild.call(this, child);
 		return this;
 	};
-	ComponentData.prototype.clone = function clone () {
-		var obj = new ComponentData(this.name);
+	ComponentData.prototype.clone = function clone (options) {
+		var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+		var obj = new ComponentData(this.name, false, newComponentId);
 		var children = [];
 		this.forEachChild(null, function (child) {
 			children.push(child.clone());
@@ -1670,7 +1671,7 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype.createEntity = function createEntity () {
 		var entity = new Entity();
 		var inheritedComponentDatas = this.getInheritedComponentDatas();
-		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
+		var components = inheritedComponentDatas.map(Component$1.createWithInheritedComponentData);
 		entity.addComponents(components);
 		entity.prototype = this;
 		
@@ -1744,11 +1745,11 @@ var propertyTypes = [
 ];
 
 var game = null; // only one game at the time
-var isClient$1 = typeof window !== 'undefined';
+var isClient = typeof window !== 'undefined';
 
 var Game = (function (PropertyOwner$$1) {
 	function Game(predefinedId) {
-		if (isClient$1) {
+		if (isClient) {
 			if (game) {
 				try {
 					game.delete();
@@ -1793,14 +1794,51 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
 
+var isClient$1 = typeof window !== 'undefined';
+var isServer = typeof module !== 'undefined';
+
+if (isClient$1 && isServer)
+	{ throw new Error('Can not be client and server at the same time.'); }
+
+var Matter;
+if (isClient$1)
+	{ Matter = window.Matter; }
+else
+	{ Matter = require('../src/external/matter.min'); } // from dist folder
+
+var Matter$1 = Matter;
+
+function createWorld(owner, options) {
+	assert(!owner._matterEngine);
+	owner._matterEngine = Matter.Engine.create(options);
+}
+function updateWorld(owner, dt) {
+	Matter.Engine.update(owner._matterEngine, dt * 1000, dt / (owner._matterPreviousDt || dt));
+	owner._matterPreviousDt = dt;
+}
+function deleteWorld(owner) {
+	if (owner._matterEngine)
+		{ Matter.Engine.clear(owner._matterEngine); }
+	owner._matterEngine = null;
+	delete owner._matterPreviousDt;
+}
+function addBody(owner, body) {
+	Matter.Composite.add(owner._matterEngine.world, body);
+}
+function deleteBody(owner, body) {
+	Matter.Composite.remove(owner._matterEngine.world, body, false);
+}
+
 var scene = null;
-var isClient = typeof window !== 'undefined';
+var physicsOptions = {
+	enableSleeping: true
+};
 
 var Scene = (function (Serializable$$1) {
 	function Scene(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
-		if (isClient) {
+		if (isClient$1) {
 			if (scene) {
 				try {
 					scene.delete();
@@ -1822,6 +1860,8 @@ var Scene = (function (Serializable$$1) {
 		this.playing = false;
 		this.time = 0;
 
+		this.physicsWorld = null;
+		
 		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 
@@ -1829,6 +1869,8 @@ var Scene = (function (Serializable$$1) {
 			{ console.log('scene import'); }
 		else
 			{ console.log('scene created'); }
+
+		createWorld(this, physicsOptions);
 		
 		this.draw();
 	}
@@ -1857,7 +1899,9 @@ var Scene = (function (Serializable$$1) {
 		this.time += dt;
 
 		setChangeOrigin(this);
+		
 		this.dispatch('onUpdate', dt, this.time);
+		updateWorld(this, dt);
 		this.draw();
 		
 		this.requestAnimFrame();
@@ -1877,6 +1921,10 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.reset = function reset () {
 		this.pause();
 		this.deleteChildren();
+
+		deleteWorld(this);
+		createWorld(this, physicsOptions);
+		
 		if (this.level)
 			{ this.level.createScene(this); }
 		this.time = 0;
@@ -1912,6 +1960,8 @@ var Scene = (function (Serializable$$1) {
 	};
 	Scene.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
+
+		deleteWorld(this);
 		
 		if (scene === this)
 			{ scene = null; }
@@ -2026,6 +2076,9 @@ var Component$1 = (function (PropertyOwner$$1) {
 		this._listenRemoveFunctions.forEach(function (f) { return f(); });
 		this._listenRemoveFunctions.length = 0;
 	};
+	Component.prototype.listenProperty = function listenProperty (component, propertyName, callback) {
+		this._listenRemoveFunctions.push(component._properties[propertyName].listen('change', callback));
+	};
 	Component.prototype.createComponentData = function createComponentData () {
 		var this$1 = this;
 
@@ -2081,6 +2134,7 @@ Component$1.register = function(ref) {
 	var parentClass = ref.parentClass; if ( parentClass === void 0 ) parentClass = Component$1;
 	var prototype = ref.prototype; if ( prototype === void 0 ) prototype = {};
 	var allowMultiple = ref.allowMultiple; if ( allowMultiple === void 0 ) allowMultiple = true;
+	var requiesInitWhenEntityIsEdited = ref.requiesInitWhenEntityIsEdited; if ( requiesInitWhenEntityIsEdited === void 0 ) requiesInitWhenEntityIsEdited = false;
 
 	assert(name, 'Component must have a name.');
 	assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
@@ -2199,6 +2253,8 @@ var EntityPrototype = (function (Prototype$$1) {
 				transform.addChild(rotation);
 				
 				children.push(transform);
+			} else if (child.threeLetterType === 'cda') {
+				children.push(child.clone({ cloneComponentId: true }));
 			} else {
 				children.push(child.clone());
 			}
@@ -2448,6 +2504,30 @@ var key = {
 	shift: 16,
 	space: 32,
 	a: 65,
+	b: 66,
+	c: 67,
+	d: 68,
+	e: 69,
+	f: 70,
+	g: 71,
+	h: 72,
+	i: 73,
+	j: 74,
+	k: 75,
+	l: 76,
+	m: 77,
+	n: 78,
+	o: 79,
+	p: 80,
+	q: 81,
+	r: 82,
+	s: 83,
+	t: 84,
+	u: 85,
+	v: 86,
+	w: 87,
+	x: 88,
+	y: 89,
 	z: 90,
 	'0': 48,
 	'1': 49,
@@ -2687,6 +2767,66 @@ Component$1.register({
 	}
 });
 
+Component$1.register({
+	name: 'Physics',
+	icon: 'fa-stop',
+	allowMultiple: false,
+	properties: [
+		createPropertyType('isStatic', false, createPropertyType.bool)
+	],
+	requirements: [
+		'Rect'
+	],
+	requiesInitWhenEntityIsEdited: true,
+	prototype: {
+		init: function init() {
+			var this$1 = this;
+
+			var update = function (callback) {
+				return function (value) {
+					if (!this$1.updatingOthers && this$1.body) {
+						callback(value);
+						Matter$1.Sleeping.set(this$1.body, false);
+					}
+				}
+			};
+			this.listenProperty(this.Transform, 'position', update(function (position) { return Matter$1.Body.setPosition(this$1.body, position); }));
+			this.listenProperty(this.Transform, 'rotation', update(function (rotation) { return Matter$1.Body.setAngle(this$1.body, rotation); }));
+			// this.listenProperty(this.Rect, 'size', update(() => this.body.position = this.Transform.position));
+		},
+		createBody: function createBody() {
+			this.body = Matter$1.Bodies.rectangle(this.Transform.position.x, this.Transform.position.y, this.Rect.size.x, this.Rect.size.y, {
+				isStatic: this.isStatic,
+				angle: this.Transform.rotation
+			});
+			addBody(this.scene, this.body);
+		},
+		setInTreeStatus: function setInTreeStatus() {
+			var i = arguments.length, argsArray = Array(i);
+			while ( i-- ) argsArray[i] = arguments[i];
+
+			this.createBody();
+			return (ref = Component$1.prototype.setInTreeStatus).call.apply(ref, [ this ].concat( argsArray ));
+			var ref;
+		},
+		onUpdate: function onUpdate() {
+			if (!this.body || this.body.isSleeping)
+				{ return; }
+			
+			this.updatingOthers = true;
+			this.Transform.position = Vector.fromObject(this.body.position);
+			this.Transform.rotation = this.body.angle;
+			this.updatingOthers = false;
+		},
+		sleep: function sleep() {
+			if (this.body) {
+				deleteBody(this.scene, this.body);
+				this.body = null;
+			}
+		}
+	}
+});
+
 // LZW-compress a string
 
 
@@ -2698,6 +2838,9 @@ function setNetworkEnabled(enabled) {
 
 	networkEnabled = enabled;
 }
+
+var shouldStartSceneWhenGameLoaded = false;
+
 
 var socket;
 
@@ -2786,6 +2929,15 @@ function tryToLoad() {
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
 		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
+		
+		if (shouldStartSceneWhenGameLoaded) {
+			var scene = game.getChildren('lvl')[0].createScene();
+			scene.play();
+			
+			game.listen('levelCompleted', function () {
+				scene.play();
+			});
+		}
 	});
 	
 	setTimeout(function () {
@@ -2795,7 +2947,7 @@ function tryToLoad() {
 	}, 100);
 }
 
-if (typeof window !== 'undefined')
+if (isClient$1)
 	{ tryToLoad(); }
 
 (function () {
@@ -4141,9 +4293,19 @@ function moveEntities(entities, change) {
 function setEntityPositions(entities, position) {
 	if (entities.length === 0)
 		{ return; }
+	
+	var averagePosition = new Vector();
 
 	entities.forEach(function (entity) {
-		entity.position = position;
+		averagePosition.add(entity.position);
+	});
+	
+	averagePosition.divideScalar(entities.length);
+	
+	var change = averagePosition.multiplyScalar(-1).add(position);
+	
+	entities.forEach(function (entity) {
+		entity.position = entity.position.add(change);
 	});
 }
 
@@ -4777,11 +4939,11 @@ var SceneModule = (function (Module$$1) {
 		});
 		*/
 		
-		this.newEntities = [];
-		this.entityUnderMouse = null;
+		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
+		this.entityUnderMouse = null; // Link to entity in tree.
 		this.previousMousePos = null;
 		
-		this.entitiesToMove = [];
+		this.entitiesToMove = []; 
 		this.selectedEntities = [];
 		
 		this.selectionStart = null;
@@ -4870,6 +5032,13 @@ var SceneModule = (function (Module$$1) {
 				deleteEntities(this$1.selectedEntities);
 				this$1.clearState();
 				this$1.draw();
+			} else if (k === key.c) {
+				if (this$1.selectedEntities.length > 0) {
+					this$1.deleteNewEntities();
+					var entityPrototypes = this$1.selectedEntities.map(function (e) { return e.prototype.clone(); });
+					entityPrototypes.forEach(function (ep) { return this$1.newEntities.push(ep.createEntity()); });
+					this$1.selectedEntities.length = 0;
+				}
 			}
 		});
 
@@ -5090,6 +5259,9 @@ var Types = (function (Module$$1) {
 		this.externalChange = false;
 
 		events.listen('change', function (change) {
+			if (change.reference.getRoot && change.reference.getRoot().threeLetterType === 'sce')
+				{ return; }
+			
 			var jstree = $(this$1.jstree).jstree(true);
 			if (!jstree)
 				{ return; }

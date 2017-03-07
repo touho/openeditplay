@@ -601,6 +601,7 @@ function assert(condition, message) {
 	}
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -687,6 +688,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1383,8 +1388,9 @@ var ComponentData = (function (Serializable$$1) {
 		Serializable$$1.prototype.addChild.call(this, child);
 		return this;
 	};
-	ComponentData.prototype.clone = function clone () {
-		var obj = new ComponentData(this.name);
+	ComponentData.prototype.clone = function clone (options) {
+		var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+		var obj = new ComponentData(this.name, false, newComponentId);
 		var children = [];
 		this.forEachChild(null, function (child) {
 			children.push(child.clone());
@@ -1479,7 +1485,7 @@ var ComponentData = (function (Serializable$$1) {
 		properties.forEach(function (prop) {
 			values[prop.name] = prop.value;
 		});
-		var component = Component$1.create(this.name, values);
+		var component = Component.create(this.name, values);
 		component._componentId = this.componentId;
 		return component;
 	};
@@ -1744,11 +1750,11 @@ var propertyTypes = [
 ];
 
 var game = null; // only one game at the time
-var isClient$1 = typeof window !== 'undefined';
+var isClient = typeof window !== 'undefined';
 
 var Game = (function (PropertyOwner$$1) {
 	function Game(predefinedId) {
-		if (isClient$1) {
+		if (isClient) {
 			if (game) {
 				try {
 					game.delete();
@@ -1793,14 +1799,51 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
 
+var isClient$1 = typeof window !== 'undefined';
+var isServer = typeof module !== 'undefined';
+
+if (isClient$1 && isServer)
+	{ throw new Error('Can not be client and server at the same time.'); }
+
+var Matter;
+if (isClient$1)
+	{ Matter = window.Matter; }
+else
+	{ Matter = require('../src/external/matter.min'); } // from dist folder
+
+var Matter$1 = Matter;
+
+function createWorld(owner, options) {
+	assert(!owner._matterEngine);
+	owner._matterEngine = Matter.Engine.create(options);
+}
+function updateWorld(owner, dt) {
+	Matter.Engine.update(owner._matterEngine, dt * 1000, dt / (owner._matterPreviousDt || dt));
+	owner._matterPreviousDt = dt;
+}
+function deleteWorld(owner) {
+	if (owner._matterEngine)
+		{ Matter.Engine.clear(owner._matterEngine); }
+	owner._matterEngine = null;
+	delete owner._matterPreviousDt;
+}
+function addBody(owner, body) {
+	Matter.Composite.add(owner._matterEngine.world, body);
+}
+function deleteBody(owner, body) {
+	Matter.Composite.remove(owner._matterEngine.world, body, false);
+}
+
 var scene = null;
-var isClient = typeof window !== 'undefined';
+var physicsOptions = {
+	enableSleeping: true
+};
 
 var Scene = (function (Serializable$$1) {
 	function Scene(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
-		if (isClient) {
+		if (isClient$1) {
 			if (scene) {
 				try {
 					scene.delete();
@@ -1822,6 +1865,8 @@ var Scene = (function (Serializable$$1) {
 		this.playing = false;
 		this.time = 0;
 
+		this.physicsWorld = null;
+		
 		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 
@@ -1829,6 +1874,8 @@ var Scene = (function (Serializable$$1) {
 			{ console.log('scene import'); }
 		else
 			{ console.log('scene created'); }
+
+		createWorld(this, physicsOptions);
 		
 		this.draw();
 	}
@@ -1857,7 +1904,9 @@ var Scene = (function (Serializable$$1) {
 		this.time += dt;
 
 		setChangeOrigin(this);
+		
 		this.dispatch('onUpdate', dt, this.time);
+		updateWorld(this, dt);
 		this.draw();
 		
 		this.requestAnimFrame();
@@ -1877,6 +1926,10 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.reset = function reset () {
 		this.pause();
 		this.deleteChildren();
+
+		deleteWorld(this);
+		createWorld(this, physicsOptions);
+		
 		if (this.level)
 			{ this.level.createScene(this); }
 		this.time = 0;
@@ -1912,6 +1965,8 @@ var Scene = (function (Serializable$$1) {
 	};
 	Scene.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
+
+		deleteWorld(this);
 		
 		if (scene === this)
 			{ scene = null; }
@@ -1946,7 +2001,8 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
-var Component$1 = (function (PropertyOwner$$1) {
+// Instance of a component, see componentExample.js
+var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
@@ -2026,6 +2082,9 @@ var Component$1 = (function (PropertyOwner$$1) {
 		this._listenRemoveFunctions.forEach(function (f) { return f(); });
 		this._listenRemoveFunctions.length = 0;
 	};
+	Component.prototype.listenProperty = function listenProperty (component, propertyName, callback) {
+		this._listenRemoveFunctions.push(component._properties[propertyName].listen('change', callback));
+	};
 	Component.prototype.createComponentData = function createComponentData () {
 		var this$1 = this;
 
@@ -2050,7 +2109,7 @@ var Component$1 = (function (PropertyOwner$$1) {
 
 	return Component;
 }(PropertyOwner));
-Component$1.create = function(name, values) {
+Component.create = function(name, values) {
 	if ( values === void 0 ) values = {};
 
 	var componentClass = componentClasses.get(name);
@@ -2059,7 +2118,7 @@ Component$1.create = function(name, values) {
 	component.initWithPropertyValues(values);
 	return component;
 };
-Component$1.createWithInheritedComponentData = function(inheritedComponentData) {
+Component.createWithInheritedComponentData = function(inheritedComponentData) {
 	var component = new inheritedComponentData.componentClass;
 	component._componentId = inheritedComponentData.componentId;
 	var properties = inheritedComponentData.properties.map(function (p) { return p.clone(); });
@@ -2067,9 +2126,9 @@ Component$1.createWithInheritedComponentData = function(inheritedComponentData) 
 	return component;
 };
 
-Component$1.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
-Component$1.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
-Component$1.register = function(ref) {
+Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
+Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
+Component.register = function(ref) {
 	var name = ref.name; if ( name === void 0 ) name = '';
 	var description = ref.description; if ( description === void 0 ) description = '';
 	var category = ref.category; if ( category === void 0 ) category = 'Other';
@@ -2078,15 +2137,16 @@ Component$1.register = function(ref) {
 	var properties = ref.properties; if ( properties === void 0 ) properties = [];
 	var requirements = ref.requirements; if ( requirements === void 0 ) requirements = ['Transform'];
 	var children = ref.children; if ( children === void 0 ) children = [];
-	var parentClass = ref.parentClass; if ( parentClass === void 0 ) parentClass = Component$1;
+	var parentClass = ref.parentClass; if ( parentClass === void 0 ) parentClass = Component;
 	var prototype = ref.prototype; if ( prototype === void 0 ) prototype = {};
 	var allowMultiple = ref.allowMultiple; if ( allowMultiple === void 0 ) allowMultiple = true;
+	var requiesInitWhenEntityIsEdited = ref.requiesInitWhenEntityIsEdited; if ( requiesInitWhenEntityIsEdited === void 0 ) requiesInitWhenEntityIsEdited = false;
 
 	assert(name, 'Component must have a name.');
 	assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
 	assert(!componentClasses.has(name), 'Duplicate component class ' + name);
 	Object.keys(prototype).forEach(function (k) {
-		if (Component$1.reservedPrototypeMembers.has(k))
+		if (Component.reservedPrototypeMembers.has(k))
 			{ assert(false, 'Component prototype can not have a reserved member: ' + k); }
 	});
 	
@@ -2116,7 +2176,7 @@ Component$1.register = function(ref) {
 		return Com;
 	}(parentClass));
 	properties.forEach(function (p) {
-		assert(!Component$1.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
+		assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
 	});
 	PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
 	Com.componentName = name;
@@ -2137,12 +2197,14 @@ Component$1.register = function(ref) {
 	return Com;
 };
 
-Serializable.registerSerializable(Component$1, 'com', function (json) {
+Serializable.registerSerializable(Component, 'com', function (json) {
 	var component = new (componentClasses.get(json.n))(json.id);
 	component._componentId = json.cid || null;
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2199,6 +2261,8 @@ var EntityPrototype = (function (Prototype$$1) {
 				transform.addChild(rotation);
 				
 				children.push(transform);
+			} else if (child.threeLetterType === 'cda') {
+				children.push(child.clone({ cloneComponentId: true }));
 			} else {
 				children.push(child.clone());
 			}
@@ -2399,7 +2463,7 @@ PropertyOwner.defineProperties(Level, propertyTypes$2);
 
 Serializable.registerSerializable(Level, 'lvl');
 
-Component$1.register({
+Component.register({
 	name: 'Transform',
 	category: 'Core',
 	icon: 'fa-dot-circle-o',
@@ -2413,7 +2477,7 @@ Component$1.register({
 
 var vari = 0;
 
-Component$1.register({
+Component.register({
 	name: 'Test',
 	category: 'Core',
 	properties: [
@@ -2445,6 +2509,30 @@ var key = {
 	shift: 16,
 	space: 32,
 	a: 65,
+	b: 66,
+	c: 67,
+	d: 68,
+	e: 69,
+	f: 70,
+	g: 71,
+	h: 72,
+	i: 73,
+	j: 74,
+	k: 75,
+	l: 76,
+	m: 77,
+	n: 78,
+	o: 79,
+	p: 80,
+	q: 81,
+	r: 82,
+	s: 83,
+	t: 84,
+	u: 85,
+	v: 86,
+	w: 87,
+	x: 88,
+	y: 89,
 	z: 90,
 	'0': 48,
 	'1': 49,
@@ -2485,7 +2573,7 @@ if (typeof window !== 'undefined') {
 	};
 }
 
-Component$1.register({
+Component.register({
 	name: 'Mover',
 	properties: [
 		createPropertyType('change', new Vector(10, 10), createPropertyType.vector),
@@ -2524,7 +2612,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Rect',
 	icon: 'fa-stop',
 	allowMultiple: true,
@@ -2554,7 +2642,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Spawner',
 	properties: [
 		createPropertyType('typeName', '', createPropertyType.string)
@@ -2593,7 +2681,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Trigger',
 	allowMultiple: true,
 	properties: [
@@ -2655,112 +2743,65 @@ Component$1.register({
 	}
 });
 
-// LZW-compress a string
+Component.register({
+	name: 'Physics',
+	icon: 'fa-stop',
+	allowMultiple: false,
+	properties: [
+		createPropertyType('isStatic', false, createPropertyType.bool)
+	],
+	requirements: [
+		'Rect'
+	],
+	requiesInitWhenEntityIsEdited: true,
+	prototype: {
+		init: function init() {
+			var this$1 = this;
 
+			var update = function (callback) {
+				return function (value) {
+					if (!this$1.updatingOthers && this$1.body) {
+						callback(value);
+						Matter$1.Sleeping.set(this$1.body, false);
+					}
+				}
+			};
+			this.listenProperty(this.Transform, 'position', update(function (position) { return Matter$1.Body.setPosition(this$1.body, position); }));
+			this.listenProperty(this.Transform, 'rotation', update(function (rotation) { return Matter$1.Body.setAngle(this$1.body, rotation); }));
+			// this.listenProperty(this.Rect, 'size', update(() => this.body.position = this.Transform.position));
+		},
+		createBody: function createBody() {
+			this.body = Matter$1.Bodies.rectangle(this.Transform.position.x, this.Transform.position.y, this.Rect.size.x, this.Rect.size.y, {
+				isStatic: this.isStatic,
+				angle: this.Transform.rotation
+			});
+			addBody(this.scene, this.body);
+		},
+		setInTreeStatus: function setInTreeStatus() {
+			var i = arguments.length, argsArray = Array(i);
+			while ( i-- ) argsArray[i] = arguments[i];
 
-// Decompress an LZW-encoded string
-
-var networkEnabled = false;
-
-
-var socket;
-
-function isInSceneTree(change) {
-	return change.reference.getRoot().threeLetterType === 'sce';
-}
-
-function getQueryVariable(variable) {
-	var query = window.location.search.substring(1);
-	var vars = query.split('&');
-	for (var i = 0; i < vars.length; i++) {
-		var pair = vars[i].split('=');
-		if (decodeURIComponent(pair[0]) == variable) {
-			return decodeURIComponent(pair[1]);
+			this.createBody();
+			return (ref = Component.prototype.setInTreeStatus).call.apply(ref, [ this ].concat( argsArray ));
+			var ref;
+		},
+		onUpdate: function onUpdate() {
+			if (!this.body || this.body.isSleeping)
+				{ return; }
+			
+			this.updatingOthers = true;
+			this.Transform.position = Vector.fromObject(this.body.position);
+			this.Transform.rotation = this.body.angle;
+			this.updatingOthers = false;
+		},
+		sleep: function sleep() {
+			if (this.body) {
+				deleteBody(this.scene, this.body);
+				this.body = null;
+			}
 		}
 	}
-	console.log('Query variable %s not found', variable);
-}
-
-function tryToLoad() {
-	if (!window.io) { return setTimeout(tryToLoad, 10); }
-	
-	socket = io();
-	
-	var changes = [];
-	var valueChanges = {}; // id => change
-
-	addChangeListener(function (change) {
-		if (change.origin === 'external' || !networkEnabled)
-			{ return; } // Don't send a change that you have received.
-		
-		if (isInSceneTree(change)) // Don't sync scene
-			{ return; }
-		
-		if (change.type === changeType.setPropertyValue) {
-			var duplicateChange = valueChanges[change.id];
-			if (duplicateChange) {
-				changes.splice(changes.indexOf(duplicateChange), 1);
-			}
-			valueChanges[change.id] = change;
-		}
-		changes.push(change);
-	});
-	
-	setInterval(function () {
-		if (changes.length === 0)
-			{ return; }
-		var packedChanges = changes.map(packChange);
-		changes.length = 0;
-		valueChanges = {};
-		console.log('sending', packedChanges);
-		socket.emit('c', packedChanges);
-	}, 100);
-
-	socket.on('c', function (packedChanges) {
-		console.log('RECEIVE,', networkEnabled);
-		if (!networkEnabled)
-			{ return; }
-		
-		console.log('received', packedChanges);
-		packedChanges.forEach(function (change) {
-			change = unpackChange(change);
-			if (change) {
-				executeChange(change);
-			}
-		});
-	});
-	
-	socket.on('requestGameId', function (serverStartTime) {
-		if (game)
-			{ socket.emit('gameId', game.id); }
-	});
-
-	var clientStartTime = Date.now();
-	socket.on('refreshIfOlderThan', function (requiredClientTime) {
-		if (clientStartTime < requiredClientTime)
-			{ location.reload(); }
-	});
-	
-	socket.on('gameData', function (gameData) {
-		console.log('gameData', gameData);
-		executeExternal(function () {
-			Serializable.fromJSON(gameData);
-		});
-		localStorage.anotherGameId = gameData.id;
-		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
-		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
-		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
-	});
-	
-	setTimeout(function () {
-		var gameId = getQueryVariable('gameId') || localStorage.anotherGameId;
-		console.log('requestGameData', gameId);
-		socket.emit('requestGameData', gameId);
-	}, 100);
-}
-
-if (typeof window !== 'undefined')
-	{ tryToLoad(); }
+});
 
 var idToGameServer = {}; // gameId => GameServer
 addChangeListener(function (change) {
@@ -2884,6 +2925,7 @@ function getOrCreateGameServer(gameId) {
 var connections = new Set();
 var requiredClientTime = Date.now();
 
+
 process.on('message', function (msg) {
 	console.log(msg);
 	requiredClientTime = Date.now();
@@ -2980,15 +3022,19 @@ function getConnectionsForGameServer(gameId) {
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
-var io$1 = require('socket.io')(http);
+var io = require('socket.io')(http);
+var compression = require('compression');
+
+app.use(compression({
+	level: 1
+}));
 app.use(express.static('public'));
-
-io$1.on('connection', function(socket) {
-	addSocket(socket);
-});
-
 http.listen(3000, function(){
 	console.log('listening on *:3000');
+});
+
+io.on('connection', function(socket) {
+	addSocket(socket);
 });
 
 process.on('uncaughtException', function (err) {

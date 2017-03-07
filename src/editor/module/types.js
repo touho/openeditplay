@@ -40,6 +40,9 @@ class Types extends Module {
 		this.externalChange = false;
 
 		events.listen('change', change => {
+			if (change.reference.getRoot && change.reference.getRoot().threeLetterType === 'sce')
+				return;
+			
 			let jstree = $(this.jstree).jstree(true);
 			if (!jstree)
 				return;

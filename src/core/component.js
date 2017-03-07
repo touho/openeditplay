@@ -75,6 +75,9 @@ export class Component extends PropertyOwner {
 		this._listenRemoveFunctions.forEach(f => f());
 		this._listenRemoveFunctions.length = 0;
 	}
+	listenProperty(component, propertyName, callback) {
+		this._listenRemoveFunctions.push(component._properties[propertyName].listen('change', callback));
+	}
 	createComponentData() {
 		let componentName = this.constructor.componentName;
 		let propertyTypes = this.constructor._propertyTypes;
@@ -123,7 +126,8 @@ Component.register = function({
 	children = [],
 	parentClass = Component,
 	prototype = {},
-	allowMultiple = true
+	allowMultiple = true,
+	requiesInitWhenEntityIsEdited = false
 }) {
 	assert(name, 'Component must have a name.');
 	assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');

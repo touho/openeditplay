@@ -58,6 +58,8 @@ export default class EntityPrototype extends Prototype {
 				transform.addChild(rotation);
 				
 				children.push(transform);
+			} else if (child.threeLetterType === 'cda') {
+				children.push(child.clone({ cloneComponentId: true }));
 			} else {
 				children.push(child.clone());
 			}

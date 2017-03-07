@@ -1,14 +1,20 @@
-import './core/dataTypes'
+import './core'
+import './components'
+import { startSceneWhenGameLoaded, setNetworkEnabled } from './util/net'
 
-import './core/component'
-import './core/componentData'
-import './core/entity'
-import './core/entityPrototype'
-import './core/game'
-import './core/level'
-import './core/property'
-import './core/scene'
+startSceneWhenGameLoaded();
+setNetworkEnabled(true);
 
-import './components/import'
+let canvas;
+window.addEventListener('load', () => {
+	canvas = document.querySelector('canvas.anotherCanvas');
+	resizeCanvas();
+});
+window.addEventListener('resize', resizeCanvas);
 
-import './util/net'
+function resizeCanvas() {
+	if (!canvas)
+		return;
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+}
