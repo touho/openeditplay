@@ -24,6 +24,7 @@ Component.register({
 					}
 				}
 			};
+			
 			this.listenProperty(this.Transform, 'position', update(position => Matter.Body.setPosition(this.body, position)));
 			this.listenProperty(this.Transform, 'rotation', update(rotation => Matter.Body.setAngle(this.body, rotation)));
 			// this.listenProperty(this.Rect, 'size', update(() => this.body.position = this.Transform.position));

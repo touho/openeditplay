@@ -78,7 +78,7 @@ autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {
 // });
 
 watch(['dist/explore.editor.js', 'dist/explore.editor.css'], () => {
-	if (serverProcess)
+	if (serverProcess && serverProcess.connected)
 		serverProcess.send({ refreshOldBrowsers: true });
 });
 
@@ -91,15 +91,25 @@ autobuildJs('src/serverMain.js', 'dist/explore.server.js', {
 
 // Server restarter
 let serverProcess = null;
-watch('dist/explore.server.js', () => {
-	if (serverProcess)
-		serverProcess.kill('SIGHUP');
+watch('dist/explore.server.js', args => {
+	if (serverProcess === 'wait')
+		return;
 	
-	// Timeout so that js and css files would have time to build before server force restarts clients
-	setTimeout(() => {
-		console.log('Launching server.');
-		serverProcess = cp.fork(ROOT + 'server.js');
-	}, 1000);
+	function launch() {
+		// Timeout so that js and css files would have time to build before server force restarts clients
+		serverProcess = 'wait';
+		setTimeout(() => {
+			console.log('Launching server.');
+			serverProcess = cp.fork(ROOT + 'server.js');
+		}, 1000);
+	}
+	
+	if (serverProcess) {
+		serverProcess.on('close', launch);
+		serverProcess.kill('SIGHUP');
+	} else {
+		launch();
+	}
 });
 
 function exec(cmd) {
@@ -122,7 +132,7 @@ function watch(path, callback, runNow) {
 	runNow && callback();
 	if (typeof path === 'string')
 		path = [path];
-	path = path.map(p => ROOT + p);
+	path = path.map(p => p.startsWith('/') ? p : ROOT + p);
 	return chokidar.watch(path)
 	.on('change', callback)
 	.on('unlink', callback);
@@ -182,6 +192,7 @@ function autobuildJs(entry, destination, options) {
 		switch (event.code) {
 			case 'STARTING':
 			case 'BUILD_START':
+				// console.log('START', destination);
 				break;
 			case 'BUILD_END':
 				console.log(`Built ${destination} (${event.duration} ms)`);

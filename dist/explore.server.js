@@ -2766,6 +2766,7 @@ Component.register({
 					}
 				}
 			};
+			
 			this.listenProperty(this.Transform, 'position', update(function (position) { return Matter$1.Body.setPosition(this$1.body, position); }));
 			this.listenProperty(this.Transform, 'rotation', update(function (rotation) { return Matter$1.Body.setAngle(this$1.body, rotation); }));
 			// this.listenProperty(this.Rect, 'size', update(() => this.body.position = this.Transform.position));
