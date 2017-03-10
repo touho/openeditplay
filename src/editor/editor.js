@@ -119,7 +119,7 @@ class Editor {
 		this.dirty = false;
 		this.saveNeeded = false;
 		
-		console.log(logStr);
+		// console.log(logStr);
 	}
 	save() {
 		localStorage.anotherGameId = this.game.id;

@@ -4,7 +4,10 @@ import assert from '../util/assert';
 import { game } from './game';
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
 import { isClient } from '../util/environment';
-import { createWorld, deleteWorld, updateWorld } from '../feature/physics';
+
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
+import { createWorld, deleteWorld, updateWorld } from '../feature/physicsP2';
 
 let scene = null;
 export { scene };
@@ -36,8 +39,6 @@ export default class Scene extends Serializable {
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
-
-		this.physicsWorld = null;
 		
 		super(predefinedId);
 		addChange(changeType.addSerializableToTree, this);
@@ -62,17 +63,18 @@ export default class Scene extends Serializable {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) return;
 		
-		let t = 0.001*performance.now();
+		let timeInMilliseconds = performance.now();
+		let t = 0.001*timeInMilliseconds;
 		let dt = t-this._prevUpdate;
-		if (dt > 0.1)
-			dt = 0.1;
+		if (dt > 0.05)
+			dt = 0.05;
 		this._prevUpdate = t;
 		this.time += dt;
 
 		setChangeOrigin(this);
 		
 		this.dispatch('onUpdate', dt, this.time);
-		updateWorld(this, dt);
+		updateWorld(this, dt, timeInMilliseconds);
 		this.draw();
 		
 		this.requestAnimFrame();

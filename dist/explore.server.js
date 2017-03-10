@@ -4,6 +4,12 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var fs = _interopDefault(require('fs'));
 
+var isClient = typeof window !== 'undefined';
+var isServer = typeof module !== 'undefined';
+
+if (isClient && isServer)
+	{ throw new Error('Can not be client and server at the same time.'); }
+
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
 
@@ -279,11 +285,15 @@ Serializable.fromJSON = function fromJSON (json) {
 	try {
 		obj = fromJSON(json);
 	} catch(e) {
-		if (!window.force)
-			{ debugger; } // Type 'force = true' in console to ignore failed imports.
-			
-		if (!window.force)
-			{ throw new Error(); }
+		if (isClient) {
+			if (!window.force)
+				{ debugger; } // Type 'force = true' in console to ignore failed imports.
+
+			if (!window.force)
+				{ throw new Error(); }
+		} else {
+			console.log('Error fromJSON', e);
+		}
 		return null;
 	}
 	var children = json.c ? json.c.map(function (child) { return Serializable.fromJSON(child); }).filter(Boolean) : [];
@@ -394,6 +404,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 var serializables = {};
 
 var DEBUG_CHANGES = 0;
+var CHECK_FOR_INVALID_ORIGINS = 0;
 
 function addSerializable(serializable) {
 	assert(serializables[serializable.id] === undefined, ("Serializable id clash " + (serializable.id)));
@@ -447,7 +458,9 @@ function setChangeOrigin(_origin) {
 			console.log('origin', previousVisualOrigin);
 			previousVisualOrigin = _origin;
 		}
-		setTimeout(resetOrigin);
+		
+		if (CHECK_FOR_INVALID_ORIGINS)
+			{ setTimeout(resetOrigin); }
 	}
 }
 
@@ -601,7 +614,6 @@ function assert(condition, message) {
 	}
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -688,10 +700,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -921,6 +929,9 @@ Vector.prototype.rotateTo = function rotateTo (rotation) {
 Vector.prototype.isEqualTo = function isEqualTo (vec) {
 	return this.x === vec.x && this.y === vec.y;
 };
+Vector.prototype.isZero = function isZero () {
+	return !this.x && !this.y;
+};
 Vector.prototype.clone = function clone () {
 	return new Vector(this.x, this.y);
 };
@@ -935,6 +946,9 @@ Vector.prototype.toString = function toString () {
 
 Vector.fromObject = function(obj) {
 	return new Vector(obj.x, obj.y);
+};
+Vector.fromArray = function(obj) {
+	return new Vector(obj[0], obj[1]);
 };
 
 function validateFloat(val) {
@@ -1379,7 +1393,10 @@ var ComponentData = (function (Serializable$$1) {
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
 				if (!this.componentClass._propertyTypesByName[child.name]) {
-					console.log('Property of that name not defined', this.id, child, this);
+					if (isClient)
+						{ console.log('Property of that name not defined', this.id, child, this); }
+					else
+						{ console.log('Property of that name not defined', this.id, this.name, child.name); }
 					return;
 				}
 				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
@@ -1750,11 +1767,11 @@ var propertyTypes = [
 ];
 
 var game = null; // only one game at the time
-var isClient = typeof window !== 'undefined';
+var isClient$1 = typeof window !== 'undefined';
 
 var Game = (function (PropertyOwner$$1) {
 	function Game(predefinedId) {
-		if (isClient) {
+		if (isClient$1) {
 			if (game) {
 				try {
 					game.delete();
@@ -1799,39 +1816,42 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
 
-var isClient$1 = typeof window !== 'undefined';
-var isServer = typeof module !== 'undefined';
-
-if (isClient$1 && isServer)
-	{ throw new Error('Can not be client and server at the same time.'); }
-
-var Matter;
-if (isClient$1)
-	{ Matter = window.Matter; }
+var p2;
+if (isClient)
+	{ p2 = window.p2; }
 else
-	{ Matter = require('../src/external/matter.min'); } // from dist folder
+	{ p2 = require('../src/external/p2'); } // from dist folder
 
-var Matter$1 = Matter;
+var p2$1 = p2;
 
 function createWorld(owner, options) {
-	assert(!owner._matterEngine);
-	owner._matterEngine = Matter.Engine.create(options);
+	assert(!owner._p2World);
+	owner._p2World = new p2.World({
+		gravity: [0, 9.81]
+	});
+
+	// Stress test says that Body sleeping performs better than Island sleeping when idling.
+	owner._p2World.sleepMode = p2.World.BODY_SLEEPING;
 }
+// const MAX_PHYSICS_DT = 0.2;
+var PHYSICS_DT = 1 / 60;
 function updateWorld(owner, dt) {
-	Matter.Engine.update(owner._matterEngine, dt * 1000, dt / (owner._matterPreviousDt || dt));
-	owner._matterPreviousDt = dt;
+	owner._p2World.step(PHYSICS_DT, dt, 10);
 }
 function deleteWorld(owner) {
-	if (owner._matterEngine)
-		{ Matter.Engine.clear(owner._matterEngine); }
-	owner._matterEngine = null;
-	delete owner._matterPreviousDt;
+	if (owner._p2World)
+		{ owner._p2World.clear(); }
+	owner._p2World = null;
 }
 function addBody(owner, body) {
-	Matter.Composite.add(owner._matterEngine.world, body);
+	owner._p2World.addBody(body);
 }
 function deleteBody(owner, body) {
-	Matter.Composite.remove(owner._matterEngine.world, body, false);
+	owner._p2World.removeBody(body);
+}
+
+function addContactMaterial(owner, A, B, options) {
+	owner._p2World.addContactMaterial(new p2.ContactMaterial(A, B, options));
 }
 
 var scene = null;
@@ -1843,7 +1863,7 @@ var Scene = (function (Serializable$$1) {
 	function Scene(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
-		if (isClient$1) {
+		if (isClient) {
 			if (scene) {
 				try {
 					scene.delete();
@@ -1864,8 +1884,6 @@ var Scene = (function (Serializable$$1) {
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
-
-		this.physicsWorld = null;
 		
 		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
@@ -1896,17 +1914,18 @@ var Scene = (function (Serializable$$1) {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
 		
-		var t = 0.001*performance.now();
+		var timeInMilliseconds = performance.now();
+		var t = 0.001*timeInMilliseconds;
 		var dt = t-this._prevUpdate;
-		if (dt > 0.1)
-			{ dt = 0.1; }
+		if (dt > 0.05)
+			{ dt = 0.05; }
 		this._prevUpdate = t;
 		this.time += dt;
 
 		setChangeOrigin(this);
 		
 		this.dispatch('onUpdate', dt, this.time);
-		updateWorld(this, dt);
+		updateWorld(this, dt, timeInMilliseconds);
 		this.draw();
 		
 		this.requestAnimFrame();
@@ -2001,7 +2020,6 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
-// Instance of a component, see componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2203,8 +2221,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2475,6 +2491,30 @@ Component.register({
 	]
 });
 
+Component.register({
+	name: 'TransformVariance',
+	category: 'Core',
+	icon: 'fa-dot-circle-o',
+	allowMultiple: false,
+	properties: [
+		createPropertyType('positionVariance', new Vector(0, 0), createPropertyType.vector),
+		createPropertyType('scaleVariance', new Vector(0, 0), createPropertyType.vector),
+		createPropertyType('rotationVariance', 0, createPropertyType.float, createPropertyType.float.range(0, Math.PI), createPropertyType.flagDegreesInEditor)
+	],
+	prototype: {
+		onStart: function onStart() {
+			if (!this.positionVariance.isZero())
+				{ this.Transform.position = this.Transform.position.add(this.positionVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
+
+			if (!this.scaleVariance.isZero())
+				{ this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
+			
+			if (this.rotationVariance)
+				{ this.Transform.rotation += this.rotationVariance * (-1 + 2 * Math.random()); }
+		}
+	}
+});
+
 var vari = 0;
 
 Component.register({
@@ -2743,12 +2783,23 @@ Component.register({
 	}
 });
 
+var PHYSICS_SCALE = 1/50;
+
+var dynamicMaterial = new p2$1.Material();
+var staticMaterial = new p2$1.Material();
+
 Component.register({
 	name: 'Physics',
 	icon: 'fa-stop',
 	allowMultiple: false,
 	properties: [
-		createPropertyType('isStatic', false, createPropertyType.bool)
+		createPropertyType('bounciness', 0, createPropertyType.float, createPropertyType.float.range(0, 1)),
+		createPropertyType('density', 0.001, createPropertyType.float, createPropertyType.float.range(0, 100)),
+		createPropertyType('friction', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1)),
+		createPropertyType('frictionAir', 0.01, createPropertyType.float, createPropertyType.float.range(0, 1)),
+		createPropertyType('frictionStatic', 0.5, createPropertyType.float, createPropertyType.float.range(0, 10)),
+		createPropertyType('isStatic', false, createPropertyType.bool),
+		createPropertyType('startStill', false, createPropertyType.bool)
 	],
 	requirements: [
 		'Rect'
@@ -2756,42 +2807,102 @@ Component.register({
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
 		init: function init() {
-			var this$1 = this;
+			if (!this.scene._p2World._materialInited) {
+				var settings = {
+					restitution: 1,
+					stiffness: Number.MAX_VALUE,
+					friction: 1
+				};
+				addContactMaterial(this.scene, dynamicMaterial, staticMaterial, settings);
+				addContactMaterial(this.scene, dynamicMaterial, dynamicMaterial, settings);
+				this.scene._p2World._materialInited = true;
+			}
+			/*
+			 let update = callback => {
+			 return value => {
+			 if (!this.updatingOthers && this.body) {
+			 callback(value);
+			 Matter.Sleeping.set(this.body, false);
+			 }
+			 }
+			 };
 
-			var update = function (callback) {
-				return function (value) {
-					if (!this$1.updatingOthers && this$1.body) {
-						callback(value);
-						Matter$1.Sleeping.set(this$1.body, false);
-					}
-				}
-			};
-			
-			this.listenProperty(this.Transform, 'position', update(function (position) { return Matter$1.Body.setPosition(this$1.body, position); }));
-			this.listenProperty(this.Transform, 'rotation', update(function (rotation) { return Matter$1.Body.setAngle(this$1.body, rotation); }));
-			// this.listenProperty(this.Rect, 'size', update(() => this.body.position = this.Transform.position));
+			 this.listenProperty(this.Transform, 'position', update(position => Matter.Body.setPosition(this.body, position)));
+			 this.listenProperty(this.Transform, 'rotation', update(rotation => Matter.Body.setAngle(this.body, rotation)));
+			 this.listenProperty(this, 'density', update(density => {
+			 // let oldMass = this.body.mass;
+			 Matter.Body.setDensity(this.body, density);
+
+			 // Remove this when Matter.js will fix setDensity
+
+			 // if (this.body.inertia !== undefined && this.body.inertia !== Infinity)
+			 // 	Matter.Body.setInertia(this.body, this.body.inertia * this.body.mass / oldMass);
+
+			 // Matter.Body.setVertices(this.body, this.body.vertices);
+			 }));
+			 this.listenProperty(this, 'friction', update(friction => this.body.friction = friction));
+			 this.listenProperty(this, 'frictionAir', update(frictionAir => this.body.frictionAir = frictionAir));
+			 this.listenProperty(this, 'frictionStatic', update(frictionStatic => this.body.frictionStatic = frictionStatic));
+			 this.listenProperty(this, 'isStatic', update(isStatic => Matter.Body.setStatic(this.body, isStatic)));
+			 this.listenProperty(this, 'bounciness', update(bounciness => this.body.restitution = bounciness));
+			 */
 		},
 		createBody: function createBody() {
-			this.body = Matter$1.Bodies.rectangle(this.Transform.position.x, this.Transform.position.y, this.Rect.size.x, this.Rect.size.y, {
-				isStatic: this.isStatic,
-				angle: this.Transform.rotation
+			/*
+			this.body = Physics.body('rectangle', {
+				x: this.Transform.position.x,
+				y: this.Transform.position.y,
+				angle: this.Transform.rotation,
+				radius: this.Rect.size.x,
+				width: this.Rect.size.x,
+				height: this.Rect.size.y,
+				treatment: this.isStatic ? 'static' : 'dynamic',
+				restitution: this.bounciness,
+				cof: this.friction
 			});
+			*/
+
+			this.body = new p2$1.Body({
+				mass: this.isStatic ? 0 : 1,
+				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
+				angle: this.Transform.rotation,
+				velocity: [0, 0],
+				angularVelocity: 0,
+				allowSleep: true
+			});
+			var shape = new p2$1.Box({
+				width: this.Rect.size.x * PHYSICS_SCALE,
+				height: this.Rect.size.y * PHYSICS_SCALE
+			});
+			shape.material = this.isStatic ? staticMaterial : dynamicMaterial;
+			this.body.addShape(shape);
+			// if (!this.isStatic)
+			// 	this.body.setDensity(this.density);
 			addBody(this.scene, this.body);
 		},
-		setInTreeStatus: function setInTreeStatus() {
+		onStart: function onStart() {
+			// Sleeping must be set in onStart because editing sleeping body does not work
+			
+			/*
+			if (this.startStill)
+				this.body.sleep(true);
+				*/
+		},
+		setInTreeStatus: function setInTreeStatus(inTree) {
 			var i = arguments.length, argsArray = Array(i);
 			while ( i-- ) argsArray[i] = arguments[i];
 
-			this.createBody();
+			if (inTree)
+				{ this.createBody(); }
 			return (ref = Component.prototype.setInTreeStatus).call.apply(ref, [ this ].concat( argsArray ));
 			var ref;
 		},
 		onUpdate: function onUpdate() {
-			if (!this.body || this.body.isSleeping)
+			if (!this.body || this.body.sleepState === p2$1.Body.SLEEPING)
 				{ return; }
-			
+
 			this.updatingOthers = true;
-			this.Transform.position = Vector.fromObject(this.body.position);
+			this.Transform.position = Vector.fromArray(this.body.position).divideScalar(PHYSICS_SCALE);
 			this.Transform.rotation = this.body.angle;
 			this.updatingOthers = false;
 		},

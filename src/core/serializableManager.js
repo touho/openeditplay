@@ -4,6 +4,7 @@ import Serializable from './serializable';
 export let serializables = {};
 
 let DEBUG_CHANGES = 0;
+let CHECK_FOR_INVALID_ORIGINS = 0;
 
 export function addSerializable(serializable) {
 	assert(serializables[serializable.id] === undefined, `Serializable id clash ${serializable.id}`);
@@ -59,7 +60,9 @@ export function setChangeOrigin(_origin) {
 			console.log('origin', previousVisualOrigin);
 			previousVisualOrigin = _origin;
 		}
-		setTimeout(resetOrigin);
+		
+		if (CHECK_FOR_INVALID_ORIGINS)
+			setTimeout(resetOrigin);
 	}
 }
 

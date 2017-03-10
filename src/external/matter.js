@@ -1,5 +1,5 @@
 /**
-* matter-js 0.12.0 by @liabru 2017-02-02
+* matter-js 0.12.0-alpha by @liabru 2017-03-10
 * http://brm.io/matter-js/
 * License MIT
 */
@@ -179,9 +179,10 @@ var Axes = _dereq_('../geometry/Axes');
         Body.set(body, {
             axes: options.axes || body.axes,
             area: options.area || body.area,
-            mass: options.mass || body.mass,
-            inertia: options.inertia || body.inertia
+            mass: options.mass || body.mass
         });
+        // Custom inertia must be set after mass because mass affects inertia.
+        Body.setInertia(body, options.inertia || body.inertia);
 
         // render properties
         var defaultFillStyle = (body.isStatic ? '#2e2b44' : Common.choose(['#006BA6', '#0496FF', '#FFBC42', '#D81159', '#8F2D56'])),
@@ -210,10 +211,10 @@ var Axes = _dereq_('../geometry/Axes');
         }
 
         for (property in settings) {
-            value = settings[property];
-
             if (!settings.hasOwnProperty(property))
                 continue;
+            
+            value = settings[property];
 
             switch (property) {
 
@@ -312,6 +313,11 @@ var Axes = _dereq_('../geometry/Axes');
      * @param {number} mass
      */
     Body.setMass = function(body, mass) {
+		// body.inertia is undefined when creating the body
+		// body.inertia is Infinity when body is static or sleeping
+		if (body.inertia !== undefined && body.inertia !== Infinity)
+			Body.setInertia(body, body.inertia * mass / body.mass);
+		
         body.mass = mass;
         body.inverseMass = 1 / body.mass;
         body.density = body.mass / body.area;
@@ -5325,7 +5331,7 @@ var Common = _dereq_('./Common');
      * @readOnly
      * @type {String}
      */
-    Matter.version = '0.12.0';
+    Matter.version = '0.12.0-alpha';
 
     /**
      * A list of plugin dependencies to be installed. These are normally set and installed through `Matter.use`.

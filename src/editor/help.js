@@ -16,6 +16,9 @@ class Help {
 	get scene() {
 		return scene;
 	}
+	get world() {
+		return scene._matterEngine.world;
+	}
 	get Vector() {
 		return Vector;
 	}

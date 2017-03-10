@@ -23,7 +23,7 @@ class Instance extends Module {
 				this.propertyEditor.update(editor.selection.items, editor.selection.type);
 			}
 		} else {
-			console.log('hide', this.id);
+			// console.log('hide', this.id);
 			return false; // hide module
 		}
 	}

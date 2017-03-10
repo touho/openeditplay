@@ -181,8 +181,10 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 						value = cda.getValue(property.name);
 					else
 						value = componentClass._propertyTypesByName[property.name].initialValue;
-				} else {
+				} else if (valueProperty) {
 					value = valueProperty.value;
+				} else {
+					value = componentClass._propertyTypesByName[property.name].initialValue;
 				}
 				let component = ent.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
 				if (component)

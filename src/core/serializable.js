@@ -1,5 +1,6 @@
 import assert from '../util/assert';
 import * as serializableManager from './serializableManager';
+import { isClient } from '../util/environment';
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 const CHAR_COUNT = CHARACTERS.length;
@@ -249,11 +250,15 @@ export default class Serializable {
 		try {
 			obj = fromJSON(json);
 		} catch(e) {
-			if (!window.force)
-				debugger; // Type 'force = true' in console to ignore failed imports.
-			
-			if (!window.force)
-				throw new Error();
+			if (isClient) {
+				if (!window.force)
+					debugger; // Type 'force = true' in console to ignore failed imports.
+
+				if (!window.force)
+					throw new Error();
+			} else {
+				console.log('Error fromJSON', e);
+			}
 			return null;
 		}
 		let children = json.c ? json.c.map(child => Serializable.fromJSON(child)).filter(Boolean) : [];

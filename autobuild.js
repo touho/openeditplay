@@ -24,7 +24,8 @@ const editorJsDependencies = [
 	'node_modules/jquery/dist/jquery.min.js',
 	'src/external/jstree.min.js',
 	'src/external/matter.js',
-	'src/external/verlet-1.0.0.min.js'
+	'src/external/physicsjs-full.js',
+	'src/external/p2.js'
 ];
 const jsDependencies = [
 	'src/external/matter.min.js',
@@ -230,7 +231,7 @@ function autobuildJs(entry, destination, options) {
 					if (err.code) {
 						console.log('error code', err.code);
 					}
-					console.log(err);
+					console.log('Some Rollup error', err);
 				}
 				break;
 

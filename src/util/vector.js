@@ -92,6 +92,9 @@ export default class Vector {
 	isEqualTo(vec) {
 		return this.x === vec.x && this.y === vec.y;
 	}
+	isZero() {
+		return !this.x && !this.y;
+	}
 	clone() {
 		return new Vector(this.x, this.y);
 	}
@@ -106,4 +109,7 @@ export default class Vector {
 }
 Vector.fromObject = function(obj) {
 	return new Vector(obj.x, obj.y);
+};
+Vector.fromArray = function(obj) {
+	return new Vector(obj[0], obj[1]);
 };

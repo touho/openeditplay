@@ -11,11 +11,39 @@ export default Matter;
 
 export function createWorld(owner, options) {
 	assert(!owner._matterEngine);
+	options = options || {};
+	
+	// options.positionIterations = 3;
+	// options.velocityIterations = 2;
+	// options.constraintIterations = 1;
+	
 	owner._matterEngine = Matter.Engine.create(options);
+	owner._matterTimeLeft = 0;
 }
+// const MAX_PHYSICS_DT = 0.2;
+const PHYSICS_DT = 1000 / 60;
 export function updateWorld(owner, dt) {
+	owner._matterTimeLeft += dt * 1000;
+	while (owner._matterTimeLeft >= PHYSICS_DT) {
+		owner._matterTimeLeft -= PHYSICS_DT;
+		Matter.Engine.update(owner._matterEngine, PHYSICS_DT, 1);
+	}
+	
+	/*
+	This method was too undeterministic
+	if (dt > MAX_PHYSICS_DT) {
+		if (dt > MAX_PHYSICS_DT*2) {
+			updateWorld(owner, MAX_PHYSICS_DT);
+			updateWorld(owner, dt - MAX_PHYSICS_DT);
+		} else {
+			updateWorld(owner, dt * 0.5);
+			updateWorld(owner, dt * 0.5);
+		}
+		return;
+	}
 	Matter.Engine.update(owner._matterEngine, dt * 1000, dt / (owner._matterPreviousDt || dt));
 	owner._matterPreviousDt = dt;
+	*/
 }
 export function deleteWorld(owner) {
 	if (owner._matterEngine)

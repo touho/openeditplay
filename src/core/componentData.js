@@ -1,6 +1,7 @@
 import Serializable, { createStringId } from './serializable';
 import assert from '../util/assert';
 import { componentClasses, Component } from './component';
+import { isClient } from '../util/environment';
 
 export default class ComponentData extends Serializable {
 	constructor(componentClassName, predefinedId = false, predefinedComponentId = false) {
@@ -16,7 +17,10 @@ export default class ComponentData extends Serializable {
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
 				if (!this.componentClass._propertyTypesByName[child.name]) {
-					console.log('Property of that name not defined', this.id, child, this);
+					if (isClient)
+						console.log('Property of that name not defined', this.id, child, this);
+					else
+						console.log('Property of that name not defined', this.id, this.name, child.name);
 					return;
 				}
 				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
