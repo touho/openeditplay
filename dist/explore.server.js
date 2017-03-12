@@ -633,8 +633,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -645,7 +643,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -732,10 +729,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -859,12 +852,13 @@ function createValidator(name, validatorFunction) {
 		var i = arguments.length, argsArray = Array(i);
 		while ( i-- ) argsArray[i] = arguments[i];
 
-		var parameters = [null ].concat( argsArray);
+		var parameters = [].concat( argsArray );
+		var validatorArgs = [null ].concat( argsArray);
 		return {
 			validatorName: name,
 			validate: function(x) {
-				parameters[0] = x;
-				return validatorFunction.apply(null, parameters);
+				validatorArgs[0] = x;
+				return validatorFunction.apply(null, validatorArgs);
 			},
 			parameters: parameters
 		};
@@ -1951,8 +1945,6 @@ function createMaterial(owner, options) {
 	return material;
 }
 
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2122,7 +2114,6 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
-// Instance of a component, see componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2320,8 +2311,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2727,6 +2716,9 @@ Component.register({
 			this.Physics = this.entity.getComponent('Physics');
 		},
 		onUpdate: function onUpdate(dt, t) {
+			if (!this._isInTree)
+				{ return; }
+			
 			if (this.userControlled) {
 				if (!this.entity.localMaster) { return; }
 				
@@ -2740,13 +2732,13 @@ Component.register({
 				if (this.Physics) {
 					if (dx || dy) {
 						var force = new Vector(
-							dx * this.Physics.getMass() * this.speed,
-							dy * this.Physics.getMass() * this.speed
+							dx * this.Physics.getMass() * this.speed * dt,
+							dy * this.Physics.getMass() * this.speed * dt
 						);
 						this.Physics.applyForce(force);
 					}
 					if (dx && this.rotationSpeed) {
-						this.Physics.setAngularForce(dx * this.rotationSpeed);
+						this.Physics.setAngularForce(dx * this.rotationSpeed * dt);
 					}
 				} else {
 					if (dx) { this.Transform.position.x += dx * this.speed * dt; }

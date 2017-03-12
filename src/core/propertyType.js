@@ -113,12 +113,13 @@ export function createDataType({
 
 function createValidator(name, validatorFunction) {
 	let validator = function() {
-		let parameters = [null, ...arguments];
+		let parameters = [...arguments];
+		let validatorArgs = [null, ...arguments];
 		return {
 			validatorName: name,
 			validate: function(x) {
-				parameters[0] = x;
-				return validatorFunction.apply(null, parameters);
+				validatorArgs[0] = x;
+				return validatorFunction.apply(null, validatorArgs);
 			},
 			parameters
 		};

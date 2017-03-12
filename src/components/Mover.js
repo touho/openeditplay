@@ -15,6 +15,9 @@ Component.register({
 			this.Physics = this.entity.getComponent('Physics');
 		},
 		onUpdate(dt, t) {
+			if (!this._isInTree)
+				return;
+			
 			if (this.userControlled) {
 				if (!this.entity.localMaster) return;
 				
@@ -28,13 +31,13 @@ Component.register({
 				if (this.Physics) {
 					if (dx || dy) {
 						let force = new Vector(
-							dx * this.Physics.getMass() * this.speed,
-							dy * this.Physics.getMass() * this.speed
+							dx * this.Physics.getMass() * this.speed * dt,
+							dy * this.Physics.getMass() * this.speed * dt
 						);
 						this.Physics.applyForce(force);
 					}
 					if (dx && this.rotationSpeed) {
-						this.Physics.setAngularForce(dx * this.rotationSpeed);
+						this.Physics.setAngularForce(dx * this.rotationSpeed * dt);
 					}
 				} else {
 					if (dx) this.Transform.position.x += dx * this.speed * dt;
