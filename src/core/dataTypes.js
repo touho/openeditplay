@@ -66,13 +66,17 @@ dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default(vec) {
+			// @ifndef OPTIMIZE
 			if (!(vec instanceof Vector))
 				throw new Error();
+			// @endif
 			vec = vec.clone();
+			// @ifndef OPTIMIZE
 			vec.x = parseFloat(vec.x);
 			vec.y = parseFloat(vec.y);
 			validateFloat(vec.x);
 			validateFloat(vec.y);
+			// @endif
 			return vec;
 		}
 	},

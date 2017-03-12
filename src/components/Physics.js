@@ -1,8 +1,9 @@
 import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import p2, { addBody, deleteBody, createMaterial } from '../feature/physicsP2';
+import p2, { addBody, deleteBody, createMaterial } from '../feature/physics';
 
 const PHYSICS_SCALE = 1/50;
+const PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
 const type = {
 	dynamic: p2.Body.DYNAMIC,
@@ -106,10 +107,17 @@ Component.register({
 		onUpdate() {
 			if (!this.body || this.body.sleepState === p2.Body.SLEEPING)
 				return;
-
+			
 			this.updatingOthers = true;
-			this.Transform.position = Vector.fromArray(this.body.position).divideScalar(PHYSICS_SCALE);
-			this.Transform.angle = this.body.angle;
+			
+			let b = this.body;
+			let newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
+			if (!this.Transform.position.isEqualTo(newPos))
+				this.Transform.position = newPos;
+			
+			if (this.Transform.angle !== b.angle)
+				this.Transform.angle = b.angle;
+			
 			this.updatingOthers = false;
 		},
 		sleep() {

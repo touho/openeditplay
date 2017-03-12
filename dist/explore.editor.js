@@ -51,6 +51,7 @@ Serializable.prototype.delete = function delete$1 () {
 		this._parent.deleteChild(this);
 		return false;
 	}
+	delete this._rootCache;
 	this.deleteChildren();
 	this._alive = false;
 	this._isInTree = false;
@@ -137,9 +138,13 @@ Serializable.prototype.findParent = function findParent (threeLetterType, filter
 	return null;
 };
 Serializable.prototype.getRoot = function getRoot () {
+	if (this._rootCache)
+		{ return this._rootCache; }
 	var element = this;
 	while (element._parent)
 		{ element = element._parent; }
+	if (element !== this)
+		{ this._rootCache = element; }
 	return element;
 };
 // idx is optional
@@ -192,6 +197,7 @@ Serializable.prototype.move = function move (newParent) {
 	return this;
 };
 Serializable.prototype._detach = function _detach () {
+	delete this._rootCache;
 	this._parent && this._parent._detachChild(this);
 	return this;
 };
@@ -242,18 +248,23 @@ Serializable.prototype.listen = function listen (event, callback) {
 		this$1._listeners[event].splice(index, 1);
 	};
 };
-Serializable.prototype.dispatch = function dispatch (event) {
+Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
 		var this$1 = this;
-		var args = [], len = arguments.length - 1;
-		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
 
 	if (this._listeners.hasOwnProperty(event)) {
-		for (var i = this._listeners[event].length - 1; i >= 0; --i) {
+		var listeners = this._listeners[event];
+		for (var i = listeners.length - 1; i >= 0; --i) {
+// @ifndef OPTIMIZE
 			try {
-				this$1._listeners[event][i].apply(null, args);
+// @endif
+
+				listeners[i](a, b, c);
+					
+// @ifndef OPTIMIZE
 			} catch(e) {
 				console.error(("Event " + event + " listener crashed."), this$1._listeners[event][i], e);
 			}
+// @endif
 		}
 	}
 };
@@ -271,6 +282,8 @@ Serializable.prototype.hasDescendant = function hasDescendant (child) {
 Serializable.prototype.setInTreeStatus = function setInTreeStatus (isInTree) {
 	if (this._isInTree === isInTree)
 		{ return; }
+
+	delete this._rootCache;
 		
 	this._isInTree = isInTree;
 	this._children.forEach(function (array) {
@@ -444,6 +457,8 @@ Object.keys(keyToShortKey).forEach(function (k) {
 });
 
 var origin;
+
+// @ifndef OPTIMIZE
 var previousVisualOrigin;
 function resetOrigin() {
 	origin = null;
@@ -451,7 +466,9 @@ function resetOrigin() {
 function getChangeOrigin() {
 	return origin;
 }
+// @endif
 function setChangeOrigin(_origin) {
+	// @ifndef OPTIMIZE
 	if (_origin !== origin) {
 		origin = _origin;
 		if (DEBUG_CHANGES && _origin && _origin !== previousVisualOrigin) {
@@ -462,6 +479,7 @@ function setChangeOrigin(_origin) {
 		if (CHECK_FOR_INVALID_ORIGINS)
 			{ setTimeout(resetOrigin); }
 	}
+	// @endif
 }
 
 var externalChange = false;
@@ -485,16 +503,24 @@ function addChange(type, reference) {
 		delete change.id;
 	}
 	
+	// @ifndef OPTIMIZE
 	if (DEBUG_CHANGES)
 		{ console.log('change', change); }
-	
+
 	var previousOrigin = origin;
-	listeners.forEach(function (l) { return l(change); });
+	// @endif
+
+	for (var i = 0; i < listeners.length; ++i) {
+		listeners[i](change);
+	}
+
+	// @ifndef OPTIMIZE
 	if (origin !== previousOrigin) {
 		if (DEBUG_CHANGES)
 			{ console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin); }
 		origin = previousOrigin;
 	}
+	// @endif
 }
 
 function executeExternal(callback) {
@@ -606,12 +632,17 @@ function executeChange(change) {
 		{ newScene.play(); }
 }
 
+// @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
+	// @ifndef OPTIMIZE
 	if (!condition) {
 		console.log('Assert', message, new Error().stack, '\norigin', getChangeOrigin());
 		debugger;
 		throw new Error(message);
 	}
+	// @endif
 }
 
 // Instance of a property
@@ -828,11 +859,13 @@ function createValidator(name, validatorFunction) {
 		var i = arguments.length, argsArray = Array(i);
 		while ( i-- ) argsArray[i] = arguments[i];
 
-		var parameters = [].concat( argsArray );
+		var parameters = [null ].concat( argsArray);
 		return {
 			validatorName: name,
-			validatorParameters: parameters,
-			validate: function (x) { return validatorFunction.apply(void 0, [ x ].concat( parameters )); },
+			validate: function(x) {
+				parameters[0] = x;
+				return validatorFunction.apply(null, parameters);
+			},
 			parameters: parameters
 		};
 	};
@@ -1023,13 +1056,17 @@ dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default: function default$3(vec) {
+			// @ifndef OPTIMIZE
 			if (!(vec instanceof Vector))
 				{ throw new Error(); }
+			// @endif
 			vec = vec.clone();
+			// @ifndef OPTIMIZE
 			vec.x = parseFloat(vec.x);
 			vec.y = parseFloat(vec.y);
 			validateFloat(vec.x);
 			validateFloat(vec.y);
+			// @endif
 			return vec;
 		}
 	},
@@ -2117,16 +2154,12 @@ var Component$1 = (function (PropertyOwner$$1) {
 		});
 
 		this.forEachChild('com', function (c) { return c._preInit(); });
-		
+		var self = this;
 		['onUpdate', 'onDraw', 'onDrawHelper', 'onStart'].forEach(function (funcName) {
 			if (typeof this$1[funcName] === 'function') {
-				// console.log('listen ' + funcName);
-				this$1._listenRemoveFunctions.push(this$1.scene.listen(funcName, function () {
-					var args = [], len = arguments.length;
-					while ( len-- ) args[ len ] = arguments[ len ];
-
-					return (ref = this$1)[funcName].apply(ref, args)
-					var ref;
+				var func = this$1[funcName];
+				this$1._listenRemoveFunctions.push(this$1.scene.listen(funcName, function() {
+					func.apply(self, arguments);
 				}));
 			}
 		});
@@ -2884,6 +2917,7 @@ Component$1.register({
 });
 
 var PHYSICS_SCALE = 1/50;
+var PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
 var type = {
 	dynamic: p2$1.Body.DYNAMIC,
@@ -2993,10 +3027,17 @@ Component$1.register({
 		onUpdate: function onUpdate() {
 			if (!this.body || this.body.sleepState === p2$1.Body.SLEEPING)
 				{ return; }
-
+			
 			this.updatingOthers = true;
-			this.Transform.position = Vector.fromArray(this.body.position).divideScalar(PHYSICS_SCALE);
-			this.Transform.angle = this.body.angle;
+			
+			var b = this.body;
+			var newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
+			if (!this.Transform.position.isEqualTo(newPos))
+				{ this.Transform.position = newPos; }
+			
+			if (this.Transform.angle !== b.angle)
+				{ this.Transform.angle = b.angle; }
+			
 			this.updatingOthers = false;
 		},
 		sleep: function sleep() {
@@ -3007,9 +3048,6 @@ Component$1.register({
 		}
 	}
 });
-
-// import './PhysicsMatter'
-// import './PhysicsJs'
 
 // LZW-compress a string
 
@@ -3251,8 +3289,9 @@ var events = {
 		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
 
 		if (listeners$1.hasOwnProperty(event)) {
-			for (var i = 0; i < listeners$1[event].length; ++i) {
-				listeners$1[event][i].apply(null, args);
+			var listener = listeners$1[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
 				/*
 				try {
 					listeners[event][i].apply(null, args);

@@ -21,8 +21,9 @@ let events = {
 	},
 	dispatch(event, ...args) {
 		if (listeners.hasOwnProperty(event)) {
-			for (var i = 0; i < listeners[event].length; ++i) {
-				listeners[event][i].apply(null, args);
+			let listener = listeners[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
 				/*
 				try {
 					listeners[event][i].apply(null, args);

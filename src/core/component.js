@@ -32,11 +32,13 @@ export class Component extends PropertyOwner {
 		});
 
 		this.forEachChild('com', c => c._preInit());
-		
+		let self = this;
 		['onUpdate', 'onDraw', 'onDrawHelper', 'onStart'].forEach(funcName => {
 			if (typeof this[funcName] === 'function') {
-				// console.log('listen ' + funcName);
-				this._listenRemoveFunctions.push(this.scene.listen(funcName, (...args) => this[funcName](...args)));
+				let func = this[funcName];
+				this._listenRemoveFunctions.push(this.scene.listen(funcName, function() {
+					func.apply(self, arguments);
+				}));
 			}
 		});
 

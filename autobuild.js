@@ -14,6 +14,7 @@ const postcssScss = require('postcss-scss');
 const precss = require('precss');
 const fs = require('fs');
 const concat = require('concat-files');
+const preprocess = require('rollup-plugin-preprocess').default;
 
 const ROOT = path.join(__dirname, './');
 
@@ -67,13 +68,15 @@ if (target === 'all') {
 }
 
 // Game engine JS
-// autobuildJs('src/main.js', 'dist/explore.js', {
-// 	copyTo: 'public/'
-// });
 if (target === 'all') {
+	autobuildJs('src/main.js', 'dist/explore.js', {
+		copyTo: 'public/',
+		optimize: true
+	});
 	autobuildJs('src/main.js', 'dist/explore.min.js', {
 		uglify: true,
-		copyTo: 'public/'
+		copyTo: 'public/',
+		optimize: true
 	});
 }
 
@@ -170,19 +173,30 @@ function autobuildJs(entry, destination, options) {
 		format: 'umd',
 		copyTo: false, // 'public/'
 		allowForOf: false,
-		externalDependencies: []
+		externalDependencies: [],
+		optimize: false
 	}, options);
+
+	let plugins = [];
 	
-	let plugins = [
-		rollupNodeResolve({
-			jsnext: true
-		}),
-		rollupBuble({
-			transforms: {
-				forOf: !options.allowForOf
+	plugins.push(rollupNodeResolve({
+		jsnext: true
+	}));
+
+	plugins.push(rollupBuble({
+		transforms: {
+			forOf: !options.allowForOf
+		}
+	}));
+
+	if (options.optimize) {
+		plugins.push(preprocess({
+			context: {
+				OPTIMIZE: true
 			}
-		})
-	];
+		}));
+	}
+	
 	if (options.uglify)
 		plugins.push(rollupUglify());
 	

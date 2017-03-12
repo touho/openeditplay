@@ -38,6 +38,7 @@ export default class Serializable {
 			this._parent.deleteChild(this);
 			return false;
 		}
+		delete this._rootCache;
 		this.deleteChildren();
 		this._alive = false;
 		this._isInTree = false;
@@ -118,9 +119,13 @@ export default class Serializable {
 		return null;
 	}
 	getRoot() {
+		if (this._rootCache)
+			return this._rootCache;
 		let element = this;
 		while (element._parent)
 			element = element._parent;
+		if (element !== this)
+			this._rootCache = element;
 		return element;
 	}
 	// idx is optional
@@ -168,6 +173,7 @@ export default class Serializable {
 		return this;
 	}
 	_detach() {
+		delete this._rootCache;
 		this._parent && this._parent._detachChild(this);
 		return this;
 	}
@@ -213,14 +219,21 @@ export default class Serializable {
 			this._listeners[event].splice(index, 1);
 		};
 	}
-	dispatch(event, ...args) {
+	dispatch(event, a, b, c) {
 		if (this._listeners.hasOwnProperty(event)) {
-			for (var i = this._listeners[event].length - 1; i >= 0; --i) {
+			let listeners = this._listeners[event];
+			for (var i = listeners.length - 1; i >= 0; --i) {
+// @ifndef OPTIMIZE
 				try {
-					this._listeners[event][i].apply(null, args);
+// @endif
+
+					listeners[i](a, b, c);
+					
+// @ifndef OPTIMIZE
 				} catch(e) {
 					console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
 				}
+// @endif
 			}
 		}
 	}
@@ -236,6 +249,8 @@ export default class Serializable {
 	setInTreeStatus(isInTree) {
 		if (this._isInTree === isInTree)
 			return;
+
+		delete this._rootCache;
 		
 		this._isInTree = isInTree;
 		this._children.forEach(array => {

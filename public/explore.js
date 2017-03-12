@@ -1,8 +1,192 @@
-'use strict';
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(factory());
+}(this, (function () { 'use strict';
 
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+function assert(condition, message) {
+}
 
-var fs = _interopDefault(require('fs'));
+var serializables = {};
+
+function addSerializable(serializable) {
+	assert(serializables[serializable.id] === undefined, ("Serializable id clash " + (serializable.id)));
+	serializables[serializable.id] = serializable;
+}
+
+function getSerializable$1(id) {
+	return serializables[id] || null;
+}
+
+
+
+function removeSerializable(id) {
+	if (serializables[id])
+		{ delete serializables[id]; }
+	else
+		{ throw new Error('Serializable not found!'); }
+}
+
+// reference parameters are not sent over net. they are helpers in local game instance
+var changeType = {
+	addSerializableToTree: 'a', // parentId, reference
+	setPropertyValue: 's', // id, value
+	deleteSerializable: 'd', // id
+	move: 'm', // id, parentId
+	deleteAllChildren: 'c', // id
+};
+var keyToShortKey = {
+	id: 'i', // obj.id
+	type: 't', // changeType.*
+	value: 'v', // value after toJSON
+	parentId: 'p' // obj._parent.id
+};
+var shortKeyToKey = {};
+Object.keys(keyToShortKey).forEach(function (k) {
+	shortKeyToKey[keyToShortKey[k]] = k;
+});
+
+var origin;
+
+function setChangeOrigin(_origin) {
+}
+
+var externalChange = false;
+function addChange(type, reference) {
+	assert(origin, 'Change without origin!');
+	if (!reference.id) { return; }
+	
+	var change = {
+		type: type,
+		reference: reference,
+		id: reference.id,
+		external: externalChange,
+		origin: origin
+	};
+	if (type === changeType.setPropertyValue) {
+		change.value = reference._value;
+	} else if (type === changeType.move) {
+		change.parent = reference._parent;
+	} else if (type === changeType.addSerializableToTree) {
+		change.parent = reference._parent;
+		delete change.id;
+	}
+	
+
+	for (var i = 0; i < listeners.length; ++i) {
+		listeners[i](change);
+	}
+
+}
+
+function executeExternal(callback) {
+	setChangeOrigin('external');
+	if (externalChange) { return callback(); }
+	externalChange = true;
+	callback();
+	externalChange = false;
+}
+
+var listeners = [];
+
+function addChangeListener(callback) {
+	assert(typeof callback === 'function');
+	listeners.push(callback);
+}
+
+function packChange(change) {
+	if (change.packedChange)
+		{ return change.packedChange; } // optimization
+	
+	var packed = {};
+	try {
+		if (change.parent)
+			{ change.parentId = change.parent.id; }
+		
+		if (change.type === changeType.addSerializableToTree) {
+			if (change.reference) {
+				change.value = change.reference.toJSON();
+			} else if (change.value) {
+				// change.value = change.value; // no changes
+			} else {
+				assert(false, 'invalid change of type addSerializableToTree', change);
+			}
+		} else if (change.value) {
+			change.value = change.reference.propertyType.type.toJSON(change.value);
+		}
+
+		Object.keys(keyToShortKey).forEach(function (key) {
+			if (change[key]) {
+				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
+				packed[keyToShortKey[key]] = change[key];
+			}
+		});
+	} catch(e) {
+		console.log('PACK ERROR', e);
+	}
+	return packed;
+}
+
+function unpackChange(packedChange) {
+	var change = {
+		packedChange: packedChange // optimization
+	};
+	Object.keys(packedChange).forEach(function (shortKey) {
+		var key = shortKeyToKey[shortKey];
+		change[key] = packedChange[shortKey];
+	});
+	if (!change.type)
+		{ change.type = changeType.setPropertyValue; }
+	
+	if (change.type === changeType.addSerializableToTree) {
+		// reference does not exist because it has not been created yet
+		change.id = change.value.id;
+	} else {
+		change.reference = getSerializable$1(change.id);
+		if (change.reference) {
+			change.id = change.reference.id;
+		} else {
+			console.error('received a change with unknown id', change, 'packed:', packedChange);
+			return null;
+		}
+	}
+	
+	if (change.parentId)
+		{ change.parent = getSerializable$1(change.parentId); }
+	return change;
+}
+
+function executeChange(change) {
+	var newScene;
+	
+	executeExternal(function () {
+		console.log('execute change', change.type, change.id || change.value);
+		if (change.type === changeType.setPropertyValue) {
+			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
+		} else if (change.type === changeType.addSerializableToTree) {
+			if (change.parent) {
+				var obj = Serializable.fromJSON(change.value);
+				change.parent.addChild(obj);
+				if (obj.threeLetterType === 'ent') {
+					obj.localMaster = false;
+				}
+			} else {
+				var obj$1 = Serializable.fromJSON(change.value); // Scene does not need a parent
+				if (obj$1.threeLetterType === 'sce')
+					{ newScene = obj$1; }
+			}
+		} else if (change.type === changeType.deleteAllChildren) {
+			change.reference.deleteChildren();
+		} else if (change.type === changeType.deleteSerializable) {
+			change.reference.delete();
+		} else if (change.type === changeType.move) {
+			change.reference.move(change.parent);
+		}
+	});
+	
+	if (newScene)
+		{ newScene.play(); }
+}
 
 var isClient = typeof window !== 'undefined';
 var isServer = typeof module !== 'undefined';
@@ -254,17 +438,9 @@ Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
 	if (this._listeners.hasOwnProperty(event)) {
 		var listeners = this._listeners[event];
 		for (var i = listeners.length - 1; i >= 0; --i) {
-// @ifndef OPTIMIZE
-			try {
-// @endif
 
 				listeners[i](a, b, c);
 					
-// @ifndef OPTIMIZE
-			} catch(e) {
-				console.error(("Event " + event + " listener crashed."), this$1._listeners[event][i], e);
-			}
-// @endif
 		}
 	}
 };
@@ -413,237 +589,6 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 		return children;
 	}
 });
-
-var serializables = {};
-
-var DEBUG_CHANGES = 0;
-var CHECK_FOR_INVALID_ORIGINS = 0;
-
-function addSerializable(serializable) {
-	assert(serializables[serializable.id] === undefined, ("Serializable id clash " + (serializable.id)));
-	serializables[serializable.id] = serializable;
-}
-
-function getSerializable$1(id) {
-	return serializables[id] || null;
-}
-
-
-
-function removeSerializable(id) {
-	if (serializables[id])
-		{ delete serializables[id]; }
-	else
-		{ throw new Error('Serializable not found!'); }
-}
-
-// reference parameters are not sent over net. they are helpers in local game instance
-var changeType = {
-	addSerializableToTree: 'a', // parentId, reference
-	setPropertyValue: 's', // id, value
-	deleteSerializable: 'd', // id
-	move: 'm', // id, parentId
-	deleteAllChildren: 'c', // id
-};
-var keyToShortKey = {
-	id: 'i', // obj.id
-	type: 't', // changeType.*
-	value: 'v', // value after toJSON
-	parentId: 'p' // obj._parent.id
-};
-var shortKeyToKey = {};
-Object.keys(keyToShortKey).forEach(function (k) {
-	shortKeyToKey[keyToShortKey[k]] = k;
-});
-
-var origin;
-
-// @ifndef OPTIMIZE
-var previousVisualOrigin;
-function resetOrigin() {
-	origin = null;
-}
-function getChangeOrigin() {
-	return origin;
-}
-// @endif
-function setChangeOrigin(_origin) {
-	// @ifndef OPTIMIZE
-	if (_origin !== origin) {
-		origin = _origin;
-		if (DEBUG_CHANGES && _origin && _origin !== previousVisualOrigin) {
-			console.log('origin', previousVisualOrigin);
-			previousVisualOrigin = _origin;
-		}
-		
-		if (CHECK_FOR_INVALID_ORIGINS)
-			{ setTimeout(resetOrigin); }
-	}
-	// @endif
-}
-
-var externalChange = false;
-function addChange(type, reference) {
-	assert(origin, 'Change without origin!');
-	if (!reference.id) { return; }
-	
-	var change = {
-		type: type,
-		reference: reference,
-		id: reference.id,
-		external: externalChange,
-		origin: origin
-	};
-	if (type === changeType.setPropertyValue) {
-		change.value = reference._value;
-	} else if (type === changeType.move) {
-		change.parent = reference._parent;
-	} else if (type === changeType.addSerializableToTree) {
-		change.parent = reference._parent;
-		delete change.id;
-	}
-	
-	// @ifndef OPTIMIZE
-	if (DEBUG_CHANGES)
-		{ console.log('change', change); }
-
-	var previousOrigin = origin;
-	// @endif
-
-	for (var i = 0; i < listeners.length; ++i) {
-		listeners[i](change);
-	}
-
-	// @ifndef OPTIMIZE
-	if (origin !== previousOrigin) {
-		if (DEBUG_CHANGES)
-			{ console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin); }
-		origin = previousOrigin;
-	}
-	// @endif
-}
-
-function executeExternal(callback) {
-	setChangeOrigin('external');
-	if (externalChange) { return callback(); }
-	externalChange = true;
-	callback();
-	externalChange = false;
-}
-
-var listeners = [];
-
-function addChangeListener(callback) {
-	assert(typeof callback === 'function');
-	listeners.push(callback);
-}
-
-function packChange(change) {
-	if (change.packedChange)
-		{ return change.packedChange; } // optimization
-	
-	var packed = {};
-	try {
-		if (change.parent)
-			{ change.parentId = change.parent.id; }
-		
-		if (change.type === changeType.addSerializableToTree) {
-			if (change.reference) {
-				change.value = change.reference.toJSON();
-			} else if (change.value) {
-				// change.value = change.value; // no changes
-			} else {
-				assert(false, 'invalid change of type addSerializableToTree', change);
-			}
-		} else if (change.value) {
-			change.value = change.reference.propertyType.type.toJSON(change.value);
-		}
-
-		Object.keys(keyToShortKey).forEach(function (key) {
-			if (change[key]) {
-				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
-				packed[keyToShortKey[key]] = change[key];
-			}
-		});
-	} catch(e) {
-		console.log('PACK ERROR', e);
-	}
-	return packed;
-}
-
-function unpackChange(packedChange) {
-	var change = {
-		packedChange: packedChange // optimization
-	};
-	Object.keys(packedChange).forEach(function (shortKey) {
-		var key = shortKeyToKey[shortKey];
-		change[key] = packedChange[shortKey];
-	});
-	if (!change.type)
-		{ change.type = changeType.setPropertyValue; }
-	
-	if (change.type === changeType.addSerializableToTree) {
-		// reference does not exist because it has not been created yet
-		change.id = change.value.id;
-	} else {
-		change.reference = getSerializable$1(change.id);
-		if (change.reference) {
-			change.id = change.reference.id;
-		} else {
-			console.error('received a change with unknown id', change, 'packed:', packedChange);
-			return null;
-		}
-	}
-	
-	if (change.parentId)
-		{ change.parent = getSerializable$1(change.parentId); }
-	return change;
-}
-
-function executeChange(change) {
-	var newScene;
-	
-	executeExternal(function () {
-		console.log('execute change', change.type, change.id || change.value);
-		if (change.type === changeType.setPropertyValue) {
-			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
-		} else if (change.type === changeType.addSerializableToTree) {
-			if (change.parent) {
-				var obj = Serializable.fromJSON(change.value);
-				change.parent.addChild(obj);
-				if (obj.threeLetterType === 'ent') {
-					obj.localMaster = false;
-				}
-			} else {
-				var obj$1 = Serializable.fromJSON(change.value); // Scene does not need a parent
-				if (obj$1.threeLetterType === 'sce')
-					{ newScene = obj$1; }
-			}
-		} else if (change.type === changeType.deleteAllChildren) {
-			change.reference.deleteChildren();
-		} else if (change.type === changeType.deleteSerializable) {
-			change.reference.delete();
-		} else if (change.type === changeType.move) {
-			change.reference.move(change.parent);
-		}
-	});
-	
-	if (newScene)
-		{ newScene.play(); }
-}
-
-// @ifndef OPTIMIZE
-// @endif
-
-function assert(condition, message) {
-	// @ifndef OPTIMIZE
-	if (!condition) {
-		console.log('Assert', message, new Error().stack, '\norigin', getChangeOrigin());
-		debugger;
-		throw new Error(message);
-	}
-	// @endif
-}
 
 // Instance of a property
 var Property = (function (Serializable$$1) {
@@ -1056,17 +1001,7 @@ dataType.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default: function default$3(vec) {
-			// @ifndef OPTIMIZE
-			if (!(vec instanceof Vector))
-				{ throw new Error(); }
-			// @endif
 			vec = vec.clone();
-			// @ifndef OPTIMIZE
-			vec.x = parseFloat(vec.x);
-			vec.y = parseFloat(vec.y);
-			validateFloat(vec.x);
-			validateFloat(vec.y);
-			// @endif
 			return vec;
 		}
 	},
@@ -3017,241 +2952,147 @@ Component.register({
 	}
 });
 
-var idToGameServer = {}; // gameId => GameServer
-addChangeListener(function (change) {
-	var root = change.reference.getRoot();
-	if (root && root.threeLetterType === 'gam') {
-		var gameServer = idToGameServer[root.id];
-		if (gameServer) {
-			gameServer.saveNeeded = true;
-			gameServer.lastUsed = new Date();
-			return;
-		} else {
-			// console.log('Invalid change, gameServer does not exist', change, root.id);
-		}
-	} else {
-		console.log('Invalid change, root is not game', change, root);
-	}
-});
+// LZW-compress a string
 
-function gameIdToFilename(gameId) {
-	// File system can be case-insensitive. Add '_' before every uppercase letter.
-	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
+
+// Decompress an LZW-encoded string
+
+var networkEnabled = false;
+function setNetworkEnabled(enabled) {
+	if ( enabled === void 0 ) enabled = true;
+
+	networkEnabled = enabled;
 }
 
-var GameServer = function GameServer(game$$1) {
-	this.id = game$$1.id;
-	this.game = game$$1;
-	console.log('open GameServer', game$$1.id);
-	this.connections = getConnectionsForGameServer(game$$1.id);
-	this.lastUsed = new Date();
-	this.saveNeeded = false;
-		
-	idToGameServer[this.id] = this;
-};
-GameServer.prototype.addConnection = function addConnection (connection) {
-	this.connections.add(connection);
-};
-GameServer.prototype.removeConnection = function removeConnection (connection) {
-	this.connections.delete(connection);
-};
-GameServer.prototype.applyChange = function applyChange (change, origin) {
-		var this$1 = this;
-
-	if (change)
-		{ executeChange(change); }
-		
-	for (var connection of this$1.connections) {
-		if (connection !== origin) {
-			connection.sendChangeToOwner(change);
-		}
-	}
-};
-GameServer.prototype.save = function save () {
-	// we are in dist folder
-	fs.writeFile((__dirname + "/../gameData/" + (gameIdToFilename(this.id))), JSON.stringify(this.game.toJSON()));
-	this.saveNeeded = false;
-};
-GameServer.prototype.delete = function delete$1 () {
-	this.connections.clear = 0;
-		
-	if (this.game) {
-		this.game.delete();
-		this.game = null;
-	}
-		
-	delete idToGameServer[this.id];
-};
-
-setInterval(function () {
-	console.log('srvrs', Object.keys(idToGameServer));
-	Object.keys(idToGameServer).map(function (key) { return idToGameServer[key]; }).forEach(function (gameServer) {
-		if (new Date() - gameServer.lastUsed > 1000*10) {
-			console.log('GameServer delete', gameServer.id);
-			gameServer.delete();
-		} else if (gameServer.saveNeeded) {
-			console.log('GameServer save', gameServer.id);
-			gameServer.save();
-		}
-	});
-}, 3000);
-
-function createGame(gameId) {
-	var game$$1 = new Game(gameId);
-	game$$1.initWithChildren();
-	return game$$1;
+var shouldStartSceneWhenGameLoaded = false;
+function startSceneWhenGameLoaded() {
+	shouldStartSceneWhenGameLoaded = true;
 }
 
-function getOrCreateGameServer(gameId) {
-	if (!gameId || typeof gameId !== 'string' || gameId.length < 10 || !gameId.startsWith('gam')) {
-		setChangeOrigin(getOrCreateGameServer);
-		return Promise.resolve(new GameServer(createGame()));
+var socket;
+
+function isInSceneTree(change) {
+	return change.reference.getRoot().threeLetterType === 'sce';
+}
+
+function getQueryVariable(variable) {
+	var query = window.location.search.substring(1);
+	var vars = query.split('&');
+	for (var i = 0; i < vars.length; i++) {
+		var pair = vars[i].split('=');
+		if (decodeURIComponent(pair[0]) == variable) {
+			return decodeURIComponent(pair[1]);
+		}
 	}
+	console.log('Query variable %s not found', variable);
+}
+
+function tryToLoad() {
+	if (!window.io) { return setTimeout(tryToLoad, 10); }
 	
-	if (idToGameServer[gameId]) {
-		return Promise.resolve(idToGameServer[gameId]);
-	}
+	socket = io();
 	
-	return new Promise(function (resolve, reject) {
-		// We are in dist folder
-		fs.readFile((__dirname + "/../gameData/" + (gameIdToFilename(gameId))), function (err, data) {
-			if (idToGameServer[gameId])
-				{ resolve(idToGameServer[gameId]); } // if someone else started the game at the same time
-			
-			setChangeOrigin(getOrCreateGameServer);
-			
-			var game$$1;
-			if (err) {
-				game$$1 = createGame(gameId); // gameId is valid here
-			} else {
-				if (Buffer.isBuffer(data)) {
-					data = data.toString('utf8');
-				}
-				var json = JSON.parse(data);
-				game$$1 = Serializable.fromJSON(json);
+	var changes = [];
+	var valueChanges = {}; // id => change
+
+	addChangeListener(function (change) {
+		if (change.origin === 'external' || !networkEnabled)
+			{ return; } // Don't send a change that you have received.
+		
+		if (isInSceneTree(change)) // Don't sync scene
+			{ return; }
+		
+		if (change.type === changeType.setPropertyValue) {
+			var duplicateChange = valueChanges[change.id];
+			if (duplicateChange) {
+				changes.splice(changes.indexOf(duplicateChange), 1);
 			}
+			valueChanges[change.id] = change;
+		}
+		changes.push(change);
+	});
+	
+	setInterval(function () {
+		if (changes.length === 0)
+			{ return; }
+		var packedChanges = changes.map(packChange);
+		changes.length = 0;
+		valueChanges = {};
+		console.log('sending', packedChanges);
+		socket.emit('c', packedChanges);
+	}, 100);
+
+	socket.on('c', function (packedChanges) {
+		console.log('RECEIVE,', networkEnabled);
+		if (!networkEnabled)
+			{ return; }
+		
+		console.log('received', packedChanges);
+		packedChanges.forEach(function (change) {
+			change = unpackChange(change);
+			if (change) {
+				executeChange(change);
+			}
+		});
+	});
+	
+	socket.on('requestGameId', function (serverStartTime) {
+		if (game)
+			{ socket.emit('gameId', game.id); }
+	});
+
+	var clientStartTime = Date.now();
+	socket.on('refreshIfOlderThan', function (requiredClientTime) {
+		if (clientStartTime < requiredClientTime)
+			{ location.reload(); }
+	});
+	
+	socket.on('gameData', function (gameData) {
+		console.log('gameData', gameData);
+		executeExternal(function () {
+			Serializable.fromJSON(gameData);
+		});
+		localStorage.anotherGameId = gameData.id;
+		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
+		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
+		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
+		
+		if (shouldStartSceneWhenGameLoaded) {
+			var scene = game.getChildren('lvl')[0].createScene();
+			scene.play();
 			
-			resolve(new GameServer(game$$1));
-		});
-	});
-}
-
-var connections = new Set();
-var requiredClientTime = Date.now();
-
-
-process.on('message', function (msg) {
-	console.log(msg);
-	requiredClientTime = Date.now();
-	for (var connection of connections)
-		connection.refreshIfOld();
-});
-
-var Connection = function Connection(socket) {
-	var this$1 = this;
-
-	this.socket = socket;
-	this.gameId = null;
-
-	socket.on('disconnect', function () {
-		if (idToGameServer[this$1.gameId])
-			{ idToGameServer[this$1.gameId].removeConnection(this$1); }
-		connections.delete(this$1);
-		console.log('socket count', connections.size);
-	});
-
-	// change event
-	socket.on('c', function (changes) {
-		getOrCreateGameServer(this$1.gameId).then(function (gameServer) {
-			setChangeOrigin(this$1);
-			// console.log('changes', changes);
-			changes.map(unpackChange).forEach(function (change) {
-				if (change.type === changeType.addSerializableToTree && change.value.id.startsWith('gam')) {
-					console.log('ERROR, Client should not create a game.');
-					return; // Should not happen. Server creates all the games
-				} else if (gameServer) {
-					gameServer.applyChange(change, this$1);
-				} else {
-					console.log('ERROR, No gameServer for', this$1.gameId);
-				}
+			game.listen('levelCompleted', function () {
+				scene.play();
 			});
-		});
+		}
 	});
-		
-	socket.on('gameId', function (gameId) {
-		this$1.setGameServer(gameId);
-	});
-		
-	socket.on('requestGameData', function (gameId) {
-		getOrCreateGameServer(gameId).then(function (gameServer) {
-			gameServer.addConnection(this$1);
-			this$1.setGameServer(gameServer.id);
-			socket.emit('gameData', gameServer.game.toJSON());
-		});
-	});
-		
-	connections.add(this);
-	console.log('socket count', connections.size);
-		
-	this.requestGameId();
-	this.refreshIfOld();
-};
-Connection.prototype.sendChangeToOwner = function sendChangeToOwner (change) {
-	console.log('SENDING', change.type);
-	change = packChange(change);
-	this.socket.emit('c', [change]);
-};
-Connection.prototype.setGameServer = function setGameServer (gameId) {
-		
-	if (gameId !== this.gameId) {
-		if (idToGameServer[this.gameId])
-			{ idToGameServer[this.gameId].removeConnection(this); }
-		this.gameId = gameId;
-	}
-};
-Connection.prototype.requestGameId = function requestGameId () {
-	this.socket.emit('requestGameId');
-};
-Connection.prototype.refreshIfOld = function refreshIfOld () {
-	this.socket.emit('refreshIfOlderThan', requiredClientTime);
-};
-
-setInterval(function () {
-	console.log('connections', Array.from(connections).map(function (conn) { return conn.gameId; }));
-}, 5000);
-
-function addSocket(socket) {
-	new Connection(socket);
+	
+	setTimeout(function () {
+		var gameId = getQueryVariable('gameId') || localStorage.anotherGameId;
+		console.log('requestGameData', gameId);
+		socket.emit('requestGameData', gameId);
+	}, 100);
 }
 
-function getConnectionsForGameServer(gameId) {
-	var set = new Set();
-	for (var connection of connections) {
-		if (connection.gameId === gameId)
-			{ set.add(connection); }
-	}
-	return set;
+if (isClient)
+	{ tryToLoad(); }
+
+startSceneWhenGameLoaded();
+setNetworkEnabled(true);
+
+var canvas;
+window.addEventListener('load', function () {
+	canvas = document.querySelector('canvas.anotherCanvas');
+	resizeCanvas();
+});
+window.addEventListener('resize', resizeCanvas);
+
+function resizeCanvas() {
+	if (!canvas)
+		{ return; }
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
 }
 
-var express = require('express');
-var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var compression = require('compression');
-
-app.use(compression({
-	level: 1
-}));
-app.use(express.static('public'));
-http.listen(3000, function(){
-	console.log('listening on *:3000');
-});
-
-io.on('connection', function(socket) {
-	addSocket(socket);
-});
-
-process.on('uncaughtException', function (err) {
-	console.error("Node.js Exception. " + err + " - " + err.stack);
-});
-//# sourceMappingURL=explore.server.js.map
+})));
+//# sourceMappingURL=explore.js.map

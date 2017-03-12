@@ -7,7 +7,7 @@ import { isClient } from '../util/environment';
 
 // import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
 // import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
-import { createWorld, deleteWorld, updateWorld } from '../feature/physicsP2';
+import { createWorld, deleteWorld, updateWorld } from '../feature/physics';
 
 let scene = null;
 export { scene };

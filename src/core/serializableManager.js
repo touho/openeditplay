@@ -46,6 +46,8 @@ Object.keys(keyToShortKey).forEach(k => {
 });
 
 let origin;
+
+// @ifndef OPTIMIZE
 let previousVisualOrigin;
 function resetOrigin() {
 	origin = null;
@@ -53,7 +55,9 @@ function resetOrigin() {
 export function getChangeOrigin() {
 	return origin;
 }
+// @endif
 export function setChangeOrigin(_origin) {
+	// @ifndef OPTIMIZE
 	if (_origin !== origin) {
 		origin = _origin;
 		if (DEBUG_CHANGES && _origin && _origin !== previousVisualOrigin) {
@@ -64,6 +68,7 @@ export function setChangeOrigin(_origin) {
 		if (CHECK_FOR_INVALID_ORIGINS)
 			setTimeout(resetOrigin);
 	}
+	// @endif
 }
 
 let externalChange = false;
@@ -87,16 +92,24 @@ export function addChange(type, reference) {
 		delete change.id;
 	}
 	
+	// @ifndef OPTIMIZE
 	if (DEBUG_CHANGES)
 		console.log('change', change);
-	
+
 	let previousOrigin = origin;
-	listeners.forEach(l => l(change));
+	// @endif
+
+	for (let i = 0; i < listeners.length; ++i) {
+		listeners[i](change);
+	}
+
+	// @ifndef OPTIMIZE
 	if (origin !== previousOrigin) {
 		if (DEBUG_CHANGES)
 			console.log('origin changed from', previousOrigin, 'to', origin && origin.constructor || origin);
 		origin = previousOrigin;
 	}
+	// @endif
 }
 
 export function executeExternal(callback) {
