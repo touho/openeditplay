@@ -86,8 +86,8 @@ export default class Vector {
 
 		return this;
 	}
-	rotateTo(rotation) {
-		return this.rotate(rotation-this.verticalAngle());
+	rotateTo(angle) {
+		return this.rotate(angle-this.verticalAngle());
 	}
 	isEqualTo(vec) {
 		return this.x === vec.x && this.y === vec.y;
@@ -105,6 +105,9 @@ export default class Vector {
 	}
 	toString() {
 		return `[${this.x}, ${this.y}]`;
+	}
+	toArray() {
+		return [this.x, this.y];
 	}
 }
 Vector.fromObject = function(obj) {

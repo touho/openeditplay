@@ -17,19 +17,23 @@ const concat = require('concat-files');
 
 const ROOT = path.join(__dirname, './');
 
+let targets = ['dev', 'all']; // TODO: add 'devOnce' and 'allOnce'
+let target = process.argv[2];
+if (targets.indexOf(target) < 0)
+	target = targets[0];
+console.log('Autobuilding', target);
+	
+
 const editorCssDependencies = [
 	'src/external/font-awesome.min.css'
 ];
 const editorJsDependencies = [
 	'node_modules/jquery/dist/jquery.min.js',
 	'src/external/jstree.min.js',
-	'src/external/matter.js',
-	'src/external/physicsjs-full.js',
 	'src/external/p2.js'
 ];
 const jsDependencies = [
-	'src/external/matter.min.js',
-	'src/external/verlet-1.0.0.min.js'
+	'src/external/p2.min.js',
 ];
 
 // Editor CSS
@@ -54,20 +58,24 @@ concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.ed
 });
 
 // Game engine JS Dependencies
-concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
-	if (err) throw new Error(err);
-	console.log(`Built dist/explore.dependencies.js`);
-	copy('dist/explore.dependencies.js', 'public/');
-});
+if (target === 'all') {
+	concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
+		if (err) throw new Error(err);
+		console.log(`Built dist/explore.dependencies.js`);
+		copy('dist/explore.dependencies.js', 'public/');
+	});
+}
 
 // Game engine JS
 // autobuildJs('src/main.js', 'dist/explore.js', {
 // 	copyTo: 'public/'
 // });
-autobuildJs('src/main.js', 'dist/explore.min.js', {
-	uglify: true,
-	copyTo: 'public/'
-});
+if (target === 'all') {
+	autobuildJs('src/main.js', 'dist/explore.min.js', {
+		uglify: true,
+		copyTo: 'public/'
+	});
+}
 
 // Editor JS
 autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {

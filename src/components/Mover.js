@@ -28,14 +28,14 @@ Component.register({
 					this.Transform.position = this.Transform.position;
 				}
 				if (dx && this.rotationSpeed) {
-					this.Transform.rotation += dt * dx * this.rotationSpeed;
+					this.Transform.angle += dt * dx * this.rotationSpeed;
 				}
 			} else {
 				let change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
 				this.Transform.position.set(this.Transform.position).add(change);
 				
 				if (this.rotationSpeed)
-					this.Transform.rotation += dt * this.rotationSpeed;
+					this.Transform.angle += dt * this.rotationSpeed;
 			}
 		}
 	}

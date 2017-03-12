@@ -9,7 +9,7 @@ Component.register({
 	properties: [
 		Prop('positionVariance', new Vector(0, 0), Prop.vector),
 		Prop('scaleVariance', new Vector(0, 0), Prop.vector),
-		Prop('rotationVariance', 0, Prop.float, Prop.float.range(0, Math.PI), Prop.flagDegreesInEditor)
+		Prop('angleVariance', 0, Prop.float, Prop.float.range(0, Math.PI), Prop.flagDegreesInEditor)
 	],
 	prototype: {
 		onStart() {
@@ -19,8 +19,8 @@ Component.register({
 			if (!this.scaleVariance.isZero())
 				this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(-1 + 2 * Math.random()));
 			
-			if (this.rotationVariance)
-				this.Transform.rotation += this.rotationVariance * (-1 + 2 * Math.random());
+			if (this.angleVariance)
+				this.Transform.angle += this.angleVariance * (-1 + 2 * Math.random());
 		}
 	}
 });

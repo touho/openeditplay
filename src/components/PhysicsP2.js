@@ -1,25 +1,27 @@
 import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import p2, { addBody, deleteBody, addContactMaterial } from '../feature/physicsP2';
-import { getChangeOrigin } from '../core/serializableManager';
+import p2, { addBody, deleteBody, createMaterial } from '../feature/physicsP2';
 
 const PHYSICS_SCALE = 1/50;
 
-let dynamicMaterial = new p2.Material();
-let staticMaterial = new p2.Material();
+const type = {
+	dynamic: p2.Body.DYNAMIC,
+	kinematic: p2.Body.KINEMATIC,
+	static: p2.Body.STATIC
+};
 
 Component.register({
 	name: 'Physics',
 	icon: 'fa-stop',
 	allowMultiple: false,
 	properties: [
+		Prop('type', 'dynamic', Prop.enum, Prop.enum.values('dynamic', 'static')),
+		Prop('density', 1, Prop.float, Prop.float.range(0, 100), Prop.visibleIf('type', 'dynamic')),
+		Prop('startStill', false, Prop.bool, Prop.visibleIf('type', 'dynamic')),
+		Prop('drag', 0.1, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'dynamic')),
+		Prop('rotationalDrag', 0.1, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'dynamic')),
 		Prop('bounciness', 0, Prop.float, Prop.float.range(0, 1)),
-		Prop('density', 0.001, Prop.float, Prop.float.range(0, 100)),
-		Prop('friction', 0.1, Prop.float, Prop.float.range(0, 1)),
-		Prop('frictionAir', 0.01, Prop.float, Prop.float.range(0, 1)),
-		Prop('frictionStatic', 0.5, Prop.float, Prop.float.range(0, 10)),
-		Prop('isStatic', false, Prop.bool),
-		Prop('startStill', false, Prop.bool)
+		Prop('friction', 0.1, Prop.float, Prop.float.range(0, 1))
 	],
 	requirements: [
 		'Rect'
@@ -27,86 +29,74 @@ Component.register({
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
 		init() {
-			if (!this.scene._p2World._materialInited) {
-				let settings = {
-					restitution: 1,
-					stiffness: Number.MAX_VALUE,
-					friction: 1
-				};
-				addContactMaterial(this.scene, dynamicMaterial, staticMaterial, settings);
-				addContactMaterial(this.scene, dynamicMaterial, dynamicMaterial, settings);
-				this.scene._p2World._materialInited = true;
-			}
-			/*
-			 let update = callback => {
-			 return value => {
-			 if (!this.updatingOthers && this.body) {
-			 callback(value);
-			 Matter.Sleeping.set(this.body, false);
-			 }
-			 }
-			 };
+			let update = callback => {
+				return value => {
+					if (!this.updatingOthers && this.body) {
+						callback(value);
+						if (this.type === 'dynamic')
+							this.body.wakeUp();
+					}
+				}
+			};
 
-			 this.listenProperty(this.Transform, 'position', update(position => Matter.Body.setPosition(this.body, position)));
-			 this.listenProperty(this.Transform, 'rotation', update(rotation => Matter.Body.setAngle(this.body, rotation)));
-			 this.listenProperty(this, 'density', update(density => {
-			 // let oldMass = this.body.mass;
-			 Matter.Body.setDensity(this.body, density);
+			this.listenProperty(this.Transform, 'position', update(position => this.body.position = position.toArray().map(x => x * PHYSICS_SCALE)));
+			this.listenProperty(this.Transform, 'angle', update(angle => this.body.angle = angle));
+			this.listenProperty(this, 'density', update(density => {
+				this.body.setDensity(density);
+			}));
+			this.listenProperty(this, 'friction', update(friction => this.updateMaterial()));
+			this.listenProperty(this, 'drag', update(drag => this.body.damping = drag));
+			this.listenProperty(this, 'type', update(type => {
+				this.body.type = type[this.type];
+				this.entity.sleep();
+				this.entity.wakeUp();
+				// this.body.setDensity(this.density);
+			}));
+			this.listenProperty(this, 'bounciness', update(bounciness => this.updateMaterial()));
 
-			 // Remove this when Matter.js will fix setDensity
-
-			 // if (this.body.inertia !== undefined && this.body.inertia !== Infinity)
-			 // 	Matter.Body.setInertia(this.body, this.body.inertia * this.body.mass / oldMass);
-
-			 // Matter.Body.setVertices(this.body, this.body.vertices);
-			 }));
-			 this.listenProperty(this, 'friction', update(friction => this.body.friction = friction));
-			 this.listenProperty(this, 'frictionAir', update(frictionAir => this.body.frictionAir = frictionAir));
-			 this.listenProperty(this, 'frictionStatic', update(frictionStatic => this.body.frictionStatic = frictionStatic));
-			 this.listenProperty(this, 'isStatic', update(isStatic => Matter.Body.setStatic(this.body, isStatic)));
-			 this.listenProperty(this, 'bounciness', update(bounciness => this.body.restitution = bounciness));
-			 */
+			if (this._isInTree)
+				this.createBody();
 		},
 		createBody() {
-			/*
-			this.body = Physics.body('rectangle', {
-				x: this.Transform.position.x,
-				y: this.Transform.position.y,
-				angle: this.Transform.rotation,
-				radius: this.Rect.size.x,
-				width: this.Rect.size.x,
-				height: this.Rect.size.y,
-				treatment: this.isStatic ? 'static' : 'dynamic',
-				restitution: this.bounciness,
-				cof: this.friction
-			});
-			*/
-
 			this.body = new p2.Body({
-				mass: this.isStatic ? 0 : 1,
+				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
-				angle: this.Transform.rotation,
+				angle: this.Transform.angle,
 				velocity: [0, 0],
 				angularVelocity: 0,
-				allowSleep: true
+				sleepTimeLimit: 0.5,
+				sleepSpeedLimit: 0.3,
+				damping: this.drag,
+				angularDamping: this.rotationalDrag
 			});
+			this.body.entity = this.entity;
 			let shape = new p2.Box({
 				width: this.Rect.size.x * PHYSICS_SCALE,
 				height: this.Rect.size.y * PHYSICS_SCALE
 			});
-			shape.material = this.isStatic ? staticMaterial : dynamicMaterial;
 			this.body.addShape(shape);
-			// if (!this.isStatic)
-			// 	this.body.setDensity(this.density);
+			this.updateMaterial();
+			
+			if (this.type === 'dynamic')
+				this.body.setDensity(this.density);
+			
 			addBody(this.scene, this.body);
 		},
+		updateMaterial() {
+			let material = createMaterial(this.scene, {
+				friction: this.friction,
+				restitution: this.bounciness,
+				// stiffness: 1e6,
+				// relaxation: 4,
+				// frictionStiffness: 1e6,
+				// frictionRelaxation: 4,
+				// surfaceVelocity: 0
+			});
+			this.body.shapes.forEach(s => s.material = material);
+		},
 		onStart() {
-			// Sleeping must be set in onStart because editing sleeping body does not work
-			
-			/*
-			if (this.startStill)
-				this.body.sleep(true);
-				*/
+			if (this.startStill && this.type === 'dynamic')
+				this.body.sleep();
 		},
 		setInTreeStatus(inTree) {
 			if (inTree)
@@ -119,7 +109,7 @@ Component.register({
 
 			this.updatingOthers = true;
 			this.Transform.position = Vector.fromArray(this.body.position).divideScalar(PHYSICS_SCALE);
-			this.Transform.rotation = this.body.angle;
+			this.Transform.angle = this.body.angle;
 			this.updatingOthers = false;
 		},
 		sleep() {

@@ -17,7 +17,7 @@ class Help {
 		return scene;
 	}
 	get world() {
-		return scene._matterEngine.world;
+		return scene._p2World;
 	}
 	get Vector() {
 		return Vector;

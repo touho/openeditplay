@@ -24,7 +24,7 @@ Component.register({
 			context.save();
 			context.fillStyle = this.style;
 			context.translate(x+w/2, y+h/2);
-			context.rotate(this.Transform.rotation);
+			context.rotate(this.Transform.angle);
 			context.fillRect(-w/2, -h/2, w, h);
 			context.restore();
 		}

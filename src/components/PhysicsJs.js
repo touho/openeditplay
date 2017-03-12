@@ -56,7 +56,7 @@ Component.register({
 			this.body = Physics.body('rectangle', {
 				x: this.Transform.position.x,
 				y: this.Transform.position.y,
-				angle: this.Transform.rotation,
+				angle: this.Transform.angle,
 				radius: this.Rect.size.x,
 				width: this.Rect.size.x,
 				height: this.Rect.size.y,
@@ -68,7 +68,7 @@ Component.register({
 			/*
 			, this.Transform.position.x, this.Transform.position.y, this.Rect.size.x, this.Rect.size.y, {
 				isStatic: this.isStatic,
-				angle: this.Transform.rotation,
+				angle: this.Transform.angle,
 				density: this.density,
 				friction: this.friction,
 				frictionAir: this.frictionAir,
@@ -94,7 +94,7 @@ Component.register({
 
 			this.updatingOthers = true;
 			this.Transform.position = Vector.fromObject(this.body.state.pos);
-			this.Transform.rotation = this.body.state.angular.pos;
+			this.Transform.angle = this.body.state.angular.pos;
 			this.updatingOthers = false;
 		},
 		sleep() {

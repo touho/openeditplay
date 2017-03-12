@@ -9,6 +9,6 @@ Component.register({
 	properties: [
 		Prop('position', new Vector(0, 0), Prop.vector),
 		Prop('scale', new Vector(1, 1), Prop.vector),
-		Prop('rotation', 0, Prop.float, Prop.float.modulo(0, Math.PI * 2), Prop.flagDegreesInEditor)
+		Prop('angle', 0, Prop.float, Prop.float.modulo(0, Math.PI * 2), Prop.flagDegreesInEditor)
 	]
 });

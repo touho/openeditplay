@@ -38,7 +38,7 @@ export default class Entity extends Serializable {
 	
 	clone() {
 		let entity = new Entity();
-		entity.prototype = this.prototype;
+		entity.prototype = this.prototype.clone();
 		entity.sleeping = this.sleeping;
 		let components = [];
 		this.components.forEach((value, key) => {

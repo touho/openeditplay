@@ -90,6 +90,7 @@ export default class Scene extends Serializable {
 		return !this.playing && this.time === 0;
 	}
 	reset() {
+		this.resetting = true;
 		this.pause();
 		this.deleteChildren();
 
@@ -98,8 +99,10 @@ export default class Scene extends Serializable {
 		
 		if (this.level)
 			this.level.createScene(this);
+		
 		this.time = 0;
 		this.draw();
+		delete this.resetting;
 	}
 	pause() {
 		if (!this.playing) return;

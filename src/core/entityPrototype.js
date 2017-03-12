@@ -51,11 +51,11 @@ export default class EntityPrototype extends Prototype {
 				});
 				transform.addChild(scale);
 
-				let rotation = transform.componentClass._propertyTypesByName.rotation.createProperty({
-					value: child.findChild('prp', prp => prp.name === 'rotation').value,
+				let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+					value: child.findChild('prp', prp => prp.name === 'angle').value,
 					predefinedId: id + '_r'
 				});
-				transform.addChild(rotation);
+				transform.addChild(angle);
 				
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
@@ -104,7 +104,7 @@ export default class EntityPrototype extends Prototype {
 					json.w = floatToJSON(prp.value.x);
 					json.h = floatToJSON(prp.value.y);
 				}
-			} else if (prp.name === 'rotation') {
+			} else if (prp.name === 'angle') {
 				if (prp.value !== 0)
 					json.a = floatToJSON(prp.value);
 			}
@@ -159,11 +159,11 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
 	});
 	transform.addChild(scale);
 
-	let rotation = transform.componentClass._propertyTypesByName.rotation.createProperty({
+	let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 		value: 0,
 		predefinedId: id + '_r'
 	});
-	transform.addChild(rotation);
+	transform.addChild(angle);
 
 	let name = EntityPrototype._propertyTypesByName.name.createProperty({
 		value: prototype.name,
@@ -184,7 +184,7 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let transformId = json.id + '_t';
 	let positionId = json.id + '_p';
 	let scaleId = json.id + '_s';
-	let rotationId = json.id + '_r';
+	let angleId = json.id + '_r';
 	
 	let name = Prototype._propertyTypesByName.name.createProperty({ 
 		value: json.n === undefined ? entityPrototype.prototype.name : json.n, 
@@ -206,11 +206,11 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	});
 	transformData.addChild(scale);
 
-	let rotation = transformClass._propertyTypesByName.rotation.createProperty({
+	let angle = transformClass._propertyTypesByName.angle.createProperty({
 		value: json.a || 0,
-		predefinedId: rotationId
+		predefinedId: angleId
 	});
-	transformData.addChild(rotation);
+	transformData.addChild(angle);
 	
 	
 	entityPrototype.initWithChildren([name, transformData]);

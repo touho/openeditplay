@@ -614,6 +614,7 @@ function assert(condition, message) {
 	}
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -700,6 +701,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -923,8 +928,8 @@ Vector.prototype.rotate = function rotate (angle) {
 
 	return this;
 };
-Vector.prototype.rotateTo = function rotateTo (rotation) {
-	return this.rotate(rotation-this.verticalAngle());
+Vector.prototype.rotateTo = function rotateTo (angle) {
+	return this.rotate(angle-this.verticalAngle());
 };
 Vector.prototype.isEqualTo = function isEqualTo (vec) {
 	return this.x === vec.x && this.y === vec.y;
@@ -942,6 +947,9 @@ Vector.prototype.set = function set (vec) {
 };
 Vector.prototype.toString = function toString () {
 	return ("[" + (this.x) + ", " + (this.y) + "]");
+};
+Vector.prototype.toArray = function toArray () {
+	return [this.x, this.y];
 };
 
 Vector.fromObject = function(obj) {
@@ -1240,7 +1248,7 @@ var Entity = (function (Serializable$$1) {
 	
 	Entity.prototype.clone = function clone () {
 		var entity = new Entity();
-		entity.prototype = this.prototype;
+		entity.prototype = this.prototype.clone();
 		entity.sleeping = this.sleeping;
 		var components = [];
 		this.components.forEach(function (value, key) {
@@ -1820,7 +1828,7 @@ var p2;
 if (isClient)
 	{ p2 = window.p2; }
 else
-	{ p2 = require('../src/external/p2'); } // from dist folder
+	{ p2 = require('../src/external/p2'); }
 
 var p2$1 = p2;
 
@@ -1841,7 +1849,8 @@ function updateWorld(owner, dt) {
 function deleteWorld(owner) {
 	if (owner._p2World)
 		{ owner._p2World.clear(); }
-	owner._p2World = null;
+	delete owner._p2World;
+	delete owner._p2Materials;
 }
 function addBody(owner, body) {
 	owner._p2World.addBody(body);
@@ -1850,10 +1859,63 @@ function deleteBody(owner, body) {
 	owner._p2World.removeBody(body);
 }
 
-function addContactMaterial(owner, A, B, options) {
-	owner._p2World.addContactMaterial(new p2.ContactMaterial(A, B, options));
+// export function addContactMaterial(owner, A, B, options) {
+// 	owner._p2World.addContactMaterial(new p2.ContactMaterial(A, B, options));
+// }
+
+var defaultMaterialOptions = {
+	friction: 0.3,
+	restitution: 0,
+	stiffness: 1e6,
+	relaxation: 4,
+	frictionStiffness: 1e6,
+	frictionRelaxation: 4,
+	surfaceVelocity: 0
+};
+
+function createMaterial(owner, options) {
+	if (!owner._p2Materials)
+		{ owner._p2Materials = {}; }
+	var materials = owner._p2Materials;
+	options = Object.assign({}, defaultMaterialOptions, options);
+	var hash = [
+		options.friction,
+		options.restitution,
+		options.stiffness,
+		options.relaxation,
+		options.frictionStiffness,
+		options.frictionRelaxation,
+		options.surfaceVelocity
+	].join(';');
+	
+	if (materials[hash])
+		{ return materials[hash]; }
+	
+	var material = new p2.Material();
+	material.options = options;
+	materials[hash] = material;
+	
+	for (var h in materials) {
+		var m = materials[h];
+		var o1 = material.options;
+		var o2 = m.options;
+		var contactMaterial = new p2.ContactMaterial(material, m, {
+			friction:				Math.min(o1.friction, o2.friction),
+			restitution:			o1.restitution * o2.restitution,
+			stiffness:				Math.min(o1.stiffness, o2.stiffness),
+			relaxation:				(o1.relaxation + o2.relaxation) / 2,
+			frictionStiffness:		Math.min(o1.frictionStiffness, o2.frictionStiffness),
+			frictionRelaxation:		(o1.frictionRelaxation + o2.frictionRelaxation) / 2,
+			surfaceVelocity:		Math.max(o1.surfaceVelocity, o2.surfaceVelocity)
+		});
+		owner._p2World.addContactMaterial(contactMaterial);
+	}
+	
+	return material;
 }
 
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -1943,6 +2005,7 @@ var Scene = (function (Serializable$$1) {
 		return !this.playing && this.time === 0;
 	};
 	Scene.prototype.reset = function reset () {
+		this.resetting = true;
 		this.pause();
 		this.deleteChildren();
 
@@ -1951,8 +2014,10 @@ var Scene = (function (Serializable$$1) {
 		
 		if (this.level)
 			{ this.level.createScene(this); }
+		
 		this.time = 0;
 		this.draw();
+		delete this.resetting;
 	};
 	Scene.prototype.pause = function pause () {
 		if (!this.playing) { return; }
@@ -2020,6 +2085,7 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
+// Instance of a component, see componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2221,6 +2287,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2270,11 +2338,11 @@ var EntityPrototype = (function (Prototype$$1) {
 				});
 				transform.addChild(scale);
 
-				var rotation = transform.componentClass._propertyTypesByName.rotation.createProperty({
-					value: child.findChild('prp', function (prp) { return prp.name === 'rotation'; }).value,
+				var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+					value: child.findChild('prp', function (prp) { return prp.name === 'angle'; }).value,
 					predefinedId: id + '_r'
 				});
-				transform.addChild(rotation);
+				transform.addChild(angle);
 				
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
@@ -2325,7 +2393,7 @@ var EntityPrototype = (function (Prototype$$1) {
 					json.w = floatToJSON(prp.value.x);
 					json.h = floatToJSON(prp.value.y);
 				}
-			} else if (prp.name === 'rotation') {
+			} else if (prp.name === 'angle') {
 				if (prp.value !== 0)
 					{ json.a = floatToJSON(prp.value); }
 			}
@@ -2386,11 +2454,11 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 	});
 	transform.addChild(scale);
 
-	var rotation = transform.componentClass._propertyTypesByName.rotation.createProperty({
+	var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 		value: 0,
 		predefinedId: id + '_r'
 	});
-	transform.addChild(rotation);
+	transform.addChild(angle);
 
 	var name = EntityPrototype._propertyTypesByName.name.createProperty({
 		value: prototype.name,
@@ -2411,7 +2479,7 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var transformId = json.id + '_t';
 	var positionId = json.id + '_p';
 	var scaleId = json.id + '_s';
-	var rotationId = json.id + '_r';
+	var angleId = json.id + '_r';
 	
 	var name = Prototype._propertyTypesByName.name.createProperty({ 
 		value: json.n === undefined ? entityPrototype.prototype.name : json.n, 
@@ -2433,11 +2501,11 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	});
 	transformData.addChild(scale);
 
-	var rotation = transformClass._propertyTypesByName.rotation.createProperty({
+	var angle = transformClass._propertyTypesByName.angle.createProperty({
 		value: json.a || 0,
-		predefinedId: rotationId
+		predefinedId: angleId
 	});
-	transformData.addChild(rotation);
+	transformData.addChild(angle);
 	
 	
 	entityPrototype.initWithChildren([name, transformData]);
@@ -2487,7 +2555,7 @@ Component.register({
 	properties: [
 		createPropertyType('position', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('scale', new Vector(1, 1), createPropertyType.vector),
-		createPropertyType('rotation', 0, createPropertyType.float, createPropertyType.float.modulo(0, Math.PI * 2), createPropertyType.flagDegreesInEditor)
+		createPropertyType('angle', 0, createPropertyType.float, createPropertyType.float.modulo(0, Math.PI * 2), createPropertyType.flagDegreesInEditor)
 	]
 });
 
@@ -2499,7 +2567,7 @@ Component.register({
 	properties: [
 		createPropertyType('positionVariance', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('scaleVariance', new Vector(0, 0), createPropertyType.vector),
-		createPropertyType('rotationVariance', 0, createPropertyType.float, createPropertyType.float.range(0, Math.PI), createPropertyType.flagDegreesInEditor)
+		createPropertyType('angleVariance', 0, createPropertyType.float, createPropertyType.float.range(0, Math.PI), createPropertyType.flagDegreesInEditor)
 	],
 	prototype: {
 		onStart: function onStart() {
@@ -2509,8 +2577,8 @@ Component.register({
 			if (!this.scaleVariance.isZero())
 				{ this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
 			
-			if (this.rotationVariance)
-				{ this.Transform.rotation += this.rotationVariance * (-1 + 2 * Math.random()); }
+			if (this.angleVariance)
+				{ this.Transform.angle += this.angleVariance * (-1 + 2 * Math.random()); }
 		}
 	}
 });
@@ -2639,14 +2707,14 @@ Component.register({
 					this.Transform.position = this.Transform.position;
 				}
 				if (dx && this.rotationSpeed) {
-					this.Transform.rotation += dt * dx * this.rotationSpeed;
+					this.Transform.angle += dt * dx * this.rotationSpeed;
 				}
 			} else {
 				var change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
 				this.Transform.position.set(this.Transform.position).add(change);
 				
 				if (this.rotationSpeed)
-					{ this.Transform.rotation += dt * this.rotationSpeed; }
+					{ this.Transform.angle += dt * this.rotationSpeed; }
 			}
 		}
 	}
@@ -2675,7 +2743,7 @@ Component.register({
 			context.save();
 			context.fillStyle = this.style;
 			context.translate(x+w/2, y+h/2);
-			context.rotate(this.Transform.rotation);
+			context.rotate(this.Transform.angle);
 			context.fillRect(-w/2, -h/2, w, h);
 			context.restore();
 		}
@@ -2785,21 +2853,24 @@ Component.register({
 
 var PHYSICS_SCALE = 1/50;
 
-var dynamicMaterial = new p2$1.Material();
-var staticMaterial = new p2$1.Material();
+var type = {
+	dynamic: p2$1.Body.DYNAMIC,
+	kinematic: p2$1.Body.KINEMATIC,
+	static: p2$1.Body.STATIC
+};
 
 Component.register({
 	name: 'Physics',
 	icon: 'fa-stop',
 	allowMultiple: false,
 	properties: [
+		createPropertyType('type', 'dynamic', createPropertyType.enum, createPropertyType.enum.values('dynamic', 'static')),
+		createPropertyType('density', 1, createPropertyType.float, createPropertyType.float.range(0, 100), createPropertyType.visibleIf('type', 'dynamic')),
+		createPropertyType('startStill', false, createPropertyType.bool, createPropertyType.visibleIf('type', 'dynamic')),
+		createPropertyType('drag', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'dynamic')),
+		createPropertyType('rotationalDrag', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'dynamic')),
 		createPropertyType('bounciness', 0, createPropertyType.float, createPropertyType.float.range(0, 1)),
-		createPropertyType('density', 0.001, createPropertyType.float, createPropertyType.float.range(0, 100)),
-		createPropertyType('friction', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1)),
-		createPropertyType('frictionAir', 0.01, createPropertyType.float, createPropertyType.float.range(0, 1)),
-		createPropertyType('frictionStatic', 0.5, createPropertyType.float, createPropertyType.float.range(0, 10)),
-		createPropertyType('isStatic', false, createPropertyType.bool),
-		createPropertyType('startStill', false, createPropertyType.bool)
+		createPropertyType('friction', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1))
 	],
 	requirements: [
 		'Rect'
@@ -2807,86 +2878,76 @@ Component.register({
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
 		init: function init() {
-			if (!this.scene._p2World._materialInited) {
-				var settings = {
-					restitution: 1,
-					stiffness: Number.MAX_VALUE,
-					friction: 1
-				};
-				addContactMaterial(this.scene, dynamicMaterial, staticMaterial, settings);
-				addContactMaterial(this.scene, dynamicMaterial, dynamicMaterial, settings);
-				this.scene._p2World._materialInited = true;
-			}
-			/*
-			 let update = callback => {
-			 return value => {
-			 if (!this.updatingOthers && this.body) {
-			 callback(value);
-			 Matter.Sleeping.set(this.body, false);
-			 }
-			 }
-			 };
+			var this$1 = this;
 
-			 this.listenProperty(this.Transform, 'position', update(position => Matter.Body.setPosition(this.body, position)));
-			 this.listenProperty(this.Transform, 'rotation', update(rotation => Matter.Body.setAngle(this.body, rotation)));
-			 this.listenProperty(this, 'density', update(density => {
-			 // let oldMass = this.body.mass;
-			 Matter.Body.setDensity(this.body, density);
+			var update = function (callback) {
+				return function (value) {
+					if (!this$1.updatingOthers && this$1.body) {
+						callback(value);
+						if (this$1.type === 'dynamic')
+							{ this$1.body.wakeUp(); }
+					}
+				}
+			};
 
-			 // Remove this when Matter.js will fix setDensity
+			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
+			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
+			this.listenProperty(this, 'density', update(function (density) {
+				this$1.body.setDensity(density);
+			}));
+			this.listenProperty(this, 'friction', update(function (friction) { return this$1.updateMaterial(); }));
+			this.listenProperty(this, 'drag', update(function (drag) { return this$1.body.damping = drag; }));
+			this.listenProperty(this, 'type', update(function (type) {
+				this$1.body.type = type[this$1.type];
+				this$1.entity.sleep();
+				this$1.entity.wakeUp();
+				// this.body.setDensity(this.density);
+			}));
+			this.listenProperty(this, 'bounciness', update(function (bounciness) { return this$1.updateMaterial(); }));
 
-			 // if (this.body.inertia !== undefined && this.body.inertia !== Infinity)
-			 // 	Matter.Body.setInertia(this.body, this.body.inertia * this.body.mass / oldMass);
-
-			 // Matter.Body.setVertices(this.body, this.body.vertices);
-			 }));
-			 this.listenProperty(this, 'friction', update(friction => this.body.friction = friction));
-			 this.listenProperty(this, 'frictionAir', update(frictionAir => this.body.frictionAir = frictionAir));
-			 this.listenProperty(this, 'frictionStatic', update(frictionStatic => this.body.frictionStatic = frictionStatic));
-			 this.listenProperty(this, 'isStatic', update(isStatic => Matter.Body.setStatic(this.body, isStatic)));
-			 this.listenProperty(this, 'bounciness', update(bounciness => this.body.restitution = bounciness));
-			 */
+			if (this._isInTree)
+				{ this.createBody(); }
 		},
 		createBody: function createBody() {
-			/*
-			this.body = Physics.body('rectangle', {
-				x: this.Transform.position.x,
-				y: this.Transform.position.y,
-				angle: this.Transform.rotation,
-				radius: this.Rect.size.x,
-				width: this.Rect.size.x,
-				height: this.Rect.size.y,
-				treatment: this.isStatic ? 'static' : 'dynamic',
-				restitution: this.bounciness,
-				cof: this.friction
-			});
-			*/
-
 			this.body = new p2$1.Body({
-				mass: this.isStatic ? 0 : 1,
+				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
-				angle: this.Transform.rotation,
+				angle: this.Transform.angle,
 				velocity: [0, 0],
 				angularVelocity: 0,
-				allowSleep: true
+				sleepTimeLimit: 0.5,
+				sleepSpeedLimit: 0.3,
+				damping: this.drag,
+				angularDamping: this.rotationalDrag
 			});
+			this.body.entity = this.entity;
 			var shape = new p2$1.Box({
 				width: this.Rect.size.x * PHYSICS_SCALE,
 				height: this.Rect.size.y * PHYSICS_SCALE
 			});
-			shape.material = this.isStatic ? staticMaterial : dynamicMaterial;
 			this.body.addShape(shape);
-			// if (!this.isStatic)
-			// 	this.body.setDensity(this.density);
+			this.updateMaterial();
+			
+			if (this.type === 'dynamic')
+				{ this.body.setDensity(this.density); }
+			
 			addBody(this.scene, this.body);
 		},
+		updateMaterial: function updateMaterial() {
+			var material = createMaterial(this.scene, {
+				friction: this.friction,
+				restitution: this.bounciness,
+				// stiffness: 1e6,
+				// relaxation: 4,
+				// frictionStiffness: 1e6,
+				// frictionRelaxation: 4,
+				// surfaceVelocity: 0
+			});
+			this.body.shapes.forEach(function (s) { return s.material = material; });
+		},
 		onStart: function onStart() {
-			// Sleeping must be set in onStart because editing sleeping body does not work
-			
-			/*
-			if (this.startStill)
-				this.body.sleep(true);
-				*/
+			if (this.startStill && this.type === 'dynamic')
+				{ this.body.sleep(); }
 		},
 		setInTreeStatus: function setInTreeStatus(inTree) {
 			var i = arguments.length, argsArray = Array(i);
@@ -2903,7 +2964,7 @@ Component.register({
 
 			this.updatingOthers = true;
 			this.Transform.position = Vector.fromArray(this.body.position).divideScalar(PHYSICS_SCALE);
-			this.Transform.rotation = this.body.angle;
+			this.Transform.angle = this.body.angle;
 			this.updatingOthers = false;
 		},
 		sleep: function sleep() {
@@ -2914,6 +2975,9 @@ Component.register({
 		}
 	}
 });
+
+// import './PhysicsMatter'
+// import './PhysicsJs'
 
 var idToGameServer = {}; // gameId => GameServer
 addChangeListener(function (change) {

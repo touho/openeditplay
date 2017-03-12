@@ -127,6 +127,9 @@ class SceneModule extends Module {
 		});
 		
 		events.listen('change', change => {
+			if (scene && scene.resetting)
+				return;
+			
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
@@ -150,8 +153,8 @@ class SceneModule extends Module {
 			} else if (k === key.c) {
 				if (this.selectedEntities.length > 0) {
 					this.deleteNewEntities();
-					let entityPrototypes = this.selectedEntities.map(e => e.prototype.clone());
-					entityPrototypes.forEach(ep => this.newEntities.push(ep.createEntity()));
+					this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
+					// entityPrototypes.forEach(ep => this.newEntities.push(ep.createEntity()));
 					this.selectedEntities.length = 0;
 				}
 			}
