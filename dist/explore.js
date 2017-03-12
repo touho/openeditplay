@@ -2658,6 +2658,9 @@ Component.register({
 		createPropertyType('rotationSpeed', 0, createPropertyType.float, 'Degrees per second', createPropertyType.flagDegreesInEditor)
 	],
 	prototype: {
+		init: function init() {
+			this.Physics = this.entity.getComponent('Physics');
+		},
 		onUpdate: function onUpdate(dt, t) {
 			if (this.userControlled) {
 				if (!this.entity.localMaster) { return; }
@@ -2669,13 +2672,26 @@ Component.register({
 				if (keyPressed(key.right)) { dx += 1; }
 				if (keyPressed(key.up)) { dy -= 1; }
 				if (keyPressed(key.down)) { dy += 1; }
-				if (dx) { this.Transform.position.x += dx * this.speed * dt; }
-				if (dy) { this.Transform.position.y += dy * this.speed * dt; }
-				if (dx || dy) {
-					this.Transform.position = this.Transform.position;
-				}
-				if (dx && this.rotationSpeed) {
-					this.Transform.angle += dt * dx * this.rotationSpeed;
+				if (this.Physics) {
+					if (dx || dy) {
+						var force = new Vector(
+							dx * this.Physics.getMass() * this.speed,
+							dy * this.Physics.getMass() * this.speed
+						);
+						this.Physics.applyForce(force);
+					}
+					if (dx && this.rotationSpeed) {
+						this.Physics.setAngularForce(dx * this.rotationSpeed);
+					}
+				} else {
+					if (dx) { this.Transform.position.x += dx * this.speed * dt; }
+					if (dy) { this.Transform.position.y += dy * this.speed * dt; }
+					if (dx || dy) {
+						this.Transform.position = this.Transform.position;
+					}
+					if (dx && this.rotationSpeed) {
+						this.Transform.angle += dt * dx * this.rotationSpeed;
+					}
 				}
 			} else {
 				var change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
@@ -2835,7 +2851,6 @@ Component.register({
 	properties: [
 		createPropertyType('type', 'dynamic', createPropertyType.enum, createPropertyType.enum.values('dynamic', 'static')),
 		createPropertyType('density', 1, createPropertyType.float, createPropertyType.float.range(0, 100), createPropertyType.visibleIf('type', 'dynamic')),
-		createPropertyType('startStill', false, createPropertyType.bool, createPropertyType.visibleIf('type', 'dynamic')),
 		createPropertyType('drag', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'dynamic')),
 		createPropertyType('rotationalDrag', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'dynamic')),
 		createPropertyType('bounciness', 0, createPropertyType.float, createPropertyType.float.range(0, 1)),
@@ -2846,9 +2861,12 @@ Component.register({
 	],
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
+		inited: false,
 		init: function init() {
 			var this$1 = this;
 
+			this.inited = true;
+			this.Rects = this.entity.getComponents('Rect');
 			var update = function (callback) {
 				return function (value) {
 					if (!this$1.updatingOthers && this$1.body) {
@@ -2878,6 +2896,8 @@ Component.register({
 				{ this.createBody(); }
 		},
 		createBody: function createBody() {
+			var this$1 = this;
+
 			this.body = new p2$1.Body({
 				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
@@ -2890,11 +2910,13 @@ Component.register({
 				angularDamping: this.rotationalDrag
 			});
 			this.body.entity = this.entity;
-			var shape = new p2$1.Box({
-				width: this.Rect.size.x * PHYSICS_SCALE,
-				height: this.Rect.size.y * PHYSICS_SCALE
+			this.Rects.forEach(function (R) {
+				var shape = new p2$1.Box({
+					width: R.size.x * PHYSICS_SCALE,
+					height: R.size.y * PHYSICS_SCALE
+				});
+				this$1.body.addShape(shape);
 			});
-			this.body.addShape(shape);
 			this.updateMaterial();
 			
 			if (this.type === 'dynamic')
@@ -2914,16 +2936,14 @@ Component.register({
 			});
 			this.body.shapes.forEach(function (s) { return s.material = material; });
 		},
-		onStart: function onStart() {
-			if (this.startStill && this.type === 'dynamic')
-				{ this.body.sleep(); }
-		},
 		setInTreeStatus: function setInTreeStatus(inTree) {
 			var i = arguments.length, argsArray = Array(i);
 			while ( i-- ) argsArray[i] = arguments[i];
 
-			if (inTree)
-				{ this.createBody(); }
+			if (inTree) {
+				if (this.inited)
+					{ this.createBody(); }
+			}
 			return (ref = Component.prototype.setInTreeStatus).call.apply(ref, [ this ].concat( argsArray ));
 			var ref;
 		},
@@ -2948,6 +2968,18 @@ Component.register({
 				deleteBody(this.scene, this.body);
 				this.body = null;
 			}
+			this.inited = false;
+		},
+		getMass: function getMass() {
+			return this.body.mass;
+		},
+		applyForce: function applyForce(forceVector) {
+			this.body.applyForce(forceVector.toArray());
+			this.body.wakeUp();
+		},
+		setAngularForce: function setAngularForce(force) {
+			this.body.angularForce = force;
+			this.body.wakeUp();
 		}
 	}
 });

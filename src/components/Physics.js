@@ -18,7 +18,6 @@ Component.register({
 	properties: [
 		Prop('type', 'dynamic', Prop.enum, Prop.enum.values('dynamic', 'static')),
 		Prop('density', 1, Prop.float, Prop.float.range(0, 100), Prop.visibleIf('type', 'dynamic')),
-		Prop('startStill', false, Prop.bool, Prop.visibleIf('type', 'dynamic')),
 		Prop('drag', 0.1, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'dynamic')),
 		Prop('rotationalDrag', 0.1, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'dynamic')),
 		Prop('bounciness', 0, Prop.float, Prop.float.range(0, 1)),
@@ -29,7 +28,10 @@ Component.register({
 	],
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
+		inited: false,
 		init() {
+			this.inited = true;
+			this.Rects = this.entity.getComponents('Rect');
 			let update = callback => {
 				return value => {
 					if (!this.updatingOthers && this.body) {
@@ -71,11 +73,13 @@ Component.register({
 				angularDamping: this.rotationalDrag
 			});
 			this.body.entity = this.entity;
-			let shape = new p2.Box({
-				width: this.Rect.size.x * PHYSICS_SCALE,
-				height: this.Rect.size.y * PHYSICS_SCALE
+			this.Rects.forEach(R => {
+				let shape = new p2.Box({
+					width: R.size.x * PHYSICS_SCALE,
+					height: R.size.y * PHYSICS_SCALE
+				});
+				this.body.addShape(shape);
 			});
-			this.body.addShape(shape);
 			this.updateMaterial();
 			
 			if (this.type === 'dynamic')
@@ -95,13 +99,11 @@ Component.register({
 			});
 			this.body.shapes.forEach(s => s.material = material);
 		},
-		onStart() {
-			if (this.startStill && this.type === 'dynamic')
-				this.body.sleep();
-		},
 		setInTreeStatus(inTree) {
-			if (inTree)
-				this.createBody();
+			if (inTree) {
+				if (this.inited)
+					this.createBody();
+			}
 			return Component.prototype.setInTreeStatus.call(this, ...arguments);
 		},
 		onUpdate() {
@@ -125,6 +127,18 @@ Component.register({
 				deleteBody(this.scene, this.body);
 				this.body = null;
 			}
+			this.inited = false;
+		},
+		getMass() {
+			return this.body.mass;
+		},
+		applyForce(forceVector) {
+			this.body.applyForce(forceVector.toArray());
+			this.body.wakeUp();
+		},
+		setAngularForce(force) {
+			this.body.angularForce = force;
+			this.body.wakeUp();
 		}
 	}
 });

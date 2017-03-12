@@ -11,6 +11,9 @@ Component.register({
 		Prop('rotationSpeed', 0, Prop.float, 'Degrees per second', Prop.flagDegreesInEditor)
 	],
 	prototype: {
+		init() {
+			this.Physics = this.entity.getComponent('Physics');
+		},
 		onUpdate(dt, t) {
 			if (this.userControlled) {
 				if (!this.entity.localMaster) return;
@@ -22,13 +25,26 @@ Component.register({
 				if (keyPressed(key.right)) dx += 1;
 				if (keyPressed(key.up)) dy -= 1;
 				if (keyPressed(key.down)) dy += 1;
-				if (dx) this.Transform.position.x += dx * this.speed * dt;
-				if (dy) this.Transform.position.y += dy * this.speed * dt;
-				if (dx || dy) {
-					this.Transform.position = this.Transform.position;
-				}
-				if (dx && this.rotationSpeed) {
-					this.Transform.angle += dt * dx * this.rotationSpeed;
+				if (this.Physics) {
+					if (dx || dy) {
+						let force = new Vector(
+							dx * this.Physics.getMass() * this.speed,
+							dy * this.Physics.getMass() * this.speed
+						);
+						this.Physics.applyForce(force);
+					}
+					if (dx && this.rotationSpeed) {
+						this.Physics.setAngularForce(dx * this.rotationSpeed);
+					}
+				} else {
+					if (dx) this.Transform.position.x += dx * this.speed * dt;
+					if (dy) this.Transform.position.y += dy * this.speed * dt;
+					if (dx || dy) {
+						this.Transform.position = this.Transform.position;
+					}
+					if (dx && this.rotationSpeed) {
+						this.Transform.angle += dt * dx * this.rotationSpeed;
+					}
 				}
 			} else {
 				let change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
