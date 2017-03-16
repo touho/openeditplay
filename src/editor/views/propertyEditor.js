@@ -163,6 +163,7 @@ class Container {
 			} else {
 				this.item.delete();
 			}
+			editor.select();
 		} }));
 	}
 	updateEntityPrototype() {

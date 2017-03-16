@@ -29,7 +29,7 @@ Component.register({
 			context.restore();
 		},
 		spawn() {
-			let prototype = this.game.findChild('prt', prt => prt.name === this.typeName);
+			let prototype = this.game.findChild('prt', prt => prt.name === this.typeName, true);
 			if (!prototype)
 				return;
 

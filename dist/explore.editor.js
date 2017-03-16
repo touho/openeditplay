@@ -118,13 +118,27 @@ Serializable.prototype._addChild = function _addChild (child) {
 		
 	return this;
 };
-Serializable.prototype.findChild = function findChild (threeLetterType, filterFunction) {
+Serializable.prototype.findChild = function findChild (threeLetterType, filterFunction, deep) {
+		if ( deep === void 0 ) deep = false;
+
 	var array = this._children.get(threeLetterType);
 	if (!array) { return null; }
-	if (filterFunction)
-		{ return array.find(filterFunction) || null; }
-	else
-		{ return array[0]; }
+	if (filterFunction) {
+		var foundChild = array.find(filterFunction);
+		if (foundChild) {
+			return foundChild;
+		} else if (deep) {
+			for (var i = 0; i < array.length; ++i) {
+				var child = array[i];
+				var foundChild$1 = child.findChild(threeLetterType, filterFunction, true);
+				if (foundChild$1)
+					{ return foundChild$1; }
+			}
+		}
+		return null;
+	} else {
+		return array[0];
+	}
 };
 Serializable.prototype.findParent = function findParent (threeLetterType, filterFunction) {
 		if ( filterFunction === void 0 ) filterFunction = null;
@@ -633,8 +647,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -645,7 +657,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -732,10 +743,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1952,8 +1959,6 @@ function createMaterial(owner, options) {
 	return material;
 }
 
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2123,7 +2128,6 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
-// Instance of a component, see componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2321,8 +2325,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2865,7 +2867,7 @@ Component$1.register({
 		spawn: function spawn() {
 			var this$1 = this;
 
-			var prototype = this.game.findChild('prt', function (prt) { return prt.name === this$1.typeName; });
+			var prototype = this.game.findChild('prt', function (prt) { return prt.name === this$1.typeName; }, true);
 			if (!prototype)
 				{ return; }
 
@@ -3250,7 +3252,6 @@ if (isClient)
 	console.log('PropertyType tests OK');
 })();
 
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Example',
 	description: 'Description of what this component does',
@@ -3346,8 +3347,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -3826,9 +3825,9 @@ ModuleContainer.prototype._activateModule = function _activateModule (module, ar
 		}
 	});
 	module._enabled = true;
-	module.activate.apply(module, args);
 	module._show();
 	this._updateTabs();
+	module.activate.apply(module, args);
 };
 ModuleContainer.prototype._enableModule = function _enableModule (module) {
 	if (!module._enabled) {
@@ -3934,7 +3933,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -4721,11 +4719,6 @@ function drawPositionHelpers(entities) {
 	});
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -4875,6 +4868,7 @@ Container.prototype.updatePrototype = function updatePrototype () {
 		} else {
 			this$1.item.delete();
 		}
+		editor.select();
 	} }));
 };
 Container.prototype.updateEntityPrototype = function updateEntityPrototype () {
@@ -5352,8 +5346,9 @@ var SceneModule = (function (Module$$1) {
 				if (this$1.selectedEntities.length > 0) {
 					this$1.deleteNewEntities();
 					(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
-					// entityPrototypes.forEach(ep => this.newEntities.push(ep.createEntity()));
 					this$1.selectedEntities.length = 0;
+					setEntityPositions(this$1.newEntities, this$1.previousMousePos);
+					this$1.draw();
 				}
 			}
 			var ref;
@@ -5506,7 +5501,10 @@ var SceneModule = (function (Module$$1) {
 	
 	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
 		editor.select(this.selectedEntities, this);
-		Module$$1.activateOneOfModules(['type', 'instance'], false);
+		if (shouldSyncLevelAndScene())
+			{ Module$$1.activateOneOfModules(['type', 'instance'], false); }
+		else
+			{ Module$$1.activateOneOfModules(['instance'], false); }
 	};
 	
 	SceneModule.prototype.stopAndReset = function stopAndReset () {
@@ -5654,7 +5652,7 @@ var Types = (function (Module$$1) {
 
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', function (e, data) {
-				if (this$1.externalChange)
+				if (this$1.externalChange || data.selected.length === 0)
 					{ return; }
 				
 				// selection changed
@@ -5876,7 +5874,9 @@ Editor.prototype.setLevel = function setLevel (level) {
 	events.dispatch('setLevel', this.selectedLevel);
 };
 Editor.prototype.select = function select (items, origin) {
-	if (!Array.isArray(items))
+	if (!items)
+		{ items = []; }
+	else if (!Array.isArray(items))
 		{ items = [items]; }
 	this.selection.items = [].concat(items);
 		

@@ -154,8 +154,9 @@ class SceneModule extends Module {
 				if (this.selectedEntities.length > 0) {
 					this.deleteNewEntities();
 					this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
-					// entityPrototypes.forEach(ep => this.newEntities.push(ep.createEntity()));
 					this.selectedEntities.length = 0;
+					sceneEdit.setEntityPositions(this.newEntities, this.previousMousePos);
+					this.draw();
 				}
 			}
 		});
@@ -301,7 +302,10 @@ class SceneModule extends Module {
 	
 	selectSelectedEntitiesInEditor() {
 		editor.select(this.selectedEntities, this);
-		Module.activateOneOfModules(['type', 'instance'], false);
+		if (sceneEdit.shouldSyncLevelAndScene())
+			Module.activateOneOfModules(['type', 'instance'], false);
+		else
+			Module.activateOneOfModules(['instance'], false);
 	}
 	
 	stopAndReset() {

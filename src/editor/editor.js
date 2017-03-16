@@ -83,7 +83,9 @@ class Editor {
 		events.dispatch('setLevel', this.selectedLevel);
 	}
 	select(items, origin) {
-		if (!Array.isArray(items))
+		if (!items)
+			items = [];
+		else if (!Array.isArray(items))
 			items = [items];
 		this.selection.items = [].concat(items);
 		

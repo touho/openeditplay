@@ -111,7 +111,7 @@ class Types extends Module {
 
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
-				if (this.externalChange)
+				if (this.externalChange || data.selected.length === 0)
 					return;
 				
 				// selection changed

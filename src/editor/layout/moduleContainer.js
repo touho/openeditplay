@@ -94,9 +94,9 @@ export default class ModuleContainer {
 			}
 		});
 		module._enabled = true;
-		module.activate(...args);
 		module._show();
 		this._updateTabs();
+		module.activate(...args);
 	}
 	_enableModule(module) {
 		if (!module._enabled) {

@@ -118,13 +118,27 @@ Serializable.prototype._addChild = function _addChild (child) {
 		
 	return this;
 };
-Serializable.prototype.findChild = function findChild (threeLetterType, filterFunction) {
+Serializable.prototype.findChild = function findChild (threeLetterType, filterFunction, deep) {
+		if ( deep === void 0 ) deep = false;
+
 	var array = this._children.get(threeLetterType);
 	if (!array) { return null; }
-	if (filterFunction)
-		{ return array.find(filterFunction) || null; }
-	else
-		{ return array[0]; }
+	if (filterFunction) {
+		var foundChild = array.find(filterFunction);
+		if (foundChild) {
+			return foundChild;
+		} else if (deep) {
+			for (var i = 0; i < array.length; ++i) {
+				var child = array[i];
+				var foundChild$1 = child.findChild(threeLetterType, filterFunction, true);
+				if (foundChild$1)
+					{ return foundChild$1; }
+			}
+		}
+		return null;
+	} else {
+		return array[0];
+	}
 };
 Serializable.prototype.findParent = function findParent (threeLetterType, filterFunction) {
 		if ( filterFunction === void 0 ) filterFunction = null;
@@ -633,8 +647,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -645,7 +657,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -732,10 +743,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1952,8 +1959,6 @@ function createMaterial(owner, options) {
 	return material;
 }
 
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2123,7 +2128,6 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
-// Instance of a component, see componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2321,8 +2325,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2833,7 +2835,7 @@ Component.register({
 		spawn: function spawn() {
 			var this$1 = this;
 
-			var prototype = this.game.findChild('prt', function (prt) { return prt.name === this$1.typeName; });
+			var prototype = this.game.findChild('prt', function (prt) { return prt.name === this$1.typeName; }, true);
 			if (!prototype)
 				{ return; }
 

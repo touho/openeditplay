@@ -101,13 +101,25 @@ export default class Serializable {
 		
 		return this;
 	}
-	findChild(threeLetterType, filterFunction) {
+	findChild(threeLetterType, filterFunction, deep = false) {
 		let array = this._children.get(threeLetterType);
 		if (!array) return null;
-		if (filterFunction)
-			return array.find(filterFunction) || null;
-		else
+		if (filterFunction) {
+			let foundChild = array.find(filterFunction);
+			if (foundChild) {
+				return foundChild;
+			} else if (deep) {
+				for (let i = 0; i < array.length; ++i) {
+					let child = array[i];
+					let foundChild = child.findChild(threeLetterType, filterFunction, true);
+					if (foundChild)
+						return foundChild;
+				}
+			}
+			return null;
+		} else {
 			return array[0];
+		}
 	}
 	findParent(threeLetterType, filterFunction = null) {
 		let parent = this;

@@ -12,12 +12,12 @@ div.top {
 }
 
 @keyframes rainbow {
-  0%   {
-    filter: sepia(100%) hue-rotate(0deg);
-  }
-  100% {
-    filter: sepia(100%) hue-rotate(360deg);
-  }
+  0%   { filter: sepia(100%) hue-rotate(0deg); }
+  100% { filter: sepia(100%) hue-rotate(360deg); }
+}
+@keyframes rainbowLittle {
+  0%   { filter: sepia(30%) hue-rotate(0deg); }
+  100% { filter: sepia(30%) hue-rotate(360deg); }
 }
 img.logo {
   height: 100%;
@@ -46,6 +46,16 @@ img.logo:hover {
 
 .topIconTextButtonContent {
   transform: translateY(-50%);
+  padding: 10px;
+  background: #333;
+  border: 1px outset #444;
+}
+.topIconTextButtonContent:hover {
+  background: #373737;
+  animation: rainbowLittle 7s infinite;
+}
+.topIconTextButtonContent:active {
+  border: 1px inset #555;
 }
 
 .module-topbar {
