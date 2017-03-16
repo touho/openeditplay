@@ -3727,7 +3727,7 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 	this.packButtonEnabled = !!packButtonIcon;
 	this.el = el(("div.moduleContainer.packable." + moduleContainerName),
 		this.packButton = packButtonIcon && el(("i.packButton.button.iconButton.fa." + packButtonIcon)),
-		this.tabs = list('div.tabs', ModuleTab),
+		this.tabs = list('div.tabs.select-none', ModuleTab),
 		this.moduleElements = el('div.moduleElements')
 	);
 		
@@ -3815,7 +3815,11 @@ ModuleContainer.prototype.activateOneOfModules = function activateOneOfModules (
 			{ return; } // Already selected
 	}
 		
-	(ref = this).activateModule.apply(ref, [ modules[0], unpackModuleView ].concat( args ));
+	for (var i$1 = 0; i$1 < this.modules.length; ++i$1) {
+		var m$1 = this$1.modules[i$1];
+		if (m$1._enabled && modules.indexOf(m$1) >= 0)
+			{ return (ref = this$1).activateModule.apply(ref, [ m$1, unpackModuleView ].concat( args )); }
+	}
 		var ref;
 };
 ModuleContainer.prototype._activateModule = function _activateModule (module, args) {
@@ -4135,8 +4139,8 @@ var TopBarModule = (function (Module$$1) {
 		var this$1 = this;
 
 		Module$$1.call(
-			this, this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
-			this.buttons = el('div.buttonContainer')
+			this, this.logo = el('img.logo.button.iconButton.select-none', { src: '../img/logo_reflection_medium.png' }),
+			this.buttons = el('div.buttonContainer.select-none')
 		);
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible

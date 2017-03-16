@@ -9,8 +9,8 @@ import LevelSelector from '../views/popup/levelSelector';
 export class TopBarModule extends Module {
 	constructor() {
 		super(
-			this.logo = el('img.logo.button.iconButton', { src: '../img/logo_reflection_medium.png' }),
-			this.buttons = el('div.buttonContainer')
+			this.logo = el('img.logo.button.iconButton.select-none', { src: '../img/logo_reflection_medium.png' }),
+			this.buttons = el('div.buttonContainer.select-none')
 		);
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible

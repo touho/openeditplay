@@ -8,7 +8,7 @@ export default class ModuleContainer {
 		this.packButtonEnabled = !!packButtonIcon;
 		this.el = el(`div.moduleContainer.packable.${moduleContainerName}`,
 			this.packButton = packButtonIcon && el(`i.packButton.button.iconButton.fa.${packButtonIcon}`),
-			this.tabs = list('div.tabs', ModuleTab),
+			this.tabs = list('div.tabs.select-none', ModuleTab),
 			this.moduleElements = el('div.moduleElements')
 		);
 		
@@ -85,7 +85,11 @@ export default class ModuleContainer {
 				return; // Already selected
 		}
 		
-		this.activateModule(modules[0], unpackModuleView, ...args);
+		for (let i = 0; i < this.modules.length; ++i) {
+			let m = this.modules[i];
+			if (m._enabled && modules.indexOf(m) >= 0)
+				return this.activateModule(m, unpackModuleView, ...args);
+		}
 	}
 	_activateModule(module, args) {
 		this.modules.forEach(m => {
