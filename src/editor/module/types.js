@@ -117,7 +117,7 @@ class Types extends Module {
 				// selection changed
 				let prototypes = data.selected.map(getSerializable);
 				editor.select(prototypes, this);
-				Module.activateModule('type');
+				Module.activateModule('type', false);
 				if (prototypes.length === 1)
 					events.dispatch('prototypeClicked', prototypes[0]);
 				

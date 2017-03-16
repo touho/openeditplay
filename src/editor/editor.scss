@@ -18,7 +18,11 @@ body, html {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+  //font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
   color: $editor-text-color;
   font-size: 14px;
+  font-weight: 200;
+  letter-spacing: 1px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  text-shadow: 1px 1px 1px #060606;
 }

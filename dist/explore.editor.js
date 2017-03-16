@@ -633,6 +633,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -643,6 +645,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -729,6 +732,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1945,6 +1952,8 @@ function createMaterial(owner, options) {
 	return material;
 }
 
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2114,6 +2123,7 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
+// Instance of a component, see componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2311,6 +2321,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3238,6 +3250,7 @@ if (isClient)
 	console.log('PropertyType tests OK');
 })();
 
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Example',
 	description: 'Description of what this component does',
@@ -3333,6 +3346,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -3919,6 +3934,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -4705,6 +4721,11 @@ function drawPositionHelpers(entities) {
 	});
 }
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5485,7 +5506,7 @@ var SceneModule = (function (Module$$1) {
 	
 	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
 		editor.select(this.selectedEntities, this);
-		Module$$1.activateOneOfModules(['type', 'instance']);
+		Module$$1.activateOneOfModules(['type', 'instance'], false);
 	};
 	
 	SceneModule.prototype.stopAndReset = function stopAndReset () {
@@ -5639,7 +5660,7 @@ var Types = (function (Module$$1) {
 				// selection changed
 				var prototypes = data.selected.map(getSerializable$1);
 				editor.select(prototypes, this$1);
-				Module$$1.activateModule('type');
+				Module$$1.activateModule('type', false);
 				if (prototypes.length === 1)
 					{ events.dispatch('prototypeClicked', prototypes[0]); }
 				

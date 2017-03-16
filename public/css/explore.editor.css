@@ -1,4 +1,5 @@
 
+/*$editor-effect-color: $cool-cyan;*/
 .button {
   cursor: pointer;
   opacity: 0.7;
@@ -28,10 +29,10 @@ button.button {
   text-shadow: 0 0 1px rgba(0, 0, 0, 0.76);
 }
 button.button:hover {
-  color: #fae900;
+  color: #d4d4d4;
 }
 button.button:active {
-  color: #fae900;
+  color: #d4d4d4;
   border-style: inset;
 }
 button.button.dangerButton {
@@ -74,7 +75,7 @@ button.button i.fa {
   border-right: 1px solid;
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
-  color: #fae900;
+  color: #d4d4d4;
 }
 .moduleTab:not(.moduleSelected) {
   filter: saturate(0);
@@ -83,6 +84,7 @@ button.button i.fa {
 }
 .moduleTab.moduleSelected {
   opacity: 1;
+  text-shadow: 0px 0px 1px #777;
 }
 .moduleTab:not(.moduleEnabled) {
   display: none;
@@ -112,7 +114,7 @@ div.nonRight {
     flex-direction: column;
 }
 div.right {
-    border-left: 1px solid #fae900;
+    border-left: 1px solid #d4d4d4;
     width: 300px;
     border-radius: 8px;
     min-width: 200px;
@@ -129,7 +131,7 @@ div.right .packButton {
 div.top {
     min-height: 60px;
     height: 10vh;
-    border-bottom: 1px solid #fae900;
+    border-bottom: 1px solid #d4d4d4;
 }
 div.middle {
     flex: 1;
@@ -142,7 +144,7 @@ div.bottomLeft {
     flex-direction: row;
 }
 div.bottom {
-    border-top: 1px solid #fae900;
+    border-top: 1px solid #d4d4d4;
     min-height: 150px;
     max-height: 300px;
     height: 25vh;
@@ -156,7 +158,7 @@ div.bottom .packButton {
     right: 0;
 }
 div.left {
-    border-right: 1px solid #fae900;
+    border-right: 1px solid #d4d4d4;
     width: 300px;
 }
 div.left.packed {
@@ -172,7 +174,7 @@ div.center {
     /*color: #adadad;*/
 }
 div.moduleContainer.packed {
-    border-color: #908f4d;
+    border-color: #a1a3a4;
 }
 div.moduleContainer.noModules {
     border-color: #333;
@@ -210,10 +212,21 @@ div.top {
   top: 0;
   padding-top: 2px;
 }
+@keyframes rainbow {
+  0%   {
+    filter: sepia(100%) hue-rotate(0deg);
+  }
+  100% {
+    filter: sepia(100%) hue-rotate(360deg);
+  }
+}
 img.logo {
   height: 100%;
   margin: 0;
   padding: 0;
+}
+img.logo:hover {
+  animation: rainbow 7s infinite;
 }
 .topIconTextButton {
   box-sizing: border-box;
@@ -223,7 +236,7 @@ img.logo {
   margin: 0 7px;
   height: 100%;
   transform: translateY(50%);
-  color: #fae900;
+  color: #d4d4d4;
 }
 .topIconTextButton i {
   display: block;
@@ -241,23 +254,23 @@ img.logo {
   margin-bottom: 3px;
   margin-right: 15px;
   font-size: 1.05em;
-  color: #b1cacb;
+  color: #d6d6d6;
 }
 .module-types .addTypeButton:hover {
-  color: #fae900;
+  color: #d4d4d4;
 }
 .module-types input {
   background: transparent;
-  color: #b1cacb;
+  color: #d6d6d6;
   outline: none;
   position: absolute;
   top: 2px;
   right: 2px;
-  border: 1px solid #908f4d;
+  border: 1px solid #a1a3a4;
   width: 70px;
 }
 .module-types .searchIcon {
-  color: #908f4d;
+  color: #a1a3a4;
   position: absolute;
   top: 5px;
   right: 5px;
@@ -328,7 +341,7 @@ img.logo {
   opacity: 0.7;
 }
 .jstree-default .jstree-search {
-  color: #b1cacb;
+  color: #d6d6d6;
   left: 10px;
   text-decoration: none;
   font-style: normal;
@@ -341,20 +354,20 @@ img.logo {
 .jstree-default .jstree-search::before {
   font-family: FontAwesome;
   content: '\f002';
-  color: #fae900;
+  color: #d4d4d4;
   margin-left: 5px;
   margin-right: 6px;
 }
 .jstree-default .jstree-hovered {
   background: none;
-  color: #fae900;
+  color: #d4d4d4;
 }
 .jstree-default .jstree-clicked {
-  background: #393928;
-  color: #fae900;
+  background: #444344;
+  color: #d4d4d4;
 }
 div.propertyEditor div.container[type='icd'], div.propertyEditor div.container[type='com'] {
-  border: 1px solid #fae900;
+  border: 1px solid #d4d4d4;
   box-shadow: 0 0 13px 0px black;
   border-right: none;
   padding: 5px;
@@ -396,7 +409,7 @@ div.propertyEditor div.containerTitle {
 div.propertyEditor .packed div.containerTitle {
 }
 div.propertyEditor div.containerTitle:hover {
-  color: #fae900;
+  color: #d4d4d4;
   background: rgba(255, 255, 255, 0.05);
 }
 div.propertyEditor div.containerTitle .icon {
@@ -410,7 +423,7 @@ div.propertyEditor table {
 tr.property {
   border-bottom: 3px solid;
   border-color: #363636;
-  color: #b1cacb;
+  color: #d6d6d6;
   transition: opacity 0.4s;
   position: relative;
 }
@@ -532,11 +545,11 @@ div.popup div.popupContent {
   background: linear-gradient(to bottom right, #858585, #606060);
   border-radius: 20px;
   padding: 10px;
-  border: 1px solid #fae900;
+  border: 1px solid #d4d4d4;
   box-shadow: 1px 8px 22px 4px black;
 }
 div.popup div.popupTitle {
-  color: #fae900;
+  color: #d4d4d4;
   margin: 15px;
   margin-top: 10px;
   text-align: center;
@@ -553,7 +566,11 @@ body, html {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-  color: #b1cacb;
+  /*font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;*/
+  color: #d6d6d6;
   font-size: 14px;
+  font-weight: 200;
+  letter-spacing: 1px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  text-shadow: 1px 1px 1px #060606;
 }
