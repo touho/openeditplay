@@ -301,6 +301,7 @@ class SceneModule extends Module {
 	
 	selectSelectedEntitiesInEditor() {
 		editor.select(this.selectedEntities, this);
+		Module.activateOneOfModules(['type', 'instance']);
 	}
 	
 	stopAndReset() {

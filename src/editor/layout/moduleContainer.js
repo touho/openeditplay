@@ -1,5 +1,5 @@
 import { el, list, mount } from 'redom';
-import events from '../events';
+import events, { dispatch, listen } from '../events';
 import { setOption, getOption } from '../editor';
 
 export default class ModuleContainer {
@@ -11,8 +11,7 @@ export default class ModuleContainer {
 			this.tabs = list('div.tabs', ModuleTab),
 			this.moduleElements = el('div.moduleElements')
 		);
-
-			
+		
 		if (packButtonIcon) {
 			let packId = 'moduleContainerPacked_' + moduleContainerName;
 			if (getOption(packId))
@@ -33,6 +32,7 @@ export default class ModuleContainer {
 		events.listen('registerModule_' + moduleContainerName.split('.')[0], (moduleClass, editor) => {
 			let module = new moduleClass(editor);
 			module.el.classList.add('module-' + module.id);
+			module.moduleContainer = this;
 			this.modules.push(module);
 			this.el.classList.remove('noModules');
 			if (this.modules.length !== 1) {
@@ -40,13 +40,12 @@ export default class ModuleContainer {
 			}
 			mount(this.moduleElements, module.el);
 			this._updateTabs();
-			
-			events.listen('activateModule_' + module.id, (unpackModuleView = true, ...args) => {
-				if (unpackModuleView)
-					this.el.classList.remove('packed');
-				this._activateModule(module, args);
-			});
 		});
+
+		listen(this, 'moduleClicked', module => {
+			this.activateModule(module);
+		});
+		
 		this._updateTabs();
 	}
 	update() {
@@ -70,6 +69,23 @@ export default class ModuleContainer {
 		
 		let noModules = !this.modules.find(m => m._enabled);
 		this.el.classList.toggle('noModules', noModules);
+	}
+	activateModule(module, unpackModuleView = true, ...args) {
+		if (unpackModuleView)
+			this.el.classList.remove('packed');
+		this._activateModule(module, args);
+	}
+	activateOneOfModules(modules, unpackModuleView = true, ...args) {
+		if (unpackModuleView)
+			this.el.classList.remove('packed');
+
+		for (let i = 0; i < this.modules.length; ++i) {
+			let m = this.modules[i];
+			if (m._selected && modules.indexOf(m) >= 0)
+				return; // Already selected
+		}
+		
+		this.activateModule(modules[0], unpackModuleView, ...args);
 	}
 	_activateModule(module, args) {
 		this.modules.forEach(m => {
@@ -111,7 +127,7 @@ class ModuleTab {
 		this.el = el('span.moduleTab.button');
 		this.module = null;
 		this.el.onclick = () => {
-			events.dispatch('activateModule_' + this.module.id);
+			dispatch(this, 'moduleClicked', this.module);
 		};
 	}
 	update(module) {

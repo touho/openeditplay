@@ -1,7 +1,11 @@
 
 RUNS IN GAME SCENE
 
-    Entity (Instance is editor):
+    Scene:
+        - Runs everything
+        - Has Entities in it
+
+    Entity (Called "Instance" is editor):
         - exists in the game scene
         - contains things called "Component"
     
@@ -15,6 +19,9 @@ RUNS IN GAME SCENE
         
 
 BEHIND THE SCENE
+
+    Game:
+        - Has Prototypes and Levels
     
     Prototype (Type in editor):
         - you can create an Entity based on a Prototype
@@ -25,6 +32,8 @@ BEHIND THE SCENE
 
     PropertyType:
         - you can create a Property based on PropertyModel
+    
+    
 
 
 

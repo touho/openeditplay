@@ -18,7 +18,7 @@ export default class Serializable {
 	constructor(predefinedId = false, skipSerializableRegistering = false) {
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		this._children = new Map(); // threeLetterType -> array
-		this._listeners = [];
+		this._listeners = {};
 		this._isInTree = this.isRoot;
 		this._state |= Serializable.STATE_CONSTRUCTOR;
 		if (skipSerializableRegistering)
@@ -42,7 +42,7 @@ export default class Serializable {
 		this.deleteChildren();
 		this._alive = false;
 		this._isInTree = false;
-		this._listeners.length = 0;
+		this._listeners = {};
 		serializableManager.removeSerializable(this.id);
 		this._state |= Serializable.STATE_DESTROY;
 		return true;

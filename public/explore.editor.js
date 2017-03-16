@@ -31,7 +31,7 @@ var Serializable = function Serializable(predefinedId, skipSerializableRegisteri
 
 	assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 	this._children = new Map(); // threeLetterType -> array
-	this._listeners = [];
+	this._listeners = {};
 	this._isInTree = this.isRoot;
 	this._state |= Serializable.STATE_CONSTRUCTOR;
 	if (skipSerializableRegistering)
@@ -55,7 +55,7 @@ Serializable.prototype.delete = function delete$1 () {
 	this.deleteChildren();
 	this._alive = false;
 	this._isInTree = false;
-	this._listeners.length = 0;
+	this._listeners = {};
 	removeSerializable(this.id);
 	this._state |= Serializable.STATE_DESTROY;
 	return true;
@@ -3716,8 +3716,7 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 		this.tabs = list('div.tabs', ModuleTab),
 		this.moduleElements = el('div.moduleElements')
 	);
-
-			
+		
 	if (packButtonIcon) {
 		var packId = 'moduleContainerPacked_' + moduleContainerName;
 		if (getOption(packId))
@@ -3738,6 +3737,7 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 	events.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor$$1) {
 		var module = new moduleClass(editor$$1);
 		module.el.classList.add('module-' + module.id);
+		module.moduleContainer = this$1;
 		this$1.modules.push(module);
 		this$1.el.classList.remove('noModules');
 		if (this$1.modules.length !== 1) {
@@ -3745,17 +3745,12 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 		}
 		mount(this$1.moduleElements, module.el);
 		this$1._updateTabs();
-			
-		events.listen('activateModule_' + module.id, function (unpackModuleView) {
-			var args = [], len = arguments.length - 1;
-			while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
-
-			if ( unpackModuleView === void 0 ) unpackModuleView = true;
-			if (unpackModuleView)
-				{ this$1.el.classList.remove('packed'); }
-			this$1._activateModule(module, args);
-		});
 	});
+
+	listen(this, 'moduleClicked', function (module) {
+		this$1.activateModule(module);
+	});
+		
 	this._updateTabs();
 };
 ModuleContainer.prototype.update = function update () {
@@ -3781,6 +3776,33 @@ ModuleContainer.prototype._updateTabs = function _updateTabs () {
 		
 	var noModules = !this.modules.find(function (m) { return m._enabled; });
 	this.el.classList.toggle('noModules', noModules);
+};
+ModuleContainer.prototype.activateModule = function activateModule (module, unpackModuleView) {
+		var args = [], len = arguments.length - 2;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
+
+		if ( unpackModuleView === void 0 ) unpackModuleView = true;
+	if (unpackModuleView)
+		{ this.el.classList.remove('packed'); }
+	this._activateModule(module, args);
+};
+ModuleContainer.prototype.activateOneOfModules = function activateOneOfModules (modules, unpackModuleView) {
+		var this$1 = this;
+		var args = [], len = arguments.length - 2;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
+
+		if ( unpackModuleView === void 0 ) unpackModuleView = true;
+	if (unpackModuleView)
+		{ this.el.classList.remove('packed'); }
+
+	for (var i = 0; i < this.modules.length; ++i) {
+		var m = this$1.modules[i];
+		if (m._selected && modules.indexOf(m) >= 0)
+			{ return; } // Already selected
+	}
+		
+	(ref = this).activateModule.apply(ref, [ modules[0], unpackModuleView ].concat( args ));
+		var ref;
 };
 ModuleContainer.prototype._activateModule = function _activateModule (module, args) {
 	this.modules.forEach(function (m) {
@@ -3822,7 +3844,7 @@ var ModuleTab = function ModuleTab() {
 	this.el = el('span.moduleTab.button');
 	this.module = null;
 	this.el.onclick = function () {
-		events.dispatch('activateModule_' + this$1.module.id);
+		dispatch(this$1, 'moduleClicked', this$1.module);
 	};
 };
 ModuleTab.prototype.update = function update (module) {
@@ -3862,7 +3884,10 @@ Layout.prototype.update = function update () {
 	this.moduleContainers.forEach(function (mc) { return mc.update(); });
 };
 
+var moduleIdToModule = {};
+
 var Module = function Module() {
+	var this$1 = this;
 	var i = arguments.length, argsArray = Array(i);
 	while ( i-- ) argsArray[i] = arguments[i];
 
@@ -3872,6 +3897,11 @@ var Module = function Module() {
 	this.el = el.apply(void 0, [ 'div.module' ].concat( argsArray ));
 	this._selected = true;
 	this._enabled = true;
+		
+	// Timeout so that module constructor has time to set this.id after calling super.
+	setTimeout(function () {
+		moduleIdToModule[this$1.id] = this$1;
+	});
 };
 // Called when this module is opened. Other modules can call Module.activateModule('Module', ...args);
 Module.prototype.activate = function activate () {
@@ -3894,7 +3924,17 @@ Module.activateModule = function(moduleId, unpackModuleView) {
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
 
 	if ( unpackModuleView === void 0 ) unpackModuleView=true;
-	events.dispatch.apply(events, [ 'activateModule_' + moduleId, unpackModuleView ].concat( args ));
+	(ref = moduleIdToModule[moduleId].moduleContainer).activateModule.apply(ref, [ moduleIdToModule[moduleId], unpackModuleView ].concat( args ));
+	var ref;
+};
+// Modules must be in same moduleContainer
+Module.activateOneOfModules = function(moduleIds, unpackModuleView) {
+	var args = [], len = arguments.length - 2;
+	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
+
+	if ( unpackModuleView === void 0 ) unpackModuleView=true;
+	(ref = moduleIdToModule[moduleIds[0]].moduleContainer).activateOneOfModules.apply(ref, [ moduleIds.map(function (mId) { return moduleIdToModule[mId]; }), unpackModuleView ].concat( args ));
+	var ref;
 };
 Module.packModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll((".moduleContainer." + moduleContainerName))[0].classList.add('packed');
@@ -5445,6 +5485,7 @@ var SceneModule = (function (Module$$1) {
 	
 	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
 		editor.select(this.selectedEntities, this);
+		Module$$1.activateOneOfModules(['type', 'instance']);
 	};
 	
 	SceneModule.prototype.stopAndReset = function stopAndReset () {
@@ -5598,6 +5639,7 @@ var Types = (function (Module$$1) {
 				// selection changed
 				var prototypes = data.selected.map(getSerializable$1);
 				editor.select(prototypes, this$1);
+				Module$$1.activateModule('type');
 				if (prototypes.length === 1)
 					{ events.dispatch('prototypeClicked', prototypes[0]); }
 				

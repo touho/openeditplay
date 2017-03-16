@@ -1,6 +1,8 @@
 import { el, list, mount } from 'redom';
 import events from '../events';
 
+let moduleIdToModule = {};
+
 export default class Module {
 	constructor() {
 		this.type = 'module';
@@ -9,6 +11,11 @@ export default class Module {
 		this.el = el('div.module', ...arguments);
 		this._selected = true;
 		this._enabled = true;
+		
+		// Timeout so that module constructor has time to set this.id after calling super.
+		setTimeout(() => {
+			moduleIdToModule[this.id] = this;
+		});
 	}
 	// Called when this module is opened. Other modules can call Module.activateModule('Module', ...args);
 	activate() {
@@ -28,7 +35,11 @@ export default class Module {
 }
 //arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView=true, ...args) {
-	events.dispatch('activateModule_' + moduleId, unpackModuleView, ...args);
+	moduleIdToModule[moduleId].moduleContainer.activateModule(moduleIdToModule[moduleId], unpackModuleView, ...args);
+};
+// Modules must be in same moduleContainer
+Module.activateOneOfModules = function(moduleIds, unpackModuleView=true, ...args) {
+	moduleIdToModule[moduleIds[0]].moduleContainer.activateOneOfModules(moduleIds.map(mId => moduleIdToModule[mId]), unpackModuleView, ...args);
 };
 Module.packModuleContainer = function(moduleContainerName) {
 	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.add('packed');
