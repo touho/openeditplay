@@ -8,6 +8,15 @@ export { default as Prop } from './propertyType';
 export let componentClasses = new Map();
 import ComponentData from './componentData';
 
+const eventListeners = [
+	'onUpdate'
+	,'onDraw'
+	,'onStart'
+// @ifndef OPTIMIZE
+	,'onDrawHelper'
+// @endif
+];
+
 // Instance of a component, see componentExample.js
 export class Component extends PropertyOwner {
 	constructor(predefinedId = false) {
@@ -25,6 +34,13 @@ export class Component extends PropertyOwner {
 		super.delete();
 		return true;
 	}
+	_addEventListener(functionName) {
+		let func = this[functionName];
+		let self = this;
+		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			func.apply(self, arguments);
+		}));
+	}
 	_preInit() {
 		this.constructor.requirements.forEach(r => {
 			this[r] = this.entity.getComponent(r);
@@ -32,16 +48,12 @@ export class Component extends PropertyOwner {
 		});
 
 		this.forEachChild('com', c => c._preInit());
-		let self = this;
-		['onUpdate', 'onDraw', 'onDrawHelper', 'onStart'].forEach(funcName => {
-			if (typeof this[funcName] === 'function') {
-				let func = this[funcName];
-				this._listenRemoveFunctions.push(this.scene.listen(funcName, function() {
-					func.apply(self, arguments);
-				}));
-			}
-		});
 
+		for (let i = 0; i < eventListeners.length; ++i) {
+			if (typeof this[eventListeners[i]] === 'function')
+				this._addEventListener(eventListeners[i]);
+		}
+		
 		if (this.constructor.componentName !== 'Transform')
 			this.scene.addComponent(this);
 		

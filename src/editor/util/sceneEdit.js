@@ -69,11 +69,10 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 		return;
 	
 	let ref = change.reference;
-	assert(ref._isInTree);
+	assert(ref && ref._rootType);
 	
 	let threeLetterType = ref && ref.threeLetterType || null;
-	let rootThreeLetterType = change.reference.getRoot().threeLetterType;
-	if (rootThreeLetterType !== 'gam')
+	if (ref._rootType !== 'gam')
 		return;
 	
 	if (change.type === changeType.addSerializableToTree) {
@@ -94,17 +93,14 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 			entities.forEach(entity => {
 				
 				let oldComponent = entity.getComponents(ref.name).find(com => com._componentId === ref.componentId);
-				console.log('delete old component', oldComponent+'');
 				if (oldComponent)
 					entity.deleteComponent(oldComponent);
 				
 				
 				let proto = entity.prototype;
 				let componentData = proto.findComponentDataByComponentId(ref.componentId, true);
-				console.log('new componentData', componentData+'');
 				if (componentData) {
 					let component = componentData.createComponent();
-					console.log('add new component', component+'');
 					entity.addComponents([component]);
 				}
 			});
@@ -194,7 +190,6 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 			let componentData = ref;
 			let prototype = componentData.getParent();
 			let entities = getAffectedEntities(prototype);
-			console.log('pissaa', componentData, prototype, entities);
 			entities.forEach(entity => {
 				let epr = entity.prototype;
 				let oldComponent = entity.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);

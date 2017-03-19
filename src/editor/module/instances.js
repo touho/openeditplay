@@ -10,6 +10,7 @@ class TestModule extends Module {
 		this.id = 'instances';
 	}
 	update() {
+		return false;
 	}
 }
 

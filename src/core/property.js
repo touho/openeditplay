@@ -56,7 +56,7 @@ Object.defineProperty(Property.prototype, 'value', {
 	set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
 		this.dispatch('change', this._value);
-		if (this._isInTree)
+		if (this._rootType)
 			addChange(changeType.setPropertyValue, this);
 	},
 	get() {

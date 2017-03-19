@@ -18,7 +18,7 @@ export function startSceneWhenGameLoaded() {
 let socket;
 
 function isInSceneTree(change) {
-	return change.reference.getRoot().threeLetterType === 'sce';
+	return change.reference._rootType === 'sce';
 }
 
 function getQueryVariable(variable) {
@@ -42,7 +42,7 @@ function tryToLoad() {
 	let valueChanges = {}; // id => change
 
 	addChangeListener(change => {
-		if (change.origin === 'external' || !networkEnabled)
+		if (change.external || !networkEnabled)
 			return; // Don't send a change that you have received.
 		
 		if (isInSceneTree(change)) // Don't sync scene
@@ -104,11 +104,20 @@ function tryToLoad() {
 		console.log('replaced with', `${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		
 		if (shouldStartSceneWhenGameLoaded) {
-			let scene = game.getChildren('lvl')[0].createScene();
-			scene.play();
+			let levelIndex = 0;
+			
+			function play() {
+				let levels = game.getChildren('lvl');
+				if (levelIndex >= levels.length)
+					levelIndex = 0;
+				levels[levelIndex].createScene().play();
+			}
+			
+			play();
 			
 			game.listen('levelCompleted', () => {
-				scene.play();
+				levelIndex++;
+				play();
 			});
 		}
 	});

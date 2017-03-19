@@ -10,7 +10,6 @@
 @import "views/propertyEditor.scss";
 @import "views/propertyEditorTypes.scss";
 @import "views/popup/popup.scss";
-@import "views/popup/levelSelectorButtons.scss";
 
 body, html {
   background: $other-backround;
@@ -32,4 +31,22 @@ body, html {
   -moz-user-select: none;     /* Firefox all */
   -ms-user-select: none;      /* IE 10+ */
   user-select: none;          /* Likely future */
+}
+
+@keyframes clickMeEffect {
+   0%   {
+     filter: sepia(100%) hue-rotate(0deg) saturate(150%);
+   }
+   100% {
+     filter: sepia(100%) hue-rotate(360deg) saturate(150%);
+   }
+}
+.clickMeEffect {
+  animation: clickMeEffect 2s infinite;
+}
+button.clickMeEffect {
+  box-shadow: 0 0 30px #555;
+}
+span.clickMeEffect {
+  text-shadow: 0 0 90px #999;
 }

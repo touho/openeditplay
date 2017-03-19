@@ -1,15 +1,12 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, modulesRegisteredPromise } from '../editor';
-import Level from '../../core/level';
 import events from '../events';
-import { setChangeOrigin } from '../../core/serializableManager';
-import LevelSelector from '../views/popup/levelSelector';
 
 export class TopBarModule extends Module {
 	constructor() {
 		super(
-			this.logo = el('img.logo.button.iconButton.select-none', { src: '../img/logo_reflection_medium.png' }),
+			this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_reflection_medium.png' }),
 			this.buttons = el('div.buttonContainer.select-none')
 		);
 		this.id = 'topbar';
@@ -18,14 +15,10 @@ export class TopBarModule extends Module {
 		events.listen('addTopButtonToTopBar', topButton => {
 			mount(this.buttons, topButton);
 		});
-		
-		new TopButton({
-			text: 'Levels',
-			iconClass: 'fa-area-chart',
-			callback: () => {
-				new LevelSelector();
-			}
-		});
+
+		this.logo.onclick = () => {
+			location.href = '/';
+		}
 	}
 }
 Module.register(TopBarModule, 'top');
@@ -38,7 +31,7 @@ export class TopButton {
 		priority = 1
 	} = {}) {
 		this.priority = priority || 0;
-		
+		this.callback = callback;
 		this.el = el('div.button.topIconTextButton',
 			el('div.topIconTextButtonContent',
 				this.icon = el(`i.fa.${iconClass}`),
@@ -46,13 +39,16 @@ export class TopButton {
 			)
 		);
 		this.el.onclick = () => {
-			if (callback) {
-				callback(this);
-			}
+			this.click();
 		};
 
 		modulesRegisteredPromise.then(() => {
 			events.dispatch('addTopButtonToTopBar', this);
 		});
+	}
+	click() {
+		if (this.callback) {
+			this.callback(this);
+		}
 	}
 }

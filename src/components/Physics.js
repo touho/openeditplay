@@ -1,6 +1,7 @@
 import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
 import p2, { addBody, deleteBody, createMaterial } from '../feature/physics';
+import assert from '../util/assert';
 
 const PHYSICS_SCALE = 1/50;
 const PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
@@ -57,10 +58,12 @@ Component.register({
 			}));
 			this.listenProperty(this, 'bounciness', update(bounciness => this.updateMaterial()));
 
-			if (this._isInTree)
+			if (this._rootType)
 				this.createBody();
 		},
 		createBody() {
+			assert(!this.body);
+			
 			this.body = new p2.Body({
 				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
@@ -99,20 +102,20 @@ Component.register({
 			});
 			this.body.shapes.forEach(s => s.material = material);
 		},
-		setInTreeStatus(inTree) {
-			if (inTree) {
+		setRootType(rootType) {
+			if (rootType) {
 				if (this.inited)
 					this.createBody();
 			}
-			return Component.prototype.setInTreeStatus.call(this, ...arguments);
+			return Component.prototype.setRootType.call(this, rootType);
 		},
 		onUpdate() {
-			if (!this.body || this.body.sleepState === p2.Body.SLEEPING)
+			let b = this.body;
+			if (!b || b.sleepState === p2.Body.SLEEPING)
 				return;
 			
 			this.updatingOthers = true;
 			
-			let b = this.body;
 			let newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
 			if (!this.Transform.position.isEqualTo(newPos))
 				this.Transform.position = newPos;

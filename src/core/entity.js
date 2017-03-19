@@ -120,13 +120,16 @@ export default class Entity extends Serializable {
 		array.splice(idx, 1);
 		return this;
 	}
-	setInTreeStatus(isInTree) {
-		if (this._isInTree === isInTree)
+	setRootType(rootType) {
+		if (this._rootType === rootType)
 			return;
+		this._rootType = rootType;
 
-		this._isInTree = isInTree;
+		let i;
 		this.components.forEach((value, key) => {
-			value.forEach(component => component.setInTreeStatus(isInTree));
+			for (i = 0; i < value.length; ++i) {
+				value[i].setRootType(rootType);
+			}
 		});
 	}
 	toJSON() {

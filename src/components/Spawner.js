@@ -23,7 +23,7 @@ Component.register({
 			context.lineWidth = 1;
 			context.font = '40px FontAwesome';
 			context.textAlign = 'center';
-			context.fillText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
+			context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 			context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
 			
 			context.restore();

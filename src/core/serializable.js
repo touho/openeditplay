@@ -1,14 +1,15 @@
 import assert from '../util/assert';
-import * as serializableManager from './serializableManager';
+import { addSerializable, removeSerializable, addChange, changeType } from './serializableManager';
 import { isClient } from '../util/environment';
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 const CHAR_COUNT = CHARACTERS.length;
 
+const random = Math.random;
 export function createStringId(threeLetterPrefix = '???', characters = 16) {
 	let id = threeLetterPrefix;
 	for (let i = characters - 1; i >= 0; --i)
-		id += CHARACTERS[Math.random() * CHAR_COUNT | 0];
+		id += CHARACTERS[random() * CHAR_COUNT | 0];
 	return id;
 }
 
@@ -16,34 +17,35 @@ let serializableClasses = new Map();
 
 export default class Serializable {
 	constructor(predefinedId = false, skipSerializableRegistering = false) {
+// @ifndef OPTIMIZE
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
+// @endif
 		this._children = new Map(); // threeLetterType -> array
 		this._listeners = {};
-		this._isInTree = this.isRoot;
-		this._state |= Serializable.STATE_CONSTRUCTOR;
+		this._rootType = this.isRoot ? this.threeLetterType : null;
 		if (skipSerializableRegistering)
 			return;
 		if (predefinedId) {
-			this._state |= Serializable.STATE_PREDEFINEDID;
 			this.id = predefinedId;
 		} else {
 			this.id = createStringId(this.threeLetterType);
 		}
+		/*
 		if (this.id.startsWith('?'))
 			throw new Error('?');
-		serializableManager.addSerializable(this);
+			*/
+		addSerializable(this);
 	}
 	delete() {
 		if (this._parent) {
 			this._parent.deleteChild(this);
 			return false;
 		}
-		delete this._rootCache;
 		this.deleteChildren();
 		this._alive = false;
-		this._isInTree = false;
+		this._rootType = null;
 		this._listeners = {};
-		serializableManager.removeSerializable(this.id);
+		removeSerializable(this.id);
 		this._state |= Serializable.STATE_DESTROY;
 		return true;
 	}
@@ -58,7 +60,7 @@ export default class Serializable {
 			this._children.clear();
 
 			if (this._parent) {
-				serializableManager.addChange(serializableManager.changeType.deleteAllChildren, this);
+				addChange(changeType.deleteAllChildren, this);
 			}
 		}
 	}
@@ -76,14 +78,12 @@ export default class Serializable {
 		return this;
 	}
 	addChild(child) {
-		
 		this._addChild(child);
-		
 		
 		this._state |= Serializable.STATE_ADDCHILD;
 		
-		if (this._isInTree)
-			serializableManager.addChange(serializableManager.changeType.addSerializableToTree, child);
+		if (this._rootType)
+			addChange(changeType.addSerializableToTree, child);
 		return this;
 	}
 	_addChild(child) {
@@ -97,7 +97,9 @@ export default class Serializable {
 		array.push(child);
 		child._parent = this;
 		child._state |= Serializable.STATE_ADDPARENT;
-		child.setInTreeStatus(this._isInTree);
+		
+		if (child._rootType !== this._rootType) // tiny optimization
+			child.setRootType(this._rootType);
 		
 		return this;
 	}
@@ -131,18 +133,15 @@ export default class Serializable {
 		return null;
 	}
 	getRoot() {
-		if (this._rootCache)
-			return this._rootCache;
 		let element = this;
-		while (element._parent)
+		while (element._parent) {
 			element = element._parent;
-		if (element !== this)
-			this._rootCache = element;
+		}
 		return element;
 	}
 	// idx is optional
 	deleteChild(child, idx) {
-		serializableManager.addChange(serializableManager.changeType.deleteSerializable, child);
+		addChange(changeType.deleteSerializable, child);
 		this._detachChild(child, idx);
 		child.delete();
 		return this;
@@ -158,7 +157,7 @@ export default class Serializable {
 		if (array.length === 0)
 			this._children.delete(child.threeLetterType);
 		child._parent = null;
-		child.setInTreeStatus(false);
+		child.setRootType(null);
 		
 		return this;
 	}
@@ -180,12 +179,11 @@ export default class Serializable {
 		
 		newParent._addChild(this._detach());
 
-		serializableManager.addChange(serializableManager.changeType.move, this);
+		addChange(changeType.move, this);
 		
 		return this;
 	}
 	_detach() {
-		delete this._rootCache;
 		this._parent && this._parent._detachChild(this);
 		return this;
 	}
@@ -258,16 +256,21 @@ export default class Serializable {
 		}
 		return false;
 	}
-	setInTreeStatus(isInTree) {
-		if (this._isInTree === isInTree)
+	setRootType(rootType) {
+		if (this._rootType === rootType)
 			return;
-
-		delete this._rootCache;
+		this._rootType = rootType;
 		
-		this._isInTree = isInTree;
-		this._children.forEach(array => {
-			array.forEach(child => child.setInTreeStatus(isInTree));
+		// Optimized
+		let i;
+		this._children.forEach(childArray => {
+			for (i = 0; i < childArray.length; ++i) {
+				childArray[i].setRootType(rootType);
+			}
 		});
+	}
+	isInTree() {
+		return !!this._rootType;
 	}
 	static fromJSON(json) {
 		assert(typeof json.id === 'string' && json.id.length > 5, 'Invalid id.');
@@ -308,15 +311,14 @@ export default class Serializable {
 Serializable.prototype._parent = null;
 Serializable.prototype._alive = true;
 Serializable.prototype._state = 0;
+Serializable.prototype._rootType = null;
 
-Serializable.STATE_CONSTRUCTOR = 1;
 Serializable.STATE_INIT = 2;
 Serializable.STATE_ADDCHILD = 4;
 Serializable.STATE_ADDPARENT = 8;
 Serializable.STATE_CLONE = 16;
 Serializable.STATE_DESTROY = 32;
 Serializable.STATE_FROMJSON = 64;
-Serializable.STATE_PREDEFINEDID = 128;
 
 Serializable.prototype.isRoot = false; // If this should be a root node
 Object.defineProperty(Serializable.prototype, 'debug', {
@@ -339,14 +341,12 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 				states.push(stateString);
 		};
 		
-		logState(Serializable.STATE_CONSTRUCTOR, 'constructor');
 		logState(Serializable.STATE_INIT, 'init');
 		logState(Serializable.STATE_ADDCHILD, 'add child');
 		logState(Serializable.STATE_ADDPARENT, 'add parent');
 		logState(Serializable.STATE_CLONE, 'clone');
 		logState(Serializable.STATE_DESTROY, 'destroy');
 		logState(Serializable.STATE_FROMJSON, 'from json');
-		logState(Serializable.STATE_PREDEFINEDID, 'predefined id');
 		
 		info += states.join(', ');
 		

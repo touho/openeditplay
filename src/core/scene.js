@@ -39,6 +39,7 @@ export default class Scene extends Serializable {
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
+		this.won = false;
 		
 		super(predefinedId);
 		addChange(changeType.addSerializableToTree, this);
@@ -53,11 +54,7 @@ export default class Scene extends Serializable {
 		this.draw();
 	}
 	win() {
-		setTimeout(() => {
-			setChangeOrigin(this);
-			this.reset();
-			game.dispatch('levelCompleted');
-		})
+		this.won = true;
 	}
 	animFrame(playCalled) {
 		this.animationFrameId = null;
@@ -75,7 +72,15 @@ export default class Scene extends Serializable {
 		
 		this.dispatch('onUpdate', dt, this.time);
 		updateWorld(this, dt, timeInMilliseconds);
+		
 		this.draw();
+		
+		if (this.won) {
+			this.pause();
+			this.time = 0;
+			game.dispatch('levelCompleted');
+			this.reset();
+		}
 		
 		this.requestAnimFrame();
 	}
@@ -90,6 +95,8 @@ export default class Scene extends Serializable {
 		return !this.playing && this.time === 0;
 	}
 	reset() {
+		if (!this._alive)
+			return; // scene has been replaced by another one
 		this.resetting = true;
 		this.pause();
 		this.deleteChildren();
@@ -100,6 +107,7 @@ export default class Scene extends Serializable {
 		if (this.level)
 			this.level.createScene(this);
 		
+		this.won = false;
 		this.time = 0;
 		this.draw();
 		delete this.resetting;

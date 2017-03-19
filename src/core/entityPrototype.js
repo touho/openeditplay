@@ -89,12 +89,10 @@ export default class EntityPrototype extends Prototype {
 		if (children.length > 0)
 			json.c = children.map(child => child.toJSON());
 		
-		let prototype = this.prototype;
-		
 		let floatToJSON = Prop.float().toJSON;
 		let handleProperty = prp => {
 			if (prp.name === 'name') {
-				if (!prototype || prp.value !== prototype.name)
+				if (prp.value)
 					json.n = prp.value;
 			} else if (prp.name === 'position') {
 				json.x = floatToJSON(prp.value.x);
@@ -166,7 +164,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
 	transform.addChild(angle);
 
 	let name = EntityPrototype._propertyTypesByName.name.createProperty({
-		value: prototype.name,
+		value: '',
 		predefinedId: id + '_n'
 	});
 	
@@ -187,7 +185,7 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let angleId = json.id + '_r';
 	
 	let name = Prototype._propertyTypesByName.name.createProperty({ 
-		value: json.n === undefined ? entityPrototype.prototype.name : json.n, 
+		value: json.n === undefined ? '' : json.n,
 		predefinedId: nameId 
 	});
 	

@@ -15,7 +15,7 @@ Component.register({
 			this.Physics = this.entity.getComponent('Physics');
 		},
 		onUpdate(dt, t) {
-			if (!this._isInTree)
+			if (!this._rootType)
 				return;
 			
 			if (this.userControlled) {

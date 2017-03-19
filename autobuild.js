@@ -40,7 +40,7 @@ const jsDependencies = [
 // Editor CSS
 watch('src/**/*.scss', () => {
 	buildCss('src/editorMain.scss', 'dist/explore.editor.css', () => {
-		copy('dist/explore.editor.cs*', 'public/css/');
+		copy('dist/explore.editor.cs*', 'public/edit/css/');
 	});
 }, true);
 
@@ -48,14 +48,14 @@ watch('src/**/*.scss', () => {
 concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.css`, err => {
 	if (err) throw new Error(err);
 	console.log(`Built dist/explore.editor.dependencies.css`);
-	copy('dist/explore.editor.dependencies.css', 'public/css/');
+	copy('dist/explore.editor.dependencies.css', 'public/edit/css/');
 });
 
 // Editor JS Dependencies
 concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.js`, err => {
 	if (err) throw new Error(err);
 	console.log(`Built dist/explore.editor.dependencies.js`);
-	copy('dist/explore.editor.dependencies.js', 'public/');
+	copy('dist/explore.editor.dependencies.js', 'public/edit/');
 });
 
 // Game engine JS Dependencies
@@ -63,33 +63,33 @@ if (target === 'all') {
 	concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
 		if (err) throw new Error(err);
 		console.log(`Built dist/explore.dependencies.js`);
-		copy('dist/explore.dependencies.js', 'public/');
+		copy('dist/explore.dependencies.js', 'public/play/');
 	});
 }
 
 // Game engine JS
 if (target === 'all') {
 	autobuildJs('src/main.js', 'dist/explore.js', {
-		copyTo: 'public/',
+		copyTo: 'public/play/',
 		optimize: true
 	});
 	autobuildJs('src/main.js', 'dist/explore.min.js', {
 		uglify: true,
-		copyTo: 'public/',
+		copyTo: 'public/play/',
 		optimize: true
 	});
 }
 
 // Editor JS
 autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {
-	copyTo: 'public/'
+	copyTo: 'public/edit/'
 });
 // autobuildJs('src/editorMain.js', 'dist/explore.editor.min.js', {
 // 	uglify: true,
 // 	copyTo: 'public/'
 // });
 
-watch(['dist/explore.editor.js', 'dist/explore.editor.css'], () => {
+watch(['public/edit/**/*', 'public/play/**/*'], () => {
 	if (serverProcess && serverProcess.connected)
 		serverProcess.send({ refreshOldBrowsers: true });
 });
@@ -103,7 +103,7 @@ autobuildJs('src/serverMain.js', 'dist/explore.server.js', {
 
 // Server restarter
 let serverProcess = null;
-watch('dist/explore.server.js', args => {
+watch(['dist/explore.server.js', 'template/*'], args => {
 	if (serverProcess === 'wait')
 		return;
 	

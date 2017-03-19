@@ -13,13 +13,14 @@ if (isClient && isServer)
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
 
+var random = Math.random;
 function createStringId(threeLetterPrefix, characters) {
 	if ( threeLetterPrefix === void 0 ) threeLetterPrefix = '???';
 	if ( characters === void 0 ) characters = 16;
 
 	var id = threeLetterPrefix;
 	for (var i = characters - 1; i >= 0; --i)
-		{ id += CHARACTERS[Math.random() * CHAR_COUNT | 0]; }
+		{ id += CHARACTERS[random() * CHAR_COUNT | 0]; }
 	return id;
 }
 
@@ -29,21 +30,23 @@ var Serializable = function Serializable(predefinedId, skipSerializableRegisteri
 	if ( predefinedId === void 0 ) predefinedId = false;
 	if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
 
+// @ifndef OPTIMIZE
 	assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
+// @endif
 	this._children = new Map(); // threeLetterType -> array
 	this._listeners = {};
-	this._isInTree = this.isRoot;
-	this._state |= Serializable.STATE_CONSTRUCTOR;
+	this._rootType = this.isRoot ? this.threeLetterType : null;
 	if (skipSerializableRegistering)
 		{ return; }
 	if (predefinedId) {
-		this._state |= Serializable.STATE_PREDEFINEDID;
 		this.id = predefinedId;
 	} else {
 		this.id = createStringId(this.threeLetterType);
 	}
+	/*
 	if (this.id.startsWith('?'))
-		{ throw new Error('?'); }
+		throw new Error('?');
+		*/
 	addSerializable(this);
 };
 Serializable.prototype.delete = function delete$1 () {
@@ -51,10 +54,9 @@ Serializable.prototype.delete = function delete$1 () {
 		this._parent.deleteChild(this);
 		return false;
 	}
-	delete this._rootCache;
 	this.deleteChildren();
 	this._alive = false;
-	this._isInTree = false;
+	this._rootType = null;
 	this._listeners = {};
 	removeSerializable(this.id);
 	this._state |= Serializable.STATE_DESTROY;
@@ -93,13 +95,11 @@ Serializable.prototype.addChildren = function addChildren (children) {
 	return this;
 };
 Serializable.prototype.addChild = function addChild (child) {
-		
 	this._addChild(child);
-		
 		
 	this._state |= Serializable.STATE_ADDCHILD;
 		
-	if (this._isInTree)
+	if (this._rootType)
 		{ addChange(changeType.addSerializableToTree, child); }
 	return this;
 };
@@ -114,7 +114,9 @@ Serializable.prototype._addChild = function _addChild (child) {
 	array.push(child);
 	child._parent = this;
 	child._state |= Serializable.STATE_ADDPARENT;
-	child.setInTreeStatus(this._isInTree);
+		
+	if (child._rootType !== this._rootType) // tiny optimization
+		{ child.setRootType(this._rootType); }
 		
 	return this;
 };
@@ -152,13 +154,10 @@ Serializable.prototype.findParent = function findParent (threeLetterType, filter
 	return null;
 };
 Serializable.prototype.getRoot = function getRoot () {
-	if (this._rootCache)
-		{ return this._rootCache; }
 	var element = this;
-	while (element._parent)
-		{ element = element._parent; }
-	if (element !== this)
-		{ this._rootCache = element; }
+	while (element._parent) {
+		element = element._parent;
+	}
 	return element;
 };
 // idx is optional
@@ -181,7 +180,7 @@ Serializable.prototype._detachChild = function _detachChild (child, idx) {
 	if (array.length === 0)
 		{ this._children.delete(child.threeLetterType); }
 	child._parent = null;
-	child.setInTreeStatus(false);
+	child.setRootType(null);
 		
 	return this;
 };
@@ -211,7 +210,6 @@ Serializable.prototype.move = function move (newParent) {
 	return this;
 };
 Serializable.prototype._detach = function _detach () {
-	delete this._rootCache;
 	this._parent && this._parent._detachChild(this);
 	return this;
 };
@@ -293,16 +291,21 @@ Serializable.prototype.hasDescendant = function hasDescendant (child) {
 	}
 	return false;
 };
-Serializable.prototype.setInTreeStatus = function setInTreeStatus (isInTree) {
-	if (this._isInTree === isInTree)
+Serializable.prototype.setRootType = function setRootType (rootType) {
+	if (this._rootType === rootType)
 		{ return; }
-
-	delete this._rootCache;
+	this._rootType = rootType;
 		
-	this._isInTree = isInTree;
-	this._children.forEach(function (array) {
-		array.forEach(function (child) { return child.setInTreeStatus(isInTree); });
+	// Optimized
+	var i;
+	this._children.forEach(function (childArray) {
+		for (i = 0; i < childArray.length; ++i) {
+			childArray[i].setRootType(rootType);
+		}
 	});
+};
+Serializable.prototype.isInTree = function isInTree () {
+	return !!this._rootType;
 };
 Serializable.fromJSON = function fromJSON (json) {
 	assert(typeof json.id === 'string' && json.id.length > 5, 'Invalid id.');
@@ -344,15 +347,14 @@ Serializable.registerSerializable = function registerSerializable (Class, threeL
 Serializable.prototype._parent = null;
 Serializable.prototype._alive = true;
 Serializable.prototype._state = 0;
+Serializable.prototype._rootType = null;
 
-Serializable.STATE_CONSTRUCTOR = 1;
 Serializable.STATE_INIT = 2;
 Serializable.STATE_ADDCHILD = 4;
 Serializable.STATE_ADDPARENT = 8;
 Serializable.STATE_CLONE = 16;
 Serializable.STATE_DESTROY = 32;
 Serializable.STATE_FROMJSON = 64;
-Serializable.STATE_PREDEFINEDID = 128;
 
 Serializable.prototype.isRoot = false; // If this should be a root node
 Object.defineProperty(Serializable.prototype, 'debug', {
@@ -377,14 +379,12 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 				{ states.push(stateString); }
 		};
 		
-		logState(Serializable.STATE_CONSTRUCTOR, 'constructor');
 		logState(Serializable.STATE_INIT, 'init');
 		logState(Serializable.STATE_ADDCHILD, 'add child');
 		logState(Serializable.STATE_ADDPARENT, 'add parent');
 		logState(Serializable.STATE_CLONE, 'clone');
 		logState(Serializable.STATE_DESTROY, 'destroy');
 		logState(Serializable.STATE_FROMJSON, 'from json');
-		logState(Serializable.STATE_PREDEFINEDID, 'predefined id');
 		
 		info += states.join(', ');
 		
@@ -431,10 +431,13 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 var serializables = {};
 
 var DEBUG_CHANGES = 0;
-var CHECK_FOR_INVALID_ORIGINS = 0;
+var CHECK_FOR_INVALID_ORIGINS = 1;
 
 function addSerializable(serializable) {
-	assert(serializables[serializable.id] === undefined, ("Serializable id clash " + (serializable.id)));
+// @ifndef OPTIMIZE
+	if (serializables[serializable.id] !== undefined)
+		{ assert(false, ("Serializable id clash " + (serializable.id))); }
+// @endif
 	serializables[serializable.id] = serializable;
 }
 
@@ -445,10 +448,11 @@ function getSerializable$1(id) {
 
 
 function removeSerializable(id) {
-	if (serializables[id])
-		{ delete serializables[id]; }
-	else
-		{ throw new Error('Serializable not found!'); }
+	/* When deleting a scene, this function is called a lot of times
+	if (!serializables[id])
+		throw new Error('Serializable not found!');
+	*/
+	delete serializables[id];
 }
 
 // reference parameters are not sent over net. they are helpers in local game instance
@@ -498,7 +502,10 @@ function setChangeOrigin(_origin) {
 
 var externalChange = false;
 function addChange(type, reference) {
+	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
+	// @endif
+	
 	if (!reference.id) { return; }
 	
 	var change = {
@@ -506,7 +513,7 @@ function addChange(type, reference) {
 		reference: reference,
 		id: reference.id,
 		external: externalChange,
-		origin: origin
+		origin: origin // exists in editor, but not in optimized release
 	};
 	if (type === changeType.setPropertyValue) {
 		change.value = reference._value;
@@ -564,17 +571,15 @@ function packChange(change) {
 		if (change.type === changeType.addSerializableToTree) {
 			if (change.reference) {
 				change.value = change.reference.toJSON();
-			} else if (change.value) {
-				// change.value = change.value; // no changes
 			} else {
 				assert(false, 'invalid change of type addSerializableToTree', change);
 			}
-		} else if (change.value) {
+		} else if (change.value !== undefined) {
 			change.value = change.reference.propertyType.type.toJSON(change.value);
 		}
 
 		Object.keys(keyToShortKey).forEach(function (key) {
-			if (change[key]) {
+			if (change[key] !== undefined) {
 				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
 				packed[keyToShortKey[key]] = change[key];
 			}
@@ -647,8 +652,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -659,7 +662,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -725,7 +727,7 @@ Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
 		this.dispatch('change', this._value);
-		if (this._isInTree)
+		if (this._rootType)
 			{ addChange(changeType.setPropertyValue, this); }
 	},
 	get: function get() {
@@ -746,10 +748,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1384,13 +1382,16 @@ var Entity = (function (Serializable$$1) {
 		array.splice(idx, 1);
 		return this;
 	};
-	Entity.prototype.setInTreeStatus = function setInTreeStatus (isInTree) {
-		if (this._isInTree === isInTree)
+	Entity.prototype.setRootType = function setRootType (rootType) {
+		if (this._rootType === rootType)
 			{ return; }
+		this._rootType = rootType;
 
-		this._isInTree = isInTree;
+		var i;
 		this.components.forEach(function (value, key) {
-			value.forEach(function (component) { return component.setInTreeStatus(isInTree); });
+			for (i = 0; i < value.length; ++i) {
+				value[i].setRootType(rootType);
+			}
 		});
 	};
 	Entity.prototype.toJSON = function toJSON () {
@@ -1626,66 +1627,19 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype.getInheritedComponentDatas = function getInheritedComponentDatas (filter) {
 		if ( filter === void 0 ) filter = null;
 
-		var originalPrototype = this;
-		
-		function getDataFromPrototype(prototype, _depth) {
-			if ( _depth === void 0 ) _depth = 0;
-
-			var data;
-			
-			var parentPrototype = prototype.getParentPrototype();
-			if (parentPrototype)
-				{ data = getDataFromPrototype(parentPrototype, _depth + 1); }
-			else
-				{ data = {}; } // Top level
-			
-			var componentDatas = prototype.getChildren('cda');
-			componentDatas.forEach(function (componentData) {
-				if (filter && !filter(componentData))
-					{ return; }
-				
-				if (!data[componentData.componentId]) {
-					// Most parent version of this componentId
-					data[componentData.componentId] = {
-						// ownComponent = true if the original prototype is the first one introducing this componentId
-						ownComponentData: null, // will be given value if original prototype has this componentId
-						componentClass: componentData.componentClass,
-						componentId: componentData.componentId,
-						propertyHash: {},
-						threeLetterType: 'icd',
-						generatedForPrototype: originalPrototype
-					};
-				}
-				if (_depth === 0) {
-					data[componentData.componentId].ownComponentData = componentData;
-				}
-
-				componentData.getChildren('prp').forEach(function (property) {
-					// Newest version of a property always overrides old property
-					data[componentData.componentId].propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
-				});
-			});
-			
-			return data;
-		}
-
-		var data = getDataFromPrototype(this);
+		var data = getDataFromPrototype(this, this, filter);
 		var array = Object.keys(data).map(function (key) { return data[key]; });
-		array.forEach(function (inheritedComponentData) {
+		var inheritedComponentData;
+		for (var i = 0; i < array.length; ++i) {
+			inheritedComponentData = array[i];
 			inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(function (propertyType) {
-				if (inheritedComponentData.propertyHash[propertyType.name])
-					{ return inheritedComponentData.propertyHash[propertyType.name]; }
-				else
-					{ return propertyType.createProperty({ skipSerializableRegistering: true }); }
+				return inheritedComponentData.propertyHash[propertyType.name]
+					|| propertyType.createProperty({ skipSerializableRegistering: true });
 			});
 			delete inheritedComponentData.propertyHash;
-		});
-		
-		array.forEach(function (inheritedComponentData) {
-			var cid = inheritedComponentData.componentId;
-		});
+		}
 
-		return array.sort(function (a, b) { return a.componentClass.componentName.localeCompare(b.componentClass.componentName); });
+		return array.sort(sortInheritedComponentDatas);
 	};
 	
 	Prototype.prototype.createAndAddPropertyForComponentData = function createAndAddPropertyForComponentData (inheritedComponentData, propertyName, propertyValue) {
@@ -1795,10 +1749,10 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype.delete = function delete$1 () {
 		var this$1 = this;
 
-		this._game = this._game || this.getRoot();
+		this._gameRoot = this._gameRoot || this.getRoot();
 		if (!PropertyOwner$$1.prototype.delete.call(this)) { return false; }
-		if (this.threeLetterType === 'prt') {
-			this._game.forEachChild('lvl', function (lvl) {
+		if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
+			this._gameRoot.forEachChild('lvl', function (lvl) {
 				var items = lvl.getChildren('epr');
 				for (var i = items.length-1; i >= 0; i--) {
 					if (items[i].prototype === this$1) {
@@ -1821,6 +1775,56 @@ Prototype.create = function(name) {
 };
 
 Serializable.registerSerializable(Prototype, 'prt');
+
+
+function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
+	if ( _depth === void 0 ) _depth = 0;
+
+	var data;
+
+	var parentPrototype = prototype.getParentPrototype();
+	if (parentPrototype)
+		{ data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1); }
+	else
+		{ data = {}; } // Top level
+	
+	var componentDatas = prototype.getChildren('cda');
+	if (filter)
+		{ componentDatas = componentDatas.filter(filter); }
+	var componentData;
+	for (var i = 0; i < componentDatas.length; ++i) {
+		componentData = componentDatas[i];
+
+		if (!data[componentData.componentId]) {
+			// Most parent version of this componentId
+			data[componentData.componentId] = {
+				// ownComponent = true if the original prototype is the first one introducing this componentId
+				ownComponentData: _depth === 0 ? componentData : null, // will be given value if original prototype has this componentId
+				componentClass: componentData.componentClass,
+				componentId: componentData.componentId,
+				propertyHash: {},
+				threeLetterType: 'icd',
+				generatedForPrototype: originalPrototype,
+			};
+		}
+		
+		var propertyHash = data[componentData.componentId].propertyHash;
+		
+		var properties = componentData.getChildren('prp');
+		var property = (void 0);
+		for (var j = 0; j < properties.length; ++j) {
+			property = properties[j];
+			// Newest version of a property always overrides old property
+			propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
+		}
+	}
+
+	return data;
+}
+
+function sortInheritedComponentDatas(a, b) {
+	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
+}
 
 var propertyTypes = [
 	createPropertyType('name', 'No name', createPropertyType.string)
@@ -1998,6 +2002,7 @@ var Scene = (function (Serializable$$1) {
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
+		this.won = false;
 		
 		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
@@ -2016,13 +2021,7 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
 	Scene.prototype.win = function win () {
-		var this$1 = this;
-
-		setTimeout(function () {
-			setChangeOrigin(this$1);
-			this$1.reset();
-			game.dispatch('levelCompleted');
-		});
+		this.won = true;
 	};
 	Scene.prototype.animFrame = function animFrame (playCalled) {
 		this.animationFrameId = null;
@@ -2040,7 +2039,15 @@ var Scene = (function (Serializable$$1) {
 		
 		this.dispatch('onUpdate', dt, this.time);
 		updateWorld(this, dt, timeInMilliseconds);
+		
 		this.draw();
+		
+		if (this.won) {
+			this.pause();
+			this.time = 0;
+			game.dispatch('levelCompleted');
+			this.reset();
+		}
 		
 		this.requestAnimFrame();
 	};
@@ -2057,6 +2064,8 @@ var Scene = (function (Serializable$$1) {
 		return !this.playing && this.time === 0;
 	};
 	Scene.prototype.reset = function reset () {
+		if (!this._alive)
+			{ return; } // scene has been replaced by another one
 		this.resetting = true;
 		this.pause();
 		this.deleteChildren();
@@ -2067,6 +2076,7 @@ var Scene = (function (Serializable$$1) {
 		if (this.level)
 			{ this.level.createScene(this); }
 		
+		this.won = false;
 		this.time = 0;
 		this.draw();
 		delete this.resetting;
@@ -2137,6 +2147,15 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
+var eventListeners = [
+	'onUpdate'
+	,'onDraw'
+	,'onStart'
+// @ifndef OPTIMIZE
+	,'onDrawHelper'
+// @endif
+];
+
 // Instance of a component, see componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
@@ -2160,6 +2179,13 @@ var Component = (function (PropertyOwner$$1) {
 		PropertyOwner$$1.prototype.delete.call(this);
 		return true;
 	};
+	Component.prototype._addEventListener = function _addEventListener (functionName) {
+		var func = this[functionName];
+		var self = this;
+		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			func.apply(self, arguments);
+		}));
+	};
 	Component.prototype._preInit = function _preInit () {
 		var this$1 = this;
 
@@ -2169,16 +2195,12 @@ var Component = (function (PropertyOwner$$1) {
 		});
 
 		this.forEachChild('com', function (c) { return c._preInit(); });
-		var self = this;
-		['onUpdate', 'onDraw', 'onDrawHelper', 'onStart'].forEach(function (funcName) {
-			if (typeof this$1[funcName] === 'function') {
-				var func = this$1[funcName];
-				this$1._listenRemoveFunctions.push(this$1.scene.listen(funcName, function() {
-					func.apply(self, arguments);
-				}));
-			}
-		});
 
+		for (var i = 0; i < eventListeners.length; ++i) {
+			if (typeof this$1[eventListeners[i]] === 'function')
+				{ this$1._addEventListener(eventListeners[i]); }
+		}
+		
 		if (this.constructor.componentName !== 'Transform')
 			{ this.scene.addComponent(this); }
 		
@@ -2335,8 +2357,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2426,12 +2446,10 @@ var EntityPrototype = (function (Prototype$$1) {
 		if (children.length > 0)
 			{ json.c = children.map(function (child) { return child.toJSON(); }); }
 		
-		var prototype = this.prototype;
-		
 		var floatToJSON = createPropertyType.float().toJSON;
 		var handleProperty = function (prp) {
 			if (prp.name === 'name') {
-				if (!prototype || prp.value !== prototype.name)
+				if (prp.value)
 					{ json.n = prp.value; }
 			} else if (prp.name === 'position') {
 				json.x = floatToJSON(prp.value.x);
@@ -2509,7 +2527,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 	transform.addChild(angle);
 
 	var name = EntityPrototype._propertyTypesByName.name.createProperty({
-		value: prototype.name,
+		value: '',
 		predefinedId: id + '_n'
 	});
 	
@@ -2530,7 +2548,7 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var angleId = json.id + '_r';
 	
 	var name = Prototype._propertyTypesByName.name.createProperty({ 
-		value: json.n === undefined ? entityPrototype.prototype.name : json.n, 
+		value: json.n === undefined ? '' : json.n,
 		predefinedId: nameId 
 	});
 	
@@ -2586,6 +2604,9 @@ var Level = (function (PropertyOwner$$1) {
 		scene.addChildren(entities);
 		scene.level = this;
 		return scene;
+	};
+	Level.prototype.isEmpty = function isEmpty () {
+		return this.getChildren('epr').length === 0;
 	};
 
 	return Level;
@@ -2742,7 +2763,7 @@ Component.register({
 			this.Physics = this.entity.getComponent('Physics');
 		},
 		onUpdate: function onUpdate(dt, t) {
-			if (!this._isInTree)
+			if (!this._rootType)
 				{ return; }
 			
 			if (this.userControlled) {
@@ -2839,7 +2860,7 @@ Component.register({
 			context.lineWidth = 1;
 			context.font = '40px FontAwesome';
 			context.textAlign = 'center';
-			context.fillText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
+			context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 			context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
 			
 			context.restore();
@@ -2897,7 +2918,7 @@ Component.register({
 				var pos = this.Transform.position;
 				for (var i = 0; i < entities.length; ++i) {
 					if (entities[i].position.distanceSq(pos) < distSq) {
-						if (!entities[i][this$1.storeProp] && this$1.launchTrigger(entities[i]) === false)
+						if (!entities[i][this$1.storeProp] && this$1.launchTrigger(entities[i]) !== false)
 							{ break; }
 						entities[i][this$1.storeProp] = true;
 					} else {
@@ -2910,6 +2931,7 @@ Component.register({
 		// Return false if other triggers should not be checked
 		launchTrigger: function launchTrigger(entity) {
 			if (this.action === 'win') {
+				console.log('will win');
 				this.scene.win();
 				return false;
 			}
@@ -2975,12 +2997,14 @@ Component.register({
 			}));
 			this.listenProperty(this, 'bounciness', update(function (bounciness) { return this$1.updateMaterial(); }));
 
-			if (this._isInTree)
+			if (this._rootType)
 				{ this.createBody(); }
 		},
 		createBody: function createBody() {
 			var this$1 = this;
 
+			assert(!this.body);
+			
 			this.body = new p2$1.Body({
 				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
@@ -3019,24 +3043,20 @@ Component.register({
 			});
 			this.body.shapes.forEach(function (s) { return s.material = material; });
 		},
-		setInTreeStatus: function setInTreeStatus(inTree) {
-			var i = arguments.length, argsArray = Array(i);
-			while ( i-- ) argsArray[i] = arguments[i];
-
-			if (inTree) {
+		setRootType: function setRootType(rootType) {
+			if (rootType) {
 				if (this.inited)
 					{ this.createBody(); }
 			}
-			return (ref = Component.prototype.setInTreeStatus).call.apply(ref, [ this ].concat( argsArray ));
-			var ref;
+			return Component.prototype.setRootType.call(this, rootType);
 		},
 		onUpdate: function onUpdate() {
-			if (!this.body || this.body.sleepState === p2$1.Body.SLEEPING)
+			var b = this.body;
+			if (!b || b.sleepState === p2$1.Body.SLEEPING)
 				{ return; }
 			
 			this.updatingOthers = true;
 			
-			var b = this.body;
 			var newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
 			if (!this.Transform.position.isEqualTo(newPos))
 				{ this.Transform.position = newPos; }
@@ -3067,10 +3087,95 @@ Component.register({
 	}
 });
 
+function gameIdToFilename(gameId) {
+	// File system can be case-insensitive. Add '_' before every uppercase letter.
+	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
+}
+
+var isGameFileRegExp = /^gam[A-Za-z0-9_]+\.txt$/;
+
+
+function readFile(path) {
+	return new Promise(function (resolve, reject) {
+		fs.readFile(DIR_ROOT + path, function (err, data) {
+			if (err)
+				{ return reject(err); }
+			resolve(data);
+		});
+	});
+}
+
+// GameInfo cache
+var cachedGameInfo = [];
+function updateCachedGameData() {
+	return getGameFilenames().then(function (filenames) {
+		var p = Promise.resolve();
+		
+		var gameInfo = [];
+		
+		filenames.forEach(function (filename) {
+			p = p.then(function () {
+				return readFile(("/gameData/" + filename)).then(function (data) {
+					var obj = JSON.parse(data);
+					var id = obj.id;
+					var nameObj = obj.c.find(function (child) { return child.n === 'name' && child.id.startsWith('prp'); });
+					var levels = obj.c.filter(function (child) { return child.id.startsWith('lvl'); }).length;
+					var name = nameObj ? nameObj.v : 'NULL';
+					var size = data.length;
+					gameInfo.push({
+						id: id,
+						name: name,
+						size: size,
+						levels: levels
+					});
+				});
+			});
+		});
+		
+		p = p.then(function () {
+			cachedGameInfo = gameInfo;
+		});
+		
+		return p;
+	}).catch(function (err) {
+		console.error('updateCachedGameData error', err);
+	});
+}
+setInterval(updateCachedGameData, 1000 * 5);
+updateCachedGameData();
+
+function getGameFilenames() {
+	return new Promise(function(resolve, reject) {
+		fs.readdir(global.DIR_GAMEDATA, function (err, files) {
+			if (err)
+				{ return reject(err); }
+			files = files.filter(function (filename) { return isGameFileRegExp.test(filename); });
+			resolve(files);
+		});
+	});
+}
+
+
+
+function removeDummyGames() {
+	getGameFilenames().then(function (filenames) {
+		var timeoutMs = 0;
+		filenames.forEach(function (filename) {
+			setTimeout(function () {
+				fs.stat((DIR_GAMEDATA + "/" + filename), function (err, stat) {
+					if (stat.size < 500 && new Date() - new Date(stat.mtime) > 1000*60*60)
+						{ fs.unlink((DIR_GAMEDATA + "/" + filename)); }
+				});
+			}, timeoutMs);
+			timeoutMs += 50;
+		});
+	});
+}
+
 var idToGameServer = {}; // gameId => GameServer
 addChangeListener(function (change) {
 	var root = change.reference.getRoot();
-	if (root && root.threeLetterType === 'gam') {
+	if (root.threeLetterType === 'gam') {
 		var gameServer = idToGameServer[root.id];
 		if (gameServer) {
 			gameServer.saveNeeded = true;
@@ -3084,10 +3189,6 @@ addChangeListener(function (change) {
 	}
 });
 
-function gameIdToFilename(gameId) {
-	// File system can be case-insensitive. Add '_' before every uppercase letter.
-	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
-}
 
 var GameServer = function GameServer(game$$1) {
 	this.id = game$$1.id;
@@ -3118,8 +3219,7 @@ GameServer.prototype.applyChange = function applyChange (change, origin) {
 	}
 };
 GameServer.prototype.save = function save () {
-	// we are in dist folder
-	fs.writeFile((__dirname + "/../gameData/" + (gameIdToFilename(this.id))), JSON.stringify(this.game.toJSON()));
+	fs.writeFile((DIR_GAMEDATA + "/" + (gameIdToFilename(this.id))), JSON.stringify(this.game.toJSON()));
 	this.saveNeeded = false;
 };
 GameServer.prototype.delete = function delete$1 () {
@@ -3133,11 +3233,13 @@ GameServer.prototype.delete = function delete$1 () {
 	delete idToGameServer[this.id];
 };
 
+// Normal update
 setInterval(function () {
 	console.log('srvrs', Object.keys(idToGameServer));
 	Object.keys(idToGameServer).map(function (key) { return idToGameServer[key]; }).forEach(function (gameServer) {
 		if (new Date() - gameServer.lastUsed > 1000*10) {
 			console.log('GameServer delete', gameServer.id);
+			setChangeOrigin('Game clear interval');
 			gameServer.delete();
 		} else if (gameServer.saveNeeded) {
 			console.log('GameServer save', gameServer.id);
@@ -3145,6 +3247,11 @@ setInterval(function () {
 		}
 	});
 }, 3000);
+
+// Delete dummy games
+setInterval(function () {
+	removeDummyGames();
+}, 5000);
 
 function createGame(gameId) {
 	var game$$1 = new Game(gameId);
@@ -3283,16 +3390,46 @@ function getConnectionsForGameServer(gameId) {
 	return set;
 }
 
+var _ = require('lodash');
+function readFileSync(filename) {
+	return fs.readFileSync((DIR_TEMPLATE + "/" + filename));
+}
+
+
+function createTemplateSync(filename) {
+	var fileData = readFileSync(filename);
+	return _.template(fileData);
+}
+
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var compression = require('compression');
+var fs$1 = require('fs');
+
 
 app.use(compression({
 	level: 1
 }));
 app.use(express.static('public'));
+
+var frontPageTemplate = createTemplateSync('frontPage.html');
+app.get('/', function (req, res) {
+	res.send(frontPageTemplate({
+		gameInfo: cachedGameInfo
+	}));
+	/*
+	getGameIdList().then(gameIds => {
+		res.send(frontPageTemplate({
+			gameIds
+		}));
+	}).catch(err => {
+		res.status(500).send('Error');
+	});
+	*/
+});
+
 http.listen(3000, function(){
 	console.log('listening on *:3000');
 });

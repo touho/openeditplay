@@ -40,7 +40,7 @@ class Types extends Module {
 		this.externalChange = false;
 
 		events.listen('change', change => {
-			if (change.reference.getRoot && change.reference.getRoot().threeLetterType === 'sce')
+			if (change.reference._rootType === 'sce')
 				return;
 			
 			let jstree = $(this.jstree).jstree(true);
@@ -99,6 +99,7 @@ class Types extends Module {
 
 		if (!this.dirty) return;
 		
+		
 		let data = [];
 		editor.game.forEachChild('prt', prototype => {
 			let parent = prototype.getParent();
@@ -109,8 +110,12 @@ class Types extends Module {
 			});
 		}, true);
 
+		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
+		
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
+				this.addButton.classList.toggle('clickMeEffect', editor.game.getChildren('prt').length === 0);
+				
 				if (this.externalChange || data.selected.length === 0)
 					return;
 				

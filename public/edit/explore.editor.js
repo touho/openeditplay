@@ -13,13 +13,14 @@ if (isClient && isServer)
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
 
+var random = Math.random;
 function createStringId(threeLetterPrefix, characters) {
 	if ( threeLetterPrefix === void 0 ) threeLetterPrefix = '???';
 	if ( characters === void 0 ) characters = 16;
 
 	var id = threeLetterPrefix;
 	for (var i = characters - 1; i >= 0; --i)
-		{ id += CHARACTERS[Math.random() * CHAR_COUNT | 0]; }
+		{ id += CHARACTERS[random() * CHAR_COUNT | 0]; }
 	return id;
 }
 
@@ -29,21 +30,23 @@ var Serializable = function Serializable(predefinedId, skipSerializableRegisteri
 	if ( predefinedId === void 0 ) predefinedId = false;
 	if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
 
+// @ifndef OPTIMIZE
 	assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
+// @endif
 	this._children = new Map(); // threeLetterType -> array
 	this._listeners = {};
-	this._isInTree = this.isRoot;
-	this._state |= Serializable.STATE_CONSTRUCTOR;
+	this._rootType = this.isRoot ? this.threeLetterType : null;
 	if (skipSerializableRegistering)
 		{ return; }
 	if (predefinedId) {
-		this._state |= Serializable.STATE_PREDEFINEDID;
 		this.id = predefinedId;
 	} else {
 		this.id = createStringId(this.threeLetterType);
 	}
+	/*
 	if (this.id.startsWith('?'))
-		{ throw new Error('?'); }
+		throw new Error('?');
+		*/
 	addSerializable(this);
 };
 Serializable.prototype.delete = function delete$1 () {
@@ -51,10 +54,9 @@ Serializable.prototype.delete = function delete$1 () {
 		this._parent.deleteChild(this);
 		return false;
 	}
-	delete this._rootCache;
 	this.deleteChildren();
 	this._alive = false;
-	this._isInTree = false;
+	this._rootType = null;
 	this._listeners = {};
 	removeSerializable(this.id);
 	this._state |= Serializable.STATE_DESTROY;
@@ -93,13 +95,11 @@ Serializable.prototype.addChildren = function addChildren (children) {
 	return this;
 };
 Serializable.prototype.addChild = function addChild (child) {
-		
 	this._addChild(child);
-		
 		
 	this._state |= Serializable.STATE_ADDCHILD;
 		
-	if (this._isInTree)
+	if (this._rootType)
 		{ addChange(changeType.addSerializableToTree, child); }
 	return this;
 };
@@ -114,7 +114,9 @@ Serializable.prototype._addChild = function _addChild (child) {
 	array.push(child);
 	child._parent = this;
 	child._state |= Serializable.STATE_ADDPARENT;
-	child.setInTreeStatus(this._isInTree);
+		
+	if (child._rootType !== this._rootType) // tiny optimization
+		{ child.setRootType(this._rootType); }
 		
 	return this;
 };
@@ -152,13 +154,10 @@ Serializable.prototype.findParent = function findParent (threeLetterType, filter
 	return null;
 };
 Serializable.prototype.getRoot = function getRoot () {
-	if (this._rootCache)
-		{ return this._rootCache; }
 	var element = this;
-	while (element._parent)
-		{ element = element._parent; }
-	if (element !== this)
-		{ this._rootCache = element; }
+	while (element._parent) {
+		element = element._parent;
+	}
 	return element;
 };
 // idx is optional
@@ -181,7 +180,7 @@ Serializable.prototype._detachChild = function _detachChild (child, idx) {
 	if (array.length === 0)
 		{ this._children.delete(child.threeLetterType); }
 	child._parent = null;
-	child.setInTreeStatus(false);
+	child.setRootType(null);
 		
 	return this;
 };
@@ -211,7 +210,6 @@ Serializable.prototype.move = function move (newParent) {
 	return this;
 };
 Serializable.prototype._detach = function _detach () {
-	delete this._rootCache;
 	this._parent && this._parent._detachChild(this);
 	return this;
 };
@@ -293,16 +291,21 @@ Serializable.prototype.hasDescendant = function hasDescendant (child) {
 	}
 	return false;
 };
-Serializable.prototype.setInTreeStatus = function setInTreeStatus (isInTree) {
-	if (this._isInTree === isInTree)
+Serializable.prototype.setRootType = function setRootType (rootType) {
+	if (this._rootType === rootType)
 		{ return; }
-
-	delete this._rootCache;
+	this._rootType = rootType;
 		
-	this._isInTree = isInTree;
-	this._children.forEach(function (array) {
-		array.forEach(function (child) { return child.setInTreeStatus(isInTree); });
+	// Optimized
+	var i;
+	this._children.forEach(function (childArray) {
+		for (i = 0; i < childArray.length; ++i) {
+			childArray[i].setRootType(rootType);
+		}
 	});
+};
+Serializable.prototype.isInTree = function isInTree () {
+	return !!this._rootType;
 };
 Serializable.fromJSON = function fromJSON (json) {
 	assert(typeof json.id === 'string' && json.id.length > 5, 'Invalid id.');
@@ -344,15 +347,14 @@ Serializable.registerSerializable = function registerSerializable (Class, threeL
 Serializable.prototype._parent = null;
 Serializable.prototype._alive = true;
 Serializable.prototype._state = 0;
+Serializable.prototype._rootType = null;
 
-Serializable.STATE_CONSTRUCTOR = 1;
 Serializable.STATE_INIT = 2;
 Serializable.STATE_ADDCHILD = 4;
 Serializable.STATE_ADDPARENT = 8;
 Serializable.STATE_CLONE = 16;
 Serializable.STATE_DESTROY = 32;
 Serializable.STATE_FROMJSON = 64;
-Serializable.STATE_PREDEFINEDID = 128;
 
 Serializable.prototype.isRoot = false; // If this should be a root node
 Object.defineProperty(Serializable.prototype, 'debug', {
@@ -377,14 +379,12 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 				{ states.push(stateString); }
 		};
 		
-		logState(Serializable.STATE_CONSTRUCTOR, 'constructor');
 		logState(Serializable.STATE_INIT, 'init');
 		logState(Serializable.STATE_ADDCHILD, 'add child');
 		logState(Serializable.STATE_ADDPARENT, 'add parent');
 		logState(Serializable.STATE_CLONE, 'clone');
 		logState(Serializable.STATE_DESTROY, 'destroy');
 		logState(Serializable.STATE_FROMJSON, 'from json');
-		logState(Serializable.STATE_PREDEFINEDID, 'predefined id');
 		
 		info += states.join(', ');
 		
@@ -431,10 +431,13 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 var serializables = {};
 
 var DEBUG_CHANGES = 0;
-var CHECK_FOR_INVALID_ORIGINS = 0;
+var CHECK_FOR_INVALID_ORIGINS = 1;
 
 function addSerializable(serializable) {
-	assert(serializables[serializable.id] === undefined, ("Serializable id clash " + (serializable.id)));
+// @ifndef OPTIMIZE
+	if (serializables[serializable.id] !== undefined)
+		{ assert(false, ("Serializable id clash " + (serializable.id))); }
+// @endif
 	serializables[serializable.id] = serializable;
 }
 
@@ -445,10 +448,11 @@ function getSerializable$1(id) {
 
 
 function removeSerializable(id) {
-	if (serializables[id])
-		{ delete serializables[id]; }
-	else
-		{ throw new Error('Serializable not found!'); }
+	/* When deleting a scene, this function is called a lot of times
+	if (!serializables[id])
+		throw new Error('Serializable not found!');
+	*/
+	delete serializables[id];
 }
 
 // reference parameters are not sent over net. they are helpers in local game instance
@@ -481,7 +485,7 @@ function getChangeOrigin() {
 	return origin;
 }
 // @endif
-function setChangeOrigin(_origin) {
+function setChangeOrigin$1(_origin) {
 	// @ifndef OPTIMIZE
 	if (_origin !== origin) {
 		origin = _origin;
@@ -498,7 +502,10 @@ function setChangeOrigin(_origin) {
 
 var externalChange = false;
 function addChange(type, reference) {
+	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
+	// @endif
+	
 	if (!reference.id) { return; }
 	
 	var change = {
@@ -506,7 +513,7 @@ function addChange(type, reference) {
 		reference: reference,
 		id: reference.id,
 		external: externalChange,
-		origin: origin
+		origin: origin // exists in editor, but not in optimized release
 	};
 	if (type === changeType.setPropertyValue) {
 		change.value = reference._value;
@@ -538,7 +545,7 @@ function addChange(type, reference) {
 }
 
 function executeExternal(callback) {
-	setChangeOrigin('external');
+	setChangeOrigin$1('external');
 	if (externalChange) { return callback(); }
 	externalChange = true;
 	callback();
@@ -564,17 +571,15 @@ function packChange(change) {
 		if (change.type === changeType.addSerializableToTree) {
 			if (change.reference) {
 				change.value = change.reference.toJSON();
-			} else if (change.value) {
-				// change.value = change.value; // no changes
 			} else {
 				assert(false, 'invalid change of type addSerializableToTree', change);
 			}
-		} else if (change.value) {
+		} else if (change.value !== undefined) {
 			change.value = change.reference.propertyType.type.toJSON(change.value);
 		}
 
 		Object.keys(keyToShortKey).forEach(function (key) {
-			if (change[key]) {
+			if (change[key] !== undefined) {
 				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
 				packed[keyToShortKey[key]] = change[key];
 			}
@@ -722,7 +727,7 @@ Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
 		this.dispatch('change', this._value);
-		if (this._isInTree)
+		if (this._rootType)
 			{ addChange(changeType.setPropertyValue, this); }
 	},
 	get: function get() {
@@ -1377,13 +1382,16 @@ var Entity = (function (Serializable$$1) {
 		array.splice(idx, 1);
 		return this;
 	};
-	Entity.prototype.setInTreeStatus = function setInTreeStatus (isInTree) {
-		if (this._isInTree === isInTree)
+	Entity.prototype.setRootType = function setRootType (rootType) {
+		if (this._rootType === rootType)
 			{ return; }
+		this._rootType = rootType;
 
-		this._isInTree = isInTree;
+		var i;
 		this.components.forEach(function (value, key) {
-			value.forEach(function (component) { return component.setInTreeStatus(isInTree); });
+			for (i = 0; i < value.length; ++i) {
+				value[i].setRootType(rootType);
+			}
 		});
 	};
 	Entity.prototype.toJSON = function toJSON () {
@@ -1619,66 +1627,19 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype.getInheritedComponentDatas = function getInheritedComponentDatas (filter) {
 		if ( filter === void 0 ) filter = null;
 
-		var originalPrototype = this;
-		
-		function getDataFromPrototype(prototype, _depth) {
-			if ( _depth === void 0 ) _depth = 0;
-
-			var data;
-			
-			var parentPrototype = prototype.getParentPrototype();
-			if (parentPrototype)
-				{ data = getDataFromPrototype(parentPrototype, _depth + 1); }
-			else
-				{ data = {}; } // Top level
-			
-			var componentDatas = prototype.getChildren('cda');
-			componentDatas.forEach(function (componentData) {
-				if (filter && !filter(componentData))
-					{ return; }
-				
-				if (!data[componentData.componentId]) {
-					// Most parent version of this componentId
-					data[componentData.componentId] = {
-						// ownComponent = true if the original prototype is the first one introducing this componentId
-						ownComponentData: null, // will be given value if original prototype has this componentId
-						componentClass: componentData.componentClass,
-						componentId: componentData.componentId,
-						propertyHash: {},
-						threeLetterType: 'icd',
-						generatedForPrototype: originalPrototype
-					};
-				}
-				if (_depth === 0) {
-					data[componentData.componentId].ownComponentData = componentData;
-				}
-
-				componentData.getChildren('prp').forEach(function (property) {
-					// Newest version of a property always overrides old property
-					data[componentData.componentId].propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
-				});
-			});
-			
-			return data;
-		}
-
-		var data = getDataFromPrototype(this);
+		var data = getDataFromPrototype(this, this, filter);
 		var array = Object.keys(data).map(function (key) { return data[key]; });
-		array.forEach(function (inheritedComponentData) {
+		var inheritedComponentData;
+		for (var i = 0; i < array.length; ++i) {
+			inheritedComponentData = array[i];
 			inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(function (propertyType) {
-				if (inheritedComponentData.propertyHash[propertyType.name])
-					{ return inheritedComponentData.propertyHash[propertyType.name]; }
-				else
-					{ return propertyType.createProperty({ skipSerializableRegistering: true }); }
+				return inheritedComponentData.propertyHash[propertyType.name]
+					|| propertyType.createProperty({ skipSerializableRegistering: true });
 			});
 			delete inheritedComponentData.propertyHash;
-		});
-		
-		array.forEach(function (inheritedComponentData) {
-			var cid = inheritedComponentData.componentId;
-		});
+		}
 
-		return array.sort(function (a, b) { return a.componentClass.componentName.localeCompare(b.componentClass.componentName); });
+		return array.sort(sortInheritedComponentDatas);
 	};
 	
 	Prototype.prototype.createAndAddPropertyForComponentData = function createAndAddPropertyForComponentData (inheritedComponentData, propertyName, propertyValue) {
@@ -1788,10 +1749,10 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype.delete = function delete$1 () {
 		var this$1 = this;
 
-		this._game = this._game || this.getRoot();
+		this._gameRoot = this._gameRoot || this.getRoot();
 		if (!PropertyOwner$$1.prototype.delete.call(this)) { return false; }
-		if (this.threeLetterType === 'prt') {
-			this._game.forEachChild('lvl', function (lvl) {
+		if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
+			this._gameRoot.forEachChild('lvl', function (lvl) {
 				var items = lvl.getChildren('epr');
 				for (var i = items.length-1; i >= 0; i--) {
 					if (items[i].prototype === this$1) {
@@ -1814,6 +1775,56 @@ Prototype.create = function(name) {
 };
 
 Serializable.registerSerializable(Prototype, 'prt');
+
+
+function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
+	if ( _depth === void 0 ) _depth = 0;
+
+	var data;
+
+	var parentPrototype = prototype.getParentPrototype();
+	if (parentPrototype)
+		{ data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1); }
+	else
+		{ data = {}; } // Top level
+	
+	var componentDatas = prototype.getChildren('cda');
+	if (filter)
+		{ componentDatas = componentDatas.filter(filter); }
+	var componentData;
+	for (var i = 0; i < componentDatas.length; ++i) {
+		componentData = componentDatas[i];
+
+		if (!data[componentData.componentId]) {
+			// Most parent version of this componentId
+			data[componentData.componentId] = {
+				// ownComponent = true if the original prototype is the first one introducing this componentId
+				ownComponentData: _depth === 0 ? componentData : null, // will be given value if original prototype has this componentId
+				componentClass: componentData.componentClass,
+				componentId: componentData.componentId,
+				propertyHash: {},
+				threeLetterType: 'icd',
+				generatedForPrototype: originalPrototype,
+			};
+		}
+		
+		var propertyHash = data[componentData.componentId].propertyHash;
+		
+		var properties = componentData.getChildren('prp');
+		var property = (void 0);
+		for (var j = 0; j < properties.length; ++j) {
+			property = properties[j];
+			// Newest version of a property always overrides old property
+			propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
+		}
+	}
+
+	return data;
+}
+
+function sortInheritedComponentDatas(a, b) {
+	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
+}
 
 var propertyTypes = [
 	createPropertyType('name', 'No name', createPropertyType.string)
@@ -1959,6 +1970,8 @@ function createMaterial(owner, options) {
 	return material;
 }
 
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
+// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -1989,6 +2002,7 @@ var Scene = (function (Serializable$$1) {
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
+		this.won = false;
 		
 		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
@@ -2007,13 +2021,7 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
 	Scene.prototype.win = function win () {
-		var this$1 = this;
-
-		setTimeout(function () {
-			setChangeOrigin(this$1);
-			this$1.reset();
-			game.dispatch('levelCompleted');
-		});
+		this.won = true;
 	};
 	Scene.prototype.animFrame = function animFrame (playCalled) {
 		this.animationFrameId = null;
@@ -2027,11 +2035,19 @@ var Scene = (function (Serializable$$1) {
 		this._prevUpdate = t;
 		this.time += dt;
 
-		setChangeOrigin(this);
+		setChangeOrigin$1(this);
 		
 		this.dispatch('onUpdate', dt, this.time);
 		updateWorld(this, dt, timeInMilliseconds);
+		
 		this.draw();
+		
+		if (this.won) {
+			this.pause();
+			this.time = 0;
+			game.dispatch('levelCompleted');
+			this.reset();
+		}
 		
 		this.requestAnimFrame();
 	};
@@ -2048,6 +2064,8 @@ var Scene = (function (Serializable$$1) {
 		return !this.playing && this.time === 0;
 	};
 	Scene.prototype.reset = function reset () {
+		if (!this._alive)
+			{ return; } // scene has been replaced by another one
 		this.resetting = true;
 		this.pause();
 		this.deleteChildren();
@@ -2058,6 +2076,7 @@ var Scene = (function (Serializable$$1) {
 		if (this.level)
 			{ this.level.createScene(this); }
 		
+		this.won = false;
 		this.time = 0;
 		this.draw();
 		delete this.resetting;
@@ -2128,6 +2147,16 @@ Scene.prototype.isRoot = true;
 Serializable.registerSerializable(Scene, 'sce');
 
 var componentClasses = new Map();
+var eventListeners = [
+	'onUpdate'
+	,'onDraw'
+	,'onStart'
+// @ifndef OPTIMIZE
+	,'onDrawHelper'
+// @endif
+];
+
+// Instance of a component, see componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2150,6 +2179,13 @@ var Component$1 = (function (PropertyOwner$$1) {
 		PropertyOwner$$1.prototype.delete.call(this);
 		return true;
 	};
+	Component.prototype._addEventListener = function _addEventListener (functionName) {
+		var func = this[functionName];
+		var self = this;
+		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			func.apply(self, arguments);
+		}));
+	};
 	Component.prototype._preInit = function _preInit () {
 		var this$1 = this;
 
@@ -2159,16 +2195,12 @@ var Component$1 = (function (PropertyOwner$$1) {
 		});
 
 		this.forEachChild('com', function (c) { return c._preInit(); });
-		var self = this;
-		['onUpdate', 'onDraw', 'onDrawHelper', 'onStart'].forEach(function (funcName) {
-			if (typeof this$1[funcName] === 'function') {
-				var func = this$1[funcName];
-				this$1._listenRemoveFunctions.push(this$1.scene.listen(funcName, function() {
-					func.apply(self, arguments);
-				}));
-			}
-		});
 
+		for (var i = 0; i < eventListeners.length; ++i) {
+			if (typeof this$1[eventListeners[i]] === 'function')
+				{ this$1._addEventListener(eventListeners[i]); }
+		}
+		
 		if (this.constructor.componentName !== 'Transform')
 			{ this.scene.addComponent(this); }
 		
@@ -2414,12 +2446,10 @@ var EntityPrototype = (function (Prototype$$1) {
 		if (children.length > 0)
 			{ json.c = children.map(function (child) { return child.toJSON(); }); }
 		
-		var prototype = this.prototype;
-		
 		var floatToJSON = createPropertyType.float().toJSON;
 		var handleProperty = function (prp) {
 			if (prp.name === 'name') {
-				if (!prototype || prp.value !== prototype.name)
+				if (prp.value)
 					{ json.n = prp.value; }
 			} else if (prp.name === 'position') {
 				json.x = floatToJSON(prp.value.x);
@@ -2497,7 +2527,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 	transform.addChild(angle);
 
 	var name = EntityPrototype._propertyTypesByName.name.createProperty({
-		value: prototype.name,
+		value: '',
 		predefinedId: id + '_n'
 	});
 	
@@ -2518,7 +2548,7 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var angleId = json.id + '_r';
 	
 	var name = Prototype._propertyTypesByName.name.createProperty({ 
-		value: json.n === undefined ? entityPrototype.prototype.name : json.n, 
+		value: json.n === undefined ? '' : json.n,
 		predefinedId: nameId 
 	});
 	
@@ -2574,6 +2604,9 @@ var Level = (function (PropertyOwner$$1) {
 		scene.addChildren(entities);
 		scene.level = this;
 		return scene;
+	};
+	Level.prototype.isEmpty = function isEmpty () {
+		return this.getChildren('epr').length === 0;
 	};
 
 	return Level;
@@ -2762,7 +2795,7 @@ Component$1.register({
 			this.Physics = this.entity.getComponent('Physics');
 		},
 		onUpdate: function onUpdate(dt, t) {
-			if (!this._isInTree)
+			if (!this._rootType)
 				{ return; }
 			
 			if (this.userControlled) {
@@ -2859,7 +2892,7 @@ Component$1.register({
 			context.lineWidth = 1;
 			context.font = '40px FontAwesome';
 			context.textAlign = 'center';
-			context.fillText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
+			context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 			context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
 			
 			context.restore();
@@ -2917,7 +2950,7 @@ Component$1.register({
 				var pos = this.Transform.position;
 				for (var i = 0; i < entities.length; ++i) {
 					if (entities[i].position.distanceSq(pos) < distSq) {
-						if (!entities[i][this$1.storeProp] && this$1.launchTrigger(entities[i]) === false)
+						if (!entities[i][this$1.storeProp] && this$1.launchTrigger(entities[i]) !== false)
 							{ break; }
 						entities[i][this$1.storeProp] = true;
 					} else {
@@ -2930,6 +2963,7 @@ Component$1.register({
 		// Return false if other triggers should not be checked
 		launchTrigger: function launchTrigger(entity) {
 			if (this.action === 'win') {
+				console.log('will win');
 				this.scene.win();
 				return false;
 			}
@@ -2995,12 +3029,14 @@ Component$1.register({
 			}));
 			this.listenProperty(this, 'bounciness', update(function (bounciness) { return this$1.updateMaterial(); }));
 
-			if (this._isInTree)
+			if (this._rootType)
 				{ this.createBody(); }
 		},
 		createBody: function createBody() {
 			var this$1 = this;
 
+			assert(!this.body);
+			
 			this.body = new p2$1.Body({
 				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
@@ -3039,24 +3075,20 @@ Component$1.register({
 			});
 			this.body.shapes.forEach(function (s) { return s.material = material; });
 		},
-		setInTreeStatus: function setInTreeStatus(inTree) {
-			var i = arguments.length, argsArray = Array(i);
-			while ( i-- ) argsArray[i] = arguments[i];
-
-			if (inTree) {
+		setRootType: function setRootType(rootType) {
+			if (rootType) {
 				if (this.inited)
 					{ this.createBody(); }
 			}
-			return (ref = Component$1.prototype.setInTreeStatus).call.apply(ref, [ this ].concat( argsArray ));
-			var ref;
+			return Component$1.prototype.setRootType.call(this, rootType);
 		},
 		onUpdate: function onUpdate() {
-			if (!this.body || this.body.sleepState === p2$1.Body.SLEEPING)
+			var b = this.body;
+			if (!b || b.sleepState === p2$1.Body.SLEEPING)
 				{ return; }
 			
 			this.updatingOthers = true;
 			
-			var b = this.body;
 			var newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
 			if (!this.Transform.position.isEqualTo(newPos))
 				{ this.Transform.position = newPos; }
@@ -3105,7 +3137,7 @@ var shouldStartSceneWhenGameLoaded = false;
 var socket;
 
 function isInSceneTree(change) {
-	return change.reference.getRoot().threeLetterType === 'sce';
+	return change.reference._rootType === 'sce';
 }
 
 function getQueryVariable(variable) {
@@ -3129,7 +3161,7 @@ function tryToLoad() {
 	var valueChanges = {}; // id => change
 
 	addChangeListener(function (change) {
-		if (change.origin === 'external' || !networkEnabled)
+		if (change.external || !networkEnabled)
 			{ return; } // Don't send a change that you have received.
 		
 		if (isInSceneTree(change)) // Don't sync scene
@@ -3191,11 +3223,20 @@ function tryToLoad() {
 		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
 		
 		if (shouldStartSceneWhenGameLoaded) {
-			var scene = game.getChildren('lvl')[0].createScene();
-			scene.play();
+			var levelIndex = 0;
+			
+			function play() {
+				var levels = game.getChildren('lvl');
+				if (levelIndex >= levels.length)
+					{ levelIndex = 0; }
+				levels[levelIndex].createScene().play();
+			}
+			
+			play();
 			
 			game.listen('levelCompleted', function () {
-				scene.play();
+				levelIndex++;
+				play();
 			});
 		}
 	});
@@ -3987,6 +4028,64 @@ var registerPromise = new Promise(function(resolve) {
 	});
 });
 
+var TopBarModule = (function (Module$$1) {
+	function TopBarModule() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_reflection_medium.png' }),
+			this.buttons = el('div.buttonContainer.select-none')
+		);
+		this.id = 'topbar';
+		this.name = 'TopBar'; // not visible
+		
+		events.listen('addTopButtonToTopBar', function (topButton) {
+			mount(this$1.buttons, topButton);
+		});
+
+		this.logo.onclick = function () {
+			location.href = '/';
+		};
+	}
+
+	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
+	TopBarModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	TopBarModule.prototype.constructor = TopBarModule;
+
+	return TopBarModule;
+}(Module));
+Module.register(TopBarModule, 'top');
+
+var TopButton = function TopButton(ref) {
+	var this$1 = this;
+	if ( ref === void 0 ) ref = {};
+	var text$$1 = ref.text; if ( text$$1 === void 0 ) text$$1 = 'Button';
+	var callback = ref.callback;
+	var iconClass = ref.iconClass; if ( iconClass === void 0 ) iconClass = 'fa-circle';
+	var priority = ref.priority; if ( priority === void 0 ) priority = 1;
+
+	this.priority = priority || 0;
+	this.callback = callback;
+	this.el = el('div.button.topIconTextButton',
+		el('div.topIconTextButtonContent',
+			this.icon = el(("i.fa." + iconClass)),
+			this.text = el('span', text$$1)
+		)
+	);
+	this.el.onclick = function () {
+		this$1.click();
+	};
+
+	modulesRegisteredPromise.then(function () {
+		events.dispatch('addTopButtonToTopBar', this$1);
+	});
+};
+TopButton.prototype.click = function click () {
+	if (this.callback) {
+		this.callback(this);
+	}
+};
+
 var popupDepth = 0;
 
 var Popup = function Popup(ref) {
@@ -4039,166 +4138,13 @@ var Layer = function Layer(popup) {
 	} });
 };
 
-var LevelSelector = (function (Popup$$1) {
-	function LevelSelector() {
-		var this$1 = this;
-
-		Popup$$1.call(this, {
-			title: 'Levels',
-			width: '500px',
-			content: el('div.levelSelectorButtons',
-				this.buttons = list('div.levelSelectorButtons', LevelItem),
-				'Create: ',
-				this.createButton = new Button
-			)
-		});
-
-		this.parent = parent;
-		
-		this.buttons.update(game.getChildren('lvl'));
-
-		this.createButton.update({
-			text: 'New level',
-			icon: 'fa-area-chart',
-			callback: function () {
-				setChangeOrigin(this$1);
-				var lvl = new Level();
-				lvl.initWithPropertyValues({
-					name: 'New level'
-				});
-				editor.game.addChild(lvl);
-				editor.setLevel(lvl);
-				editor.select(lvl, this$1);
-				
-				this$1.remove();
-
-				setTimeout(function () {
-					Module.activateModule('level', true, 'focusOnProperty', 'name');
-				}, 100);
-			}
-		});
-
-		listen(this.el, 'selectLevel', function (level) { 
-			editor.setLevel(level);
-
-			this$1.remove();
-			editor.select(level, this$1);
-		});
-		
-		listen(this.el, 'deleteLevel', function (level) {
-			if (confirm('Are you sure you want to delete level: ' + level.name)) {
-				setChangeOrigin(this$1);
-				level.delete();
-				
-				this$1.remove();
-				new LevelSelector();
-			}
-		});
-	}
-
-	if ( Popup$$1 ) LevelSelector.__proto__ = Popup$$1;
-	LevelSelector.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
-	LevelSelector.prototype.constructor = LevelSelector;
-
-	return LevelSelector;
-}(Popup));
-
-var LevelItem = function LevelItem() {
-	this.el = el('div.levelItem',
-		this.number = el('span'),
-		this.selectButton = new Button,
-		this.deleteButton = new Button
-	);
-};
-LevelItem.prototype.selectClicked = function selectClicked () {
-	dispatch(this, 'selectLevel', this.level);
-};
-LevelItem.prototype.deleteClicked = function deleteClicked () {
-	dispatch(this, 'deleteLevel', this.level);
-};
-LevelItem.prototype.update = function update (level, idx) {
-		var this$1 = this;
-
-	this.level = level;
-	this.number.textContent = (idx+1) + '.';
-	this.selectButton.update({
-		text: level.name,
-		icon: 'fa-area-chart',
-		callback: function () { return this$1.selectClicked(); }
-	});
-	this.deleteButton.update({
-		text: 'Delete',
-		class: 'dangerButton',
-		icon: 'fa-cross',
-		callback: function () { return this$1.deleteClicked(); }
-	});
-};
-
-var TopBarModule = (function (Module$$1) {
-	function TopBarModule() {
-		var this$1 = this;
-
-		Module$$1.call(
-			this, this.logo = el('img.logo.button.iconButton.select-none', { src: '../img/logo_reflection_medium.png' }),
-			this.buttons = el('div.buttonContainer.select-none')
-		);
-		this.id = 'topbar';
-		this.name = 'TopBar'; // not visible
-		
-		events.listen('addTopButtonToTopBar', function (topButton) {
-			mount(this$1.buttons, topButton);
-		});
-		
-		new TopButton({
-			text: 'Levels',
-			iconClass: 'fa-area-chart',
-			callback: function () {
-				new LevelSelector();
-			}
-		});
-	}
-
-	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
-	TopBarModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	TopBarModule.prototype.constructor = TopBarModule;
-
-	return TopBarModule;
-}(Module));
-Module.register(TopBarModule, 'top');
-
-var TopButton = function TopButton(ref) {
-	var this$1 = this;
-	if ( ref === void 0 ) ref = {};
-	var text$$1 = ref.text; if ( text$$1 === void 0 ) text$$1 = 'Button';
-	var callback = ref.callback;
-	var iconClass = ref.iconClass; if ( iconClass === void 0 ) iconClass = 'fa-circle';
-	var priority = ref.priority; if ( priority === void 0 ) priority = 1;
-
-	this.priority = priority || 0;
-		
-	this.el = el('div.button.topIconTextButton',
-		el('div.topIconTextButtonContent',
-			this.icon = el(("i.fa." + iconClass)),
-			this.text = el('span', text$$1)
-		)
-	);
-	this.el.onclick = function () {
-		if (callback) {
-			callback(this$1);
-		}
-	};
-
-	modulesRegisteredPromise.then(function () {
-		events.dispatch('addTopButtonToTopBar', this$1);
-	});
-};
-
 var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 
 // <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
 var editors = {};
-editors.default = editors.string = function (container, oninput, onchange) {
+editors.default = editors.string = function (container, oninput, onchange, options) {
 	var input = el('input', {
+		placeholder: options.placeholder || '',
 		oninput: function () { return oninput(input.value); },
 		onchange: function () { return onchange(input.value); }
 	});
@@ -4254,8 +4200,8 @@ editors.vector = function (container, oninput, onchange) {
 	};
 };
 
-editors.enum = function (container, oninput, onchange, propertyType) {
-	var select = el.apply(void 0, [ 'select' ].concat( propertyType.validator.parameters.map(function (p) { return el('option', p); }) ));
+editors.enum = function (container, oninput, onchange, options) {
+	var select = el.apply(void 0, [ 'select' ].concat( options.propertyType.validator.parameters.map(function (p) { return el('option', p); }) ));
 	select.onchange = function () {
 		onchange(select.value);
 	};
@@ -4297,7 +4243,7 @@ var ComponentAdder = (function (Popup$$1) {
 	ComponentAdder.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
 	ComponentAdder.prototype.constructor = ComponentAdder;
 	ComponentAdder.prototype.addComponentToParent = function addComponentToParent (componentName) {
-		setChangeOrigin(this);
+		setChangeOrigin$1(this);
 		if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
 			var component = new ComponentData(componentName);
 			this.parent.addChild(component);
@@ -4379,11 +4325,10 @@ function syncAChangeBetweenSceneAndLevel(change) {
 		{ return; }
 	
 	var ref = change.reference;
-	assert(ref._isInTree);
+	assert(ref && ref._rootType);
 	
 	var threeLetterType = ref && ref.threeLetterType || null;
-	var rootThreeLetterType = change.reference.getRoot().threeLetterType;
-	if (rootThreeLetterType !== 'gam')
+	if (ref._rootType !== 'gam')
 		{ return; }
 	
 	if (change.type === changeType.addSerializableToTree) {
@@ -4404,17 +4349,14 @@ function syncAChangeBetweenSceneAndLevel(change) {
 			entities.forEach(function (entity) {
 				
 				var oldComponent = entity.getComponents(ref.name).find(function (com) { return com._componentId === ref.componentId; });
-				console.log('delete old component', oldComponent+'');
 				if (oldComponent)
 					{ entity.deleteComponent(oldComponent); }
 				
 				
 				var proto = entity.prototype;
 				var componentData = proto.findComponentDataByComponentId(ref.componentId, true);
-				console.log('new componentData', componentData+'');
 				if (componentData) {
 					var component = componentData.createComponent();
-					console.log('add new component', component+'');
 					entity.addComponents([component]);
 				}
 			});
@@ -4504,7 +4446,6 @@ function syncAChangeBetweenSceneAndLevel(change) {
 			var componentData$3 = ref;
 			var prototype$4 = componentData$3.getParent();
 			var entities$5 = getAffectedEntities(prototype$4);
-			console.log('pissaa', componentData$3, prototype$4, entities$5);
 			entities$5.forEach(function (entity) {
 				var epr = entity.prototype;
 				var oldComponent = entity.getComponents(componentData$3.name).find(function (com) { return com._componentId === componentData$3.componentId; });
@@ -4760,7 +4701,7 @@ var PropertyEditor = function PropertyEditor() {
 	});
 		
 	listen(this, 'makingChanges', function () {
-		setChangeOrigin(this$1);
+		setChangeOrigin$1(this$1);
 	});
 		
 	// Change in this editor
@@ -4842,11 +4783,16 @@ Container.prototype.updatePrototype = function updatePrototype () {
 	var inheritedComponentDatas = this.item.getInheritedComponentDatas();
 	this.containers.update(inheritedComponentDatas);
 	this.properties.update(this.item.getChildren('prp'));
-	mount(this.controls, el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+		
+	var addButton;
+	mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
 		onclick: function () {
 			new ComponentAdder(this$1.item);
 		}
 	}));
+	if (inheritedComponentDatas.length === 0)
+		{ addButton.classList.add('clickMeEffect'); }
+		
 	mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone type', { onclick: function () {
 		dispatch(this$1, 'makingChanges');
 			
@@ -4880,8 +4826,12 @@ Container.prototype.updateEntityPrototype = function updateEntityPrototype () {
 
 	var inheritedComponentDatas = this.item.getInheritedComponentDatas();
 	this.containers.update(inheritedComponentDatas);
-	this.properties.update(this.item.getChildren('prp'));
-	mount(this.controls, el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+	var properties = this.item.getChildren('prp');
+	properties.forEach(function (prop) {
+		prop._editorPlaceholder = this$1.item.prototype.findChild('prp', function (prp) { return prp.name === prop.name; }).value;
+	});
+	this.properties.update(properties);
+	mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add component', {
 		onclick: function () {
 			new ComponentAdder(this$1.item);
 		}
@@ -5064,7 +5014,10 @@ Property$2.prototype.update = function update (property) {
 	this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
 	this.content.innerHTML = '';
 	var propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-	this.setValue = propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, property.propertyType);
+	this.setValue = propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
+		propertyType: property.propertyType,
+		placeholder: property._editorPlaceholder
+	});
 	this.setValueFromProperty();
 	this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 	if (property._editorVisibleIfTarget) {
@@ -5176,373 +5129,6 @@ var Instance = (function (Module$$1) {
 
 Module.register(Instance, 'right');
 
-function removeTheDeadFromArray(array) {
-	for (var i = array.length - 1; i >= 0; --i) {
-		if (array[i]._alive === false)
-			{ array.splice(i, 1); }
-	}
-}
-
-var Help = function Help () {};
-
-var prototypeAccessors = { game: {},editor: {},level: {},scene: {},world: {},Vector: {} };
-
-prototypeAccessors.game.get = function () {
-	return game;
-};
-prototypeAccessors.editor.get = function () {
-	return editor;
-};
-prototypeAccessors.level.get = function () {
-	return editor.selectedLevel;
-};
-prototypeAccessors.scene.get = function () {
-	return scene;
-};
-prototypeAccessors.world.get = function () {
-	return scene._p2World;
-};
-prototypeAccessors.Vector.get = function () {
-	return Vector;
-};
-
-Object.defineProperties( Help.prototype, prototypeAccessors );
-
-var help = new Help;
-window.help = help;
-
-var SceneModule = (function (Module$$1) {
-	function SceneModule() {
-		var this$1 = this;
-
-		Module$$1.call(
-			this, this.canvas = el('canvas.anotherCanvas', {
-				// width and height will be fixed after loading
-				width: 0,
-				height: 0
-			}),
-			el('div.pauseInfo', "Paused. Editing instances will not affect the level."),
-			el('i.fa.fa-pause.pauseInfo.topLeft'),
-			el('i.fa.fa-pause.pauseInfo.topRight'),
-			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
-			el('i.fa.fa-pause.pauseInfo.bottomRight')
-		);
-		this.el.classList.add('hidePauseButtons');
-
-		setInterval(function () {
-			this$1.fixAspectRatio();
-		}, 500);
-		setTimeout(function () {
-			this$1.fixAspectRatio();
-		});
-		
-		this.id = 'scene';
-		this.name = 'Scene';
-		
-		help.sceneModule = this;
-
-		/*
-		loadedPromise.then(() => {
-			if (editor.selectedLevel)
-				editor.selectedLevel.createScene();
-			else
-				this.drawInvalidScene();
-		});
-		*/
-		
-		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
-		this.entityUnderMouse = null; // Link to entity in tree.
-		this.previousMousePos = null;
-		
-		this.entitiesToMove = []; 
-		this.selectedEntities = [];
-		
-		this.selectionStart = null;
-		this.selectionEnd = null;
-		this.entitiesInSelection = [];
-		
-		this.playButton = new TopButton({
-			text: 'Play',
-			iconClass: 'fa-play',
-			callback: function (btn) {
-				if (!scene)
-					{ return; }
-				
-				setChangeOrigin(this$1);
-
-				this$1.clearState();
-				
-				if (scene.playing) {
-					scene.pause();
-					this$1.draw();
-				} else
-					{ scene.play(); }
-				this$1.updatePlayPauseButtonStates();
-			}
-		});
-		this.stopButton = new TopButton({
-			text: 'Reset',
-			iconClass: 'fa-stop',
-			callback: function (btn) {
-				setChangeOrigin(this$1);
-				this$1.stopAndReset();
-			}
-		});
-
-		game.listen('levelCompleted', function () {
-			this$1.updatePlayPauseButtonStates();
-			this$1.draw();
-		});
-		
-		events.listen('setLevel', function (lvl) {
-			console.log('scenemodule.setLevel');
-			if (lvl)
-				{ lvl.createScene(false, this$1); }
-			else if (scene) {
-				scene.delete(this$1);
-			}
-			
-			this$1.updatePlayPauseButtonStates();
-			
-			this$1.clearState();
-			this$1.draw();
-		});
-
-		// Change in serializable tree
-		events.listen('prototypeClicked', function (prototype) {
-			if (!scene)
-				{ return; }
-			
-			this$1.clearState();
-			
-			var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
-			entityPrototype.position = new Vector(this$1.canvas.width/2, this$1.canvas.height/2);
-			var newEntity = entityPrototype.createEntity(this$1);
-			this$1.newEntities.push(newEntity);
-			this$1.draw();
-		});
-		
-		events.listen('change', function (change) {
-			if (scene && scene.resetting)
-				{ return; }
-			
-			// console.log('sceneModule change', change);
-			if (change.origin !== this$1) {
-				setChangeOrigin(this$1);
-				syncAChangeBetweenSceneAndLevel(change);
-				this$1.draw();
-			}
-		});
-		
-		listenKeyDown(function (k) {
-			if (!scene)
-				{ return; }
-			
-			setChangeOrigin(this$1);
-			if (k === key.esc) {
-				this$1.clearState();
-				this$1.draw();
-			} else if (k === key.backspace) {
-				deleteEntities(this$1.selectedEntities);
-				this$1.clearState();
-				this$1.draw();
-			} else if (k === key.c) {
-				if (this$1.selectedEntities.length > 0) {
-					this$1.deleteNewEntities();
-					(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
-					this$1.selectedEntities.length = 0;
-					setEntityPositions(this$1.newEntities, this$1.previousMousePos);
-					this$1.draw();
-				}
-			}
-			var ref;
-		});
-
-		listenMouseMove(this.el, function (mousePos) {
-			if (!scene)
-				{ return; }
-			
-			setChangeOrigin(this$1);
-			var change = this$1.previousMousePos ? mousePos.clone().subtract(this$1.previousMousePos) : mousePos;
-			this$1.entityUnderMouse = null;
-			
-			setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
-			moveEntities(this$1.entitiesToMove, change); // these are in scene
-			copyPositionFromEntitiesToEntityPrototypes(this$1.entitiesToMove);
-			
-			if (scene) {
-				if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd)
-					{ this$1.entityUnderMouse = getEntityUnderMouse(mousePos); }
-			}
-			
-			if (this$1.selectionEnd) {
-				this$1.selectionEnd.add(change);
-				this$1.entitiesInSelection = getEntitiesInSelection(this$1.selectionStart, this$1.selectionEnd);
-			}
-
-			this$1.previousMousePos = mousePos;
-			this$1.draw();
-		});
-		listenMouseDown(this.el, function (mousePos) {
-			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
-				{ return; }
-			
-			setChangeOrigin(this$1);
-			if (this$1.newEntities.length > 0)
-				{ copyEntitiesToScene(this$1.newEntities); }
-			else if (this$1.entityUnderMouse) {
-				if (this$1.selectedEntities.indexOf(this$1.entityUnderMouse) >= 0) {
-				} else {
-					if (!keyPressed(key.shift))
-						{ this$1.selectedEntities.length = 0; }
-					this$1.selectedEntities.push(this$1.entityUnderMouse);
-				}
-				(ref = this$1.entitiesToMove).push.apply(ref, this$1.selectedEntities);
-				this$1.selectSelectedEntitiesInEditor();
-			} else {
-				this$1.selectedEntities.length = 0;
-				this$1.selectionStart = mousePos;
-				this$1.selectionEnd = mousePos.clone();
-			}
-			
-			this$1.draw();
-			var ref;
-		});
-		listenMouseUp(this.el, function (mousePos) {
-			if (!scene)
-				{ return; }
-			
-			this$1.selectionStart = null;
-			this$1.selectionEnd = null;
-			this$1.entitiesToMove.length = 0;
-			
-			if (this$1.entitiesInSelection.length > 0) {
-				(ref = this$1.selectedEntities).push.apply(ref, this$1.entitiesInSelection);
-				this$1.entitiesInSelection.length = 0;
-				this$1.selectSelectedEntitiesInEditor();
-			}
-			
-			this$1.draw();
-			var ref;
-		});
-	}
-
-	if ( Module$$1 ) SceneModule.__proto__ = Module$$1;
-	SceneModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	SceneModule.prototype.constructor = SceneModule;
-	SceneModule.prototype.updatePlayPauseButtonStates = function updatePlayPauseButtonStates () {
-		if (!scene)
-			{ return; }
-		if (scene.playing) {
-			this.el.classList.add('hidePauseButtons');
-			this.playButton.icon.className = 'fa fa-pause';
-		} else {
-			this.el.classList.toggle('hidePauseButtons', scene.isInInitialState());
-			this.playButton.icon.className = 'fa fa-play';
-		}
-	};
-	
-	SceneModule.prototype.fixAspectRatio = function fixAspectRatio () {
-		if (this.canvas) {
-			var change = false;
-			if (this.canvas.width !== this.canvas.offsetWidth && this.canvas.offsetWidth) {
-				this.canvas.width = this.canvas.offsetWidth;
-				change = true;
-			}
-			if (this.canvas.height !== this.canvas.offsetHeight && this.canvas.offsetHeight) {
-				this.canvas.height = this.canvas.offsetHeight;
-				change = true;
-			}
-			if (change) {
-				this.draw();
-			}
-		}
-	};
-	
-	SceneModule.prototype.draw = function draw () {
-		if (scene) {
-			if (!scene.playing) {
-				this.filterDeadSelection();
-				
-				scene.draw();
-				scene.dispatch('onDrawHelper', scene.context);
-				drawPositionHelpers(scene.getChildren('ent'));
-				drawEntityUnderMouse(this.entityUnderMouse);
-				drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
-				drawSelectedEntities(this.selectedEntities);
-			}
-		} else {
-			this.drawInvalidScene();
-		}
-	};
-	
-	SceneModule.prototype.drawInvalidScene = function drawInvalidScene () {
-		this.canvas.width = this.canvas.width; 
-		var context = this.canvas.getContext('2d');
-		context.font = '30px arial';
-		context.fillStyle = 'white';
-		context.fillText('No level loaded.', 10, 35);
-	};
-	
-	SceneModule.prototype.clearState = function clearState () {
-		this.deleteNewEntities();
-		
-		this.entityUnderMouse = null;
-		this.selectedEntities.length = 0;
-		this.entitiesToMove.length = 0;
-
-		this.selectionStart = null;
-		this.selectionEnd = null;
-	};
-	
-	SceneModule.prototype.deleteNewEntities = function deleteNewEntities () {
-		this.newEntities.forEach(function (e) {
-			e.prototype.delete();
-			e.delete();
-		});
-		this.newEntities.length = 0;
-	};
-	
-	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
-		editor.select(this.selectedEntities, this);
-		if (shouldSyncLevelAndScene())
-			{ Module$$1.activateOneOfModules(['type', 'instance'], false); }
-		else
-			{ Module$$1.activateOneOfModules(['instance'], false); }
-	};
-	
-	SceneModule.prototype.stopAndReset = function stopAndReset () {
-		this.clearState();
-		if (editor.selection.type === 'ent') {
-			editor.select(editor.selection.items.map(function (ent) { return ent.prototype.prototype; }), this);
-		}
-		if (scene)
-			{ scene.reset(this); }
-		this.playButton.icon.className = 'fa fa-play';
-		this.updatePlayPauseButtonStates();
-		this.draw();
-	};
-	
-	SceneModule.prototype.filterDeadSelection = function filterDeadSelection () {
-		var this$1 = this;
-
-		removeTheDeadFromArray(this.selectedEntities);
-		removeTheDeadFromArray(this.entitiesToMove);
-
-		for (var i = this.newEntities.length - 1; i >= 0; --i) {
-			if (this$1.newEntities[i].prototype.prototype._alive === false) {
-				var entity = this$1.newEntities.splice(i, 1)[0];
-				entity.prototype.delete();
-				entity.delete();
-			}
-		}
-	};
-
-	return SceneModule;
-}(Module));
-
-Module.register(SceneModule, 'center');
-
 var Types = (function (Module$$1) {
 	function Types() {
 		var this$1 = this;
@@ -5557,7 +5143,7 @@ var Types = (function (Module$$1) {
 		this.name = 'Types';
 
 		this.addButton.onclick = function () {
-			setChangeOrigin(this$1);
+			setChangeOrigin$1(this$1);
 			var prototype = Prototype.create(' New type');
 			editor.game.addChild(prototype);
 			editor.select(prototype);
@@ -5579,7 +5165,7 @@ var Types = (function (Module$$1) {
 		this.externalChange = false;
 
 		events.listen('change', function (change) {
-			if (change.reference.getRoot && change.reference.getRoot().threeLetterType === 'sce')
+			if (change.reference._rootType === 'sce')
 				{ return; }
 			
 			var jstree = $(this$1.jstree).jstree(true);
@@ -5644,6 +5230,7 @@ var Types = (function (Module$$1) {
 
 		if (!this.dirty) { return; }
 		
+		
 		var data = [];
 		editor.game.forEachChild('prt', function (prototype) {
 			var parent = prototype.getParent();
@@ -5654,8 +5241,12 @@ var Types = (function (Module$$1) {
 			});
 		}, true);
 
+		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
+		
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', function (e, data) {
+				this$1.addButton.classList.toggle('clickMeEffect', editor.game.getChildren('prt').length === 0);
+				
 				if (this$1.externalChange || data.selected.length === 0)
 					{ return; }
 				
@@ -5732,7 +5323,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 		var nodeObjects = nodes.map(getSerializable$1);
 		nodeObjects.forEach(assert);
 		nodeObjects.forEach(function (prototype) {
-			setChangeOrigin(jstree);
+			setChangeOrigin$1(jstree);
 			prototype.move(newParent);
 		});
 		
@@ -5742,10 +5333,515 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
+function removeTheDeadFromArray(array) {
+	for (var i = array.length - 1; i >= 0; --i) {
+		if (array[i]._alive === false)
+			{ array.splice(i, 1); }
+	}
+}
+
+var Help = function Help () {};
+
+var prototypeAccessors = { game: {},editor: {},level: {},scene: {},entities: {},world: {},Vector: {},serializables: {},serializablesArray: {} };
+
+prototypeAccessors.game.get = function () {
+	return game;
+};
+prototypeAccessors.editor.get = function () {
+	return editor;
+};
+prototypeAccessors.level.get = function () {
+	return editor.selectedLevel;
+};
+prototypeAccessors.scene.get = function () {
+	return scene;
+};
+prototypeAccessors.entities.get = function () {
+	return scene.getChildren('ent');
+};
+prototypeAccessors.world.get = function () {
+	return scene._p2World;
+};
+prototypeAccessors.Vector.get = function () {
+	return Vector;
+};
+prototypeAccessors.serializables.get = function () {
+	return serializables;
+};
+prototypeAccessors.serializablesArray.get = function () {
+	return Object.keys(serializables).map(function (k) { return serializables[k]; });
+};
+
+Object.defineProperties( Help.prototype, prototypeAccessors );
+
+var help = new Help;
+window.help = help;
+
+function createNewLevel() {
+	var lvl = new Level();
+	lvl.initWithPropertyValues({
+		name: 'New level'
+	});
+	editor.game.addChild(lvl);
+	editor.setLevel(lvl);
+	
+	return lvl;
+}
+
+var Levels = (function (Module$$1) {
+	function Levels() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.content = el('div',
+				this.buttons = list('div.levelSelectorButtons', LevelItem),
+				'Create: ',
+				this.createButton = new Button
+			)
+		);
+		this.name = 'Levels';
+		this.id = 'levels';
+
+		this.createButton.update({
+			text: 'New level',
+			icon: 'fa-area-chart',
+			callback: function () {
+				setChangeOrigin(this$1);
+				var lvl = createNewLevel();
+				editor.select(lvl, this$1);
+
+				setTimeout(function () {
+					Module$$1.activateModule('level', true, 'focusOnProperty', 'name');
+				}, 100);
+			}
+		});
+
+		listen(this.el, 'selectLevel', function (level) {
+			editor.setLevel(level);
+			editor.select(level, this$1);
+		});
+
+		listen(this.el, 'deleteLevel', function (level) {
+			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
+				setChangeOrigin(this$1);
+				level.delete();
+			}
+		});
+	}
+
+	if ( Module$$1 ) Levels.__proto__ = Module$$1;
+	Levels.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Levels.prototype.constructor = Levels;
+	Levels.prototype.update = function update () {
+		this.buttons.update(game.getChildren('lvl'));
+	};
+
+	return Levels;
+}(Module));
+
+Module.register(Levels, 'left');
+
+var LevelItem = function LevelItem() {
+	this.el = el('div.levelItem',
+		this.number = el('span'),
+		this.selectButton = new Button,
+		this.deleteButton = new Button
+	);
+};
+LevelItem.prototype.selectClicked = function selectClicked () {
+	dispatch(this, 'selectLevel', this.level);
+};
+LevelItem.prototype.deleteClicked = function deleteClicked () {
+	dispatch(this, 'deleteLevel', this.level);
+};
+LevelItem.prototype.update = function update (level, idx) {
+		var this$1 = this;
+
+	this.level = level;
+	this.number.textContent = (idx+1) + '.';
+	this.selectButton.update({
+		text: level.name,
+		icon: 'fa-area-chart',
+		callback: function () { return this$1.selectClicked(); }
+	});
+	this.deleteButton.update({
+		text: 'Delete',
+		class: 'dangerButton',
+		icon: 'fa-cross',
+		callback: function () { return this$1.deleteClicked(); }
+	});
+};
+
+var SceneModule = (function (Module$$1) {
+	function SceneModule() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.canvas = el('canvas.anotherCanvas', {
+				// width and height will be fixed after loading
+				width: 0,
+				height: 0
+			}),
+			el('div.pauseInfo', "Paused. Editing instances will not affect the level."),
+			el('i.fa.fa-pause.pauseInfo.topLeft'),
+			el('i.fa.fa-pause.pauseInfo.topRight'),
+			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
+			el('i.fa.fa-pause.pauseInfo.bottomRight')
+		);
+		this.el.classList.add('hidePauseButtons');
+
+		setInterval(function () {
+			this$1.fixAspectRatio();
+		}, 200);
+		setTimeout(function () {
+			this$1.fixAspectRatio();
+		});
+		
+		this.id = 'scene';
+		this.name = 'Scene';
+		
+		help.sceneModule = this;
+
+		/*
+		loadedPromise.then(() => {
+			if (editor.selectedLevel)
+				editor.selectedLevel.createScene();
+			else
+				this.drawNoLevel();
+		});
+		*/
+		
+		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
+		this.entityUnderMouse = null; // Link to entity in tree.
+		this.previousMousePos = null;
+		
+		this.entitiesToMove = []; 
+		this.selectedEntities = [];
+		
+		this.selectionStart = null;
+		this.selectionEnd = null;
+		this.entitiesInSelection = [];
+		
+		this.playButton = new TopButton({
+			text: el('span', el('u', 'P'), 'lay'),
+			iconClass: 'fa-play',
+			callback: function (btn) {
+				if (!scene)
+					{ return; }
+				
+				setChangeOrigin$1(this$1);
+
+				this$1.clearState();
+				
+				if (scene.playing) {
+					scene.pause();
+					this$1.draw();
+				} else
+					{ scene.play(); }
+				this$1.updatePlayPauseButtonStates();
+			}
+		});
+		this.stopButton = new TopButton({
+			text: el('span', el('u', 'R'), 'eset'),
+			iconClass: 'fa-stop',
+			callback: function (btn) {
+				setChangeOrigin$1(this$1);
+				this$1.stopAndReset();
+			}
+		});
+
+		game.listen('levelCompleted', function () {
+			this$1.updatePlayPauseButtonStates();
+			this$1.draw();
+		});
+		
+		events.listen('setLevel', function (lvl) {
+			console.log('scenemodule.setLevel');
+			if (lvl)
+				{ lvl.createScene(false, this$1); }
+			else if (scene) {
+				scene.delete(this$1);
+			}
+			
+			this$1.updatePlayPauseButtonStates();
+			
+			this$1.clearState();
+			this$1.draw();
+		});
+
+		// Change in serializable tree
+		events.listen('prototypeClicked', function (prototype) {
+			if (!scene)
+				{ return; }
+			
+			this$1.clearState();
+			
+			var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+			entityPrototype.position = new Vector(this$1.canvas.width/2, this$1.canvas.height/2);
+			var newEntity = entityPrototype.createEntity(this$1);
+			this$1.newEntities.push(newEntity);
+			this$1.draw();
+		});
+		
+		events.listen('change', function (change) {
+			if (scene && scene.resetting)
+				{ return; }
+			
+			// console.log('sceneModule change', change);
+			if (change.origin !== this$1) {
+				setChangeOrigin$1(this$1);
+				syncAChangeBetweenSceneAndLevel(change);
+				this$1.draw();
+			}
+		});
+		
+		listenKeyDown(function (k) {
+			if (!scene)
+				{ return; }
+			
+			setChangeOrigin$1(this$1);
+			if (k === key.esc) {
+				this$1.clearState();
+				this$1.draw();
+			} else if (k === key.backspace) {
+				deleteEntities(this$1.selectedEntities);
+				this$1.clearState();
+				this$1.draw();
+			} else if (k === key.c) {
+				if (this$1.selectedEntities.length > 0) {
+					this$1.deleteNewEntities();
+					(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
+					this$1.selectedEntities.length = 0;
+					setEntityPositions(this$1.newEntities, this$1.previousMousePos);
+					this$1.draw();
+				}
+			} else if (k === key.p) {
+				this$1.playButton.click();
+			} else if (k === key.r) {
+				this$1.stopButton.click();
+			}
+			var ref;
+		});
+
+		listenMouseMove(this.el, function (mousePos) {
+			if (!scene)
+				{ return; }
+			
+			setChangeOrigin$1(this$1);
+			var change = this$1.previousMousePos ? mousePos.clone().subtract(this$1.previousMousePos) : mousePos;
+			this$1.entityUnderMouse = null;
+			
+			setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
+			moveEntities(this$1.entitiesToMove, change); // these are in scene
+			copyPositionFromEntitiesToEntityPrototypes(this$1.entitiesToMove);
+			
+			if (scene) {
+				if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd)
+					{ this$1.entityUnderMouse = getEntityUnderMouse(mousePos); }
+			}
+			
+			if (this$1.selectionEnd) {
+				this$1.selectionEnd.add(change);
+				this$1.entitiesInSelection = getEntitiesInSelection(this$1.selectionStart, this$1.selectionEnd);
+			}
+
+			this$1.previousMousePos = mousePos;
+			this$1.draw();
+		});
+		listenMouseDown(this.el, function (mousePos) {
+			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
+				{ return; }
+			
+			setChangeOrigin$1(this$1);
+			if (this$1.newEntities.length > 0)
+				{ copyEntitiesToScene(this$1.newEntities); }
+			else if (this$1.entityUnderMouse) {
+				if (this$1.selectedEntities.indexOf(this$1.entityUnderMouse) >= 0) {
+				} else {
+					if (!keyPressed(key.shift))
+						{ this$1.selectedEntities.length = 0; }
+					this$1.selectedEntities.push(this$1.entityUnderMouse);
+				}
+				(ref = this$1.entitiesToMove).push.apply(ref, this$1.selectedEntities);
+				this$1.selectSelectedEntitiesInEditor();
+			} else {
+				this$1.selectedEntities.length = 0;
+				this$1.selectionStart = mousePos;
+				this$1.selectionEnd = mousePos.clone();
+			}
+			
+			this$1.draw();
+			var ref;
+		});
+		listenMouseUp(this.el, function (mousePos) {
+			if (!scene)
+				{ return; }
+			
+			this$1.selectionStart = null;
+			this$1.selectionEnd = null;
+			this$1.entitiesToMove.length = 0;
+			
+			if (this$1.entitiesInSelection.length > 0) {
+				(ref = this$1.selectedEntities).push.apply(ref, this$1.entitiesInSelection);
+				this$1.entitiesInSelection.length = 0;
+				this$1.selectSelectedEntitiesInEditor();
+			}
+			
+			this$1.draw();
+			var ref;
+		});
+	}
+
+	if ( Module$$1 ) SceneModule.__proto__ = Module$$1;
+	SceneModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	SceneModule.prototype.constructor = SceneModule;
+	SceneModule.prototype.update = function update () {
+		this.draw();
+	};
+	SceneModule.prototype.updatePlayPauseButtonStates = function updatePlayPauseButtonStates () {
+		if (!scene)
+			{ return; }
+		if (scene.playing) {
+			this.el.classList.add('hidePauseButtons');
+			this.playButton.icon.className = 'fa fa-pause';
+			this.playButton.text.innerHTML = '<u>P</u>ause';
+		} else {
+			this.el.classList.toggle('hidePauseButtons', scene.isInInitialState());
+			this.playButton.icon.className = 'fa fa-play';
+			this.playButton.text.innerHTML = '<u>P</u>lay';
+		}
+	};
+	
+	SceneModule.prototype.fixAspectRatio = function fixAspectRatio () {
+		if (this.canvas) {
+			var change = false;
+			if (this.canvas.width !== this.canvas.offsetWidth && this.canvas.offsetWidth) {
+				this.canvas.width = this.canvas.offsetWidth;
+				change = true;
+			}
+			if (this.canvas.height !== this.canvas.offsetHeight && this.canvas.offsetHeight) {
+				this.canvas.height = this.canvas.offsetHeight;
+				change = true;
+			}
+			if (change) {
+				this.draw();
+			}
+		}
+	};
+	
+	SceneModule.prototype.draw = function draw () {
+		var this$1 = this;
+
+		if (scene) {
+			if (!scene.playing) {
+				this.filterDeadSelection();
+				
+				scene.draw();
+				scene.dispatch('onDrawHelper', scene.context);
+				drawPositionHelpers(scene.getChildren('ent'));
+				drawEntityUnderMouse(this.entityUnderMouse);
+				drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
+				drawSelectedEntities(this.selectedEntities);
+				if (scene.level && scene.level.isEmpty()) {
+					this.drawEmptyLevel();
+				}
+			}
+		} else {
+			this.drawNoLevel();
+			setTimeout(function () {
+				if (game.getChildren('lvl').length === 0) {
+					setChangeOrigin$1(this$1);
+					createNewLevel();
+				}
+			}, 700);
+		}
+	};
+	
+	SceneModule.prototype.drawNoLevel = function drawNoLevel () {
+		this.canvas.width = this.canvas.width;
+		var context = this.canvas.getContext('2d');
+		context.font = '20px arial';
+		context.fillStyle = 'white';
+		context.fillText('No level selected', 10, 35);
+	};
+	SceneModule.prototype.drawEmptyLevel = function drawEmptyLevel () {
+		var context = this.canvas.getContext('2d');
+		context.font = '20px arial';
+		context.fillStyle = 'white';
+		context.fillText('Create a type and click it here', 20, 35);
+	};
+	
+	SceneModule.prototype.clearState = function clearState () {
+		this.deleteNewEntities();
+		
+		this.entityUnderMouse = null;
+		this.selectedEntities.length = 0;
+		this.entitiesToMove.length = 0;
+
+		this.selectionStart = null;
+		this.selectionEnd = null;
+	};
+	
+	SceneModule.prototype.deleteNewEntities = function deleteNewEntities () {
+		this.newEntities.forEach(function (e) {
+			e.prototype.delete();
+			e.delete();
+		});
+		this.newEntities.length = 0;
+	};
+	
+	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
+		editor.select(this.selectedEntities, this);
+		if (shouldSyncLevelAndScene())
+			{ Module$$1.activateOneOfModules(['type', 'instance'], false); }
+		else
+			{ Module$$1.activateOneOfModules(['instance'], false); }
+	};
+	
+	SceneModule.prototype.stopAndReset = function stopAndReset () {
+		this.clearState();
+		if (editor.selection.type === 'ent') {
+			editor.select(editor.selection.items.map(function (ent) { return ent.prototype.prototype; }), this);
+		}
+		if (scene)
+			{ scene.reset(this); }
+		this.playButton.icon.className = 'fa fa-play';
+		this.updatePlayPauseButtonStates();
+		this.draw();
+	};
+	
+	SceneModule.prototype.filterDeadSelection = function filterDeadSelection () {
+		var this$1 = this;
+
+		removeTheDeadFromArray(this.selectedEntities);
+		removeTheDeadFromArray(this.entitiesToMove);
+
+		for (var i = this.newEntities.length - 1; i >= 0; --i) {
+			if (this$1.newEntities[i].prototype.prototype._alive === false) {
+				var entity = this$1.newEntities.splice(i, 1)[0];
+				entity.prototype.delete();
+				entity.delete();
+			}
+		}
+	};
+
+	return SceneModule;
+}(Module));
+
+Module.register(SceneModule, 'center');
+
 var Level$2 = (function (Module$$1) {
 	function Level() {
+		var this$1 = this;
+
 		Module$$1.call(
-			this, this.propertyEditor = new PropertyEditor()
+			this, this.propertyEditor = new PropertyEditor(),
+			this.deleteButton = el('button.button.dangerButton', 'Delete', {
+				onclick: function () {
+					setChangeOrigin$1(this$1);
+					this$1.level.delete();
+				}
+			})
 		);
 		this.id = 'level';
 		this.name = 'Level';
@@ -5755,9 +5851,11 @@ var Level$2 = (function (Module$$1) {
 	Level.prototype = Object.create( Module$$1 && Module$$1.prototype );
 	Level.prototype.constructor = Level;
 	Level.prototype.update = function update () {
-		if (editor.selectedLevel)
-			{ this.propertyEditor.update([editor.selectedLevel], 'lvl'); }
-		else
+		this.level = null;
+		if (editor.selectedLevel) {
+			this.level = editor.selectedLevel;
+			this.propertyEditor.update([editor.selectedLevel], 'lvl');
+		} else
 			{ return false; }
 	};
 	Level.prototype.activate = function activate (command, parameter) {
@@ -5770,6 +5868,35 @@ var Level$2 = (function (Module$$1) {
 }(Module));
 
 Module.register(Level$2, 'right');
+
+var Game$2 = (function (Module$$1) {
+	function Game() {
+		Module$$1.call(
+			this, this.propertyEditor = new PropertyEditor()
+		);
+		this.id = 'game';
+		this.name = 'Game';
+	}
+
+	if ( Module$$1 ) Game.__proto__ = Module$$1;
+	Game.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Game.prototype.constructor = Game;
+	Game.prototype.update = function update () {
+		if (game)
+			{ this.propertyEditor.update([game], 'gam'); }
+		else
+			{ return false; }
+	};
+	Game.prototype.activate = function activate (command, parameter) {
+		if (command === 'focusOnProperty') {
+			this.propertyEditor.el.querySelector((".property[name='" + parameter + "'] input")).select();
+		}
+	};
+
+	return Game;
+}(Module));
+
+Module.register(Game$2, 'right');
 
 var TestModule = (function (Module$$1) {
 	function TestModule() {
@@ -5784,6 +5911,7 @@ var TestModule = (function (Module$$1) {
 	TestModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
 	TestModule.prototype.constructor = TestModule;
 	TestModule.prototype.update = function update () {
+		return false;
 	};
 
 	return TestModule;
@@ -5845,8 +5973,6 @@ addChangeListener(function (change) {
 			}
 		}
 		editor.dirty = true;
-		if (change.type !== 'editorSelection' && loaded && change.reference.getRoot().threeLetterType === 'gam')
-			{ editor.saveNeeded = true; }
 	}
 });
 
@@ -5905,22 +6031,7 @@ Editor.prototype.select = function select (items, origin) {
 Editor.prototype.update = function update () {
 	if (!this.dirty || !this.game) { return; }
 	this.layout.update();
-		
-	var logStr = 'update';
-		
-	if (this.saveNeeded) {
-		logStr += ' & save';
-		this.save();
-	}
-		
 	this.dirty = false;
-	this.saveNeeded = false;
-		
-	// console.log(logStr);
-};
-Editor.prototype.save = function save () {
-	localStorage.anotherGameId = this.game.id;
-	// localStorage.anotherGameJSON = JSON.stringify(this.game.toJSON());
 };
 
 
@@ -5958,7 +6069,7 @@ window.Serializable = Serializable;
 
 window.getSerializable = getSerializable$1;
 window.serializables = serializables;
-window.setChangeOrigin = setChangeOrigin;
+window.setChangeOrigin = setChangeOrigin$1;
 
 window.Game = Game;
 

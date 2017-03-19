@@ -1,46 +1,41 @@
-import Popup, { Button } from './popup';
-import { componentClasses } from '../../../core/component';
-import ComponentData from '../../../core/componentData';
-import { list, el } from 'redom';
-import assert from '../../../util/assert';
-import { setChangeOrigin } from '../../../core/serializableManager';
-import { game } from '../../../core/game';
-import { scene } from '../../../core/scene';
-import Level from '../../../core/level';
-import { editor } from '../../editor';
-import { listen, dispatch } from '../../events';
-import Module from '../../module/module';
+import { el, list, mount } from 'redom';
+import Module from './module';
+import { game } from '../../core/game';
+import { editor } from '../editor';
+import Level from '../../core/level';
+import { Button } from '../views/popup/popup';
+import { dispatch, listen } from '../events';
 
-export default class LevelSelector extends Popup {
+export function createNewLevel() {
+	let lvl = new Level();
+	lvl.initWithPropertyValues({
+		name: 'New level'
+	});
+	editor.game.addChild(lvl);
+	editor.setLevel(lvl);
+	
+	return lvl;
+}
+
+class Levels extends Module {
 	constructor() {
-		super({
-			title: 'Levels',
-			width: '500px',
-			content: el('div.levelSelectorButtons',
+		super(
+			this.content = el('div',
 				this.buttons = list('div.levelSelectorButtons', LevelItem),
 				'Create: ',
 				this.createButton = new Button
 			)
-		});
-
-		this.parent = parent;
-		
-		this.buttons.update(game.getChildren('lvl'));
+		);
+		this.name = 'Levels';
+		this.id = 'levels';
 
 		this.createButton.update({
 			text: 'New level',
 			icon: 'fa-area-chart',
 			callback: () => {
 				setChangeOrigin(this);
-				let lvl = new Level();
-				lvl.initWithPropertyValues({
-					name: 'New level'
-				});
-				editor.game.addChild(lvl);
-				editor.setLevel(lvl);
+				let lvl = createNewLevel();
 				editor.select(lvl, this);
-				
-				this.remove();
 
 				setTimeout(() => {
 					Module.activateModule('level', true, 'focusOnProperty', 'name');
@@ -48,24 +43,24 @@ export default class LevelSelector extends Popup {
 			}
 		});
 
-		listen(this.el, 'selectLevel', level => { 
+		listen(this.el, 'selectLevel', level => {
 			editor.setLevel(level);
-
-			this.remove();
 			editor.select(level, this);
 		});
-		
+
 		listen(this.el, 'deleteLevel', level => {
-			if (confirm('Are you sure you want to delete level: ' + level.name)) {
+			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
 				setChangeOrigin(this);
 				level.delete();
-				
-				this.remove();
-				new LevelSelector();
 			}
 		});
 	}
+	update() {
+		this.buttons.update(game.getChildren('lvl'));
+	}
 }
+
+Module.register(Levels, 'left');
 
 class LevelItem {
 	constructor() {

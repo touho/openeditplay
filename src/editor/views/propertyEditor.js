@@ -133,11 +133,16 @@ class Container {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
 		this.containers.update(inheritedComponentDatas);
 		this.properties.update(this.item.getChildren('prp'));
-		mount(this.controls, el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+		
+		let addButton;
+		mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
 		}));
+		if (inheritedComponentDatas.length === 0)
+			addButton.classList.add('clickMeEffect');
+		
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone type', { onclick: () => {
 			dispatch(this, 'makingChanges');
 			
@@ -169,8 +174,12 @@ class Container {
 	updateEntityPrototype() {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
 		this.containers.update(inheritedComponentDatas);
-		this.properties.update(this.item.getChildren('prp'));
-		mount(this.controls, el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+		let properties = this.item.getChildren('prp');
+		properties.forEach(prop => {
+			prop._editorPlaceholder = this.item.prototype.findChild('prp', prp => prp.name === prop.name).value;
+		});
+		this.properties.update(properties);
+		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
@@ -351,7 +360,10 @@ class Property {
 		this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
 		this.content.innerHTML = '';
 		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), property.propertyType);
+		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), {
+			propertyType: property.propertyType,
+			placeholder: property._editorPlaceholder
+		});
 		this.setValueFromProperty();
 		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 		if (property._editorVisibleIfTarget) {

@@ -3,10 +3,12 @@ import Layout from './layout/layout';
 import './module/topBar';
 import './module/type';
 import './module/instance';
-import './module/scene';
 import './module/types';
+import './module/scene';
 import './module/level';
+import './module/game';
 import './module/instances';
+import './module/levels';
 import './module/test3';
 import { el, list, mount } from 'redom';
 import { game } from '../core/game';
@@ -49,8 +51,6 @@ addChangeListener(change => {
 			}
 		}
 		editor.dirty = true;
-		if (change.type !== 'editorSelection' && loaded && change.reference.getRoot().threeLetterType === 'gam')
-			editor.saveNeeded = true;
 	}
 });
 
@@ -110,22 +110,7 @@ class Editor {
 	update() {
 		if (!this.dirty || !this.game) return;
 		this.layout.update();
-		
-		let logStr = 'update';
-		
-		if (this.saveNeeded) {
-			logStr += ' & save';
-			this.save();
-		}
-		
 		this.dirty = false;
-		this.saveNeeded = false;
-		
-		// console.log(logStr);
-	}
-	save() {
-		localStorage.anotherGameId = this.game.id;
-		// localStorage.anotherGameJSON = JSON.stringify(this.game.toJSON());
 	}
 }
 

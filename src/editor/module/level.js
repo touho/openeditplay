@@ -3,19 +3,28 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor';
 import { editor } from '../editor';
 import PropertyOwner from '../../core/propertyOwner'
+import { setChangeOrigin } from '../../core/serializableManager';
 
 class Level extends Module {
 	constructor() {
 		super(
-			this.propertyEditor = new PropertyEditor()
+			this.propertyEditor = new PropertyEditor(),
+			this.deleteButton = el('button.button.dangerButton', 'Delete', {
+				onclick: () => {
+					setChangeOrigin(this);
+					this.level.delete();
+				}
+			})
 		);
 		this.id = 'level';
 		this.name = 'Level';
 	}
 	update() {
-		if (editor.selectedLevel)
+		this.level = null;
+		if (editor.selectedLevel) {
+			this.level = editor.selectedLevel;
 			this.propertyEditor.update([editor.selectedLevel], 'lvl');
-		else
+		} else
 			return false;
 	}
 	activate(command, parameter) {

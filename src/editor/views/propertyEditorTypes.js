@@ -7,8 +7,9 @@ const EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 let editors = {};
 export default editors;
 
-editors.default = editors.string = (container, oninput, onchange) => {
+editors.default = editors.string = (container, oninput, onchange, options) => {
 	let input = el('input', {
+		placeholder: options.placeholder || '',
 		oninput: () => oninput(input.value),
 		onchange: () => onchange(input.value)
 	});
@@ -64,8 +65,8 @@ editors.vector = (container, oninput, onchange) => {
 	};
 };
 
-editors.enum = (container, oninput, onchange, propertyType) => {
-	let select = el('select', ...propertyType.validator.parameters.map(p => el('option', p)));
+editors.enum = (container, oninput, onchange, options) => {
+	let select = el('select', ...options.propertyType.validator.parameters.map(p => el('option', p)));
 	select.onchange = () => {
 		onchange(select.value);
 	};

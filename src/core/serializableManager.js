@@ -4,10 +4,13 @@ import Serializable from './serializable';
 export let serializables = {};
 
 let DEBUG_CHANGES = 0;
-let CHECK_FOR_INVALID_ORIGINS = 0;
+let CHECK_FOR_INVALID_ORIGINS = 1;
 
 export function addSerializable(serializable) {
-	assert(serializables[serializable.id] === undefined, `Serializable id clash ${serializable.id}`);
+// @ifndef OPTIMIZE
+	if (serializables[serializable.id] !== undefined)
+		assert(false, ("Serializable id clash " + (serializable.id)));
+// @endif
 	serializables[serializable.id] = serializable;
 }
 
@@ -20,10 +23,11 @@ export function hasSerializable(id) {
 }
 
 export function removeSerializable(id) {
-	if (serializables[id])
-		delete serializables[id];
-	else
+	/* When deleting a scene, this function is called a lot of times
+	if (!serializables[id])
 		throw new Error('Serializable not found!');
+	*/
+	delete serializables[id];
 }
 
 // reference parameters are not sent over net. they are helpers in local game instance
@@ -73,7 +77,10 @@ export function setChangeOrigin(_origin) {
 
 let externalChange = false;
 export function addChange(type, reference) {
+	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
+	// @endif
+	
 	if (!reference.id) return;
 	
 	let change = {
@@ -81,7 +88,7 @@ export function addChange(type, reference) {
 		reference,
 		id: reference.id,
 		external: externalChange,
-		origin
+		origin // exists in editor, but not in optimized release
 	};
 	if (type === changeType.setPropertyValue) {
 		change.value = reference._value;
@@ -139,17 +146,15 @@ export function packChange(change) {
 		if (change.type === changeType.addSerializableToTree) {
 			if (change.reference) {
 				change.value = change.reference.toJSON();
-			} else if (change.value) {
-				// change.value = change.value; // no changes
 			} else {
 				assert(false, 'invalid change of type addSerializableToTree', change);
 			}
-		} else if (change.value) {
+		} else if (change.value !== undefined) {
 			change.value = change.reference.propertyType.type.toJSON(change.value);
 		}
 
 		Object.keys(keyToShortKey).forEach(key => {
-			if (change[key]) {
+			if (change[key] !== undefined) {
 				if (key === 'type' && change[key] === changeType.setPropertyValue) return; // optimize most common type
 				packed[keyToShortKey[key]] = change[key];
 			}

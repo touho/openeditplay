@@ -16,6 +16,7 @@ import * as sceneEdit from '../util/sceneEdit';
 import Vector from '../../util/vector';
 import { removeTheDeadFromArray } from '../../util/algorithm';
 import { help } from '../help';
+import { createNewLevel } from './levels';
 
 class SceneModule extends Module {
 	constructor() {
@@ -35,7 +36,7 @@ class SceneModule extends Module {
 
 		setInterval(() => {
 			this.fixAspectRatio();
-		}, 500);
+		}, 200);
 		setTimeout(() => {
 			this.fixAspectRatio();
 		});
@@ -50,7 +51,7 @@ class SceneModule extends Module {
 			if (editor.selectedLevel)
 				editor.selectedLevel.createScene();
 			else
-				this.drawInvalidScene();
+				this.drawNoLevel();
 		});
 		*/
 		
@@ -66,7 +67,7 @@ class SceneModule extends Module {
 		this.entitiesInSelection = [];
 		
 		this.playButton = new TopButton({
-			text: 'Play',
+			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: btn => {
 				if (!scene)
@@ -85,7 +86,7 @@ class SceneModule extends Module {
 			}
 		});
 		this.stopButton = new TopButton({
-			text: 'Reset',
+			text: el('span', el('u', 'R'), 'eset'),
 			iconClass: 'fa-stop',
 			callback: btn => {
 				setChangeOrigin(this);
@@ -158,6 +159,10 @@ class SceneModule extends Module {
 					sceneEdit.setEntityPositions(this.newEntities, this.previousMousePos);
 					this.draw();
 				}
+			} else if (k === key.p) {
+				this.playButton.click();
+			} else if (k === key.r) {
+				this.stopButton.click();
 			}
 		});
 
@@ -227,15 +232,20 @@ class SceneModule extends Module {
 			this.draw();
 		});
 	}
+	update() {
+		this.draw();
+	}
 	updatePlayPauseButtonStates() {
 		if (!scene)
 			return;
 		if (scene.playing) {
 			this.el.classList.add('hidePauseButtons');
 			this.playButton.icon.className = 'fa fa-pause';
+			this.playButton.text.innerHTML = '<u>P</u>ause';
 		} else {
 			this.el.classList.toggle('hidePauseButtons', scene.isInInitialState());
 			this.playButton.icon.className = 'fa fa-play';
+			this.playButton.text.innerHTML = '<u>P</u>lay';
 		}
 	}
 	
@@ -267,18 +277,33 @@ class SceneModule extends Module {
 				sceneEdit.drawEntityUnderMouse(this.entityUnderMouse);
 				sceneEdit.drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
 				sceneEdit.drawSelectedEntities(this.selectedEntities);
+				if (scene.level && scene.level.isEmpty()) {
+					this.drawEmptyLevel();
+				}
 			}
 		} else {
-			this.drawInvalidScene();
+			this.drawNoLevel();
+			setTimeout(() => {
+				if (game.getChildren('lvl').length === 0) {
+					setChangeOrigin(this);
+					createNewLevel();
+				}
+			}, 700)
 		}
 	}
 	
-	drawInvalidScene() {
-		this.canvas.width = this.canvas.width; 
+	drawNoLevel() {
+		this.canvas.width = this.canvas.width;
 		let context = this.canvas.getContext('2d');
-		context.font = '30px arial';
+		context.font = '20px arial';
 		context.fillStyle = 'white';
-		context.fillText('No level loaded.', 10, 35);
+		context.fillText('No level selected', 10, 35);
+	}
+	drawEmptyLevel() {
+		let context = this.canvas.getContext('2d');
+		context.font = '20px arial';
+		context.fillStyle = 'white';
+		context.fillText('Create a type and click it here', 20, 35);
 	}
 	
 	clearState() {

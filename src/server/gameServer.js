@@ -3,13 +3,14 @@ import Game from '../core/game';
 import Serializable from '../core/serializable';
 import { getConnectionsForGameServer } from './connection';
 import { executeChange, setChangeOrigin, addChangeListener } from '../core/serializableManager';
+import { gameIdToFilename, removeDummyGames } from './gameDataTools';
 
 let idToGameServer = {}; // gameId => GameServer
 export { idToGameServer };
 
 addChangeListener(change => {
 	let root = change.reference.getRoot();
-	if (root && root.threeLetterType === 'gam') {
+	if (root.threeLetterType === 'gam') {
 		let gameServer = idToGameServer[root.id];
 		if (gameServer) {
 			gameServer.saveNeeded = true;
@@ -23,10 +24,6 @@ addChangeListener(change => {
 	}
 });
 
-function gameIdToFilename(gameId) {
-	// File system can be case-insensitive. Add '_' before every uppercase letter.
-	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
-}
 
 class GameServer {
 	constructor(game) {
@@ -56,8 +53,7 @@ class GameServer {
 		}
 	}
 	save() {
-		// we are in dist folder
-		fs.writeFile(`${__dirname}/../gameData/${gameIdToFilename(this.id)}`, JSON.stringify(this.game.toJSON()));
+		fs.writeFile(`${DIR_GAMEDATA}/${gameIdToFilename(this.id)}`, JSON.stringify(this.game.toJSON()));
 		this.saveNeeded = false;
 	}
 	delete() {
@@ -72,11 +68,13 @@ class GameServer {
 	}
 }
 
+// Normal update
 setInterval(() => {
 	console.log('srvrs', Object.keys(idToGameServer));
 	Object.keys(idToGameServer).map(key => idToGameServer[key]).forEach(gameServer => {
 		if (new Date() - gameServer.lastUsed > 1000*10) {
 			console.log('GameServer delete', gameServer.id);
+			setChangeOrigin('Game clear interval');
 			gameServer.delete();
 		} else if (gameServer.saveNeeded) {
 			console.log('GameServer save', gameServer.id);
@@ -84,6 +82,11 @@ setInterval(() => {
 		}
 	});
 }, 3000);
+
+// Delete dummy games
+setInterval(() => {
+	removeDummyGames();
+}, 5000);
 
 function createGame(gameId) {
 	let game = new Game(gameId);

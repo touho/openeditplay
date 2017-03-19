@@ -40,7 +40,7 @@ Component.register({
 				let pos = this.Transform.position;
 				for (let i = 0; i < entities.length; ++i) {
 					if (entities[i].position.distanceSq(pos) < distSq) {
-						if (!entities[i][this.storeProp] && this.launchTrigger(entities[i]) === false)
+						if (!entities[i][this.storeProp] && this.launchTrigger(entities[i]) !== false)
 							break;
 						entities[i][this.storeProp] = true;
 					} else {
@@ -53,6 +53,7 @@ Component.register({
 		// Return false if other triggers should not be checked
 		launchTrigger(entity) {
 			if (this.action === 'win') {
+				console.log('will win');
 				this.scene.win();
 				return false;
 			}

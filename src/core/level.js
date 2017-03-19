@@ -23,7 +23,9 @@ export default class Level extends PropertyOwner {
 		scene.level = this;
 		return scene;
 	}
-	
+	isEmpty() {
+		return this.getChildren('epr').length === 0;
+	}
 	
 	/*
 	OPTIMIZATION DOES NOT WORK, YET

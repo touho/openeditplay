@@ -54,64 +54,19 @@ export default class Prototype extends PropertyOwner {
 	]
 	 */
 	getInheritedComponentDatas(filter = null) {
-		let originalPrototype = this;
-		
-		function getDataFromPrototype(prototype, _depth = 0) {
-			let data;
-			
-			let parentPrototype = prototype.getParentPrototype();
-			if (parentPrototype)
-				data = getDataFromPrototype(parentPrototype, _depth + 1);
-			else
-				data = {}; // Top level
-			
-			let componentDatas = prototype.getChildren('cda');
-			componentDatas.forEach(componentData => {
-				if (filter && !filter(componentData))
-					return;
-				
-				if (!data[componentData.componentId]) {
-					// Most parent version of this componentId
-					data[componentData.componentId] = {
-						// ownComponent = true if the original prototype is the first one introducing this componentId
-						ownComponentData: null, // will be given value if original prototype has this componentId
-						componentClass: componentData.componentClass,
-						componentId: componentData.componentId,
-						propertyHash: {},
-						threeLetterType: 'icd',
-						generatedForPrototype: originalPrototype
-					};
-				}
-				if (_depth === 0) {
-					data[componentData.componentId].ownComponentData = componentData;
-				}
-
-				componentData.getChildren('prp').forEach(property => {
-					// Newest version of a property always overrides old property
-					data[componentData.componentId].propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
-				});
-			});
-			
-			return data;
-		}
-
-		let data = getDataFromPrototype(this);
+		let data = getDataFromPrototype(this, this, filter);
 		let array = Object.keys(data).map(key => data[key]);
-		array.forEach(inheritedComponentData => {
+		let inheritedComponentData;
+		for (let i = 0; i < array.length; ++i) {
+			inheritedComponentData = array[i];
 			inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(propertyType => {
-				if (inheritedComponentData.propertyHash[propertyType.name])
-					return inheritedComponentData.propertyHash[propertyType.name];
-				else
-					return propertyType.createProperty({ skipSerializableRegistering: true });
+				return inheritedComponentData.propertyHash[propertyType.name]
+					|| propertyType.createProperty({ skipSerializableRegistering: true });
 			});
 			delete inheritedComponentData.propertyHash;
-		});
-		
-		array.forEach(inheritedComponentData => {
-			let cid = inheritedComponentData.componentId;
-		});
+		}
 
-		return array.sort((a, b) => a.componentClass.componentName.localeCompare(b.componentClass.componentName));
+		return array.sort(sortInheritedComponentDatas);
 	}
 	
 	createAndAddPropertyForComponentData(inheritedComponentData, propertyName, propertyValue) {
@@ -214,10 +169,10 @@ export default class Prototype extends PropertyOwner {
 	}
 	
 	delete() {
-		this._game = this._game || this.getRoot();
+		this._gameRoot = this._gameRoot || this.getRoot();
 		if (!super.delete()) return false;
-		if (this.threeLetterType === 'prt') {
-			this._game.forEachChild('lvl', lvl => {
+		if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
+			this._gameRoot.forEachChild('lvl', lvl => {
 				let items = lvl.getChildren('epr');
 				for (let i = items.length-1; i >= 0; i--) {
 					if (items[i].prototype === this) {
@@ -237,3 +192,51 @@ Prototype.create = function(name) {
 };
 
 Serializable.registerSerializable(Prototype, 'prt');
+
+
+function getDataFromPrototype(prototype, originalPrototype, filter, _depth = 0) {
+	let data;
+
+	let parentPrototype = prototype.getParentPrototype();
+	if (parentPrototype)
+		data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1);
+	else
+		data = {}; // Top level
+	
+	let componentDatas = prototype.getChildren('cda');
+	if (filter)
+		componentDatas = componentDatas.filter(filter);
+	let componentData;
+	for (let i = 0; i < componentDatas.length; ++i) {
+		componentData = componentDatas[i];
+
+		if (!data[componentData.componentId]) {
+			// Most parent version of this componentId
+			data[componentData.componentId] = {
+				// ownComponent = true if the original prototype is the first one introducing this componentId
+				ownComponentData: _depth === 0 ? componentData : null, // will be given value if original prototype has this componentId
+				componentClass: componentData.componentClass,
+				componentId: componentData.componentId,
+				propertyHash: {},
+				threeLetterType: 'icd',
+				generatedForPrototype: originalPrototype,
+			};
+		}
+		
+		let propertyHash = data[componentData.componentId].propertyHash;
+		
+		let properties = componentData.getChildren('prp');
+		let property;
+		for (let j = 0; j < properties.length; ++j) {
+			property = properties[j];
+			// Newest version of a property always overrides old property
+			propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
+		}
+	};
+
+	return data;
+}
+
+function sortInheritedComponentDatas(a, b) {
+	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
+}
