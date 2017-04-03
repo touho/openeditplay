@@ -204,7 +204,6 @@ Serializable.prototype.forEachChild = function forEachChild (threeLetterType, ca
 Serializable.prototype.move = function move (newParent) {
 		
 	newParent._addChild(this._detach());
-
 	addChange(changeType.move, this);
 		
 	return this;
@@ -652,6 +651,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -662,6 +663,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -748,6 +750,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1255,6 +1261,148 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	});
 };
 
+var ComponentData = (function (Serializable$$1) {
+	function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
+		if ( predefinedId === void 0 ) predefinedId = false;
+		if ( predefinedComponentId === void 0 ) predefinedComponentId = false;
+
+		Serializable$$1.call(this, predefinedId);
+		this.name = componentClassName;
+		this.componentClass = componentClasses.get(this.name);
+		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
+		if (!this.componentClass.allowMultiple)
+			{ predefinedComponentId = '_' + componentClassName; }
+		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
+	}
+
+	if ( Serializable$$1 ) ComponentData.__proto__ = Serializable$$1;
+	ComponentData.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	ComponentData.prototype.constructor = ComponentData;
+	ComponentData.prototype.addChild = function addChild (child) {
+		if (child.threeLetterType === 'prp') {
+			if (!child.propertyType) {
+				if (!this.componentClass._propertyTypesByName[child.name]) {
+					if (isClient)
+						{ console.log('Property of that name not defined', this.id, child, this); }
+					else
+						{ console.log('Property of that name not defined', this.id, this.name, child.name); }
+					return;
+				}
+				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
+			}
+		}
+		Serializable$$1.prototype.addChild.call(this, child);
+		return this;
+	};
+	ComponentData.prototype.clone = function clone (options) {
+		var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+		var obj = new ComponentData(this.name, false, newComponentId);
+		var children = [];
+		this.forEachChild(null, function (child) {
+			children.push(child.clone());
+		});
+		obj.initWithChildren(children);
+		this._state |= Serializable$$1.STATE_CLONE;
+		return obj;
+	};
+	ComponentData.prototype.toJSON = function toJSON () {
+		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
+			cid: this.componentId,
+			n: this.name
+		});
+	};
+	/*
+	Returns a list of Properties.
+	Those which don't have an id are temporary properties generated from parents.
+	Don't set _depth.
+	 */
+	ComponentData.prototype.getInheritedProperties = function getInheritedProperties (_depth) {
+		if ( _depth === void 0 ) _depth = 0;
+
+		var properties = {};
+
+		// properties from parent
+		var parentComponentData = this.getParentComponentData();
+		if (parentComponentData)
+			{ parentComponentData.getInheritedProperties(_depth + 1).forEach(function (prop) { return properties[prop.name] = prop; }); }
+		
+		// properties from this. override properties of parents
+		this.getChildren('prp').forEach(function (prop) {
+			if (_depth === 0)
+				{ properties[prop.name] = prop; }
+			else
+				{ properties[prop.name] = prop.clone(true); }
+		});
+		
+		// fill from propertyType
+		if (_depth === 0) {
+			return this.componentClass._propertyTypes.map(function (propertyType) {
+				return properties[propertyType.name] || propertyType.createProperty({
+					skipSerializableRegistering: true
+				});
+			});
+		} else {
+			return Object.keys(properties).map(function (key) { return properties[key]; });
+		}
+	};
+	ComponentData.prototype.getParentComponentData = function getParentComponentData () {
+		var this$1 = this;
+
+		if (!this._parent) { return null; }
+		var parentPrototype = this._parent.getParentPrototype();
+		while (parentPrototype) {
+			var parentComponentData = parentPrototype.findChild('cda', function (componentData) { return componentData.componentId === this$1.componentId; });
+			if (parentComponentData)
+				{ return parentComponentData; }
+			else
+				{ parentPrototype = parentPrototype.getParentPrototype(); }
+		}
+		return null;
+	};
+	ComponentData.prototype.getPropertyOrCreate = function getPropertyOrCreate (name) {
+		var property = this.findChild('prp', function (prp) { return prp.name === name; });
+		if (!property) {
+			property = this.componentClass._propertyTypesByName[name].createProperty();
+			this.addChild(property);
+		}
+		return property;
+	};
+	ComponentData.prototype.getProperty = function getProperty (name) {
+		return this.findChild('prp', function (prp) { return prp.name === name; });
+	};
+	ComponentData.prototype.setValue = function setValue (propertyName, value) {
+		this.getPropertyOrCreate(propertyName).value = value;
+		return this;
+	};
+	ComponentData.prototype.getValue = function getValue (name) {
+		var property = this.getProperty(name);
+		if (property)
+			{ return property.value; }
+		var parent = this.getParentComponentData();
+		
+		if (parent)
+			{ return parent.getValue(name); }
+		
+		return this.componentClass._propertyTypesByName[name].initialValue;
+	};
+	ComponentData.prototype.createComponent = function createComponent () {
+		var properties = this.getInheritedProperties();
+		var values = {};
+		properties.forEach(function (prop) {
+			values[prop.name] = prop.value;
+		});
+		var component = Component$1.create(this.name, values);
+		component._componentId = this.componentId;
+		return component;
+	};
+
+	return ComponentData;
+}(Serializable));
+
+Serializable.registerSerializable(ComponentData, 'cda', function (json) {
+	return new ComponentData(json.n, json.id, json.cid);
+});
+
 var ALIVE_ERROR = 'entity is already dead';
 
 var Entity = (function (Serializable$$1) {
@@ -1431,148 +1579,6 @@ Serializable.registerSerializable(Entity, 'ent', function (json) {
 		entity.addComponents(json.comp.map(Serializable.fromJSON));
 	}
 	return entity;
-});
-
-var ComponentData = (function (Serializable$$1) {
-	function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
-		if ( predefinedId === void 0 ) predefinedId = false;
-		if ( predefinedComponentId === void 0 ) predefinedComponentId = false;
-
-		this.name = componentClassName;
-		this.componentClass = componentClasses.get(this.name);
-		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
-		Serializable$$1.call(this, predefinedId);
-		if (!this.componentClass.allowMultiple)
-			{ predefinedComponentId = '_' + componentClassName; }
-		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
-	}
-
-	if ( Serializable$$1 ) ComponentData.__proto__ = Serializable$$1;
-	ComponentData.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
-	ComponentData.prototype.constructor = ComponentData;
-	ComponentData.prototype.addChild = function addChild (child) {
-		if (child.threeLetterType === 'prp') {
-			if (!child.propertyType) {
-				if (!this.componentClass._propertyTypesByName[child.name]) {
-					if (isClient)
-						{ console.log('Property of that name not defined', this.id, child, this); }
-					else
-						{ console.log('Property of that name not defined', this.id, this.name, child.name); }
-					return;
-				}
-				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
-			}
-		}
-		Serializable$$1.prototype.addChild.call(this, child);
-		return this;
-	};
-	ComponentData.prototype.clone = function clone (options) {
-		var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
-		var obj = new ComponentData(this.name, false, newComponentId);
-		var children = [];
-		this.forEachChild(null, function (child) {
-			children.push(child.clone());
-		});
-		obj.initWithChildren(children);
-		this._state |= Serializable$$1.STATE_CLONE;
-		return obj;
-	};
-	ComponentData.prototype.toJSON = function toJSON () {
-		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
-			cid: this.componentId,
-			n: this.name
-		});
-	};
-	/*
-	Returns a list of Properties.
-	Those which don't have an id are temporary properties generated from parents.
-	Don't set _depth.
-	 */
-	ComponentData.prototype.getInheritedProperties = function getInheritedProperties (_depth) {
-		if ( _depth === void 0 ) _depth = 0;
-
-		var properties = {};
-
-		// properties from parent
-		var parentComponentData = this.getParentComponentData();
-		if (parentComponentData)
-			{ parentComponentData.getInheritedProperties(_depth + 1).forEach(function (prop) { return properties[prop.name] = prop; }); }
-		
-		// properties from this. override properties of parents
-		this.getChildren('prp').forEach(function (prop) {
-			if (_depth === 0)
-				{ properties[prop.name] = prop; }
-			else
-				{ properties[prop.name] = prop.clone(true); }
-		});
-		
-		// fill from propertyType
-		if (_depth === 0) {
-			return this.componentClass._propertyTypes.map(function (propertyType) {
-				return properties[propertyType.name] || propertyType.createProperty({
-					skipSerializableRegistering: true
-				});
-			});
-		} else {
-			return Object.keys(properties).map(function (key) { return properties[key]; });
-		}
-	};
-	ComponentData.prototype.getParentComponentData = function getParentComponentData () {
-		var this$1 = this;
-
-		if (!this._parent) { return null; }
-		var parentPrototype = this._parent.getParentPrototype();
-		while (parentPrototype) {
-			var parentComponentData = parentPrototype.findChild('cda', function (componentData) { return componentData.componentId === this$1.componentId; });
-			if (parentComponentData)
-				{ return parentComponentData; }
-			else
-				{ parentPrototype = parentPrototype.getParentPrototype(); }
-		}
-		return null;
-	};
-	ComponentData.prototype.getPropertyOrCreate = function getPropertyOrCreate (name) {
-		var property = this.findChild('prp', function (prp) { return prp.name === name; });
-		if (!property) {
-			property = this.componentClass._propertyTypesByName[name].createProperty();
-			this.addChild(property);
-		}
-		return property;
-	};
-	ComponentData.prototype.getProperty = function getProperty (name) {
-		return this.findChild('prp', function (prp) { return prp.name === name; });
-	};
-	ComponentData.prototype.setValue = function setValue (propertyName, value) {
-		this.getPropertyOrCreate(propertyName).value = value;
-		return this;
-	};
-	ComponentData.prototype.getValue = function getValue (name) {
-		var property = this.getProperty(name);
-		if (property)
-			{ return property.value; }
-		var parent = this.getParentComponentData();
-		
-		if (parent)
-			{ return parent.getValue(name); }
-		
-		return this.componentClass._propertyTypesByName[name].initialValue;
-	};
-	ComponentData.prototype.createComponent = function createComponent () {
-		var properties = this.getInheritedProperties();
-		var values = {};
-		properties.forEach(function (prop) {
-			values[prop.name] = prop.value;
-		});
-		var component = Component$1.create(this.name, values);
-		component._componentId = this.componentId;
-		return component;
-	};
-
-	return ComponentData;
-}(Serializable));
-
-Serializable.registerSerializable(ComponentData, 'cda', function (json) {
-	return new ComponentData(json.n, json.id, json.cid);
 });
 
 var propertyTypes$1 = [
@@ -1843,15 +1849,13 @@ var Game = (function (PropertyOwner$$1) {
 					console.warn('Deleting old game failed', e);
 				}
 			}
-			game = this;
 		}
 		
-		if (predefinedId)
-			{ console.log('game import'); }
-		else
-			{ console.log('game created'); }
-		
 		PropertyOwner$$1.apply(this, arguments);
+		
+		if (isClient$1) {
+			game = this;
+		}
 	}
 
 	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;
@@ -1908,6 +1912,9 @@ function deleteWorld(owner) {
 	delete owner._p2World;
 	delete owner._p2Materials;
 }
+function getWorld(owner) {
+	return owner._p2World;
+}
 function addBody(owner, body) {
 	owner._p2World.addBody(body);
 }
@@ -1951,6 +1958,9 @@ function createMaterial(owner, options) {
 	material.options = options;
 	materials[hash] = material;
 	
+	// TODO: When physics entities are edited, new materials are created.
+	// Should somehow remove old unused materials and contact materials.
+	
 	for (var h in materials) {
 		var m = materials[h];
 		var o1 = material.options;
@@ -1970,8 +1980,6 @@ function createMaterial(owner, options) {
 	return material;
 }
 
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -1981,6 +1989,8 @@ var Scene = (function (Serializable$$1) {
 	function Scene(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
+		Serializable$$1.call(this, predefinedId);
+		
 		if (isClient) {
 			if (scene) {
 				try {
@@ -2004,7 +2014,6 @@ var Scene = (function (Serializable$$1) {
 		this.time = 0;
 		this.won = false;
 		
-		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 
 		if (predefinedId)
@@ -2023,7 +2032,7 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.win = function win () {
 		this.won = true;
 	};
-	Scene.prototype.animFrame = function animFrame (playCalled) {
+	Scene.prototype.animFrame = function animFrame () {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
 		
@@ -2054,7 +2063,11 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.requestAnimFrame = function requestAnimFrame () {
 		var this$1 = this;
 
-		this.animationFrameId = window.requestAnimationFrame(function () { return this$1.animFrame(); });
+		var callback = function () { return this$1.animFrame(); };
+		if (window.requestAnimationFrame)
+			{ this.animationFrameId = window.requestAnimationFrame(callback); }
+		else
+			{ this.animationFrameId = setTimeout(callback, 16); }
 	};
 	Scene.prototype.draw = function draw () {
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -2085,8 +2098,12 @@ var Scene = (function (Serializable$$1) {
 		if (!this.playing) { return; }
 		
 		this.playing = false;
-		if (this.animationFrameId)
-			{ window.cancelAnimationFrame(this.animationFrameId); }
+		if (this.animationFrameId) {
+			if (window.requestAnimationFrame)
+				{ window.cancelAnimationFrame(this.animationFrameId); }
+			else
+				{ clearTimeout(this.animationFrameId); }
+		}
 		this.animationFrameId = null;
 	};
 	Scene.prototype.play = function play () {
@@ -2156,7 +2173,7 @@ var eventListeners = [
 // @endif
 ];
 
-// Instance of a component, see componentExample.js
+// Instance of a component, see _componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2201,7 +2218,7 @@ var Component$1 = (function (PropertyOwner$$1) {
 				{ this$1._addEventListener(eventListeners[i]); }
 		}
 		
-		if (this.constructor.componentName !== 'Transform')
+		if (this.constructor.componentName !== 'Transform' && this.scene)
 			{ this.scene.addComponent(this); }
 		
 		try {
@@ -2228,7 +2245,7 @@ var Component$1 = (function (PropertyOwner$$1) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
 
-		if (this.constructor.componentName !== 'Transform')
+		if (this.constructor.componentName !== 'Transform' && this.scene)
 			{ this.scene.removeComponent(this); }
 		
 		this.forEachChild('com', function (c) { return c._sleep(); });
@@ -2357,6 +2374,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3003,7 +3022,6 @@ Component$1.register({
 			var this$1 = this;
 
 			this.inited = true;
-			this.Rects = this.entity.getComponents('Rect');
 			var update = function (callback) {
 				return function (value) {
 					if (!this$1.updatingOthers && this$1.body) {
@@ -3013,6 +3031,11 @@ Component$1.register({
 					}
 				}
 			};
+
+			var Rects = this.entity.getComponents('Rect');
+			for (var i = 0; i < Rects.length; ++i) {
+				this$1.listenProperty(Rects[i], 'size', update(function (size) { return this$1.updateShape(); }));
+			}
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
@@ -3033,8 +3056,6 @@ Component$1.register({
 				{ this.createBody(); }
 		},
 		createBody: function createBody() {
-			var this$1 = this;
-
 			assert(!this.body);
 			
 			this.body = new p2$1.Body({
@@ -3048,20 +3069,44 @@ Component$1.register({
 				damping: this.drag,
 				angularDamping: this.rotationalDrag
 			});
+			this.updateShape();
+			this.updateMaterial();
+
 			this.body.entity = this.entity;
-			this.Rects.forEach(function (R) {
+			
+			addBody(this.scene, this.body);
+		},
+		updateShape: function updateShape() {
+			var this$1 = this;
+
+			console.log('update shape');
+			if (!this.body.entity) {
+				// We update instead of create.
+				// Should remove existing shapes
+				
+				// The library does not support updating shapes during the step.
+				var world = getWorld(this.scene);
+				assert(!world.stepping);
+				
+				var shapes = this.body.shapes;
+				for (var i = 0; i < shapes.length; ++i) {
+					shapes[i].body = null;
+				}
+				shapes.length = 0;
+			}
+
+			var Rects = this.entity.getComponents('Rect');
+			var scale = this.Transform.scale;
+			
+			Rects.forEach(function (R) {
 				var shape = new p2$1.Box({
-					width: R.size.x * PHYSICS_SCALE,
-					height: R.size.y * PHYSICS_SCALE
+					width: R.size.x * PHYSICS_SCALE * scale.x,
+					height: R.size.y * PHYSICS_SCALE * scale.y
 				});
 				this$1.body.addShape(shape);
 			});
-			this.updateMaterial();
 			
-			if (this.type === 'dynamic')
-				{ this.body.setDensity(this.density); }
-			
-			addBody(this.scene, this.body);
+			this.updateMass();
 		},
 		updateMaterial: function updateMaterial() {
 			var material = createMaterial(this.scene, {
@@ -3074,6 +3119,10 @@ Component$1.register({
 				// surfaceVelocity: 0
 			});
 			this.body.shapes.forEach(function (s) { return s.material = material; });
+		},
+		updateMass: function updateMass() {
+			if (this.type === 'dynamic')
+				{ this.body.setDensity(this.density); }
 		},
 		setRootType: function setRootType(rootType) {
 			if (rootType) {
@@ -3251,96 +3300,6 @@ function tryToLoad() {
 if (isClient)
 	{ tryToLoad(); }
 
-(function () {
-	var S = (function (Serializable$$1) {
-		function S () {
-			Serializable$$1.apply(this, arguments);
-		}if ( Serializable$$1 ) S.__proto__ = Serializable$$1;
-		S.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
-		S.prototype.constructor = S;
-
-		
-
-		return S;
-	}(Serializable));
-	Serializable.registerSerializable(S, 'tes', function (json) {
-		return new S(json.id);
-	});
-	var s = new S();
-	var id = s.id;
-	assert(typeof id === 'string' && id.length > 10);
-	var json = s.toJSON();
-	assert(json && typeof json === 'object' && typeof json.id === 'string');
-	s.delete();
-	s = Serializable.fromJSON(json);
-	assert(typeof s.id === 'string' && s.id.length > 10 && s.id === id);
-	s.delete();
-	console.log('Serializable tests OK');
-})();
-
-(function () {
-	var i = new Entity();
-	assert(i.components.size === 0);
-	assert(i.getComponent('moi') === null);
-	assert(i.getComponents('moi').length === 0);
-	i.delete();
-	console.log('Entity tests OK');
-})();
-
-(function () {
-	assert(createPropertyType.float.default().validate('4') === 4);
-	assert(createPropertyType.float.range(0, 1).validate(3) === 1);
-	console.log('PropertyType tests OK');
-})();
-
-Component$1.register({
-	name: 'Example',
-	description: 'Description of what this component does',
-	category: 'Core', // You can also make up new categories.
-	icon: 'fa-bars', // Font Awesome id
-	requirements: ['Transform'], // These shared components are autofilled. Error if component is not found.
-	children: ['Image', 'Image', 'Sound'], // These private components are also autofilled. Error if component is not found.
-	properties: [
-		createPropertyType('variable', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), 'Description of the property'),
-		createPropertyType('otherVar_iaerfperfjoierj', 'Hello', createPropertyType.string, 'Description of the property')
-	],
-	parentClass: Component$1,
-	prototype: {
-		staticVariable: 'Example class info',
-		constructor: function constructor() {
-			// This will be called once, when creating the component
-			this.hiddenVariable = 3;
-		},
-		preInit: function preInit() {
-			// preInit is called for every component before any component is inited with init(). Children are already preInited here.
-			this.data = {
-				lotsOfData: 123 + this.variable + this.hiddenVariable
-			};
-		},
-		init: function init() {
-			// All the components of this entity has been preInited. You can use them. Children are already inited here.
-			this.Transform.position.x = this.Transform.position.y + 1;
-
-			this.howToAccessChildren = [
-				this.children.Image[0].property,
-				this.children.Sound.property
-			];
-
-			this.SomeComponent = this.entity.getComponent('SomeComponent');
-		},
-		sleep: function sleep() {
-			// Release all the data created in preInit and init
-			this.data = null;
-			this.SomeComponent = null;
-			this.howToAccessChildren = null;
-			// Position component is automatically released because it is a requirement.
-		},
-		delete: function delete$1() {
-			// This will be called once, when component stops existing
-		}
-	}
-});
-
 /*
  Global event system
 
@@ -3388,6 +3347,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -3424,16 +3385,19 @@ function mount (parent, child, before) {
   if (child !== childEl) {
     childEl.__redom_view = child;
   }
+
   if (child.isMounted) {
     child.remount && child.remount();
   } else {
     child.mount && child.mount();
   }
+
   if (before) {
     parentEl.insertBefore(childEl, before.el || before);
   } else {
     parentEl.appendChild(childEl);
   }
+
   if (child.isMounted) {
     child.remounted && child.remounted();
   } else {
@@ -3521,11 +3485,9 @@ function parseArguments (element, args) {
   }
 }
 
-var is = function (type) { return function (a) { return typeof a === type; }; };
-
-var isString = is('string');
-var isNumber = is('number');
-var isFunction = is('function');
+var isString = function (a) { return typeof a === 'string'; };
+var isNumber = function (a) { return typeof a === 'number'; };
+var isFunction = function (a) { return typeof a === 'function'; };
 
 var isNode = function (a) { return a && a.nodeType; };
 var isList = function (a) { return a && a.__redom_list; };
@@ -3594,11 +3556,11 @@ function createElement (query, ns) {
   return element;
 }
 
-var elcache = {};
+var htmlCache = {};
 
-var memoizeEl = function (query) { return elcache[query] || createElement(query); };
+var memoizeHTML = function (query) { return htmlCache[query] || createElement(query); };
 
-function el (query) {
+function html (query) {
   var arguments$1 = arguments;
 
   var args = [], len = arguments.length - 1;
@@ -3607,7 +3569,7 @@ function el (query) {
   var element;
 
   if (isString(query)) {
-    element = memoizeEl(query).cloneNode(false);
+    element = memoizeHTML(query).cloneNode(false);
   } else if (isNode(query)) {
     element = query.cloneNode(false);
   } else {
@@ -3619,11 +3581,13 @@ function el (query) {
   return element;
 }
 
-el.extend = function (query) {
-  var clone = memoizeEl(query);
+html.extend = function (query) {
+  var clone = memoizeHTML(query);
 
-  return el.bind(this, clone);
+  return html.bind(this, clone);
 };
+
+var el = html;
 
 function setChildren (parent, children) {
   if (children.length === undefined) {
@@ -3728,7 +3692,7 @@ List.prototype.update = function (data) {
 
 function getParentEl (parent) {
   if (isString(parent)) {
-    return el(parent);
+    return html(parent);
   } else if (isNode(parent.el)) {
     return parent.el;
   } else {
@@ -3736,28 +3700,29 @@ function getParentEl (parent) {
   }
 }
 
-var Router = function Router (parent, Views) {
-  this.el = isString(parent) ? el(parent) : parent;
+var Router = function Router (parent, Views, initData) {
+  this.el = getParentEl(parent);
   this.Views = Views;
+  this.initData = initData;
 };
 Router.prototype.update = function update (route, data) {
   if (route !== this.route) {
     var Views = this.Views;
     var View = Views[route];
 
-    this.view = View && new View();
+    this.view = View && new View(this.initData, data);
     this.route = route;
 
     setChildren(this.el, [ this.view ]);
   }
-  this.view && this.view.update && this.view.update(data);
+  this.view && this.view.update && this.view.update(data, route);
 };
 
 var SVG = 'http://www.w3.org/2000/svg';
 
-var svgcache = {};
+var svgCache = {};
 
-var memoizeSVG = function (query) { return svgcache[query] || createElement(query, SVG); };
+var memoizeSVG = function (query) { return svgCache[query] || createElement(query, SVG); };
 
 var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIcon) {
 	var this$1 = this;
@@ -3978,6 +3943,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -4663,6 +4629,11 @@ function drawPositionHelpers(entities) {
 		scene.context.fillRect(p.x - halfSize, p.y - halfSize, size, size);
 	});
 }
+
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
 
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
@@ -5420,13 +5391,14 @@ var Levels = (function (Module$$1) {
 			editor.setLevel(level);
 			editor.select(level, this$1);
 		});
-
-		listen(this.el, 'deleteLevel', function (level) {
+/*
+		listen(this.el, 'deleteLevel', level => {
 			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
-				setChangeOrigin(this$1);
+				setChangeOrigin(this);
 				level.delete();
 			}
 		});
+		*/
 	}
 
 	if ( Module$$1 ) Levels.__proto__ = Module$$1;
@@ -5444,16 +5416,18 @@ Module.register(Levels, 'left');
 var LevelItem = function LevelItem() {
 	this.el = el('div.levelItem',
 		this.number = el('span'),
-		this.selectButton = new Button,
-		this.deleteButton = new Button
+		this.selectButton = new Button
+		//,this.deleteButton = new Button
 	);
 };
 LevelItem.prototype.selectClicked = function selectClicked () {
 	dispatch(this, 'selectLevel', this.level);
 };
-LevelItem.prototype.deleteClicked = function deleteClicked () {
+/*
+deleteClicked() {
 	dispatch(this, 'deleteLevel', this.level);
-};
+}
+*/
 LevelItem.prototype.update = function update (level, idx) {
 		var this$1 = this;
 
@@ -5464,12 +5438,14 @@ LevelItem.prototype.update = function update (level, idx) {
 		icon: 'fa-area-chart',
 		callback: function () { return this$1.selectClicked(); }
 	});
+	/*
 	this.deleteButton.update({
 		text: 'Delete',
 		class: 'dangerButton',
 		icon: 'fa-cross',
-		callback: function () { return this$1.deleteClicked(); }
+		callback: () => this.deleteClicked()
 	});
+	*/
 };
 
 var SceneModule = (function (Module$$1) {
@@ -5762,13 +5738,13 @@ var SceneModule = (function (Module$$1) {
 		var context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
-		context.fillText('No level selected', 10, 35);
+		context.fillText('No level selected', 20, 35);
 	};
 	SceneModule.prototype.drawEmptyLevel = function drawEmptyLevel () {
 		var context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
-		context.fillText('Create a type and click it here', 20, 35);
+		context.fillText('Empty level. Click a type and place it here.', 20, 35);
 	};
 	
 	SceneModule.prototype.clearState = function clearState () {
@@ -5838,8 +5814,10 @@ var Level$2 = (function (Module$$1) {
 			this, this.propertyEditor = new PropertyEditor(),
 			this.deleteButton = el('button.button.dangerButton', 'Delete', {
 				onclick: function () {
-					setChangeOrigin$1(this$1);
-					this$1.level.delete();
+					if (this$1.level.isEmpty() || confirm('Are you sure you want to delete level: ' + this$1.level.name)) {
+						setChangeOrigin$1(this$1);
+						this$1.level.delete();
+					}
 				}
 			})
 		);
@@ -5872,7 +5850,8 @@ Module.register(Level$2, 'right');
 var Game$2 = (function (Module$$1) {
 	function Game() {
 		Module$$1.call(
-			this, this.propertyEditor = new PropertyEditor()
+			this, this.propertyEditor = new PropertyEditor(),
+			el('div.gameDeleteInfo', 'To delete this game, remove all types and levels. Game will be automatically destroyed after 1h of inactivity.')
 		);
 		this.id = 'game';
 		this.name = 'Game';

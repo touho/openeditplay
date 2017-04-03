@@ -11,8 +11,10 @@ class Level extends Module {
 			this.propertyEditor = new PropertyEditor(),
 			this.deleteButton = el('button.button.dangerButton', 'Delete', {
 				onclick: () => {
-					setChangeOrigin(this);
-					this.level.delete();
+					if (this.level.isEmpty() || confirm('Are you sure you want to delete level: ' + this.level.name)) {
+						setChangeOrigin(this);
+						this.level.delete();
+					}
 				}
 			})
 		);

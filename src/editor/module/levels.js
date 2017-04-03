@@ -47,13 +47,14 @@ class Levels extends Module {
 			editor.setLevel(level);
 			editor.select(level, this);
 		});
-
+/*
 		listen(this.el, 'deleteLevel', level => {
 			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
 				setChangeOrigin(this);
 				level.delete();
 			}
 		});
+		*/
 	}
 	update() {
 		this.buttons.update(game.getChildren('lvl'));
@@ -66,16 +67,18 @@ class LevelItem {
 	constructor() {
 		this.el = el('div.levelItem',
 			this.number = el('span'),
-			this.selectButton = new Button,
-			this.deleteButton = new Button
+			this.selectButton = new Button
+			//,this.deleteButton = new Button
 		)
 	}
 	selectClicked() {
 		dispatch(this, 'selectLevel', this.level);
 	}
+	/*
 	deleteClicked() {
 		dispatch(this, 'deleteLevel', this.level);
 	}
+	*/
 	update(level, idx) {
 		this.level = level;
 		this.number.textContent = (idx+1) + '.';
@@ -84,11 +87,13 @@ class LevelItem {
 			icon: 'fa-area-chart',
 			callback: () => this.selectClicked()
 		});
+		/*
 		this.deleteButton.update({
 			text: 'Delete',
 			class: 'dangerButton',
 			icon: 'fa-cross',
 			callback: () => this.deleteClicked()
 		});
+		*/
 	}
 }

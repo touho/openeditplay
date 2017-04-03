@@ -1,6 +1,6 @@
 import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import p2, { addBody, deleteBody, createMaterial } from '../feature/physics';
+import p2, { addBody, deleteBody, createMaterial, getWorld } from '../feature/physics';
 import assert from '../util/assert';
 
 const PHYSICS_SCALE = 1/50;
@@ -32,7 +32,6 @@ Component.register({
 		inited: false,
 		init() {
 			this.inited = true;
-			this.Rects = this.entity.getComponents('Rect');
 			let update = callback => {
 				return value => {
 					if (!this.updatingOthers && this.body) {
@@ -42,6 +41,11 @@ Component.register({
 					}
 				}
 			};
+
+			let Rects = this.entity.getComponents('Rect');
+			for (let i = 0; i < Rects.length; ++i) {
+				this.listenProperty(Rects[i], 'size', update(size => this.updateShape()));
+			}
 
 			this.listenProperty(this.Transform, 'position', update(position => this.body.position = position.toArray().map(x => x * PHYSICS_SCALE)));
 			this.listenProperty(this.Transform, 'angle', update(angle => this.body.angle = angle));
@@ -75,20 +79,42 @@ Component.register({
 				damping: this.drag,
 				angularDamping: this.rotationalDrag
 			});
+			this.updateShape();
+			this.updateMaterial();
+
 			this.body.entity = this.entity;
-			this.Rects.forEach(R => {
+			
+			addBody(this.scene, this.body);
+		},
+		updateShape() {
+			console.log('update shape');
+			if (!this.body.entity) {
+				// We update instead of create.
+				// Should remove existing shapes
+				
+				// The library does not support updating shapes during the step.
+				let world = getWorld(this.scene);
+				assert(!world.stepping);
+				
+				let shapes = this.body.shapes;
+				for (let i = 0; i < shapes.length; ++i) {
+					shapes[i].body = null;
+				}
+				shapes.length = 0;
+			}
+
+			let Rects = this.entity.getComponents('Rect');
+			let scale = this.Transform.scale;
+			
+			Rects.forEach(R => {
 				let shape = new p2.Box({
-					width: R.size.x * PHYSICS_SCALE,
-					height: R.size.y * PHYSICS_SCALE
+					width: R.size.x * PHYSICS_SCALE * scale.x,
+					height: R.size.y * PHYSICS_SCALE * scale.y
 				});
 				this.body.addShape(shape);
 			});
-			this.updateMaterial();
 			
-			if (this.type === 'dynamic')
-				this.body.setDensity(this.density);
-			
-			addBody(this.scene, this.body);
+			this.updateMass();
 		},
 		updateMaterial() {
 			let material = createMaterial(this.scene, {
@@ -101,6 +127,10 @@ Component.register({
 				// surfaceVelocity: 0
 			});
 			this.body.shapes.forEach(s => s.material = material);
+		},
+		updateMass() {
+			if (this.type === 'dynamic')
+				this.body.setDensity(this.density);
 		},
 		setRootType(rootType) {
 			if (rootType) {

@@ -1,12 +1,8 @@
 import Serializable from './serializable';
-import Entity from './entity';
 import assert from '../util/assert';
 import { game } from './game';
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
 import { isClient } from '../util/environment';
-
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
 import { createWorld, deleteWorld, updateWorld } from '../feature/physics';
 
 let scene = null;
@@ -18,6 +14,8 @@ const physicsOptions = {
 
 export default class Scene extends Serializable {
 	constructor(predefinedId = false) {
+		super(predefinedId);
+		
 		if (isClient) {
 			if (scene) {
 				try {
@@ -41,7 +39,6 @@ export default class Scene extends Serializable {
 		this.time = 0;
 		this.won = false;
 		
-		super(predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 
 		if (predefinedId)
@@ -56,7 +53,7 @@ export default class Scene extends Serializable {
 	win() {
 		this.won = true;
 	}
-	animFrame(playCalled) {
+	animFrame() {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) return;
 		
@@ -85,7 +82,11 @@ export default class Scene extends Serializable {
 		this.requestAnimFrame();
 	}
 	requestAnimFrame() {
-		this.animationFrameId = window.requestAnimationFrame(() => this.animFrame());
+		let callback = () => this.animFrame();
+		if (window.requestAnimationFrame)
+			this.animationFrameId = window.requestAnimationFrame(callback);
+		else
+			this.animationFrameId = setTimeout(callback, 16);
 	}
 	draw() {
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -116,8 +117,12 @@ export default class Scene extends Serializable {
 		if (!this.playing) return;
 		
 		this.playing = false;
-		if (this.animationFrameId)
-			window.cancelAnimationFrame(this.animationFrameId);
+		if (this.animationFrameId) {
+			if (window.requestAnimationFrame)
+				window.cancelAnimationFrame(this.animationFrameId);
+			else
+				clearTimeout(this.animationFrameId);
+		}
 		this.animationFrameId = null;
 	}
 	play() {

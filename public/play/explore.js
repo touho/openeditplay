@@ -383,7 +383,6 @@ Serializable.prototype.forEachChild = function forEachChild (threeLetterType, ca
 Serializable.prototype.move = function move (newParent) {
 		
 	newParent._addChild(this._detach());
-
 	addChange(changeType.move, this);
 		
 	return this;
@@ -599,6 +598,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 	}
 });
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -685,6 +685,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1770,7 +1774,6 @@ var Game = (function (PropertyOwner$$1) {
 					console.warn('Deleting old game failed', e);
 				}
 			}
-			game = this;
 		}
 		
 		if (predefinedId)
@@ -1779,6 +1782,10 @@ var Game = (function (PropertyOwner$$1) {
 			{ console.log('game created'); }
 		
 		PropertyOwner$$1.apply(this, arguments);
+		
+		if (isClient$1) {
+			game = this;
+		}
 	}
 
 	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;
@@ -1835,6 +1842,9 @@ function deleteWorld(owner) {
 	delete owner._p2World;
 	delete owner._p2Materials;
 }
+function getWorld(owner) {
+	return owner._p2World;
+}
 function addBody(owner, body) {
 	owner._p2World.addBody(body);
 }
@@ -1877,6 +1887,9 @@ function createMaterial(owner, options) {
 	var material = new p2.Material();
 	material.options = options;
 	materials[hash] = material;
+	
+	// TODO: When physics entities are edited, new materials are created.
+	// Should somehow remove old unused materials and contact materials.
 	
 	for (var h in materials) {
 		var m = materials[h];
@@ -1950,7 +1963,7 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.win = function win () {
 		this.won = true;
 	};
-	Scene.prototype.animFrame = function animFrame (playCalled) {
+	Scene.prototype.animFrame = function animFrame () {4;
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
 		
@@ -1981,7 +1994,11 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.requestAnimFrame = function requestAnimFrame () {
 		var this$1 = this;
 
-		this.animationFrameId = window.requestAnimationFrame(function () { return this$1.animFrame(); });
+		var callback = function () { return this$1.animFrame(); };
+		if (window.requestAnimationFrame)
+			{ this.animationFrameId = window.requestAnimationFrame(callback); }
+		else
+			{ this.animationFrameId = setTimeout(callback, 16); }
 	};
 	Scene.prototype.draw = function draw () {
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -2012,8 +2029,12 @@ var Scene = (function (Serializable$$1) {
 		if (!this.playing) { return; }
 		
 		this.playing = false;
-		if (this.animationFrameId)
-			{ window.cancelAnimationFrame(this.animationFrameId); }
+		if (this.animationFrameId) {
+			if (window.requestAnimationFrame)
+				{ window.cancelAnimationFrame(this.animationFrameId); }
+			else
+				{ clearTimeout(this.animationFrameId); }
+		}
 		this.animationFrameId = null;
 	};
 	Scene.prototype.play = function play () {
@@ -2080,7 +2101,7 @@ var eventListeners = [
 	,'onStart'
 ];
 
-// Instance of a component, see componentExample.js
+// Instance of a component, see _componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2281,6 +2302,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2895,7 +2918,6 @@ Component.register({
 			var this$1 = this;
 
 			this.inited = true;
-			this.Rects = this.entity.getComponents('Rect');
 			var update = function (callback) {
 				return function (value) {
 					if (!this$1.updatingOthers && this$1.body) {
@@ -2905,6 +2927,11 @@ Component.register({
 					}
 				}
 			};
+
+			var Rects = this.entity.getComponents('Rect');
+			for (var i = 0; i < Rects.length; ++i) {
+				this$1.listenProperty(Rects[i], 'size', update(function (size) { return this$1.updateShape(); }));
+			}
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
@@ -2925,8 +2952,6 @@ Component.register({
 				{ this.createBody(); }
 		},
 		createBody: function createBody() {
-			var this$1 = this;
-
 			assert(!this.body);
 			
 			this.body = new p2$1.Body({
@@ -2940,20 +2965,44 @@ Component.register({
 				damping: this.drag,
 				angularDamping: this.rotationalDrag
 			});
+			this.updateShape();
+			this.updateMaterial();
+
 			this.body.entity = this.entity;
-			this.Rects.forEach(function (R) {
+			
+			addBody(this.scene, this.body);
+		},
+		updateShape: function updateShape() {
+			var this$1 = this;
+
+			console.log('update shape');
+			if (!this.body.entity) {
+				// We update instead of create.
+				// Should remove existing shapes
+				
+				// The library does not support updating shapes during the step.
+				var world = getWorld(this.scene);
+				assert(!world.stepping);
+				
+				var shapes = this.body.shapes;
+				for (var i = 0; i < shapes.length; ++i) {
+					shapes[i].body = null;
+				}
+				shapes.length = 0;
+			}
+
+			var Rects = this.entity.getComponents('Rect');
+			var scale = this.Transform.scale;
+			
+			Rects.forEach(function (R) {
 				var shape = new p2$1.Box({
-					width: R.size.x * PHYSICS_SCALE,
-					height: R.size.y * PHYSICS_SCALE
+					width: R.size.x * PHYSICS_SCALE * scale.x,
+					height: R.size.y * PHYSICS_SCALE * scale.y
 				});
 				this$1.body.addShape(shape);
 			});
-			this.updateMaterial();
 			
-			if (this.type === 'dynamic')
-				{ this.body.setDensity(this.density); }
-			
-			addBody(this.scene, this.body);
+			this.updateMass();
 		},
 		updateMaterial: function updateMaterial() {
 			var material = createMaterial(this.scene, {
@@ -2966,6 +3015,10 @@ Component.register({
 				// surfaceVelocity: 0
 			});
 			this.body.shapes.forEach(function (s) { return s.material = material; });
+		},
+		updateMass: function updateMass() {
+			if (this.type === 'dynamic')
+				{ this.body.setDensity(this.density); }
 		},
 		setRootType: function setRootType(rootType) {
 			if (rootType) {

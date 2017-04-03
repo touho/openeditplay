@@ -17,7 +17,7 @@ const eventListeners = [
 // @endif
 ];
 
-// Instance of a component, see componentExample.js
+// Instance of a component, see _componentExample.js
 export class Component extends PropertyOwner {
 	constructor(predefinedId = false) {
 		super(predefinedId);
@@ -54,7 +54,7 @@ export class Component extends PropertyOwner {
 				this._addEventListener(eventListeners[i]);
 		}
 		
-		if (this.constructor.componentName !== 'Transform')
+		if (this.constructor.componentName !== 'Transform' && this.scene)
 			this.scene.addComponent(this);
 		
 		try {
@@ -81,7 +81,7 @@ export class Component extends PropertyOwner {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
 
-		if (this.constructor.componentName !== 'Transform')
+		if (this.constructor.componentName !== 'Transform' && this.scene)
 			this.scene.removeComponent(this);
 		
 		this.forEachChild('com', c => c._sleep());

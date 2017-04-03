@@ -297,13 +297,13 @@ class SceneModule extends Module {
 		let context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
-		context.fillText('No level selected', 10, 35);
+		context.fillText('No level selected', 20, 35);
 	}
 	drawEmptyLevel() {
 		let context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
-		context.fillText('Create a type and click it here', 20, 35);
+		context.fillText('Empty level. Click a type and place it here.', 20, 35);
 	}
 	
 	clearState() {

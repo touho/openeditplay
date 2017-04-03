@@ -178,7 +178,6 @@ export default class Serializable {
 	move(newParent) {
 		
 		newParent._addChild(this._detach());
-
 		addChange(changeType.move, this);
 		
 		return this;

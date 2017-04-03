@@ -5,10 +5,10 @@ import { isClient } from '../util/environment';
 
 export default class ComponentData extends Serializable {
 	constructor(componentClassName, predefinedId = false, predefinedComponentId = false) {
+		super(predefinedId);
 		this.name = componentClassName;
 		this.componentClass = componentClasses.get(this.name);
 		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
-		super(predefinedId);
 		if (!this.componentClass.allowMultiple)
 			predefinedComponentId = '_' + componentClassName;
 		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData

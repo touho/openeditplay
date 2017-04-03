@@ -2,9 +2,6 @@ import './core'
 import './components'
 import './util/net'
 
-import './core/test';
-import './core/componentExample'; // temp
-
 import './editor/editor';
 
 import Property from './core/property';

@@ -29,6 +29,9 @@ export function deleteWorld(owner) {
 	delete owner._p2World;
 	delete owner._p2Materials;
 }
+export function getWorld(owner) {
+	return owner._p2World;
+}
 export function addBody(owner, body) {
 	owner._p2World.addBody(body);
 }
@@ -71,6 +74,9 @@ export function createMaterial(owner, options) {
 	let material = new p2.Material();
 	material.options = options;
 	materials[hash] = material;
+	
+	// TODO: When physics entities are edited, new materials are created.
+	// Should somehow remove old unused materials and contact materials.
 	
 	for (var h in materials) {
 		let m = materials[h];

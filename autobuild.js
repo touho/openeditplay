@@ -17,112 +17,119 @@ const concat = require('concat-files');
 const preprocess = require('rollup-plugin-preprocess').default;
 
 const ROOT = path.join(__dirname, './');
+module.exports.ROOT = ROOT;
 
 let targets = ['dev', 'all']; // TODO: add 'devOnce' and 'allOnce'
 let target = process.argv[2];
 if (targets.indexOf(target) < 0)
 	target = targets[0];
-console.log('Autobuilding', target);
 	
+if (!global.TARGET_NONE) {
+	console.log('Autobuilding', target);
+	
+	const editorCssDependencies = [
+		'src/external/font-awesome.min.css'
+	];
+	const editorJsDependencies = [
+		'node_modules/jquery/dist/jquery.min.js',
+		'src/external/jstree.min.js',
+		'src/external/p2.js'
+	];
+	const jsDependencies = [
+		'src/external/p2.min.js',
+	];
 
-const editorCssDependencies = [
-	'src/external/font-awesome.min.css'
-];
-const editorJsDependencies = [
-	'node_modules/jquery/dist/jquery.min.js',
-	'src/external/jstree.min.js',
-	'src/external/p2.js'
-];
-const jsDependencies = [
-	'src/external/p2.min.js',
-];
+	// Editor CSS
+	watch('src/**/*.scss', () => {
+		buildCss('src/editorMain.scss', 'dist/explore.editor.css', () => {
+			copy('dist/explore.editor.cs*', 'public/edit/css/');
+		});
+	}, true);
 
-// Editor CSS
-watch('src/**/*.scss', () => {
-	buildCss('src/editorMain.scss', 'dist/explore.editor.css', () => {
-		copy('dist/explore.editor.cs*', 'public/edit/css/');
-	});
-}, true);
-
-// Editor CSS Dependencies
-concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.css`, err => {
-	if (err) throw new Error(err);
-	console.log(`Built dist/explore.editor.dependencies.css`);
-	copy('dist/explore.editor.dependencies.css', 'public/edit/css/');
-});
-
-// Editor JS Dependencies
-concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.js`, err => {
-	if (err) throw new Error(err);
-	console.log(`Built dist/explore.editor.dependencies.js`);
-	copy('dist/explore.editor.dependencies.js', 'public/edit/');
-});
-
-// Game engine JS Dependencies
-if (target === 'all') {
-	concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
+	// Editor CSS Dependencies
+	concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.css`, err => {
 		if (err) throw new Error(err);
-		console.log(`Built dist/explore.dependencies.js`);
-		copy('dist/explore.dependencies.js', 'public/play/');
+		console.log(`Built dist/explore.editor.dependencies.css`);
+		copy('dist/explore.editor.dependencies.css', 'public/edit/css/');
+	});
+
+	// Editor JS Dependencies
+	concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.js`, err => {
+		if (err) throw new Error(err);
+		console.log(`Built dist/explore.editor.dependencies.js`);
+		copy('dist/explore.editor.dependencies.js', 'public/edit/');
+	});
+
+	// Game engine JS Dependencies
+	if (target === 'all') {
+		concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
+			if (err) throw new Error(err);
+			console.log(`Built dist/explore.dependencies.js`);
+			copy('dist/explore.dependencies.js', 'public/play/');
+		});
+	}
+
+	// Game engine JS
+	if (target === 'all') {
+		autobuildJs('src/main.js', 'dist/explore.js', {
+			copyTo: 'public/play/',
+			optimize: true
+		});
+		autobuildJs('src/main.js', 'dist/explore.min.js', {
+			uglify: true,
+			copyTo: 'public/play/',
+			optimize: true
+		});
+	}
+
+	// Editor JS
+	autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {
+		copyTo: 'public/edit/'
+	});
+	// autobuildJs('src/editorMain.js', 'dist/explore.editor.min.js', {
+	// 	uglify: true,
+	// 	copyTo: 'public/'
+	// });
+
+	watch(['public/edit/**/*', 'public/play/**/*'], () => {
+		if (serverProcess && serverProcess.connected)
+			serverProcess.send({refreshOldBrowsers: true});
+	});
+
+	// Server JS
+	autobuildJs('src/serverMain.js', 'dist/explore.server.js', {
+		format: 'cjs',
+		allowForOf: true, // node supports for-of
+		externalDependencies: ['fs']
+	});
+
+	if (target === 'all') {
+		autobuildJs('src/testMain.js', 'dist/explore.tests.js');
+	}
+
+	// Server restarter
+	let serverProcess = null;
+	watch(['dist/explore.server.js', 'template/*'], args => {
+		if (serverProcess === 'wait')
+			return;
+
+		function launch() {
+			// Timeout so that js and css files would have time to build before server force restarts clients
+			serverProcess = 'wait';
+			setTimeout(() => {
+				console.log('Launching server.');
+				serverProcess = cp.fork(ROOT + 'server.js');
+			}, 1000);
+		}
+
+		if (serverProcess) {
+			serverProcess.on('close', launch);
+			serverProcess.kill('SIGHUP');
+		} else {
+			launch();
+		}
 	});
 }
-
-// Game engine JS
-if (target === 'all') {
-	autobuildJs('src/main.js', 'dist/explore.js', {
-		copyTo: 'public/play/',
-		optimize: true
-	});
-	autobuildJs('src/main.js', 'dist/explore.min.js', {
-		uglify: true,
-		copyTo: 'public/play/',
-		optimize: true
-	});
-}
-
-// Editor JS
-autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {
-	copyTo: 'public/edit/'
-});
-// autobuildJs('src/editorMain.js', 'dist/explore.editor.min.js', {
-// 	uglify: true,
-// 	copyTo: 'public/'
-// });
-
-watch(['public/edit/**/*', 'public/play/**/*'], () => {
-	if (serverProcess && serverProcess.connected)
-		serverProcess.send({ refreshOldBrowsers: true });
-});
-
-// Server JS
-autobuildJs('src/serverMain.js', 'dist/explore.server.js', {
-	format: 'cjs',
-	allowForOf: true, // node supports for-of
-	externalDependencies: ['fs']
-});
-
-// Server restarter
-let serverProcess = null;
-watch(['dist/explore.server.js', 'template/*'], args => {
-	if (serverProcess === 'wait')
-		return;
-	
-	function launch() {
-		// Timeout so that js and css files would have time to build before server force restarts clients
-		serverProcess = 'wait';
-		setTimeout(() => {
-			console.log('Launching server.');
-			serverProcess = cp.fork(ROOT + 'server.js');
-		}, 1000);
-	}
-	
-	if (serverProcess) {
-		serverProcess.on('close', launch);
-		serverProcess.kill('SIGHUP');
-	} else {
-		launch();
-	}
-});
 
 function exec(cmd) {
 	let parts = cmd.split(' ');
@@ -149,6 +156,7 @@ function watch(path, callback, runNow) {
 	.on('change', callback)
 	.on('unlink', callback);
 }
+module.exports.watch = watch;
 
 function buildCss(sourceEntry, destination, callback) {
 	let scss = fs.readFileSync(ROOT + sourceEntry, 'utf8');
@@ -262,7 +270,7 @@ function autobuildJs(entry, destination, options) {
 		}
 	});
 }
-
+module.exports.autobuildJs = autobuildJs;
 process.on('uncaughtException', function (err) {
 	console.error("Node.js Exception. " + err + " - " + err.stack);
 });

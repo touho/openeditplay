@@ -23,15 +23,13 @@ export default class Game extends PropertyOwner {
 					console.warn('Deleting old game failed', e);
 				}
 			}
-			game = this;
 		}
 		
-		if (predefinedId)
-			console.log('game import');
-		else
-			console.log('game created');
-		
 		super(...arguments);
+		
+		if (isClient) {
+			game = this;
+		}
 	}
 	initWithChildren() {
 		super.initWithChildren(...arguments);

@@ -7,7 +7,8 @@ import PropertyOwner from '../../core/propertyOwner'
 class Game extends Module {
 	constructor() {
 		super(
-			this.propertyEditor = new PropertyEditor()
+			this.propertyEditor = new PropertyEditor(),
+			el('div.gameDeleteInfo', 'To delete this game, remove all types and levels. Game will be automatically destroyed after 1h of inactivity.')
 		);
 		this.id = 'game';
 		this.name = 'Game';
