@@ -18,6 +18,8 @@ import { removeTheDeadFromArray } from '../../util/algorithm';
 import { help } from '../help';
 import { createNewLevel } from './levels';
 
+import '../components/EditorWidget';
+
 class SceneModule extends Module {
 	constructor() {
 		super(
@@ -39,7 +41,7 @@ class SceneModule extends Module {
 		}, 200);
 		setTimeout(() => {
 			this.fixAspectRatio();
-		});
+		}, 0);
 		
 		this.id = 'scene';
 		this.name = 'Scene';
@@ -128,6 +130,12 @@ class SceneModule extends Module {
 		});
 		
 		events.listen('change', change => {
+			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
+				change.reference.addComponents([
+					Component.create('EditorWidget')
+				]);
+			}
+			
 			if (scene && scene.resetting)
 				return;
 			
@@ -155,7 +163,7 @@ class SceneModule extends Module {
 				if (this.selectedEntities.length > 0) {
 					this.deleteNewEntities();
 					this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
-					this.selectedEntities.length = 0;
+					this.clearSelectedEntities();
 					sceneEdit.setEntityPositions(this.newEntities, this.previousMousePos);
 					this.draw();
 				}
@@ -202,13 +210,14 @@ class SceneModule extends Module {
 				if (this.selectedEntities.indexOf(this.entityUnderMouse) >= 0) {
 				} else {
 					if (!keyPressed(key.shift))
-						this.selectedEntities.length = 0;
+						this.clearSelectedEntities();
 					this.selectedEntities.push(this.entityUnderMouse);
+					this.entityUnderMouse.getComponent('EditorWidget').selected = true;
 				}
 				this.entitiesToMove.push(...this.selectedEntities);
 				this.selectSelectedEntitiesInEditor();
 			} else {
-				this.selectedEntities.length = 0;
+				this.clearSelectedEntities();
 				this.selectionStart = mousePos;
 				this.selectionEnd = mousePos.clone();
 			}
@@ -225,6 +234,9 @@ class SceneModule extends Module {
 			
 			if (this.entitiesInSelection.length > 0) {
 				this.selectedEntities.push(...this.entitiesInSelection);
+				this.entitiesInSelection.forEach(entity => {
+					entity.getComponent('EditorWidget').selected = true;
+				});
 				this.entitiesInSelection.length = 0;
 				this.selectSelectedEntitiesInEditor();
 			}
@@ -276,7 +288,6 @@ class SceneModule extends Module {
 				sceneEdit.drawPositionHelpers(scene.getChildren('ent'));
 				sceneEdit.drawEntityUnderMouse(this.entityUnderMouse);
 				sceneEdit.drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
-				sceneEdit.drawSelectedEntities(this.selectedEntities);
 				if (scene.level && scene.level.isEmpty()) {
 					this.drawEmptyLevel();
 				}
@@ -306,11 +317,19 @@ class SceneModule extends Module {
 		context.fillText('Empty level. Click a type and place it here.', 20, 35);
 	}
 	
+	clearSelectedEntities() {
+		this.selectedEntities.forEach(entity => {
+			if (entity._alive)
+				entity.getComponent('EditorWidget').selected = false;
+		});
+		this.selectedEntities.length = 0;
+	}
+	
 	clearState() {
 		this.deleteNewEntities();
 		
 		this.entityUnderMouse = null;
-		this.selectedEntities.length = 0;
+		this.clearSelectedEntities();
 		this.entitiesToMove.length = 0;
 
 		this.selectionStart = null;

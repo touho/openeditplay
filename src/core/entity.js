@@ -58,10 +58,12 @@ export default class Entity extends Serializable {
 		assert(Array.isArray(components), 'Parameter is not an array.');
 
 		for (let i = 0; i < components.length; i++) {
-			let componentList = this.components.get(components[i]._name) || this.components.set(components[i]._name, []).get(components[i]._name);
-			componentList.push(components[i]);
-			components[i].entity = this;
-			components[i]._parent = this;
+			let component = components[i];
+			let componentList = this.components.get(component._name) || this.components.set(component._name, []).get(component._name);
+			componentList.push(component);
+			component.entity = this;
+			component._parent = this;
+			component.setRootType(this._rootType);
 		}
 		
 		if (!this.sleeping)

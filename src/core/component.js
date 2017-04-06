@@ -159,7 +159,7 @@ Component.register = function({
 		constructor() {
 			super(...arguments);
 			if (constructorFunction)
-				constructorFunction();
+				constructorFunction.call(this);
 		}
 		delete() {
 			if (!super.delete()) return false;

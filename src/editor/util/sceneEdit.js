@@ -330,7 +330,11 @@ export function entityModifiedInEditor(entity, change) {
 }
 
 
+
 /// Drawing
+
+// '#53f8ff'
+let widgetColor = 'white';
 
 export function drawEntityUnderMouse(entity) {
 	if (!entity)
@@ -338,7 +342,7 @@ export function drawEntityUnderMouse(entity) {
 	
 	let p = entity.position;
 	let r = 10;
-	scene.context.strokeStyle = '#53f8ff';
+	scene.context.strokeStyle = widgetColor;
 	scene.context.lineWidth = 1;
 	
 	scene.context.beginPath();
@@ -350,7 +354,7 @@ export function drawSelection(start, end, entitiesInsideSelection = []) {
 	if (!start || !end)
 		return;
 	
-	scene.context.strokeStyle = '#53f8ff';
+	scene.context.strokeStyle = widgetColor;
 	scene.context.lineWidth = 0.2;
 	
 	let r = 10;
@@ -369,23 +373,6 @@ export function drawSelection(start, end, entitiesInsideSelection = []) {
 	
 	scene.context.fillRect(start.x, start.y, end.x - start.x, end.y - start.y);
 	scene.context.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y);
-}
-
-export function drawSelectedEntities(entities) {
-	if (!Array.isArray(entities) || entities.length === 0)
-		return;
-	
-	let r = 10;
-	
-	scene.context.strokeStyle = '#53f8ff';
-	scene.context.lineWidth = 1.7;
-
-	entities.forEach(e => {
-		let p = e.position;
-		scene.context.beginPath();
-		scene.context.arc(p.x, p.y, r, 0, 2*Math.PI, false);
-		scene.context.stroke();
-	});
 }
 
 export function drawPositionHelpers(entities) {

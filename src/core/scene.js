@@ -4,6 +4,7 @@ import { game } from './game';
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
 import { isClient } from '../util/environment';
 import { createWorld, deleteWorld, updateWorld } from '../feature/physics';
+import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed } from '../util/input';
 
 let scene = null;
 export { scene };
@@ -28,6 +29,12 @@ export default class Scene extends Serializable {
 			
 			this.canvas = document.querySelector('canvas.anotherCanvas');
 			this.context = this.canvas.getContext('2d');
+
+			this.mouseListeners = [
+				listenMouseMove(this.canvas, mousePosition => this.dispatch('onMouseMove', mousePosition)),
+				listenMouseDown(this.canvas, mousePosition => this.dispatch('onMouseDown', mousePosition)),
+				listenMouseUp(this.canvas, mousePosition => this.dispatch('onMouseUp', mousePosition))
+			];
 		}
 		this.level = null;
 		
@@ -152,6 +159,11 @@ export default class Scene extends Serializable {
 		
 		if (scene === this)
 			scene = null;
+		
+		if (this.mouseListeners) {
+			this.mouseListeners.forEach(listener => listener());
+			this.mouseListeners = null;
+		}
 		
 		console.log('scene.delete');
 		return true;

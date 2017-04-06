@@ -87,7 +87,6 @@ Component.register({
 			addBody(this.scene, this.body);
 		},
 		updateShape() {
-			console.log('update shape');
 			if (!this.body.entity) {
 				// We update instead of create.
 				// Should remove existing shapes

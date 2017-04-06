@@ -137,4 +137,3 @@ export function getOption(id) {
 	loadOptions();
 	return options[id];
 }
-

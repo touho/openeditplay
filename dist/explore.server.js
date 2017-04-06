@@ -651,8 +651,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -663,7 +661,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -750,10 +747,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1468,10 +1461,12 @@ var Entity = (function (Serializable$$1) {
 		assert(Array.isArray(components), 'Parameter is not an array.');
 
 		for (var i = 0; i < components.length; i++) {
-			var componentList = this$1.components.get(components[i]._name) || this$1.components.set(components[i]._name, []).get(components[i]._name);
-			componentList.push(components[i]);
-			components[i].entity = this$1;
-			components[i]._parent = this$1;
+			var component = components[i];
+			var componentList = this$1.components.get(component._name) || this$1.components.set(component._name, []).get(component._name);
+			componentList.push(component);
+			component.entity = this$1;
+			component._parent = this$1;
+			component.setRootType(this$1._rootType);
 		}
 		
 		if (!this.sleeping)
@@ -1980,6 +1975,122 @@ function createMaterial(owner, options) {
 	return material;
 }
 
+function keyPressed(key) {
+	return keys[key] || false;
+}
+
+
+
+
+var key = {
+	left: 37,
+	right: 39,
+	up: 38,
+	down: 40,
+	ctrl: 17,
+	appleLeft: 91,
+	appleRight: 93,
+	alt: 18,
+	shift: 16,
+	space: 32,
+	a: 65,
+	b: 66,
+	c: 67,
+	d: 68,
+	e: 69,
+	f: 70,
+	g: 71,
+	h: 72,
+	i: 73,
+	j: 74,
+	k: 75,
+	l: 76,
+	m: 77,
+	n: 78,
+	o: 79,
+	p: 80,
+	q: 81,
+	r: 82,
+	s: 83,
+	t: 84,
+	u: 85,
+	v: 86,
+	w: 87,
+	x: 88,
+	y: 89,
+	z: 90,
+	'0': 48,
+	'1': 49,
+	'9': 57,
+	backspace: 8,
+	enter: 13,
+	esc: 27
+};
+
+function listenMouseMove(element, handler) {
+	element.addEventListener('mousemove', function (event) {
+		var x = event.pageX;
+		var y = event.pageY;
+		var el = element;
+		while( el != null ) {
+			x -= el.offsetLeft;
+			y -= el.offsetTop;
+			el = el.offsetParent;
+		}
+		
+		element._mx = x;
+		element._my = y;
+		handler && handler(new Vector(x, y));
+	});
+	return function () { return element.removeEventListener('mousemove', handler); };
+}
+// Requires listenMouseMove on the same element to get the mouse position
+function listenMouseDown(element, handler) {
+	element.addEventListener('mousedown', function (event) {
+		if (typeof element._mx === 'number')
+			{ handler(new Vector(element._mx, element._my)); }
+		else
+			{ handler(); }
+	});
+	return function () { return element.removeEventListener('mousedown', handler); };
+}
+// Requires listenMouseMove on the same element to get the mouse position
+function listenMouseUp(element, handler) {
+	element.addEventListener('mouseup', function (event) {
+		if (typeof element._mx === 'number')
+			{ handler(new Vector(element._mx, element._my)); }
+		else
+			{ handler(); }
+	});
+	return function () { return element.removeEventListener('mouseup', handler); };
+}
+
+////////////////////////////////////
+
+
+var keys = {};
+var keyDownListeners = [];
+var keyUpListeners = [];
+
+
+if (typeof window !== 'undefined') {
+
+	window.onkeydown = function (event) {
+		var keyCode = event.which || event.keyCode;
+
+		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
+			{ return; }
+
+		keys[keyCode] = true;
+		keyDownListeners.forEach(function (l) { return l(keyCode); });
+	};
+	window.onkeyup = function (event) {
+		var key = event.which || event.keyCode;
+		keys[key] = false;
+		keyUpListeners.forEach(function (l) { return l(key); });
+	};
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -1987,6 +2098,7 @@ var physicsOptions = {
 
 var Scene = (function (Serializable$$1) {
 	function Scene(predefinedId) {
+		var this$1 = this;
 		if ( predefinedId === void 0 ) predefinedId = false;
 
 		Serializable$$1.call(this, predefinedId);
@@ -2003,6 +2115,12 @@ var Scene = (function (Serializable$$1) {
 			
 			this.canvas = document.querySelector('canvas.anotherCanvas');
 			this.context = this.canvas.getContext('2d');
+
+			this.mouseListeners = [
+				listenMouseMove(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseMove', mousePosition); }),
+				listenMouseDown(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseDown', mousePosition); }),
+				listenMouseUp(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseUp', mousePosition); })
+			];
 		}
 		this.level = null;
 		
@@ -2133,6 +2251,11 @@ var Scene = (function (Serializable$$1) {
 		
 		if (scene === this)
 			{ scene = null; }
+		
+		if (this.mouseListeners) {
+			this.mouseListeners.forEach(function (listener) { return listener(); });
+			this.mouseListeners = null;
+		}
 		
 		console.log('scene.delete');
 		return true;
@@ -2329,7 +2452,7 @@ Component.register = function(ref) {
 		function Com() {
 			parentClass.apply(this, arguments);
 			if (constructorFunction)
-				{ constructorFunction(); }
+				{ constructorFunction.call(this); }
 		}
 
 		if ( parentClass ) Com.__proto__ = parentClass;
@@ -2374,8 +2497,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2686,89 +2807,6 @@ Component.register({
 	]
 });
 
-function keyPressed(key) {
-	return keys[key] || false;
-}
-
-
-
-
-var key = {
-	left: 37,
-	right: 39,
-	up: 38,
-	down: 40,
-	ctrl: 17,
-	appleLeft: 91,
-	appleRight: 93,
-	alt: 18,
-	shift: 16,
-	space: 32,
-	a: 65,
-	b: 66,
-	c: 67,
-	d: 68,
-	e: 69,
-	f: 70,
-	g: 71,
-	h: 72,
-	i: 73,
-	j: 74,
-	k: 75,
-	l: 76,
-	m: 77,
-	n: 78,
-	o: 79,
-	p: 80,
-	q: 81,
-	r: 82,
-	s: 83,
-	t: 84,
-	u: 85,
-	v: 86,
-	w: 87,
-	x: 88,
-	y: 89,
-	z: 90,
-	'0': 48,
-	'1': 49,
-	'9': 57,
-	backspace: 8,
-	enter: 13,
-	esc: 27
-};
-
-
-
-
-
-
-////////////////////////////////////
-
-
-var keys = {};
-var keyDownListeners = [];
-var keyUpListeners = [];
-
-
-if (typeof window !== 'undefined') {
-
-	window.onkeydown = function (event) {
-		var keyCode = event.which || event.keyCode;
-
-		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
-			{ return; }
-
-		keys[keyCode] = true;
-		keyDownListeners.forEach(function (l) { return l(keyCode); });
-	};
-	window.onkeyup = function (event) {
-		var key = event.which || event.keyCode;
-		keys[key] = false;
-		keyUpListeners.forEach(function (l) { return l(key); });
-	};
-}
-
 Component.register({
 	name: 'Mover',
 	properties: [
@@ -3047,7 +3085,6 @@ Component.register({
 		updateShape: function updateShape() {
 			var this$1 = this;
 
-			console.log('update shape');
 			if (!this.body.entity) {
 				// We update instead of create.
 				// Should remove existing shapes

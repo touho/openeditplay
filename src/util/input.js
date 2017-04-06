@@ -71,10 +71,11 @@ export function listenMouseMove(element, handler) {
 		
 		element._mx = x;
 		element._my = y;
-		handler(new Vector(x, y));
+		handler && handler(new Vector(x, y));
 	});
+	return () => element.removeEventListener('mousemove', handler);
 }
-
+// Requires listenMouseMove on the same element to get the mouse position
 export function listenMouseDown(element, handler) {
 	element.addEventListener('mousedown', event => {
 		if (typeof element._mx === 'number')
@@ -82,7 +83,9 @@ export function listenMouseDown(element, handler) {
 		else
 			handler();
 	});
+	return () => element.removeEventListener('mousedown', handler);
 }
+// Requires listenMouseMove on the same element to get the mouse position
 export function listenMouseUp(element, handler) {
 	element.addEventListener('mouseup', event => {
 		if (typeof element._mx === 'number')
@@ -90,6 +93,7 @@ export function listenMouseUp(element, handler) {
 		else
 			handler();
 	});
+	return () => element.removeEventListener('mouseup', handler);
 }
 
 ////////////////////////////////////
