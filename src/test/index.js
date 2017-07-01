@@ -1,4 +1,4 @@
-import assert from 'assert';
+import deepStrictEqual from 'deep-strict-equal';
 import { setChangeOrigin } from '../core/serializableManager';
 
 import './game';
@@ -44,8 +44,10 @@ export function test(funcOrName, func) {
 	}
 }
 export function ok(condition, message) {
-	return assert.call(null, condition, message);
+	if (!condition)
+		console.error()
+	return internalAssert.call(null, condition, message);
 }
 export function eq(a, b, message) {
-	return assert.deepStrictEqual.call(null, a, b, message);
+	return deepStrictEqual.call(null, a, b, message);
 }

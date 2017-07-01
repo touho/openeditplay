@@ -17,6 +17,7 @@ import { addChangeListener, serializables, executeExternal, setChangeOrigin, cha
 import assert from '../util/assert';
 import { setNetworkEnabled } from '../util/net';
 import './help';
+import './test';
 
 let loaded = false;
 
