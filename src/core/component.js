@@ -165,7 +165,7 @@ Component.register = function({
 			if (!super.delete()) return false;
 			
 			if (deleteFunction)
-				deleteFunction();
+				deleteFunction.call(this);
 			
 			return true;
 		}

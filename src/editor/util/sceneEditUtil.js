@@ -3,6 +3,7 @@ import { editor } from '../editor';
 import { changeType } from '../../core/serializableManager';
 import assert from '../../util/assert';
 import Vector from '../../util/vector';
+import { centerWidgetRadius } from '../widget/widget'
 
 let radius = 10;
 
@@ -225,28 +226,30 @@ export function copyEntitiesToScene(entities) {
 	}
 }
 
-export function getEntityUnderMouse(mousePos) {
-	let nearestEntity = null;
+export function getWidgetUnderMouse(mousePos) {
+	let nearestWidget = null;
 	let nearestDistanceSq = Infinity;
 	
-	let minX = mousePos.x - radius;
-	let maxX = mousePos.x + radius;
-	let minY = mousePos.y - radius;
-	let maxY = mousePos.y + radius;
-	
-	scene.getChildren('ent').filter(ent => {
-		let p = ent.position;
-		if (p.x < minX) return false;
-		if (p.x > maxX) return false;
-		if (p.y < minY) return false;
-		if (p.y > maxY) return false;
-		let distSq = mousePos.distanceSq(p);
+	function testWidget(widget) {
+		if (!widget.isMouseInWidget(mousePos))
+			return;
+		
+		let distSq = mousePos.distanceSq(widget);
 		if (distSq < nearestDistanceSq) {
 			nearestDistanceSq = distSq;
-			nearestEntity = ent;
+			nearestWidget = widget;
+		}
+	}
+	
+	scene.getComponents('EditorWidget').forEach(editorWidget => {
+		if (editorWidget.selected) {
+			editorWidget.widgets.forEach(testWidget);
+		} else {
+			testWidget(editorWidget.position);
 		}
 	});
-	return nearestEntity;
+	
+	return nearestWidget;
 }
 export function getEntitiesInSelection(start, end) {
 	let minX = Math.min(start.x, end.x);
@@ -264,10 +267,15 @@ export function getEntitiesInSelection(start, end) {
 	});
 }
 
-export function copyPositionFromEntitiesToEntityPrototypes(entities) {
+export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) {
 	if (shouldSyncLevelAndScene()) {
 		entities.forEach(e => {
-			e.prototype.position = e.position;
+			let entityPrototypeTransform = e.prototype.getTransform();
+			let entityTransform = e.getComponent('Transform');
+			
+			entityPrototypeTransform.findChild('prp', prp => prp.name === 'position').value = entityTransform.position;
+			entityPrototypeTransform.findChild('prp', prp => prp.name === 'scale').value = entityTransform.scale;
+			entityPrototypeTransform.findChild('prp', prp => prp.name === 'angle').value = entityTransform.angle;
 		});
 	}
 }
@@ -329,66 +337,3 @@ export function entityModifiedInEditor(entity, change) {
 	entity.dispatch('changedInEditor', change);
 }
 
-
-
-/// Drawing
-
-// '#53f8ff'
-let widgetColor = 'white';
-
-export function drawEntityUnderMouse(entity) {
-	if (!entity)
-		return;
-	
-	let p = entity.position;
-	let r = 10;
-	scene.context.strokeStyle = widgetColor;
-	scene.context.lineWidth = 1;
-	
-	scene.context.beginPath();
-	scene.context.arc(p.x, p.y, r, 0, 2*Math.PI, false);
-	scene.context.stroke();
-}
-
-export function drawSelection(start, end, entitiesInsideSelection = []) {
-	if (!start || !end)
-		return;
-	
-	scene.context.strokeStyle = widgetColor;
-	scene.context.lineWidth = 0.2;
-	
-	let r = 10;
-
-	entitiesInsideSelection.forEach(e => {
-		let p = e.position;
-		scene.context.beginPath();
-		scene.context.arc(p.x, p.y, r, 0, 2*Math.PI, false);
-		scene.context.stroke();
-	});
-	
-	
-	scene.context.fillStyle = 'rgba(255, 255, 0, 0.2)';
-	scene.context.lineWidth = 1;
-	scene.context.strokeStyle = 'yellow';
-	
-	scene.context.fillRect(start.x, start.y, end.x - start.x, end.y - start.y);
-	scene.context.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y);
-}
-
-export function drawPositionHelpers(entities) {
-	scene.context.fillStyle = 'white';
-	let size = 3;
-	let halfSize = size/2;
-	entities.forEach(e => {
-		let p = e.position;
-		scene.context.fillRect(p.x - halfSize, p.y - halfSize, size, size);
-	});
-	
-	scene.context.fillStyle = 'black';
-	size = 2;
-	halfSize = size/2;
-	entities.forEach(e => {
-		let p = e.position;
-		scene.context.fillRect(p.x - halfSize, p.y - halfSize, size, size);
-	});
-}

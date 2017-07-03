@@ -2469,7 +2469,7 @@ Component.register = function(ref) {
 			if (!parentClass.prototype.delete.call(this)) { return false; }
 			
 			if (deleteFunction)
-				{ deleteFunction(); }
+				{ deleteFunction.call(this); }
 			
 			return true;
 		};

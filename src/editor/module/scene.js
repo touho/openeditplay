@@ -12,7 +12,8 @@ import { Component } from '../../core/component';
 import { TopButton } from './topBar';
 import { editor } from '../editor';
 import { changeType, setChangeOrigin } from '../../core/serializableManager';
-import * as sceneEdit from '../util/sceneEdit';
+import * as sceneEdit from '../util/sceneEditUtil';
+import * as sceneDraw from '../util/sceneDrawUtil';
 import Vector from '../../util/vector';
 import { removeTheDeadFromArray } from '../../util/algorithm';
 import { help } from '../help';
@@ -22,8 +23,9 @@ import '../components/EditorWidget';
 
 class SceneModule extends Module {
 	constructor() {
+		let canvas;
 		super(
-			this.canvas = el('canvas.anotherCanvas', {
+			canvas = el('canvas.anotherCanvas', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -35,6 +37,7 @@ class SceneModule extends Module {
 			el('i.fa.fa-pause.pauseInfo.bottomRight')
 		);
 		this.el.classList.add('hidePauseButtons');
+		this.canvas = canvas;
 
 		setInterval(() => {
 			this.fixAspectRatio();
@@ -45,8 +48,10 @@ class SceneModule extends Module {
 		
 		this.id = 'scene';
 		this.name = 'Scene';
-		
-		help.sceneModule = this;
+
+		Object.defineProperty(help, 'sceneModule', {
+			get: () => this
+		});
 
 		/*
 		loadedPromise.then(() => {
@@ -58,10 +63,10 @@ class SceneModule extends Module {
 		*/
 		
 		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
-		this.entityUnderMouse = null; // Link to entity in tree.
+		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePos = null;
 		
-		this.entitiesToMove = []; 
+		this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
 		this.selectedEntities = [];
 		
 		this.selectionStart = null;
@@ -180,15 +185,17 @@ class SceneModule extends Module {
 			
 			setChangeOrigin(this);
 			let change = this.previousMousePos ? mousePos.clone().subtract(this.previousMousePos) : mousePos;
-			this.entityUnderMouse = null;
-			
-			sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
-			sceneEdit.moveEntities(this.entitiesToMove, change); // these are in scene
-			sceneEdit.copyPositionFromEntitiesToEntityPrototypes(this.entitiesToMove);
-			
-			if (scene) {
-				if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd)
-					this.entityUnderMouse = sceneEdit.getEntityUnderMouse(mousePos);
+			if (this.entitiesToEdit.length > 0 && this.widgetUnderMouse) {
+				// Editing entities with a widget
+				this.widgetUnderMouse.onDrag(mousePos, change, this.entitiesToEdit);
+				sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
+			} else {
+				this.widgetUnderMouse = null;
+				sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
+				if (scene) {
+					if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd)
+						this.widgetUnderMouse = sceneEdit.getWidgetUnderMouse(mousePos);
+				}
 			}
 			
 			if (this.selectionEnd) {
@@ -206,15 +213,14 @@ class SceneModule extends Module {
 			setChangeOrigin(this);
 			if (this.newEntities.length > 0)
 				sceneEdit.copyEntitiesToScene(this.newEntities);
-			else if (this.entityUnderMouse) {
-				if (this.selectedEntities.indexOf(this.entityUnderMouse) >= 0) {
-				} else {
+			else if (this.widgetUnderMouse) {
+				if (this.selectedEntities.indexOf(this.widgetUnderMouse.component.entity) < 0) {
 					if (!keyPressed(key.shift))
 						this.clearSelectedEntities();
-					this.selectedEntities.push(this.entityUnderMouse);
-					this.entityUnderMouse.getComponent('EditorWidget').selected = true;
+					this.selectedEntities.push(this.widgetUnderMouse.component.entity);
+					this.widgetUnderMouse.component.selected = true;
 				}
-				this.entitiesToMove.push(...this.selectedEntities);
+				this.entitiesToEdit.push(...this.selectedEntities);
 				this.selectSelectedEntitiesInEditor();
 			} else {
 				this.clearSelectedEntities();
@@ -230,7 +236,7 @@ class SceneModule extends Module {
 			
 			this.selectionStart = null;
 			this.selectionEnd = null;
-			this.entitiesToMove.length = 0;
+			this.entitiesToEdit.length = 0;
 			
 			if (this.entitiesInSelection.length > 0) {
 				this.selectedEntities.push(...this.entitiesInSelection);
@@ -285,9 +291,13 @@ class SceneModule extends Module {
 				
 				scene.draw();
 				scene.dispatch('onDrawHelper', scene.context);
-				sceneEdit.drawPositionHelpers(scene.getChildren('ent'));
-				sceneEdit.drawEntityUnderMouse(this.entityUnderMouse);
-				sceneEdit.drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
+				sceneDraw.drawPositionHelpers(scene.getChildren('ent'));
+
+				scene.context.strokeStyle = 'white';
+				if (this.widgetUnderMouse)
+					this.widgetUnderMouse.draw(scene.context);
+				
+				sceneDraw.drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
 				if (scene.level && scene.level.isEmpty()) {
 					this.drawEmptyLevel();
 				}
@@ -328,9 +338,9 @@ class SceneModule extends Module {
 	clearState() {
 		this.deleteNewEntities();
 		
-		this.entityUnderMouse = null;
+		this.widgetUnderMouse = null;
 		this.clearSelectedEntities();
-		this.entitiesToMove.length = 0;
+		this.entitiesToEdit.length = 0;
 
 		this.selectionStart = null;
 		this.selectionEnd = null;
@@ -366,7 +376,7 @@ class SceneModule extends Module {
 	
 	filterDeadSelection() {
 		removeTheDeadFromArray(this.selectedEntities);
-		removeTheDeadFromArray(this.entitiesToMove);
+		removeTheDeadFromArray(this.entitiesToEdit);
 
 		for (let i = this.newEntities.length - 1; i >= 0; --i) {
 			if (this.newEntities[i].prototype.prototype._alive === false) {

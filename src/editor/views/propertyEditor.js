@@ -9,7 +9,7 @@ import { changeType, setChangeOrigin } from '../../core/serializableManager';
 import { Prop } from '../../core/component';
 import { setOption, getOption, editor } from '../editor';
 import { scene } from '../../core/scene';
-import * as sceneEdit from '../util/sceneEdit';
+import * as sceneEdit from '../util/sceneEditUtil';
 import PropertyOwner from '../../core/propertyOwner';
 
 /*
