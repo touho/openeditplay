@@ -255,6 +255,8 @@ Serializable.prototype.listen = function listen (event, callback) {
 	}
 	this._listeners[event].unshift(callback);
 	return function () {
+		if (!this$1._alive)
+			{ return; } // listeners already deleted
 		var index = this$1._listeners[event].indexOf(callback);
 		this$1._listeners[event].splice(index, 1);
 	};
@@ -651,6 +653,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -661,6 +665,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -747,6 +752,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2500,6 +2509,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3048,6 +3059,7 @@ Component$1.register({
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
+			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {
 				this$1.body.setDensity(density);
 			}));
@@ -3079,7 +3091,6 @@ Component$1.register({
 				angularDamping: this.rotationalDrag
 			});
 			this.updateShape();
-			this.updateMaterial();
 
 			this.body.entity = this.entity;
 			
@@ -3088,7 +3099,7 @@ Component$1.register({
 		updateShape: function updateShape() {
 			var this$1 = this;
 
-			if (!this.body.entity) {
+			if (this.body.shapes.length > 0) {
 				// We update instead of create.
 				// Should remove existing shapes
 				
@@ -3115,6 +3126,7 @@ Component$1.register({
 			});
 			
 			this.updateMass();
+			this.updateMaterial();
 		},
 		updateMaterial: function updateMaterial() {
 			var material = createMaterial(this.scene, {
@@ -3355,6 +3367,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -3949,6 +3963,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -4187,7 +4202,7 @@ var ComponentAdder = (function (Popup$$1) {
 		var this$1 = this;
 
 		Popup$$1.call(this, {
-			title: 'Add component',
+			title: 'Add Component',
 			width: '500px',
 			content: this.buttons = list('div', Button)
 		});
@@ -4609,6 +4624,11 @@ function entityModifiedInEditor(entity, change) {
 	entity.dispatch('changedInEditor', change);
 }
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -4730,7 +4750,7 @@ Container.prototype.updatePrototype = function updatePrototype () {
 	this.properties.update(this.item.getChildren('prp'));
 		
 	var addButton;
-	mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+	mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
 		onclick: function () {
 			new ComponentAdder(this$1.item);
 		}
@@ -4738,7 +4758,7 @@ Container.prototype.updatePrototype = function updatePrototype () {
 	if (inheritedComponentDatas.length === 0)
 		{ addButton.classList.add('clickMeEffect'); }
 		
-	mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone type', { onclick: function () {
+	mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: function () {
 		dispatch(this$1, 'makingChanges');
 			
 		var clone = this$1.item.clone();
@@ -4754,7 +4774,7 @@ Container.prototype.updatePrototype = function updatePrototype () {
 		this$1.item.getParent().addChild(clone);
 		dispatch(this$1, 'propertyEditorSelect', clone);
 	} }));
-	mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete type', { onclick: function () {
+	mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', { onclick: function () {
 		dispatch(this$1, 'makingChanges');
 		var entityPrototypeCount = this$1.item.countEntityPrototypes(true);
 		if (entityPrototypeCount) {
@@ -4776,7 +4796,7 @@ Container.prototype.updateEntityPrototype = function updateEntityPrototype () {
 		prop._editorPlaceholder = this$1.item.prototype.findChild('prp', function (prp) { return prp.name === prop.name; }).value;
 	});
 	this.properties.update(properties);
-	mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add component', {
+	mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add Component', {
 		onclick: function () {
 			new ComponentAdder(this$1.item);
 		}
@@ -4814,7 +4834,7 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 	this.properties.update(this.item.properties);
 		
 	if (!this.item.ownComponentData || parentComponentData) {
-		mount(this.controls, el('button.button', 'Show parent', {
+		mount(this.controls, el('button.button', 'Show Parent', {
 			onclick: function () {
 				var componentData = this$1.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(this$1.item.componentId, true);
 				dispatch(this$1, 'propertyEditorSelect', componentData.getParent());
@@ -4955,7 +4975,7 @@ Property$2.prototype.update = function update (property) {
 	this.property = property;
 	this.el.setAttribute('name', property.name);
 	this.el.setAttribute('type', property.propertyType.type.name);
-	this.name.textContent = property.propertyType.name;
+	this.name.textContent = variableNameToPresentableName(property.propertyType.name);
 	this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
 	this.content.innerHTML = '';
 	var propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
@@ -5000,6 +5020,11 @@ Property$2.prototype.update = function update (property) {
 
 function isInDom(element) {
 	return $.contains(document.documentElement, element);
+}
+
+function variableNameToPresentableName(propertyName) {
+	var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
+	return name[0].toUpperCase() + name.substring(1);
 }
 
 var Type = (function (Module$$1) {
@@ -5278,6 +5303,9 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
+/// Drawing
+
+// '#53f8ff'
 var widgetColor = 'white';
 
 
@@ -5336,7 +5364,7 @@ function removeTheDeadFromArray(array) {
 
 var Help = function Help () {};
 
-var prototypeAccessors = { game: {},editor: {},level: {},scene: {},entities: {},world: {},Vector: {},serializables: {},serializablesArray: {} };
+var prototypeAccessors = { game: {},editor: {},level: {},scene: {},entities: {},world: {},Vector: {},serializables: {},serializablesArray: {},selectedEntity: {} };
 
 prototypeAccessors.game.get = function () {
 	return game;
@@ -5364,6 +5392,10 @@ prototypeAccessors.serializables.get = function () {
 };
 prototypeAccessors.serializablesArray.get = function () {
 	return Object.keys(serializables).map(function (k) { return serializables[k]; });
+};
+prototypeAccessors.selectedEntity.get = function () {
+	if (this.sceneModule && this.sceneModule.selectedEntities.length > 0)
+		{ return this.sceneModule.selectedEntities[0]; }
 };
 
 Object.defineProperties( Help.prototype, prototypeAccessors );
@@ -5471,6 +5503,8 @@ LevelItem.prototype.update = function update (level, idx) {
 	*/
 };
 
+var SHIFT_STEPS = 16;
+
 var AngleWidget = (function (Widget$$1) {
 	function AngleWidget(component) {
 		Widget$$1.call(this, {
@@ -5493,7 +5527,12 @@ var AngleWidget = (function (Widget$$1) {
 		
 		affectedEntities.forEach(function (entity) {
 			var Transform = entity.getComponent('Transform');
-			Transform.angle = Transform.angle + angleDifference;
+			var newAngle = Transform.angle + angleDifference;
+			if (keyPressed(key.shift)) {
+				newAngle += Math.PI / SHIFT_STEPS;
+				newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
+			}
+			Transform.angle = newAngle;
 		});
 	};
 
@@ -5562,6 +5601,8 @@ var PositionWidget = (function (Widget$$1) {
 	return PositionWidget;
 }(Widget));
 
+var MIN_SCALE = 0.1;
+
 var ScaleWidget = (function (Widget$$1) {
 	function ScaleWidget(component, scaleX, scaleY) {
 		Widget$$1.call(this, {
@@ -5595,7 +5636,12 @@ var ScaleWidget = (function (Widget$$1) {
 		
 		affectedEntities.forEach(function (entity) {
 			var Transform = entity.getComponent('Transform');
-			Transform.scale = Transform.scale.clone().multiply(changeVector);
+			var newScale = Transform.scale.clone().multiply(changeVector);
+			if (newScale.x < MIN_SCALE)
+				{ newScale.x = MIN_SCALE; }
+			if (newScale.y < MIN_SCALE)
+				{ newScale.y = MIN_SCALE; }
+			Transform.scale = newScale;
 		});
 	};
 
@@ -5623,6 +5669,10 @@ var ScaleWidget = (function (Widget$$1) {
 		
 		var arrowTailPos1 = arrowTailPos.clone().rotate(0.5).add(lineEnd);
 		var arrowTailPos2 = arrowTailPos.clone().rotate(-0.5).add(lineEnd);
+		
+		context.save();
+		
+		context.lineWidth = 2;
 
 		context.beginPath();
 		context.moveTo(lineEnd.x, lineEnd.y);
@@ -5633,6 +5683,8 @@ var ScaleWidget = (function (Widget$$1) {
 		context.moveTo(lineEnd.x, lineEnd.y);
 		context.lineTo(arrowTailPos2.x, arrowTailPos2.y);
 		context.stroke();
+
+		context.restore();
 	};
 
 	return ScaleWidget;

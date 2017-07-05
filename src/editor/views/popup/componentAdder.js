@@ -8,7 +8,7 @@ import { setChangeOrigin } from '../../../core/serializableManager';
 export default class ComponentAdder extends Popup {
 	constructor(parent, callback) {
 		super({
-			title: 'Add component',
+			title: 'Add Component',
 			width: '500px',
 			content: this.buttons = list('div', Button)
 		});

@@ -434,6 +434,8 @@ Serializable.prototype.listen = function listen (event, callback) {
 	}
 	this._listeners[event].unshift(callback);
 	return function () {
+		if (!this$1._alive)
+			{ return; } // listeners already deleted
 		var index = this$1._listeners[event].indexOf(callback);
 		this$1._listeners[event].splice(index, 1);
 	};
@@ -1186,193 +1188,15 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	});
 };
 
-var ALIVE_ERROR = 'entity is already dead';
-
-var Entity = (function (Serializable$$1) {
-	function Entity(predefinedId) {
-		if ( predefinedId === void 0 ) predefinedId = false;
-
-		Serializable$$1.call(this, predefinedId);
-		this.components = new Map(); // name -> array
-		this.sleeping = false;
-		this.prototype = null; // should be set immediately after constructor
-		this.localMaster = true; // set false if entity is controlled over the net
-	}
-
-	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
-	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
-	Entity.prototype.constructor = Entity;
-
-	// Get the first component of given name
-	Entity.prototype.getComponent = function getComponent (name) {
-		assert(this._alive, ALIVE_ERROR);
-		var components = this.components.get(name);
-		if (components !== undefined)
-			{ return components[0]; }
-		else
-			{ return null; }
-	};
-
-	// Get all components with given name
-	Entity.prototype.getComponents = function getComponents (name) {
-		assert(this._alive, ALIVE_ERROR);
-		return this.components.get(name) || [];
-	};
-	
-	Entity.prototype.getListOfAllComponents = function getListOfAllComponents () {
-		var components = [];
-		this.components.forEach(function (value, key) {
-			components.push.apply(components, value);
-		});
-		return components;
-	};
-	
-	Entity.prototype.clone = function clone () {
-		var entity = new Entity();
-		entity.prototype = this.prototype.clone();
-		entity.sleeping = this.sleeping;
-		var components = [];
-		this.components.forEach(function (value, key) {
-			components.push.apply(components, value.map(function (c) { return c.clone(); }));
-		});
-		entity.addComponents(components);
-		return entity;
-	};
-
-	/*
-	Adds multiple components as an array to this Entity.
-	Uses addComponent internally.
-	Initializes components after all components are added.
-	*/
-	Entity.prototype.addComponents = function addComponents (components) {
-		var this$1 = this;
-
-		assert(this._alive, ALIVE_ERROR);
-		assert(Array.isArray(components), 'Parameter is not an array.');
-
-		for (var i = 0; i < components.length; i++) {
-			var componentList = this$1.components.get(components[i]._name) || this$1.components.set(components[i]._name, []).get(components[i]._name);
-			componentList.push(components[i]);
-			components[i].entity = this$1;
-			components[i]._parent = this$1;
-		}
-		
-		if (!this.sleeping)
-			{ Entity.initComponents(components); }
-		return this;
-	};
-	Entity.initComponents = function initComponents (components) {
-		for (var i = 0; i < components.length; i++)
-			{ components[i]._preInit(); }
-		for (var i$1 = 0; i$1 < components.length; i$1++)
-			{ components[i$1]._init(); }
-	};
-	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
-		for (var i = 0; i < components.length; i++)
-			{ components[i]._sleep(); }
-	};
-	Entity.deleteComponents = function deleteComponents (components) {
-		for (var i = 0; i < components.length; i++)
-			{ components[i].delete(); }
-	};
-	Entity.prototype.sleep = function sleep () {
-		assert(this._alive, ALIVE_ERROR);
-		if (this.sleeping) { return false; }
-		
-		this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
-		
-		this.sleeping = true;
-		return true;
-	};
-	Entity.prototype.wakeUp = function wakeUp () {
-		assert(this._alive, ALIVE_ERROR);
-		if (!this.sleeping) { return false; }
-
-		this.components.forEach(function (value, key) { return Entity.initComponents(value); });
-
-		this.sleeping = false;
-		return true;
-	};
-	Entity.prototype.delete = function delete$1 () {
-		assert(this._alive, ALIVE_ERROR);
-		this.sleep();
-		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
-		
-		this.components.forEach(function (value, key) { return Entity.deleteComponents(value); });
-		this.components.clear();
-		
-		return true;
-	};
-	Entity.prototype.deleteComponent = function deleteComponent (component) {
-		var array = this.getComponents(component.constructor.componentName);
-		var idx = array.indexOf(component);
-		assert(idx >= 0);
-		if (!this.sleeping)
-			{ component._sleep(); }
-		component.delete();
-		array.splice(idx, 1);
-		return this;
-	};
-	Entity.prototype.setRootType = function setRootType (rootType) {
-		if (this._rootType === rootType)
-			{ return; }
-		this._rootType = rootType;
-
-		var i;
-		this.components.forEach(function (value, key) {
-			for (i = 0; i < value.length; ++i) {
-				value[i].setRootType(rootType);
-			}
-		});
-	};
-	Entity.prototype.toJSON = function toJSON () {
-		assert(this._alive, ALIVE_ERROR);
-		
-		var components = [];
-		this.components.forEach(function (compArray) {
-			compArray.forEach(function (comp) {
-				components.push(comp.toJSON());
-			});
-		});
-		
-		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
-			comp: components,
-			proto: this.prototype.id
-		});
-	};
-
-	return Entity;
-}(Serializable));
-
-Object.defineProperty(Entity.prototype, 'position', {
-	get: function get() {
-		return this.getComponent('Transform').position;
-	},
-	set: function set(position) {
-		this.getComponent('Transform').position = position;
-	}
-});
-
-Serializable.registerSerializable(Entity, 'ent', function (json) {
-	console.log('creating entity from json', json);
-	var entity = new Entity(json.id);
-	entity.prototype = getSerializable(json.proto);
-	console.log('created entity from json', entity);
-	if (json.comp) {
-		entity.addComponents(json.comp.map(Serializable.fromJSON));
-	}
-	return entity;
-});
-
 var ComponentData = (function (Serializable$$1) {
 	function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 		if ( predefinedComponentId === void 0 ) predefinedComponentId = false;
 
+		Serializable$$1.call(this, predefinedId);
 		this.name = componentClassName;
 		this.componentClass = componentClasses.get(this.name);
 		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
-		Serializable$$1.call(this, predefinedId);
 		if (!this.componentClass.allowMultiple)
 			{ predefinedComponentId = '_' + componentClassName; }
 		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
@@ -1504,6 +1328,186 @@ var ComponentData = (function (Serializable$$1) {
 
 Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	return new ComponentData(json.n, json.id, json.cid);
+});
+
+var ALIVE_ERROR = 'entity is already dead';
+
+var Entity = (function (Serializable$$1) {
+	function Entity(predefinedId) {
+		if ( predefinedId === void 0 ) predefinedId = false;
+
+		Serializable$$1.call(this, predefinedId);
+		this.components = new Map(); // name -> array
+		this.sleeping = false;
+		this.prototype = null; // should be set immediately after constructor
+		this.localMaster = true; // set false if entity is controlled over the net
+	}
+
+	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
+	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	Entity.prototype.constructor = Entity;
+
+	// Get the first component of given name
+	Entity.prototype.getComponent = function getComponent (name) {
+		assert(this._alive, ALIVE_ERROR);
+		var components = this.components.get(name);
+		if (components !== undefined)
+			{ return components[0]; }
+		else
+			{ return null; }
+	};
+
+	// Get all components with given name
+	Entity.prototype.getComponents = function getComponents (name) {
+		assert(this._alive, ALIVE_ERROR);
+		return this.components.get(name) || [];
+	};
+	
+	Entity.prototype.getListOfAllComponents = function getListOfAllComponents () {
+		var components = [];
+		this.components.forEach(function (value, key) {
+			components.push.apply(components, value);
+		});
+		return components;
+	};
+	
+	Entity.prototype.clone = function clone () {
+		var entity = new Entity();
+		entity.prototype = this.prototype.clone();
+		entity.sleeping = this.sleeping;
+		var components = [];
+		this.components.forEach(function (value, key) {
+			components.push.apply(components, value.map(function (c) { return c.clone(); }));
+		});
+		entity.addComponents(components);
+		return entity;
+	};
+
+	/*
+	Adds multiple components as an array to this Entity.
+	Uses addComponent internally.
+	Initializes components after all components are added.
+	*/
+	Entity.prototype.addComponents = function addComponents (components) {
+		var this$1 = this;
+
+		assert(this._alive, ALIVE_ERROR);
+		assert(Array.isArray(components), 'Parameter is not an array.');
+
+		for (var i = 0; i < components.length; i++) {
+			var component = components[i];
+			var componentList = this$1.components.get(component._name) || this$1.components.set(component._name, []).get(component._name);
+			componentList.push(component);
+			component.entity = this$1;
+			component._parent = this$1;
+			component.setRootType(this$1._rootType);
+		}
+		
+		if (!this.sleeping)
+			{ Entity.initComponents(components); }
+		return this;
+	};
+	Entity.initComponents = function initComponents (components) {
+		for (var i = 0; i < components.length; i++)
+			{ components[i]._preInit(); }
+		for (var i$1 = 0; i$1 < components.length; i$1++)
+			{ components[i$1]._init(); }
+	};
+	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
+		for (var i = 0; i < components.length; i++)
+			{ components[i]._sleep(); }
+	};
+	Entity.deleteComponents = function deleteComponents (components) {
+		for (var i = 0; i < components.length; i++)
+			{ components[i].delete(); }
+	};
+	Entity.prototype.sleep = function sleep () {
+		assert(this._alive, ALIVE_ERROR);
+		if (this.sleeping) { return false; }
+		
+		this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
+		
+		this.sleeping = true;
+		return true;
+	};
+	Entity.prototype.wakeUp = function wakeUp () {
+		assert(this._alive, ALIVE_ERROR);
+		if (!this.sleeping) { return false; }
+
+		this.components.forEach(function (value, key) { return Entity.initComponents(value); });
+
+		this.sleeping = false;
+		return true;
+	};
+	Entity.prototype.delete = function delete$1 () {
+		assert(this._alive, ALIVE_ERROR);
+		this.sleep();
+		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
+		
+		this.components.forEach(function (value, key) { return Entity.deleteComponents(value); });
+		this.components.clear();
+		
+		return true;
+	};
+	Entity.prototype.deleteComponent = function deleteComponent (component) {
+		var array = this.getComponents(component.constructor.componentName);
+		var idx = array.indexOf(component);
+		assert(idx >= 0);
+		if (!this.sleeping)
+			{ component._sleep(); }
+		component.delete();
+		array.splice(idx, 1);
+		return this;
+	};
+	Entity.prototype.setRootType = function setRootType (rootType) {
+		if (this._rootType === rootType)
+			{ return; }
+		this._rootType = rootType;
+
+		var i;
+		this.components.forEach(function (value, key) {
+			for (i = 0; i < value.length; ++i) {
+				value[i].setRootType(rootType);
+			}
+		});
+	};
+	Entity.prototype.toJSON = function toJSON () {
+		assert(this._alive, ALIVE_ERROR);
+		
+		var components = [];
+		this.components.forEach(function (compArray) {
+			compArray.forEach(function (comp) {
+				components.push(comp.toJSON());
+			});
+		});
+		
+		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
+			comp: components,
+			proto: this.prototype.id
+		});
+	};
+
+	return Entity;
+}(Serializable));
+
+Object.defineProperty(Entity.prototype, 'position', {
+	get: function get() {
+		return this.getComponent('Transform').position;
+	},
+	set: function set(position) {
+		this.getComponent('Transform').position = position;
+	}
+});
+
+Serializable.registerSerializable(Entity, 'ent', function (json) {
+	console.log('creating entity from json', json);
+	var entity = new Entity(json.id);
+	entity.prototype = getSerializable(json.proto);
+	console.log('created entity from json', entity);
+	if (json.comp) {
+		entity.addComponents(json.comp.map(Serializable.fromJSON));
+	}
+	return entity;
 });
 
 var propertyTypes$1 = [
@@ -1776,11 +1780,6 @@ var Game = (function (PropertyOwner$$1) {
 			}
 		}
 		
-		if (predefinedId)
-			{ console.log('game import'); }
-		else
-			{ console.log('game created'); }
-		
 		PropertyOwner$$1.apply(this, arguments);
 		
 		if (isClient$1) {
@@ -1910,8 +1909,122 @@ function createMaterial(owner, options) {
 	return material;
 }
 
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsMatter';
-// import { createWorld, deleteWorld, updateWorld } from '../feature/physicsJs';
+function keyPressed(key) {
+	return keys[key] || false;
+}
+
+
+
+
+var key = {
+	left: 37,
+	right: 39,
+	up: 38,
+	down: 40,
+	ctrl: 17,
+	appleLeft: 91,
+	appleRight: 93,
+	alt: 18,
+	shift: 16,
+	space: 32,
+	a: 65,
+	b: 66,
+	c: 67,
+	d: 68,
+	e: 69,
+	f: 70,
+	g: 71,
+	h: 72,
+	i: 73,
+	j: 74,
+	k: 75,
+	l: 76,
+	m: 77,
+	n: 78,
+	o: 79,
+	p: 80,
+	q: 81,
+	r: 82,
+	s: 83,
+	t: 84,
+	u: 85,
+	v: 86,
+	w: 87,
+	x: 88,
+	y: 89,
+	z: 90,
+	'0': 48,
+	'1': 49,
+	'9': 57,
+	backspace: 8,
+	enter: 13,
+	esc: 27
+};
+
+function listenMouseMove(element, handler) {
+	element.addEventListener('mousemove', function (event) {
+		var x = event.pageX;
+		var y = event.pageY;
+		var el = element;
+		while( el != null ) {
+			x -= el.offsetLeft;
+			y -= el.offsetTop;
+			el = el.offsetParent;
+		}
+		
+		element._mx = x;
+		element._my = y;
+		handler && handler(new Vector(x, y));
+	});
+	return function () { return element.removeEventListener('mousemove', handler); };
+}
+// Requires listenMouseMove on the same element to get the mouse position
+function listenMouseDown(element, handler) {
+	element.addEventListener('mousedown', function (event) {
+		if (typeof element._mx === 'number')
+			{ handler(new Vector(element._mx, element._my)); }
+		else
+			{ handler(); }
+	});
+	return function () { return element.removeEventListener('mousedown', handler); };
+}
+// Requires listenMouseMove on the same element to get the mouse position
+function listenMouseUp(element, handler) {
+	element.addEventListener('mouseup', function (event) {
+		if (typeof element._mx === 'number')
+			{ handler(new Vector(element._mx, element._my)); }
+		else
+			{ handler(); }
+	});
+	return function () { return element.removeEventListener('mouseup', handler); };
+}
+
+////////////////////////////////////
+
+
+var keys = {};
+var keyDownListeners = [];
+var keyUpListeners = [];
+
+
+if (typeof window !== 'undefined') {
+
+	window.onkeydown = function (event) {
+		var keyCode = event.which || event.keyCode;
+
+		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
+			{ return; }
+
+		keys[keyCode] = true;
+		keyDownListeners.forEach(function (l) { return l(keyCode); });
+	};
+	window.onkeyup = function (event) {
+		var key = event.which || event.keyCode;
+		keys[key] = false;
+		keyUpListeners.forEach(function (l) { return l(key); });
+	};
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -1919,8 +2032,11 @@ var physicsOptions = {
 
 var Scene = (function (Serializable$$1) {
 	function Scene(predefinedId) {
+		var this$1 = this;
 		if ( predefinedId === void 0 ) predefinedId = false;
 
+		Serializable$$1.call(this, predefinedId);
+		
 		if (isClient) {
 			if (scene) {
 				try {
@@ -1933,6 +2049,12 @@ var Scene = (function (Serializable$$1) {
 			
 			this.canvas = document.querySelector('canvas.anotherCanvas');
 			this.context = this.canvas.getContext('2d');
+
+			this.mouseListeners = [
+				listenMouseMove(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseMove', mousePosition); }),
+				listenMouseDown(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseDown', mousePosition); }),
+				listenMouseUp(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseUp', mousePosition); })
+			];
 		}
 		this.level = null;
 		
@@ -1944,7 +2066,6 @@ var Scene = (function (Serializable$$1) {
 		this.time = 0;
 		this.won = false;
 		
-		Serializable$$1.call(this, predefinedId);
 		addChange(changeType.addSerializableToTree, this);
 
 		if (predefinedId)
@@ -1963,7 +2084,7 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.win = function win () {
 		this.won = true;
 	};
-	Scene.prototype.animFrame = function animFrame () {4;
+	Scene.prototype.animFrame = function animFrame () {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
 		
@@ -2065,6 +2186,11 @@ var Scene = (function (Serializable$$1) {
 		if (scene === this)
 			{ scene = null; }
 		
+		if (this.mouseListeners) {
+			this.mouseListeners.forEach(function (listener) { return listener(); });
+			this.mouseListeners = null;
+		}
+		
 		console.log('scene.delete');
 		return true;
 	};
@@ -2146,7 +2272,7 @@ var Component = (function (PropertyOwner$$1) {
 				{ this$1._addEventListener(eventListeners[i]); }
 		}
 		
-		if (this.constructor.componentName !== 'Transform')
+		if (this.constructor.componentName !== 'Transform' && this.scene)
 			{ this.scene.addComponent(this); }
 		
 		try {
@@ -2173,7 +2299,7 @@ var Component = (function (PropertyOwner$$1) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
 
-		if (this.constructor.componentName !== 'Transform')
+		if (this.constructor.componentName !== 'Transform' && this.scene)
 			{ this.scene.removeComponent(this); }
 		
 		this.forEachChild('com', function (c) { return c._sleep(); });
@@ -2257,7 +2383,7 @@ Component.register = function(ref) {
 		function Com() {
 			parentClass.apply(this, arguments);
 			if (constructorFunction)
-				{ constructorFunction(); }
+				{ constructorFunction.call(this); }
 		}
 
 		if ( parentClass ) Com.__proto__ = parentClass;
@@ -2267,7 +2393,7 @@ Component.register = function(ref) {
 			if (!parentClass.prototype.delete.call(this)) { return false; }
 			
 			if (deleteFunction)
-				{ deleteFunction(); }
+				{ deleteFunction.call(this); }
 			
 			return true;
 		};
@@ -2614,89 +2740,6 @@ Component.register({
 	]
 });
 
-function keyPressed(key) {
-	return keys[key] || false;
-}
-
-
-
-
-var key = {
-	left: 37,
-	right: 39,
-	up: 38,
-	down: 40,
-	ctrl: 17,
-	appleLeft: 91,
-	appleRight: 93,
-	alt: 18,
-	shift: 16,
-	space: 32,
-	a: 65,
-	b: 66,
-	c: 67,
-	d: 68,
-	e: 69,
-	f: 70,
-	g: 71,
-	h: 72,
-	i: 73,
-	j: 74,
-	k: 75,
-	l: 76,
-	m: 77,
-	n: 78,
-	o: 79,
-	p: 80,
-	q: 81,
-	r: 82,
-	s: 83,
-	t: 84,
-	u: 85,
-	v: 86,
-	w: 87,
-	x: 88,
-	y: 89,
-	z: 90,
-	'0': 48,
-	'1': 49,
-	'9': 57,
-	backspace: 8,
-	enter: 13,
-	esc: 27
-};
-
-
-
-
-
-
-////////////////////////////////////
-
-
-var keys = {};
-var keyDownListeners = [];
-var keyUpListeners = [];
-
-
-if (typeof window !== 'undefined') {
-
-	window.onkeydown = function (event) {
-		var keyCode = event.which || event.keyCode;
-
-		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
-			{ return; }
-
-		keys[keyCode] = true;
-		keyDownListeners.forEach(function (l) { return l(keyCode); });
-	};
-	window.onkeyup = function (event) {
-		var key = event.which || event.keyCode;
-		keys[key] = false;
-		keyUpListeners.forEach(function (l) { return l(key); });
-	};
-}
-
 Component.register({
 	name: 'Mover',
 	properties: [
@@ -2935,6 +2978,7 @@ Component.register({
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
+			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {
 				this$1.body.setDensity(density);
 			}));
@@ -2966,7 +3010,6 @@ Component.register({
 				angularDamping: this.rotationalDrag
 			});
 			this.updateShape();
-			this.updateMaterial();
 
 			this.body.entity = this.entity;
 			
@@ -2975,8 +3018,7 @@ Component.register({
 		updateShape: function updateShape() {
 			var this$1 = this;
 
-			console.log('update shape');
-			if (!this.body.entity) {
+			if (this.body.shapes.length > 0) {
 				// We update instead of create.
 				// Should remove existing shapes
 				
@@ -3003,6 +3045,7 @@ Component.register({
 			});
 			
 			this.updateMass();
+			this.updateMaterial();
 		},
 		updateMaterial: function updateMaterial() {
 			var material = createMaterial(this.scene, {

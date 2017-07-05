@@ -224,6 +224,8 @@ export default class Serializable {
 		}
 		this._listeners[event].unshift(callback);
 		return () => {
+			if (!this._alive)
+				return; // listeners already deleted
 			var index = this._listeners[event].indexOf(callback);
 			this._listeners[event].splice(index, 1);
 		};

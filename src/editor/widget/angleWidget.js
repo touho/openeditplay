@@ -1,5 +1,8 @@
 import { default as Widget, defaultWidgetDistance, centerWidgetRadius } from './widget';
 import Vector from '../../util/vector';
+import { keyPressed, key } from '../../util/input';
+
+const SHIFT_STEPS = 16;
 
 export default class AngleWidget extends Widget {
 	constructor(component) {
@@ -19,7 +22,12 @@ export default class AngleWidget extends Widget {
 		
 		affectedEntities.forEach(entity => {
 			let Transform = entity.getComponent('Transform');
-			Transform.angle = Transform.angle + angleDifference;
+			let newAngle = Transform.angle + angleDifference;
+			if (keyPressed(key.shift)) {
+				newAngle += Math.PI / SHIFT_STEPS;
+				newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
+			}
+			Transform.angle = newAngle;
 		});
 	}
 

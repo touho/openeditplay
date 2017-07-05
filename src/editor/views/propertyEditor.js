@@ -135,7 +135,7 @@ class Container {
 		this.properties.update(this.item.getChildren('prp'));
 		
 		let addButton;
-		mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add component', {
+		mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
@@ -143,7 +143,7 @@ class Container {
 		if (inheritedComponentDatas.length === 0)
 			addButton.classList.add('clickMeEffect');
 		
-		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone type', { onclick: () => {
+		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: () => {
 			dispatch(this, 'makingChanges');
 			
 			let clone = this.item.clone();
@@ -159,7 +159,7 @@ class Container {
 			this.item.getParent().addChild(clone);
 			dispatch(this, 'propertyEditorSelect', clone);
 		} }));
-		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete type', { onclick: () => {
+		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', { onclick: () => {
 			dispatch(this, 'makingChanges');
 			let entityPrototypeCount = this.item.countEntityPrototypes(true);
 			if (entityPrototypeCount) {
@@ -179,7 +179,7 @@ class Container {
 			prop._editorPlaceholder = this.item.prototype.findChild('prp', prp => prp.name === prop.name).value;
 		});
 		this.properties.update(properties);
-		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add component', {
+		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add Component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
@@ -215,7 +215,7 @@ class Container {
 		this.properties.update(this.item.properties);
 		
 		if (!this.item.ownComponentData || parentComponentData) {
-			mount(this.controls, el('button.button', 'Show parent', {
+			mount(this.controls, el('button.button', 'Show Parent', {
 				onclick: () => {
 					let componentData = this.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(this.item.componentId, true);
 					dispatch(this, 'propertyEditorSelect', componentData.getParent());
@@ -356,7 +356,7 @@ class Property {
 		this.property = property;
 		this.el.setAttribute('name', property.name);
 		this.el.setAttribute('type', property.propertyType.type.name);
-		this.name.textContent = property.propertyType.name;
+		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
 		this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
 		this.content.innerHTML = '';
 		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
@@ -402,4 +402,9 @@ class Property {
 
 function isInDom(element) {
 	return $.contains(document.documentElement, element);
+}
+
+function variableNameToPresentableName(propertyName) {
+	let name = propertyName.replace(/[A-Z]/g, c => ' ' + c);
+	return name[0].toUpperCase() + name.substring(1);
 }

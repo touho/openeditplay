@@ -32,7 +32,6 @@
     "deep-strict-equal": "^0.2.0",
     "express": "^4.14.0",
     "lodash": "^4.17.4",
-    "p2": "^0.7.1",
     "socket.io": "^1.7.2"
   }
 }

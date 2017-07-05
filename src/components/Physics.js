@@ -49,6 +49,7 @@ Component.register({
 
 			this.listenProperty(this.Transform, 'position', update(position => this.body.position = position.toArray().map(x => x * PHYSICS_SCALE)));
 			this.listenProperty(this.Transform, 'angle', update(angle => this.body.angle = angle));
+			this.listenProperty(this.Transform, 'scale', update(scale => this.updateShape()));
 			this.listenProperty(this, 'density', update(density => {
 				this.body.setDensity(density);
 			}));
@@ -80,14 +81,13 @@ Component.register({
 				angularDamping: this.rotationalDrag
 			});
 			this.updateShape();
-			this.updateMaterial();
 
 			this.body.entity = this.entity;
 			
 			addBody(this.scene, this.body);
 		},
 		updateShape() {
-			if (!this.body.entity) {
+			if (this.body.shapes.length > 0) {
 				// We update instead of create.
 				// Should remove existing shapes
 				
@@ -114,6 +114,7 @@ Component.register({
 			});
 			
 			this.updateMass();
+			this.updateMaterial();
 		},
 		updateMaterial() {
 			let material = createMaterial(this.scene, {

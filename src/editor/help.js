@@ -32,6 +32,10 @@ class Help {
 	get serializablesArray() {
 		return Object.keys(serializables).map(k => serializables[k]);
 	}
+	get selectedEntity() {
+		if (this.sceneModule && this.sceneModule.selectedEntities.length > 0)
+			return this.sceneModule.selectedEntities[0];
+	}
 }
 
 let help = new Help;

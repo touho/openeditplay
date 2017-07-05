@@ -1,6 +1,8 @@
 import { default as Widget, defaultWidgetDistance, centerWidgetRadius } from './widget';
 import Vector from '../../util/vector';
 
+const MIN_SCALE = 0.1;
+
 export default class ScaleWidget extends Widget {
 	constructor(component, scaleX, scaleY) {
 		super({
@@ -30,7 +32,12 @@ export default class ScaleWidget extends Widget {
 		
 		affectedEntities.forEach(entity => {
 			let Transform = entity.getComponent('Transform');
-			Transform.scale = Transform.scale.clone().multiply(changeVector);
+			let newScale = Transform.scale.clone().multiply(changeVector);
+			if (newScale.x < MIN_SCALE)
+				newScale.x = MIN_SCALE;
+			if (newScale.y < MIN_SCALE)
+				newScale.y = MIN_SCALE;
+			Transform.scale = newScale;
 		});
 	}
 
@@ -58,6 +65,10 @@ export default class ScaleWidget extends Widget {
 		
 		let arrowTailPos1 = arrowTailPos.clone().rotate(0.5).add(lineEnd);
 		let arrowTailPos2 = arrowTailPos.clone().rotate(-0.5).add(lineEnd);
+		
+		context.save();
+		
+		context.lineWidth = 2;
 
 		context.beginPath();
 		context.moveTo(lineEnd.x, lineEnd.y);
@@ -68,5 +79,7 @@ export default class ScaleWidget extends Widget {
 		context.moveTo(lineEnd.x, lineEnd.y);
 		context.lineTo(arrowTailPos2.x, arrowTailPos2.y);
 		context.stroke();
+
+		context.restore();
 	}
 }

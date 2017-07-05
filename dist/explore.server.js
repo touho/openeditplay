@@ -255,6 +255,8 @@ Serializable.prototype.listen = function listen (event, callback) {
 	}
 	this._listeners[event].unshift(callback);
 	return function () {
+		if (!this$1._alive)
+			{ return; } // listeners already deleted
 		var index = this$1._listeners[event].indexOf(callback);
 		this$1._listeners[event].splice(index, 1);
 	};
@@ -3054,6 +3056,7 @@ Component.register({
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
+			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {
 				this$1.body.setDensity(density);
 			}));
@@ -3085,7 +3088,6 @@ Component.register({
 				angularDamping: this.rotationalDrag
 			});
 			this.updateShape();
-			this.updateMaterial();
 
 			this.body.entity = this.entity;
 			
@@ -3094,7 +3096,7 @@ Component.register({
 		updateShape: function updateShape() {
 			var this$1 = this;
 
-			if (!this.body.entity) {
+			if (this.body.shapes.length > 0) {
 				// We update instead of create.
 				// Should remove existing shapes
 				
@@ -3121,6 +3123,7 @@ Component.register({
 			});
 			
 			this.updateMass();
+			this.updateMaterial();
 		},
 		updateMaterial: function updateMaterial() {
 			var material = createMaterial(this.scene, {
