@@ -600,7 +600,6 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 	}
 });
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -687,10 +686,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -948,6 +943,49 @@ Vector.fromArray = function(obj) {
 	return new Vector(obj[0], obj[1]);
 };
 
+var Color = function Color(r, g, b) {
+	if (r && r.constructor === Color) {
+		this.r = r.r;
+		this.g = r.g;
+		this.b = r.b;
+	} else if (typeof r === 'number') {
+		this.r = r;
+		this.g = g;
+		this.b = b;
+	} else if (typeof r === 'string') {
+		var rgb = hexToRgb(r);
+		this.r = rgb.r;
+		this.g = rgb.g;
+		this.b = rgb.b;
+	} else {
+		assert(false, 'Invalid Color parameters');
+	}
+};
+Color.prototype.toHexString = function toHexString () {
+	return rgbToHex(this.r, this.g, this.b);
+};
+Color.prototype.toHexNumber = function toHexNumber () {
+	return this.r * 256 * 256 + this.g * 256 + this.b;
+};
+
+function hexToRgb(hex) {
+	var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	return result ? {
+		r: parseInt(result[1], 16),
+		g: parseInt(result[2], 16),
+		b: parseInt(result[3], 16)
+	} : null;
+}
+
+function componentToHex(c) {
+	var hex = c.toString(16);
+	return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+	return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
 function validateFloat(val) {
 	if (isNaN(val) || val === Infinity || val === -Infinity)
 		{ throw new Error('Invalid float: ' + val); }
@@ -1067,6 +1105,18 @@ dataType.enum = createDataType({
 	},
 	toJSON: function (x) { return x; },
 	fromJSON: function (x) { return x; }
+});
+
+dataType.color = createDataType({
+	name: 'color',
+	validators: {
+		default: function default$6(color) {
+			var newColor = new Color(color);
+			return newColor;
+		}
+	},
+	toJSON: function (x) { return x.toHexString(); },
+	fromJSON: function (x) { return new Color(x); }
 });
 
 var PropertyOwner = (function (Serializable$$1) {
@@ -1955,6 +2005,13 @@ var key = {
 	z: 90,
 	'0': 48,
 	'1': 49,
+	'2': 50,
+	'3': 51,
+	'4': 52,
+	'5': 53,
+	'6': 54,
+	'7': 55,
+	'8': 56,
 	'9': 57,
 	backspace: 8,
 	enter: 13,
@@ -2025,6 +2082,27 @@ if (typeof window !== 'undefined') {
 	};
 }
 
+var PIXI;
+
+if (isClient)
+	{ PIXI = window.PIXI; }
+
+var PIXI$1 = PIXI;
+
+var renderer = null; // Only one PIXI renderer supported for now
+
+function getRenderer(canvas) {
+	if (!renderer) {
+		renderer = PIXI.autoDetectRenderer({
+			view: canvas,
+			autoResize: true,
+			antialias: true
+		});
+	}
+	
+	return renderer;
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2036,7 +2114,7 @@ var Scene = (function (Serializable$$1) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
 		Serializable$$1.call(this, predefinedId);
-		
+
 		if (isClient) {
 			if (scene) {
 				try {
@@ -2046,9 +2124,35 @@ var Scene = (function (Serializable$$1) {
 				}
 			}
 			scene = this;
-			
+
 			this.canvas = document.querySelector('canvas.anotherCanvas');
-			this.context = this.canvas.getContext('2d');
+			this.renderer = getRenderer(this.canvas);
+			this.stage = new PIXI$1.Container();
+			var self = this;
+			function createLayer() {
+				var layer = new PIXI$1.Container();
+				self.stage.addChild(layer);
+				return layer;
+			}
+			this.backgroundLayer = createLayer();
+			this.behindLayer = createLayer();
+			this.mainLayer = createLayer();
+			this.frontLayer = createLayer();
+			this.UILayer = createLayer();
+			
+			
+			// let gra = new PIXI.Graphics();
+			// // gra.lineStyle(4, 0xFF3300, 1);
+			// gra.beginFill(0x66CCFF);
+			// gra.drawRect(0, 0, 10, 10);
+			// gra.endFill();
+			// gra.x = 0;
+			// gra.y = 0;
+			// this.stage.addChild(gra);
+			
+			
+			// Deprecated
+			// this.context = this.canvas.getContext('2d');
 
 			this.mouseListeners = [
 				listenMouseMove(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseMove', mousePosition); }),
@@ -2057,15 +2161,15 @@ var Scene = (function (Serializable$$1) {
 			];
 		}
 		this.level = null;
-		
+
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
-		
+
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
 		this.won = false;
-		
+
 		addChange(changeType.addSerializableToTree, this);
 
 		if (predefinedId)
@@ -2074,44 +2178,51 @@ var Scene = (function (Serializable$$1) {
 			{ console.log('scene created'); }
 
 		createWorld(this, physicsOptions);
-		
+
 		this.draw();
 	}
 
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+
 	Scene.prototype.win = function win () {
 		this.won = true;
 	};
+
 	Scene.prototype.animFrame = function animFrame () {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
-		
+
 		var timeInMilliseconds = performance.now();
-		var t = 0.001*timeInMilliseconds;
-		var dt = t-this._prevUpdate;
+		var t = 0.001 * timeInMilliseconds;
+		var dt = t - this._prevUpdate;
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
 		this.time += dt;
 
 		setChangeOrigin(this);
-		
+
+		// Update logic
 		this.dispatch('onUpdate', dt, this.time);
+
+		// Update physics
 		updateWorld(this, dt, timeInMilliseconds);
-		
+
+		// Update graphics
 		this.draw();
-		
+
 		if (this.won) {
 			this.pause();
 			this.time = 0;
 			game.dispatch('levelCompleted');
 			this.reset();
 		}
-		
+
 		this.requestAnimFrame();
 	};
+
 	Scene.prototype.requestAnimFrame = function requestAnimFrame () {
 		var this$1 = this;
 
@@ -2121,13 +2232,18 @@ var Scene = (function (Serializable$$1) {
 		else
 			{ this.animationFrameId = setTimeout(callback, 16); }
 	};
+
 	Scene.prototype.draw = function draw () {
-		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		this.dispatch('onDraw', this.context);
+		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		// this.dispatch('onDraw', this.context);
+		
+		this.renderer.render(this.stage, null, true);
 	};
+
 	Scene.prototype.isInInitialState = function isInInitialState () {
 		return !this.playing && this.time === 0;
 	};
+
 	Scene.prototype.reset = function reset () {
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
@@ -2137,18 +2253,20 @@ var Scene = (function (Serializable$$1) {
 
 		deleteWorld(this);
 		createWorld(this, physicsOptions);
-		
+
+		this.won = false;
+		this.time = 0;
+
 		if (this.level)
 			{ this.level.createScene(this); }
 		
-		this.won = false;
-		this.time = 0;
 		this.draw();
 		delete this.resetting;
 	};
+
 	Scene.prototype.pause = function pause () {
 		if (!this.playing) { return; }
-		
+
 		this.playing = false;
 		if (this.animationFrameId) {
 			if (window.requestAnimationFrame)
@@ -2158,39 +2276,46 @@ var Scene = (function (Serializable$$1) {
 		}
 		this.animationFrameId = null;
 	};
-	Scene.prototype.play = function play () {
+
+	Scene.prototype.play = function play () {
 		if (this.playing) { return; }
-		
-		this._prevUpdate = 0.001*performance.now();
+
+		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
-		
+
 		this.requestAnimFrame();
-		
-		
+
+
 		if (this.time === 0)
 			{ this.dispatch('onStart'); }
-		
+
 		/*
-		let player = game.findChild('prt', p => p.name === 'Player', true);
-		if (player) {
-			console.log('Spawning player!', player);
-			this.spawn(player);
-		}
-		*/
+		 let player = game.findChild('prt', p => p.name === 'Player', true);
+		 if (player) {
+		 console.log('Spawning player!', player);
+		 this.spawn(player);
+		 }
+		 */
 	};
+
 	Scene.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
 
 		deleteWorld(this);
-		
+
 		if (scene === this)
 			{ scene = null; }
-		
+
 		if (this.mouseListeners) {
 			this.mouseListeners.forEach(function (listener) { return listener(); });
 			this.mouseListeners = null;
 		}
 		
+		this.renderer = null; // Do not call renderer.destroy(). Same renderer is used by all scenes for now.
+		
+		this.stage.destroy();
+		this.stage = null;
+
 		console.log('scene.delete');
 		return true;
 	};
@@ -2204,11 +2329,13 @@ var Scene = (function (Serializable$$1) {
 		}
 		set.add(component);
 	};
+
 	Scene.prototype.removeComponent = function removeComponent (component) {
 		var set = this.components.get(component.constructor.componentName);
 		assert(set);
 		assert(set.delete(component));
 	};
+
 	Scene.prototype.getComponents = function getComponents (componentName) {
 		return this.components.get(componentName) || new Set;
 	};
@@ -2428,8 +2555,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2809,21 +2934,170 @@ Component.register({
 	],
 	prototype: {
 		init: function init() {
+			var this$1 = this;
+
 			if (this.randomStyle)
-				{ this.style = "hsl(" + (Math.random()*360 | 0) + ", 100%, 40%)"; }
+				{ this.style = "hsl(" + (Math.random() * 360 | 0) + ", 100%, 40%)"; }
+			
+			this.createGraphics();
+
+			this.listenProperty(this.Transform, 'position', function (position) {
+				this$1.graphics.x = position.x;
+				this$1.graphics.y = position.y;
+			});
+
+			this.listenProperty(this.Transform, 'angle', function (angle) {
+				this$1.graphics.rotation = angle;
+			});
+			
+			var redrawGraphics = function () {
+				if (this$1.graphics) {
+					this$1.drawGraphics();
+				}
+			};
+
+			this.listenProperty(this, 'size', redrawGraphics);
+			this.listenProperty(this, 'style', redrawGraphics);
+			this.listenProperty(this.Transform, 'scale', redrawGraphics);
+		},
+		createGraphics: function createGraphics() {
+			this.graphics = new PIXI$1.Graphics();
+			this.drawGraphics();
+			this.scene.mainLayer.addChild(this.graphics);
+
+			var T = this.Transform;
+			
+			this.graphics.x = T.position.x;
+			this.graphics.y = T.position.y;
+			this.graphics.rotation = T.angle;
+		},
+		drawGraphics: function drawGraphics() {
+			var scale = this.Transform.scale;
+			var
+				x = -this.size.x / 2 * scale.x,
+				y = -this.size.y / 2 * scale.y,
+				w = this.size.x * scale.x,
+				h = this.size.y * scale.y;
+			
+			this.graphics.clear();
+			this.graphics.lineStyle(2, 0xFF3300, 1);
+			this.graphics.beginFill(0x66CCFF);
+			this.graphics.drawRect(x, y, w, h);
+			this.graphics.endFill();
+		},
+		sleep: function sleep() {
+			this.graphics.destroy();
+			this.graphics = null;
+		},
+		onUpdate: function onUpdate() {
+
 		},
 		onDraw: function onDraw(context) {
 			var
-				x = this.Transform.position.x - this.size.x/2 * this.Transform.scale.x,
-				y = this.Transform.position.y - this.size.y/2 * this.Transform.scale.y,
+				x = this.Transform.position.x - this.size.x / 2 * this.Transform.scale.x,
+				y = this.Transform.position.y - this.size.y / 2 * this.Transform.scale.y,
 				w = this.size.x * this.Transform.scale.x,
 				h = this.size.y * this.Transform.scale.y;
 			context.save();
 			context.fillStyle = this.style;
-			context.translate(x+w/2, y+h/2);
+			context.translate(x + w / 2, y + h / 2);
 			context.rotate(this.Transform.angle);
-			context.fillRect(-w/2, -h/2, w, h);
+			context.fillRect(-w / 2, -h / 2, w, h);
 			context.restore();
+		}
+	}
+});
+
+Component.register({
+	name: 'Shape',
+	icon: 'fa-stop',
+	allowMultiple: true,
+	properties: [
+		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle')),
+		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
+		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
+		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
+		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
+		createPropertyType('borderWidth', 1, createPropertyType.float)
+	],
+	prototype: {
+		init: function init() {
+			var this$1 = this;
+
+			this.createGraphics();
+
+			this.listenProperty(this.Transform, 'position', function (position) {
+				this$1.graphics.x = position.x;
+				this$1.graphics.y = position.y;
+			});
+
+			this.listenProperty(this.Transform, 'angle', function (angle) {
+				this$1.graphics.rotation = angle;
+			});
+
+			var redrawGraphics = function () {
+				if (this$1.graphics) {
+					this$1.drawGraphics();
+				}
+			};
+			
+			this.listenProperty(this.Transform, 'scale', redrawGraphics);
+			
+			var propertiesThatRequireRedraw = [
+				'type',
+				'radius',
+				'size',
+				'fillColor',
+				'borderColor',
+				'borderWidth'
+			];
+
+			propertiesThatRequireRedraw.forEach(function (propName) {
+				this$1.listenProperty(this$1, propName, redrawGraphics);
+			});
+		},
+		createGraphics: function createGraphics() {
+			this.graphics = new PIXI$1.Graphics();
+			this.drawGraphics();
+			
+			this.scene.mainLayer.addChild(this.graphics);
+
+			var T = this.Transform;
+
+			this.graphics.x = T.position.x;
+			this.graphics.y = T.position.y;
+			this.graphics.rotation = T.angle;
+		},
+		drawGraphics: function drawGraphics() {
+			var scale = this.Transform.scale;
+			this.graphics.clear();
+			
+			if (this.type === 'rectangle') {
+				var
+					x = -this.size.x / 2 * scale.x,
+					y = -this.size.y / 2 * scale.y,
+					w = this.size.x * scale.x,
+					h = this.size.y * scale.y;
+
+				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				this.graphics.beginFill(this.fillColor.toHexNumber());
+				this.graphics.drawRect(x, y, w, h);
+				this.graphics.endFill();
+			} else if (this.type === 'circle') {
+				var averageScale = (scale.x + scale.y) / 2;
+				
+				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				this.graphics.beginFill(this.fillColor.toHexNumber());
+				this.graphics.drawCircle(0, 0, this.radius * averageScale);
+				this.graphics.endFill();
+			}
+		},
+		sleep: function sleep() {
+			this.graphics.destroy();
+			this.graphics = null;
+		},
+		onUpdate: function onUpdate() {
+
 		}
 	}
 });
@@ -2831,11 +3105,24 @@ Component.register({
 Component.register({
 	name: 'Spawner',
 	properties: [
-		createPropertyType('typeName', '', createPropertyType.string)
+		createPropertyType('typeName', '', createPropertyType.string),
+		createPropertyType('trigger', 'start', createPropertyType.enum, createPropertyType.enum.values('start', 'interval')),
+		createPropertyType('interval', 10, createPropertyType.float, createPropertyType.float.range(0.1, 1000000), createPropertyType.visibleIf('trigger', 'interval'), 'Interval in seconds')
 	],
 	prototype: {
+		constructor: function constructor() {
+			this.lastSpawn = 0;
+		},
+		init: function init() {
+			this.lastSpawn = this.scene.time;
+		},
 		onStart: function onStart() {
-			this.spawn();
+			if (this.trigger === 'start')
+				{ this.spawn(); }
+		},
+		onUpdate: function onUpdate() {
+			if (this.scene.time > this.lastSpawn + this.interval)
+				{ this.spawn(); }
 		},
 		onDrawHelper: function onDrawHelper(context) {
 			var size = 30;
@@ -2863,6 +3150,7 @@ Component.register({
 				{ return; }
 
 			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+			this.lastSpawn = this.scene.time;
 		}
 	}
 });
@@ -2952,7 +3240,7 @@ Component.register({
 		createPropertyType('friction', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1))
 	],
 	requirements: [
-		'Rect'
+		'Shape'
 	],
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
@@ -2971,9 +3259,11 @@ Component.register({
 				}
 			};
 
-			var Rects = this.entity.getComponents('Rect');
-			for (var i = 0; i < Rects.length; ++i) {
-				this$1.listenProperty(Rects[i], 'size', update(function (size) { return this$1.updateShape(); }));
+			var Shapes = this.entity.getComponents('Shapes');
+			for (var i = 0; i < Shapes.length; ++i) {
+				this$1.listenProperty(Shapes[i], 'type', update(function (size) { return this$1.updateShape(); }));
+				this$1.listenProperty(Shapes[i], 'size', update(function (size) { return this$1.updateShape(); }));
+				this$1.listenProperty(Shapes[i], 'radius', update(function (size) { return this$1.updateShape(); }));
 			}
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
@@ -3033,15 +3323,25 @@ Component.register({
 				shapes.length = 0;
 			}
 
-			var Rects = this.entity.getComponents('Rect');
+			var Shapes = this.entity.getComponents('Shape');
 			var scale = this.Transform.scale;
-			
-			Rects.forEach(function (R) {
-				var shape = new p2$1.Box({
-					width: R.size.x * PHYSICS_SCALE * scale.x,
-					height: R.size.y * PHYSICS_SCALE * scale.y
-				});
-				this$1.body.addShape(shape);
+
+			Shapes.forEach(function (Shape) {
+				var shape;
+				if (Shape.type === 'rectangle') {
+					shape = new p2$1.Box({
+						width: Shape.size.x * PHYSICS_SCALE * scale.x,
+						height: Shape.size.y * PHYSICS_SCALE * scale.y
+					});
+				} else if (Shape.type === 'circle') {
+					var averageScale = (scale.x + scale.y) / 2;
+					
+					shape = new p2$1.Circle({
+						radius: Shape.radius * PHYSICS_SCALE * averageScale
+					});
+				}
+				if (shape)
+					{ this$1.body.addShape(shape); }
 			});
 			
 			this.updateMass();

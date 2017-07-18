@@ -136,7 +136,7 @@ class ModuleTab {
 	}
 	update(module) {
 		this.module = module;
-		this.el.textContent = module.name;
+		this.el.innerHTML = module.name;
 		this.el.classList.toggle('moduleSelected', module._selected);
 		this.el.classList.toggle('moduleEnabled', module._enabled);
 	}

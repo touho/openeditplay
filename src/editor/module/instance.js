@@ -3,14 +3,21 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor';
 import { editor } from '../editor';
 import { scene } from '../../core/scene';
+import { listenKeyDown, key } from '../../util/input';
 
 class Instance extends Module {
 	constructor() {
-		super(
-			this.propertyEditor = new PropertyEditor()
-		);
+		let propertyEditor = new PropertyEditor();
+		super(propertyEditor);
+		this.propertyEditor = propertyEditor;
 		this.id = 'instance';
-		this.name = 'Instance';
+		this.name = '<u>I</u>nstance';
+
+		listenKeyDown(k => {
+			if (k === key.i) {
+				Module.activateModule('instance', true);
+			}
+		});
 	}
 	update() {
 		if (editor.selection.items.length != 1)

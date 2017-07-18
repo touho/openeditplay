@@ -337,3 +337,10 @@ export function entityModifiedInEditor(entity, change) {
 	entity.dispatch('changedInEditor', change);
 }
 
+export function setEntitiesInSelectionArea(entities, inSelectionArea) {
+	entities.forEach(entity => {
+		let editorWidget = entity.getComponent('EditorWidget');
+		editorWidget.inSelectionArea = inSelectionArea;
+		editorWidget.position.updateVisibility();
+	});
+}

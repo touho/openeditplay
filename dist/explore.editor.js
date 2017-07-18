@@ -653,8 +653,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -665,7 +663,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -752,10 +749,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1013,6 +1006,49 @@ Vector.fromArray = function(obj) {
 	return new Vector(obj[0], obj[1]);
 };
 
+var Color = function Color(r, g, b) {
+	if (r && r.constructor === Color) {
+		this.r = r.r;
+		this.g = r.g;
+		this.b = r.b;
+	} else if (typeof r === 'number') {
+		this.r = r;
+		this.g = g;
+		this.b = b;
+	} else if (typeof r === 'string') {
+		var rgb = hexToRgb(r);
+		this.r = rgb.r;
+		this.g = rgb.g;
+		this.b = rgb.b;
+	} else {
+		assert(false, 'Invalid Color parameters');
+	}
+};
+Color.prototype.toHexString = function toHexString () {
+	return rgbToHex(this.r, this.g, this.b);
+};
+Color.prototype.toHexNumber = function toHexNumber () {
+	return this.r * 256 * 256 + this.g * 256 + this.b;
+};
+
+function hexToRgb(hex) {
+	var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	return result ? {
+		r: parseInt(result[1], 16),
+		g: parseInt(result[2], 16),
+		b: parseInt(result[3], 16)
+	} : null;
+}
+
+function componentToHex(c) {
+	var hex = c.toString(16);
+	return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+	return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
 function validateFloat(val) {
 	if (isNaN(val) || val === Infinity || val === -Infinity)
 		{ throw new Error('Invalid float: ' + val); }
@@ -1142,6 +1178,23 @@ dataType.enum = createDataType({
 	},
 	toJSON: function (x) { return x; },
 	fromJSON: function (x) { return x; }
+});
+
+dataType.color = createDataType({
+	name: 'color',
+	validators: {
+		default: function default$6(color) {
+			var newColor = new Color(color);
+			// @ifndef OPTIMIZE
+			assert(newColor.r >= 0 && newColor.r < 256);
+			assert(newColor.g >= 0 && newColor.g < 256);
+			assert(newColor.b >= 0 && newColor.b < 256);
+			// @endif
+			return newColor;
+		}
+	},
+	toJSON: function (x) { return x.toHexString(); },
+	fromJSON: function (x) { return new Color(x); }
 });
 
 var PropertyOwner = (function (Serializable$$1) {
@@ -2033,6 +2086,13 @@ var key = {
 	z: 90,
 	'0': 48,
 	'1': 49,
+	'2': 50,
+	'3': 51,
+	'4': 52,
+	'5': 53,
+	'6': 54,
+	'7': 55,
+	'8': 56,
 	'9': 57,
 	backspace: 8,
 	enter: 13,
@@ -2103,6 +2163,27 @@ if (typeof window !== 'undefined') {
 	};
 }
 
+var PIXI$1;
+
+if (isClient)
+	{ PIXI$1 = window.PIXI; }
+
+var PIXI$2 = PIXI$1;
+
+var renderer = null; // Only one PIXI renderer supported for now
+
+function getRenderer(canvas) {
+	if (!renderer) {
+		renderer = PIXI$1.autoDetectRenderer({
+			view: canvas,
+			autoResize: true,
+			antialias: true
+		});
+	}
+	
+	return renderer;
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2114,7 +2195,7 @@ var Scene = (function (Serializable$$1) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
 		Serializable$$1.call(this, predefinedId);
-		
+
 		if (isClient) {
 			if (scene) {
 				try {
@@ -2124,9 +2205,35 @@ var Scene = (function (Serializable$$1) {
 				}
 			}
 			scene = this;
-			
+
 			this.canvas = document.querySelector('canvas.anotherCanvas');
-			this.context = this.canvas.getContext('2d');
+			this.renderer = getRenderer(this.canvas);
+			this.stage = new PIXI$2.Container();
+			var self = this;
+			function createLayer() {
+				var layer = new PIXI$2.Container();
+				self.stage.addChild(layer);
+				return layer;
+			}
+			this.backgroundLayer = createLayer();
+			this.behindLayer = createLayer();
+			this.mainLayer = createLayer();
+			this.frontLayer = createLayer();
+			this.UILayer = createLayer();
+			
+			
+			// let gra = new PIXI.Graphics();
+			// // gra.lineStyle(4, 0xFF3300, 1);
+			// gra.beginFill(0x66CCFF);
+			// gra.drawRect(0, 0, 10, 10);
+			// gra.endFill();
+			// gra.x = 0;
+			// gra.y = 0;
+			// this.stage.addChild(gra);
+			
+			
+			// Deprecated
+			// this.context = this.canvas.getContext('2d');
 
 			this.mouseListeners = [
 				listenMouseMove(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseMove', mousePosition); }),
@@ -2135,15 +2242,15 @@ var Scene = (function (Serializable$$1) {
 			];
 		}
 		this.level = null;
-		
+
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
-		
+
 		this.animationFrameId = null;
 		this.playing = false;
 		this.time = 0;
 		this.won = false;
-		
+
 		addChange(changeType.addSerializableToTree, this);
 
 		if (predefinedId)
@@ -2152,44 +2259,51 @@ var Scene = (function (Serializable$$1) {
 			{ console.log('scene created'); }
 
 		createWorld(this, physicsOptions);
-		
+
 		this.draw();
 	}
 
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+
 	Scene.prototype.win = function win () {
 		this.won = true;
 	};
+
 	Scene.prototype.animFrame = function animFrame () {
 		this.animationFrameId = null;
 		if (!this._alive || !this.playing) { return; }
-		
+
 		var timeInMilliseconds = performance.now();
-		var t = 0.001*timeInMilliseconds;
-		var dt = t-this._prevUpdate;
+		var t = 0.001 * timeInMilliseconds;
+		var dt = t - this._prevUpdate;
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
 		this.time += dt;
 
 		setChangeOrigin$1(this);
-		
+
+		// Update logic
 		this.dispatch('onUpdate', dt, this.time);
+
+		// Update physics
 		updateWorld(this, dt, timeInMilliseconds);
-		
+
+		// Update graphics
 		this.draw();
-		
+
 		if (this.won) {
 			this.pause();
 			this.time = 0;
 			game.dispatch('levelCompleted');
 			this.reset();
 		}
-		
+
 		this.requestAnimFrame();
 	};
+
 	Scene.prototype.requestAnimFrame = function requestAnimFrame () {
 		var this$1 = this;
 
@@ -2199,13 +2313,18 @@ var Scene = (function (Serializable$$1) {
 		else
 			{ this.animationFrameId = setTimeout(callback, 16); }
 	};
+
 	Scene.prototype.draw = function draw () {
-		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		this.dispatch('onDraw', this.context);
+		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		// this.dispatch('onDraw', this.context);
+		
+		this.renderer.render(this.stage, null, true);
 	};
+
 	Scene.prototype.isInInitialState = function isInInitialState () {
 		return !this.playing && this.time === 0;
 	};
+
 	Scene.prototype.reset = function reset () {
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
@@ -2215,18 +2334,20 @@ var Scene = (function (Serializable$$1) {
 
 		deleteWorld(this);
 		createWorld(this, physicsOptions);
-		
+
+		this.won = false;
+		this.time = 0;
+
 		if (this.level)
 			{ this.level.createScene(this); }
 		
-		this.won = false;
-		this.time = 0;
 		this.draw();
 		delete this.resetting;
 	};
+
 	Scene.prototype.pause = function pause () {
 		if (!this.playing) { return; }
-		
+
 		this.playing = false;
 		if (this.animationFrameId) {
 			if (window.requestAnimationFrame)
@@ -2236,39 +2357,46 @@ var Scene = (function (Serializable$$1) {
 		}
 		this.animationFrameId = null;
 	};
-	Scene.prototype.play = function play () {
+
+	Scene.prototype.play = function play () {
 		if (this.playing) { return; }
-		
-		this._prevUpdate = 0.001*performance.now();
+
+		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
-		
+
 		this.requestAnimFrame();
-		
-		
+
+
 		if (this.time === 0)
 			{ this.dispatch('onStart'); }
-		
+
 		/*
-		let player = game.findChild('prt', p => p.name === 'Player', true);
-		if (player) {
-			console.log('Spawning player!', player);
-			this.spawn(player);
-		}
-		*/
+		 let player = game.findChild('prt', p => p.name === 'Player', true);
+		 if (player) {
+		 console.log('Spawning player!', player);
+		 this.spawn(player);
+		 }
+		 */
 	};
+
 	Scene.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
 
 		deleteWorld(this);
-		
+
 		if (scene === this)
 			{ scene = null; }
-		
+
 		if (this.mouseListeners) {
 			this.mouseListeners.forEach(function (listener) { return listener(); });
 			this.mouseListeners = null;
 		}
 		
+		this.renderer = null; // Do not call renderer.destroy(). Same renderer is used by all scenes for now.
+		
+		this.stage.destroy();
+		this.stage = null;
+
 		console.log('scene.delete');
 		return true;
 	};
@@ -2282,11 +2410,13 @@ var Scene = (function (Serializable$$1) {
 		}
 		set.add(component);
 	};
+
 	Scene.prototype.removeComponent = function removeComponent (component) {
 		var set = this.components.get(component.constructor.componentName);
 		assert(set);
 		assert(set.delete(component));
 	};
+
 	Scene.prototype.getComponents = function getComponents (componentName) {
 		return this.components.get(componentName) || new Set;
 	};
@@ -2509,8 +2639,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2890,21 +3018,170 @@ Component$1.register({
 	],
 	prototype: {
 		init: function init() {
+			var this$1 = this;
+
 			if (this.randomStyle)
-				{ this.style = "hsl(" + (Math.random()*360 | 0) + ", 100%, 40%)"; }
+				{ this.style = "hsl(" + (Math.random() * 360 | 0) + ", 100%, 40%)"; }
+			
+			this.createGraphics();
+
+			this.listenProperty(this.Transform, 'position', function (position) {
+				this$1.graphics.x = position.x;
+				this$1.graphics.y = position.y;
+			});
+
+			this.listenProperty(this.Transform, 'angle', function (angle) {
+				this$1.graphics.rotation = angle;
+			});
+			
+			var redrawGraphics = function () {
+				if (this$1.graphics) {
+					this$1.drawGraphics();
+				}
+			};
+
+			this.listenProperty(this, 'size', redrawGraphics);
+			this.listenProperty(this, 'style', redrawGraphics);
+			this.listenProperty(this.Transform, 'scale', redrawGraphics);
+		},
+		createGraphics: function createGraphics() {
+			this.graphics = new PIXI$2.Graphics();
+			this.drawGraphics();
+			this.scene.mainLayer.addChild(this.graphics);
+
+			var T = this.Transform;
+			
+			this.graphics.x = T.position.x;
+			this.graphics.y = T.position.y;
+			this.graphics.rotation = T.angle;
+		},
+		drawGraphics: function drawGraphics() {
+			var scale = this.Transform.scale;
+			var
+				x = -this.size.x / 2 * scale.x,
+				y = -this.size.y / 2 * scale.y,
+				w = this.size.x * scale.x,
+				h = this.size.y * scale.y;
+			
+			this.graphics.clear();
+			this.graphics.lineStyle(2, 0xFF3300, 1);
+			this.graphics.beginFill(0x66CCFF);
+			this.graphics.drawRect(x, y, w, h);
+			this.graphics.endFill();
+		},
+		sleep: function sleep() {
+			this.graphics.destroy();
+			this.graphics = null;
+		},
+		onUpdate: function onUpdate() {
+
 		},
 		onDraw: function onDraw(context) {
 			var
-				x = this.Transform.position.x - this.size.x/2 * this.Transform.scale.x,
-				y = this.Transform.position.y - this.size.y/2 * this.Transform.scale.y,
+				x = this.Transform.position.x - this.size.x / 2 * this.Transform.scale.x,
+				y = this.Transform.position.y - this.size.y / 2 * this.Transform.scale.y,
 				w = this.size.x * this.Transform.scale.x,
 				h = this.size.y * this.Transform.scale.y;
 			context.save();
 			context.fillStyle = this.style;
-			context.translate(x+w/2, y+h/2);
+			context.translate(x + w / 2, y + h / 2);
 			context.rotate(this.Transform.angle);
-			context.fillRect(-w/2, -h/2, w, h);
+			context.fillRect(-w / 2, -h / 2, w, h);
 			context.restore();
+		}
+	}
+});
+
+Component$1.register({
+	name: 'Shape',
+	icon: 'fa-stop',
+	allowMultiple: true,
+	properties: [
+		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle')),
+		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
+		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
+		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
+		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
+		createPropertyType('borderWidth', 1, createPropertyType.float)
+	],
+	prototype: {
+		init: function init() {
+			var this$1 = this;
+
+			this.createGraphics();
+
+			this.listenProperty(this.Transform, 'position', function (position) {
+				this$1.graphics.x = position.x;
+				this$1.graphics.y = position.y;
+			});
+
+			this.listenProperty(this.Transform, 'angle', function (angle) {
+				this$1.graphics.rotation = angle;
+			});
+
+			var redrawGraphics = function () {
+				if (this$1.graphics) {
+					this$1.drawGraphics();
+				}
+			};
+			
+			this.listenProperty(this.Transform, 'scale', redrawGraphics);
+			
+			var propertiesThatRequireRedraw = [
+				'type',
+				'radius',
+				'size',
+				'fillColor',
+				'borderColor',
+				'borderWidth'
+			];
+
+			propertiesThatRequireRedraw.forEach(function (propName) {
+				this$1.listenProperty(this$1, propName, redrawGraphics);
+			});
+		},
+		createGraphics: function createGraphics() {
+			this.graphics = new PIXI$2.Graphics();
+			this.drawGraphics();
+			
+			this.scene.mainLayer.addChild(this.graphics);
+
+			var T = this.Transform;
+
+			this.graphics.x = T.position.x;
+			this.graphics.y = T.position.y;
+			this.graphics.rotation = T.angle;
+		},
+		drawGraphics: function drawGraphics() {
+			var scale = this.Transform.scale;
+			this.graphics.clear();
+			
+			if (this.type === 'rectangle') {
+				var
+					x = -this.size.x / 2 * scale.x,
+					y = -this.size.y / 2 * scale.y,
+					w = this.size.x * scale.x,
+					h = this.size.y * scale.y;
+
+				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				this.graphics.beginFill(this.fillColor.toHexNumber());
+				this.graphics.drawRect(x, y, w, h);
+				this.graphics.endFill();
+			} else if (this.type === 'circle') {
+				var averageScale = (scale.x + scale.y) / 2;
+				
+				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				this.graphics.beginFill(this.fillColor.toHexNumber());
+				this.graphics.drawCircle(0, 0, this.radius * averageScale);
+				this.graphics.endFill();
+			}
+		},
+		sleep: function sleep() {
+			this.graphics.destroy();
+			this.graphics = null;
+		},
+		onUpdate: function onUpdate() {
+
 		}
 	}
 });
@@ -2912,11 +3189,24 @@ Component$1.register({
 Component$1.register({
 	name: 'Spawner',
 	properties: [
-		createPropertyType('typeName', '', createPropertyType.string)
+		createPropertyType('typeName', '', createPropertyType.string),
+		createPropertyType('trigger', 'start', createPropertyType.enum, createPropertyType.enum.values('start', 'interval')),
+		createPropertyType('interval', 10, createPropertyType.float, createPropertyType.float.range(0.1, 1000000), createPropertyType.visibleIf('trigger', 'interval'), 'Interval in seconds')
 	],
 	prototype: {
+		constructor: function constructor() {
+			this.lastSpawn = 0;
+		},
+		init: function init() {
+			this.lastSpawn = this.scene.time;
+		},
 		onStart: function onStart() {
-			this.spawn();
+			if (this.trigger === 'start')
+				{ this.spawn(); }
+		},
+		onUpdate: function onUpdate() {
+			if (this.scene.time > this.lastSpawn + this.interval)
+				{ this.spawn(); }
 		},
 		onDrawHelper: function onDrawHelper(context) {
 			var size = 30;
@@ -2944,6 +3234,7 @@ Component$1.register({
 				{ return; }
 
 			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+			this.lastSpawn = this.scene.time;
 		}
 	}
 });
@@ -3033,7 +3324,7 @@ Component$1.register({
 		createPropertyType('friction', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1))
 	],
 	requirements: [
-		'Rect'
+		'Shape'
 	],
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
@@ -3052,9 +3343,11 @@ Component$1.register({
 				}
 			};
 
-			var Rects = this.entity.getComponents('Rect');
-			for (var i = 0; i < Rects.length; ++i) {
-				this$1.listenProperty(Rects[i], 'size', update(function (size) { return this$1.updateShape(); }));
+			var Shapes = this.entity.getComponents('Shapes');
+			for (var i = 0; i < Shapes.length; ++i) {
+				this$1.listenProperty(Shapes[i], 'type', update(function (size) { return this$1.updateShape(); }));
+				this$1.listenProperty(Shapes[i], 'size', update(function (size) { return this$1.updateShape(); }));
+				this$1.listenProperty(Shapes[i], 'radius', update(function (size) { return this$1.updateShape(); }));
 			}
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
@@ -3085,7 +3378,7 @@ Component$1.register({
 				angle: this.Transform.angle,
 				velocity: [0, 0],
 				angularVelocity: 0,
-				sleepTimeLimit: 0.5,
+				sleepTimeLimit: 0.6,
 				sleepSpeedLimit: 0.3,
 				damping: this.drag,
 				angularDamping: this.rotationalDrag
@@ -3114,15 +3407,25 @@ Component$1.register({
 				shapes.length = 0;
 			}
 
-			var Rects = this.entity.getComponents('Rect');
+			var Shapes = this.entity.getComponents('Shape');
 			var scale = this.Transform.scale;
-			
-			Rects.forEach(function (R) {
-				var shape = new p2$1.Box({
-					width: R.size.x * PHYSICS_SCALE * scale.x,
-					height: R.size.y * PHYSICS_SCALE * scale.y
-				});
-				this$1.body.addShape(shape);
+
+			Shapes.forEach(function (Shape) {
+				var shape;
+				if (Shape.type === 'rectangle') {
+					shape = new p2$1.Box({
+						width: Shape.size.x * PHYSICS_SCALE * scale.x,
+						height: Shape.size.y * PHYSICS_SCALE * scale.y
+					});
+				} else if (Shape.type === 'circle') {
+					var averageScale = (scale.x + scale.y) / 2;
+					
+					shape = new p2$1.Circle({
+						radius: Shape.radius * PHYSICS_SCALE * averageScale
+					});
+				}
+				if (shape)
+					{ this$1.body.addShape(shape); }
 			});
 			
 			this.updateMass();
@@ -3367,8 +3670,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -3893,7 +4194,7 @@ var ModuleTab = function ModuleTab() {
 };
 ModuleTab.prototype.update = function update (module) {
 	this.module = module;
-	this.el.textContent = module.name;
+	this.el.innerHTML = module.name;
 	this.el.classList.toggle('moduleSelected', module._selected);
 	this.el.classList.toggle('moduleEnabled', module._enabled);
 };
@@ -3963,7 +4264,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -4197,6 +4497,16 @@ editors.enum = function (container, oninput, onchange, options) {
 	}
 };
 
+editors.color = function (container, oninput, onchange) {
+	var input = el('input', {
+		type: 'color',
+		oninput: function () { return oninput(input.value); },
+		onchange: function () { return onchange(input.value); }
+	});
+	mount(container, input);
+	return function (val) { return input.value = val.toHexString(); };
+};
+
 var ComponentAdder = (function (Popup$$1) {
 	function ComponentAdder(parent, callback) {
 		var this$1 = this;
@@ -4252,6 +4562,7 @@ var Widget = function Widget(options) {
 	this.x = options.x || 0;
 	this.y = options.y || 0;
 	this.r = options.r || defaultWidgetRadius;
+	this.hovering = false;
 	this.component = options.component;
 	this.relativePosition = options.relativePosition || new Vector(0, 0);
 };
@@ -4263,6 +4574,11 @@ Widget.prototype.updatePosition = function updatePosition () {
 	var pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
 	this.x = pos.x;
 	this.y = pos.y;
+		
+	if (this.graphics) {
+		this.graphics.x = this.x;
+		this.graphics.y = this.y;
+	}
 };
 	
 // Optimized for many function calls
@@ -4298,6 +4614,58 @@ Widget.prototype.draw = function draw (context) {
 	context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
 	context.fill();
 	context.stroke();
+};
+
+Widget.prototype.createGraphics = function createGraphics () {
+	var graphics = new PIXI$2.Graphics();
+		
+	graphics.lineStyle(4, 0x000000, 0.2);
+	graphics.drawCircle(0, 0, this.r);
+
+	graphics.lineStyle(2, 0xFFFFFF, 1);
+	graphics.drawCircle(0, 0, this.r);
+		
+	return graphics;
+};
+	
+Widget.prototype.init = function init () {
+	this.graphics = this.createGraphics();
+	this.updatePosition();
+	this.updateVisibility();
+	this.component.scene.positionHelperLayer.addChild(this.graphics);
+};
+	
+Widget.prototype.sleep = function sleep () {
+	if (this.graphics) {
+		this.graphics.destroy();
+		this.graphics = null;
+	}
+};
+	
+Widget.prototype.delete = function delete$1 () {
+	this.sleep();
+	this.component = null;
+	this.relativePosition = null;
+};
+	
+Widget.prototype.updateVisibility = function updateVisibility () {
+	if (this.graphics) {
+		if (this.hovering) {
+			this.graphics.alpha = 1;
+		} else {
+			this.graphics.alpha = 0.4;
+		}
+	}
+};
+	
+Widget.prototype.hover = function hover () {
+	this.hovering = true;
+	this.updateVisibility();
+};
+Widget.prototype.unhover = function unhover () {
+	this.hovering = false;
+	if (this.component) // if alive
+		{ this.updateVisibility(); }
 };
 
 function shouldSyncLevelAndScene() {
@@ -4624,10 +4992,13 @@ function entityModifiedInEditor(entity, change) {
 	entity.dispatch('changedInEditor', change);
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
+function setEntitiesInSelectionArea(entities, inSelectionArea) {
+	entities.forEach(function (entity) {
+		var editorWidget = entity.getComponent('EditorWidget');
+		editorWidget.inSelectionArea = inSelectionArea;
+		editorWidget.position.updateVisibility();
+	});
+}
 
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
@@ -5033,7 +5404,13 @@ var Type = (function (Module$$1) {
 			this, this.propertyEditor = new PropertyEditor()
 		);
 		this.id = 'type';
-		this.name = 'Type';
+		this.name = '<u>T</u>ype';
+
+		listenKeyDown(function (k) {
+			if (k === key.t) {
+				Module$$1.activateModule('type', true);
+			}
+		});
 	}
 
 	if ( Module$$1 ) Type.__proto__ = Module$$1;
@@ -5066,11 +5443,17 @@ Module.register(Type, 'right');
 
 var Instance = (function (Module$$1) {
 	function Instance() {
-		Module$$1.call(
-			this, this.propertyEditor = new PropertyEditor()
-		);
+		var propertyEditor = new PropertyEditor();
+		Module$$1.call(this, propertyEditor);
+		this.propertyEditor = propertyEditor;
 		this.id = 'instance';
-		this.name = 'Instance';
+		this.name = '<u>I</u>nstance';
+
+		listenKeyDown(function (k) {
+			if (k === key.i) {
+				Module$$1.activateModule('instance', true);
+			}
+		});
 	}
 
 	if ( Module$$1 ) Instance.__proto__ = Module$$1;
@@ -5303,9 +5686,6 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
-/// Drawing
-
-// '#53f8ff'
 var widgetColor = 'white';
 
 
@@ -5313,6 +5693,8 @@ var widgetColor = 'white';
 function drawSelection(start, end, entitiesInsideSelection) {
 	if ( entitiesInsideSelection === void 0 ) entitiesInsideSelection = [];
 
+	return; // PIXI refactor
+	
 	if (!start || !end)
 		{ return; }
 
@@ -5338,6 +5720,8 @@ function drawSelection(start, end, entitiesInsideSelection) {
 }
 
 function drawPositionHelpers(entities) {
+	return; // PIXI refactor
+	
 	scene.context.fillStyle = 'white';
 	var size = 3;
 	var halfSize = size/2;
@@ -5536,6 +5920,48 @@ var AngleWidget = (function (Widget$$1) {
 		});
 	};
 
+	AngleWidget.prototype.updatePosition = function updatePosition () {
+		var Transform = this.component.Transform;
+		var pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
+		this.x = pos.x;
+		this.y = pos.y;
+
+		if (this.graphics) {
+			this.graphics.x = Transform.position.x;
+			this.graphics.y = Transform.position.y;
+			this.graphics.rotation = Transform.angle;
+		}
+	};
+	
+	AngleWidget.prototype.createGraphics = function createGraphics () {
+		var tail = this.relativePosition.clone().setLength(centerWidgetRadius);
+		var head = this.relativePosition.clone().setLength(defaultWidgetDistance - this.r);
+		
+		/*
+		let arrowWing = this.relativePosition.clone().setLength(this.r * 1).multiplyScalar(-1);
+		let arrowWing1 = arrowWing.clone().rotate(Math.PI/2).add(arrowHead);
+		let arrowWing2 = arrowWing.clone().rotate(-Math.PI/2).add(arrowHead);
+
+*/
+		
+		var graphics = new PIXI.Graphics();
+
+		graphics.beginFill(0x000000, 0.4);
+		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
+		graphics.endFill();
+
+		graphics.beginFill(0xFFFFFF, 1);
+		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r);
+		graphics.endFill();
+		
+		graphics.lineStyle(2, 0xFFFFFF, 1);
+
+		graphics.moveTo(tail.x, tail.y);
+		graphics.lineTo(head.x, head.y);
+
+		return graphics;
+	};
+
 	AngleWidget.prototype.draw = function draw (context) {
 		var p = this.component.Transform.position;
 
@@ -5580,11 +6006,6 @@ var PositionWidget = (function (Widget$$1) {
 	if ( Widget$$1 ) PositionWidget.__proto__ = Widget$$1;
 	PositionWidget.prototype = Object.create( Widget$$1 && Widget$$1.prototype );
 	PositionWidget.prototype.constructor = PositionWidget;
-	PositionWidget.prototype.updatePosition = function updatePosition () {
-		var p = this.component.Transform.position;
-		this.x = p.x;
-		this.y = p.y;
-	};
 	PositionWidget.prototype.draw = function draw (context) {
 		var p = this.component.Transform.position;
 		context.beginPath();
@@ -5596,6 +6017,22 @@ var PositionWidget = (function (Widget$$1) {
 		affectedEntities.forEach(function (entity) {
 			entity.position = entity.position.add(mousePositionChange);
 		});
+	};
+
+	PositionWidget.prototype.updateVisibility = function updateVisibility () {
+		if (this.component.selected) {
+			if (this.hovering) {
+				this.graphics.alpha = 1;
+			} else {
+				this.graphics.alpha = 0.5;
+			}
+		} else {
+			if (this.hovering || this.component.inSelectionArea) {
+				this.graphics.alpha = 0.5;
+			} else {
+				this.graphics.alpha = 0;
+			}
+		}
 	};
 
 	return PositionWidget;
@@ -5614,26 +6051,67 @@ var ScaleWidget = (function (Widget$$1) {
 	if ( Widget$$1 ) ScaleWidget.__proto__ = Widget$$1;
 	ScaleWidget.prototype = Object.create( Widget$$1 && Widget$$1.prototype );
 	ScaleWidget.prototype.constructor = ScaleWidget;
+
+	ScaleWidget.prototype.updatePosition = function updatePosition () {
+		var Transform = this.component.Transform;
+		var pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
+		this.x = pos.x;
+		this.y = pos.y;
+
+		if (this.graphics) {
+			this.graphics.x = Transform.position.x;
+			this.graphics.y = Transform.position.y;
+			this.graphics.rotation = Transform.angle;
+		}
+	};
+
+	ScaleWidget.prototype.createGraphics = function createGraphics () {
+		var arrowTail = this.relativePosition.clone().setLength(centerWidgetRadius);
+		var arrowHead = this.relativePosition.clone().setLength(this.relativePosition.length() + this.r);
+		var arrowWing = this.relativePosition.clone().setLength(this.r * 1.8).multiplyScalar(-1);
+		var arrowWing1 = arrowWing.clone().rotate(0.6).add(arrowHead);
+		var arrowWing2 = arrowWing.clone().rotate(-0.6).add(arrowHead);
+
+		var graphics = new PIXI.Graphics();
+
+		graphics.beginFill(0x000000, 0.4);
+		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
+		graphics.endFill();
+		
+		graphics.lineStyle(2, 0xFFFFFF, 1);
+		
+		graphics.moveTo(arrowHead.x, arrowHead.y);
+		graphics.lineTo(arrowTail.x, arrowTail.y);
+
+		graphics.moveTo(arrowHead.x, arrowHead.y);
+		graphics.lineTo(arrowWing1.x, arrowWing1.y);
+
+		graphics.moveTo(arrowHead.x, arrowHead.y);
+		graphics.lineTo(arrowWing2.x, arrowWing2.y);
+		
+		return graphics;
+	};
+
 	ScaleWidget.prototype.onDrag = function onDrag (mousePosition, mousePositionChange, affectedEntities) {
 		var oldMousePosition = mousePosition.clone().subtract(mousePositionChange);
 		var widgetPosition = Vector.fromObject(this);
 		var entityPosition = this.component.Transform.position;
-		
+
 		var relativeWidgetPosition = widgetPosition.clone().subtract(entityPosition);
 		var relativeMousePosition = mousePosition.clone().subtract(entityPosition);
 		var relativeOldMousePosition = oldMousePosition.subtract(entityPosition);
-		
-		
+
+
 		var mousePositionValue = relativeWidgetPosition.dot(relativeMousePosition) / relativeWidgetPosition.lengthSq();
 		var oldMousePositionValue = relativeWidgetPosition.dot(relativeOldMousePosition) / relativeWidgetPosition.lengthSq();
-		
+
 		var change = mousePositionValue - oldMousePositionValue;
-		
+
 		var changeDirection = this.relativePosition.clone().multiply(new Vector(1, -1)).normalize();
-		
+
 		var changeVector = new Vector(1, 1).add(changeDirection.multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
-		
-		
+
+
 		affectedEntities.forEach(function (entity) {
 			var Transform = entity.getComponent('Transform');
 			var newScale = Transform.scale.clone().multiply(changeVector);
@@ -5663,22 +6141,22 @@ var ScaleWidget = (function (Widget$$1) {
 		context.moveTo(lineStart.x, lineStart.y);
 		context.lineTo(lineEnd.x, lineEnd.y);
 		context.stroke();
-		
 
-		var arrowTailPos = lineStart.clone().subtract(lineEnd).setLength(this.r*2);
-		
+
+		var arrowTailPos = lineStart.clone().subtract(lineEnd).setLength(this.r * 2);
+
 		var arrowTailPos1 = arrowTailPos.clone().rotate(0.5).add(lineEnd);
 		var arrowTailPos2 = arrowTailPos.clone().rotate(-0.5).add(lineEnd);
-		
+
 		context.save();
-		
+
 		context.lineWidth = 2;
 
 		context.beginPath();
 		context.moveTo(lineEnd.x, lineEnd.y);
 		context.lineTo(arrowTailPos1.x, arrowTailPos1.y);
 		context.stroke();
-		
+
 		context.beginPath();
 		context.moveTo(lineEnd.x, lineEnd.y);
 		context.lineTo(arrowTailPos2.x, arrowTailPos2.y);
@@ -5703,6 +6181,21 @@ function isMouseInPotentialWidgetArea(mousePosition, position) {
 		&& mousePosition.y < position.y + radius$1;
 }
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
 // Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
@@ -5712,10 +6205,11 @@ Component$1.register({
 		// Prop('selected', false, Prop.bool)
 	],
 	prototype: {
-		selected: false,
-		activeWidget: null,
-		widgets: null,
-		mouseOnWidget: null,
+		selected: false, // this entity is selected in editor -> all widgets are visible
+		activeWidget: null, // widget being dragged
+		widgets: null, // All 5 widgets are always here
+		mouseOnWidget: null, // If mouse is hovering on a visible widget,
+		inSelectionArea: false,
 		
 		// Widgets
 		xScale: null,
@@ -5723,19 +6217,43 @@ Component$1.register({
 		scale: null,
 		angle: null,
 		position: null,
+
+		positionHelper: null,
 		
 		constructor: function constructor() {
 			this.widgets = [
+				this.position = new PositionWidget(this),
 				this.xScale = new ScaleWidget(this, 1, 0),
 				this.yScale = new ScaleWidget(this, 0, 1),
 				this.scale = new ScaleWidget(this, 1, 1),
-				this.angle = new AngleWidget(this),
-				this.position = new PositionWidget(this)
+				this.angle = new AngleWidget(this)
 			];
 		},
 		select: function select() {
+			var this$1 = this;
+
+			if (!this.selected) {
+				this.selected = true;
+				for (var i = 1; i < this.widgets.length; ++i) {
+					this$1.widgets[i].init();
+				}
+				for (var i$1 = 0; i$1 < this.widgets.length; ++i$1) {
+					this$1.widgets[i$1].updateVisibility();
+				}
+			}
 		},
 		deselect: function deselect() {
+			var this$1 = this;
+
+			if (this.selected) {
+				this.selected = false;
+				for (var i = 1; i < this.widgets.length; ++i) {
+					this$1.widgets[i].sleep();
+				}
+				for (var i$1 = 0; i$1 < this.widgets.length; ++i$1) {
+					this$1.widgets[i$1].updateVisibility();
+				}
+			}
 		},
 		updateWidgets: function updateWidgets() {
 			var this$1 = this;
@@ -5754,26 +6272,62 @@ Component$1.register({
 		init: function init() {
 			var this$1 = this;
 
-			this.listenProperty(this.Transform, 'position', function () {
+			this.listenProperty(this.Transform, 'position', function (position) {
 				this$1.updateWidgets();
+				this$1.positionHelper.x = position.x;
+				this$1.positionHelper.y = position.y;
 			});
 			this.listenProperty(this.Transform, 'angle', function () {
 				this$1.updateWidgets();
 			});
+
+			
+			this.position.init();
+			
 			this.updateWidgets();
+			
+			this.positionHelper = new PIXI.Graphics();
+			this.positionHelper.beginFill(0xFFFFFF);
+			this.positionHelper.drawCircle(0, 0, 2.7);
+			this.positionHelper.endFill();
+			this.positionHelper.beginFill(0x000000);
+			this.positionHelper.drawCircle(0, 0, 1.3);
+			this.positionHelper.endFill();
+			this.positionHelper.x = this.Transform.position.x;
+			this.positionHelper.y = this.Transform.position.y;
+			this.scene.positionHelperLayer.addChild(this.positionHelper);
+
+			// let gra = new PIXI.Graphics();
+			// // gra.lineStyle(4, 0xFF3300, 1);
+			// gra.beginFill(0x66CCFF);
+			// gra.drawRect(0, 0, 10, 10);
+			// gra.endFill();
+			// gra.x = 0;
+			// gra.y = 0;
+			// this.stage.addChild(gra);
 		},
 		sleep: function sleep() {
+			this.selected = true;
+			this.widgets.forEach(function (widget) {
+				widget.sleep();
+			});
 		},
 		delete: function delete$1() {
+			this.widgets.forEach(function (widget) {
+				widget.delete();
+			});
 			this.widgets.length = 0;
 			this.xScale = null;
 			this.yScale = null;
 			this.scale = null;
 			this.angle = null;
 			this.position = null;
+			
+			this.positionHelper.destroy();
+			this.positionHelper = null;
 		},
 		onMouseMove: function onMouseMove(mousePosition) {
-			
+			return;
 			var p = this.Transform.position;
 			this.mouseOnWidget = null;
 			
@@ -5794,12 +6348,14 @@ Component$1.register({
 			
 		},
 		onMouseDown: function onMouseDown(mousePosition) {
+			return;
 			if (this.mouseOnWidget) {
-				this.selected = true;
+				this.select();
 				this.activeWidget = this.mouseOnWidget;
 			}
 		},
 		onMouseUp: function onMouseUp(mousePosition) {
+			return;
 			if (this.selected) {
 				this.updateWidgets();
 			}
@@ -5814,11 +6370,14 @@ Component$1.register({
 			context.fillStyle = 'black';
 			context.strokeStyle = secondaryColor;
 
+			
+			
 			if (this.selected) {
 				for (var i = 0; i < this.widgets.length; ++i) {
 					this$1.widgets[i].draw(context);
 				}
 			}
+			
 
 			if (this.mouseOnWidget) {
 				context.strokeStyle = 'white';
@@ -5880,6 +6439,7 @@ var SceneModule = (function (Module$$1) {
 		
 		this.selectionStart = null;
 		this.selectionEnd = null;
+		this.selectionArea = null;
 		this.entitiesInSelection = [];
 		
 		this.playButton = new TopButton({
@@ -5894,10 +6454,13 @@ var SceneModule = (function (Module$$1) {
 				this$1.clearState();
 				
 				if (scene.playing) {
+					scene.editorLayer.visible = true;
 					scene.pause();
 					this$1.draw();
-				} else
-					{ scene.play(); }
+				} else {
+					scene.editorLayer.visible = false;
+					scene.play();
+				}
 				this$1.updatePlayPauseButtonStates();
 			}
 		});
@@ -5907,6 +6470,8 @@ var SceneModule = (function (Module$$1) {
 			callback: function (btn) {
 				setChangeOrigin$1(this$1);
 				this$1.stopAndReset();
+
+				scene.editorLayer.visible = true;
 			}
 		});
 
@@ -5945,6 +6510,10 @@ var SceneModule = (function (Module$$1) {
 		
 		events.listen('change', function (change) {
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
+				
+				// Make sure the scene has the layers for EditorWidget
+				this$1.makeSureSceneHasEditorLayer();
+				
 				change.reference.addComponents([
 					Component$1.create('EditorWidget')
 				]);
@@ -6000,17 +6569,39 @@ var SceneModule = (function (Module$$1) {
 				this$1.widgetUnderMouse.onDrag(mousePos, change, this$1.entitiesToEdit);
 				copyTransformPropertiesFromEntitiesToEntityPrototypes(this$1.entitiesToEdit);
 			} else {
-				this$1.widgetUnderMouse = null;
+				if (this$1.widgetUnderMouse) {
+					this$1.widgetUnderMouse.unhover();
+					this$1.widgetUnderMouse = null;
+				}
 				setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
 				if (scene) {
-					if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd)
-						{ this$1.widgetUnderMouse = getWidgetUnderMouse(mousePos); }
+					if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd) {
+						this$1.widgetUnderMouse = getWidgetUnderMouse(mousePos);
+						if (this$1.widgetUnderMouse)
+							{ this$1.widgetUnderMouse.hover(); }
+					}
 				}
 			}
 			
 			if (this$1.selectionEnd) {
 				this$1.selectionEnd.add(change);
+				this$1.selectionArea.clear();
+				this$1.selectionArea.lineStyle(2, 0xFFFF00, 0.7);
+				this$1.selectionArea.beginFill(0xFFFF00, 0.3);
+				this$1.selectionArea.drawRect(
+					this$1.selectionStart.x,
+					this$1.selectionStart.y,
+					this$1.selectionEnd.x - this$1.selectionStart.x,
+					this$1.selectionEnd.y - this$1.selectionStart.y
+				);
+				
+				this$1.selectionArea.endFill();
+				
+				if (this$1.entitiesInSelection.length > 0) {
+					setEntitiesInSelectionArea(this$1.entitiesInSelection, false);
+				}
 				this$1.entitiesInSelection = getEntitiesInSelection(this$1.selectionStart, this$1.selectionEnd);
+				setEntitiesInSelectionArea(this$1.entitiesInSelection, true);
 			}
 
 			this$1.previousMousePos = mousePos;
@@ -6028,7 +6619,7 @@ var SceneModule = (function (Module$$1) {
 					if (!keyPressed(key.shift))
 						{ this$1.clearSelectedEntities(); }
 					this$1.selectedEntities.push(this$1.widgetUnderMouse.component.entity);
-					this$1.widgetUnderMouse.component.selected = true;
+					this$1.widgetUnderMouse.component.select();
 				}
 				(ref = this$1.entitiesToEdit).push.apply(ref, this$1.selectedEntities);
 				this$1.selectSelectedEntitiesInEditor();
@@ -6036,6 +6627,8 @@ var SceneModule = (function (Module$$1) {
 				this$1.clearSelectedEntities();
 				this$1.selectionStart = mousePos;
 				this$1.selectionEnd = mousePos.clone();
+				this$1.selectionArea = new PIXI$2.Graphics();
+				scene.selectionLayer.addChild(this$1.selectionArea);
 			}
 			
 			this$1.draw();
@@ -6047,13 +6640,18 @@ var SceneModule = (function (Module$$1) {
 			
 			this$1.selectionStart = null;
 			this$1.selectionEnd = null;
+			if (this$1.selectionArea) {
+				this$1.selectionArea.destroy();
+				this$1.selectionArea = null;
+			}
 			this$1.entitiesToEdit.length = 0;
 			
 			if (this$1.entitiesInSelection.length > 0) {
 				(ref = this$1.selectedEntities).push.apply(ref, this$1.entitiesInSelection);
 				this$1.entitiesInSelection.forEach(function (entity) {
-					entity.getComponent('EditorWidget').selected = true;
+					entity.getComponent('EditorWidget').select();
 				});
+				setEntitiesInSelectionArea(this$1.entitiesInSelection, false);
 				this$1.entitiesInSelection.length = 0;
 				this$1.selectSelectedEntitiesInEditor();
 			}
@@ -6083,17 +6681,37 @@ var SceneModule = (function (Module$$1) {
 		}
 	};
 	
+	SceneModule.prototype.makeSureSceneHasEditorLayer = function makeSureSceneHasEditorLayer () {
+		if (!scene.editorLayer) {
+			scene.editorLayer = new PIXI$2.Container();
+			scene.stage.addChild(scene.editorLayer);
+			
+			scene.widgetLayer = new PIXI$2.Container();
+			scene.positionHelperLayer = new PIXI$2.Container();
+			scene.selectionLayer = new PIXI$2.Container();
+			
+			scene.editorLayer.addChild(
+				scene.widgetLayer,
+				scene.positionHelperLayer,
+				scene.selectionLayer
+			);
+		}
+	};
+	
 	SceneModule.prototype.fixAspectRatio = function fixAspectRatio () {
 		if (this.canvas) {
 			var change = false;
-			if (this.canvas.width !== this.canvas.offsetWidth && this.canvas.offsetWidth) {
-				this.canvas.width = this.canvas.offsetWidth;
+			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth) {
+				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
 				change = true;
 			}
-			if (this.canvas.height !== this.canvas.offsetHeight && this.canvas.offsetHeight) {
-				this.canvas.height = this.canvas.offsetHeight;
+			else if (this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
+				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
 				change = true;
 			}
+
+			// scene.renderer.resize(this.canvas.width, this.canvas.height);
+			
 			if (change) {
 				this.draw();
 			}
@@ -6108,6 +6726,9 @@ var SceneModule = (function (Module$$1) {
 				this.filterDeadSelection();
 				
 				scene.draw();
+
+				return; // PIXI refactor
+				
 				scene.dispatch('onDrawHelper', scene.context);
 				drawPositionHelpers(scene.getChildren('ent'));
 
@@ -6121,6 +6742,8 @@ var SceneModule = (function (Module$$1) {
 				}
 			}
 		} else {
+			return; // PIXI refactor
+			
 			this.drawNoLevel();
 			setTimeout(function () {
 				if (game.getChildren('lvl').length === 0) {
@@ -6132,23 +6755,27 @@ var SceneModule = (function (Module$$1) {
 	};
 	
 	SceneModule.prototype.drawNoLevel = function drawNoLevel () {
+		/*
 		this.canvas.width = this.canvas.width;
-		var context = this.canvas.getContext('2d');
+		let context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
 		context.fillText('No level selected', 20, 35);
+		*/
 	};
 	SceneModule.prototype.drawEmptyLevel = function drawEmptyLevel () {
-		var context = this.canvas.getContext('2d');
+		/*
+		let context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
 		context.fillText('Empty level. Click a type and place it here.', 20, 35);
+		*/
 	};
 	
 	SceneModule.prototype.clearSelectedEntities = function clearSelectedEntities () {
 		this.selectedEntities.forEach(function (entity) {
 			if (entity._alive)
-				{ entity.getComponent('EditorWidget').selected = false; }
+				{ entity.getComponent('EditorWidget').deselect(); }
 		});
 		this.selectedEntities.length = 0;
 	};
@@ -6156,6 +6783,8 @@ var SceneModule = (function (Module$$1) {
 	SceneModule.prototype.clearState = function clearState () {
 		this.deleteNewEntities();
 		
+		if (this.widgetUnderMouse)
+			{ this.widgetUnderMouse.unhover(); }
 		this.widgetUnderMouse = null;
 		this.clearSelectedEntities();
 		this.entitiesToEdit.length = 0;

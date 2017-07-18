@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<canvas width="400" height="300" id="myCanvas"></canvas>
+<script src="../../src/external/pixi.min.js"></script>
+<script>
+    console.log(myCanvas)
+	let renderer = PIXI.autoDetectRenderer({
+        view: myCanvas
+    });
+//	document.body.append(renderer.view);
+
+	let stage = new PIXI.Container();
+
+	let gra = new PIXI.Graphics();
+	gra.lineStyle(4, 0xFF3300, 1);
+	gra.beginFill(0x66CCFF);
+	gra.drawRect(0, 0, 64, 64);
+	gra.endFill();
+	gra.x = 170;
+	gra.y = 170;
+	stage.addChild(gra);
+	
+	renderer.render(stage);
+	
+</script>
+
+</body>
+</html>

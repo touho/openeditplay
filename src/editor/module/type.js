@@ -3,6 +3,7 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor';
 import { editor } from '../editor';
 import PropertyOwner from '../../core/propertyOwner'
+import { listenKeyDown, key } from '../../util/input';
 
 class Type extends Module {
 	constructor() {
@@ -10,7 +11,13 @@ class Type extends Module {
 			this.propertyEditor = new PropertyEditor()
 		);
 		this.id = 'type';
-		this.name = 'Type';
+		this.name = '<u>T</u>ype';
+
+		listenKeyDown(k => {
+			if (k === key.t) {
+				Module.activateModule('type', true);
+			}
+		});
 	}
 	update() {
 		if (editor.selection.items.length != 1)

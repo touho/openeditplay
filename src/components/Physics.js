@@ -25,7 +25,7 @@ Component.register({
 		Prop('friction', 0.1, Prop.float, Prop.float.range(0, 1))
 	],
 	requirements: [
-		'Rect'
+		'Shape'
 	],
 	requiesInitWhenEntityIsEdited: true,
 	prototype: {
@@ -42,9 +42,11 @@ Component.register({
 				}
 			};
 
-			let Rects = this.entity.getComponents('Rect');
-			for (let i = 0; i < Rects.length; ++i) {
-				this.listenProperty(Rects[i], 'size', update(size => this.updateShape()));
+			let Shapes = this.entity.getComponents('Shapes');
+			for (let i = 0; i < Shapes.length; ++i) {
+				this.listenProperty(Shapes[i], 'type', update(size => this.updateShape()));
+				this.listenProperty(Shapes[i], 'size', update(size => this.updateShape()));
+				this.listenProperty(Shapes[i], 'radius', update(size => this.updateShape()));
 			}
 
 			this.listenProperty(this.Transform, 'position', update(position => this.body.position = position.toArray().map(x => x * PHYSICS_SCALE)));
@@ -75,7 +77,7 @@ Component.register({
 				angle: this.Transform.angle,
 				velocity: [0, 0],
 				angularVelocity: 0,
-				sleepTimeLimit: 0.5,
+				sleepTimeLimit: 0.6,
 				sleepSpeedLimit: 0.3,
 				damping: this.drag,
 				angularDamping: this.rotationalDrag
@@ -102,15 +104,25 @@ Component.register({
 				shapes.length = 0;
 			}
 
-			let Rects = this.entity.getComponents('Rect');
+			let Shapes = this.entity.getComponents('Shape');
 			let scale = this.Transform.scale;
-			
-			Rects.forEach(R => {
-				let shape = new p2.Box({
-					width: R.size.x * PHYSICS_SCALE * scale.x,
-					height: R.size.y * PHYSICS_SCALE * scale.y
-				});
-				this.body.addShape(shape);
+
+			Shapes.forEach(Shape => {
+				let shape;
+				if (Shape.type === 'rectangle') {
+					shape = new p2.Box({
+						width: Shape.size.x * PHYSICS_SCALE * scale.x,
+						height: Shape.size.y * PHYSICS_SCALE * scale.y
+					});
+				} else if (Shape.type === 'circle') {
+					let averageScale = (scale.x + scale.y) / 2;
+					
+					shape = new p2.Circle({
+						radius: Shape.radius * PHYSICS_SCALE * averageScale
+					});
+				}
+				if (shape)
+					this.body.addShape(shape);
 			});
 			
 			this.updateMass();

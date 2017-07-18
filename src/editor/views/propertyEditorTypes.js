@@ -75,3 +75,13 @@ editors.enum = (container, oninput, onchange, options) => {
 		select.value = val;
 	}
 };
+
+editors.color = (container, oninput, onchange) => {
+	let input = el('input', {
+		type: 'color',
+		oninput: () => oninput(input.value),
+		onchange: () => onchange(input.value)
+	});
+	mount(container, input);
+	return val => input.value = val.toHexString();
+};

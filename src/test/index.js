@@ -1,4 +1,4 @@
-import { default as deepStrictEqual } from 'deep-strict-equal';
+const deepStrictEqual = require('deep-strict-equal');
 import { setChangeOrigin } from '../core/serializableManager';
 
 import './game';

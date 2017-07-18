@@ -6,6 +6,8 @@ import { scene } from '../../core/scene';
 let widgetColor = 'white';
 
 export function drawEntityUnderMouse(entity) {
+	return; // PIXI refactor
+	
 	if (!entity)
 		return;
 
@@ -20,6 +22,8 @@ export function drawEntityUnderMouse(entity) {
 }
 
 export function drawSelection(start, end, entitiesInsideSelection = []) {
+	return; // PIXI refactor
+	
 	if (!start || !end)
 		return;
 
@@ -45,6 +49,8 @@ export function drawSelection(start, end, entitiesInsideSelection = []) {
 }
 
 export function drawPositionHelpers(entities) {
+	return; // PIXI refactor
+	
 	scene.context.fillStyle = 'white';
 	let size = 3;
 	let halfSize = size/2;

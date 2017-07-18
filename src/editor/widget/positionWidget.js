@@ -7,11 +7,6 @@ export default class PositionWidget extends Widget {
 			component
 		});
 	}
-	updatePosition() {
-		let p = this.component.Transform.position;
-		this.x = p.x;
-		this.y = p.y;
-	}
 	draw(context) {
 		let p = this.component.Transform.position;
 		context.beginPath();
@@ -23,5 +18,21 @@ export default class PositionWidget extends Widget {
 		affectedEntities.forEach(entity => {
 			entity.position = entity.position.add(mousePositionChange);
 		});
+	}
+
+	updateVisibility() {
+		if (this.component.selected) {
+			if (this.hovering) {
+				this.graphics.alpha = 1;
+			} else {
+				this.graphics.alpha = 0.5;
+			}
+		} else {
+			if (this.hovering || this.component.inSelectionArea) {
+				this.graphics.alpha = 0.5;
+			} else {
+				this.graphics.alpha = 0;
+			}
+		}
 	}
 }

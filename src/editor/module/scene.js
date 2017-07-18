@@ -18,6 +18,7 @@ import Vector from '../../util/vector';
 import { removeTheDeadFromArray } from '../../util/algorithm';
 import { help } from '../help';
 import { createNewLevel } from './levels';
+import PIXI from '../../feature/graphics';
 
 import '../components/EditorWidget';
 
@@ -71,6 +72,7 @@ class SceneModule extends Module {
 		
 		this.selectionStart = null;
 		this.selectionEnd = null;
+		this.selectionArea = null;
 		this.entitiesInSelection = [];
 		
 		this.playButton = new TopButton({
@@ -85,10 +87,13 @@ class SceneModule extends Module {
 				this.clearState();
 				
 				if (scene.playing) {
+					scene.editorLayer.visible = true;
 					scene.pause();
 					this.draw();
-				} else
+				} else {
+					scene.editorLayer.visible = false;
 					scene.play();
+				}
 				this.updatePlayPauseButtonStates();
 			}
 		});
@@ -98,6 +103,8 @@ class SceneModule extends Module {
 			callback: btn => {
 				setChangeOrigin(this);
 				this.stopAndReset();
+
+				scene.editorLayer.visible = true;
 			}
 		});
 
@@ -136,6 +143,10 @@ class SceneModule extends Module {
 		
 		events.listen('change', change => {
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
+				
+				// Make sure the scene has the layers for EditorWidget
+				this.makeSureSceneHasEditorLayer();
+				
 				change.reference.addComponents([
 					Component.create('EditorWidget')
 				]);
@@ -190,17 +201,39 @@ class SceneModule extends Module {
 				this.widgetUnderMouse.onDrag(mousePos, change, this.entitiesToEdit);
 				sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
 			} else {
-				this.widgetUnderMouse = null;
+				if (this.widgetUnderMouse) {
+					this.widgetUnderMouse.unhover();
+					this.widgetUnderMouse = null;
+				}
 				sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
 				if (scene) {
-					if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd)
+					if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd) {
 						this.widgetUnderMouse = sceneEdit.getWidgetUnderMouse(mousePos);
+						if (this.widgetUnderMouse)
+							this.widgetUnderMouse.hover();
+					}
 				}
 			}
 			
 			if (this.selectionEnd) {
 				this.selectionEnd.add(change);
+				this.selectionArea.clear();
+				this.selectionArea.lineStyle(2, 0xFFFF00, 0.7);
+				this.selectionArea.beginFill(0xFFFF00, 0.3);
+				this.selectionArea.drawRect(
+					this.selectionStart.x,
+					this.selectionStart.y,
+					this.selectionEnd.x - this.selectionStart.x,
+					this.selectionEnd.y - this.selectionStart.y
+				);
+				
+				this.selectionArea.endFill();
+				
+				if (this.entitiesInSelection.length > 0) {
+					sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, false);
+				}
 				this.entitiesInSelection = sceneEdit.getEntitiesInSelection(this.selectionStart, this.selectionEnd);
+				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, true);
 			}
 
 			this.previousMousePos = mousePos;
@@ -218,7 +251,7 @@ class SceneModule extends Module {
 					if (!keyPressed(key.shift))
 						this.clearSelectedEntities();
 					this.selectedEntities.push(this.widgetUnderMouse.component.entity);
-					this.widgetUnderMouse.component.selected = true;
+					this.widgetUnderMouse.component.select();
 				}
 				this.entitiesToEdit.push(...this.selectedEntities);
 				this.selectSelectedEntitiesInEditor();
@@ -226,6 +259,8 @@ class SceneModule extends Module {
 				this.clearSelectedEntities();
 				this.selectionStart = mousePos;
 				this.selectionEnd = mousePos.clone();
+				this.selectionArea = new PIXI.Graphics();
+				scene.selectionLayer.addChild(this.selectionArea);
 			}
 			
 			this.draw();
@@ -236,13 +271,18 @@ class SceneModule extends Module {
 			
 			this.selectionStart = null;
 			this.selectionEnd = null;
+			if (this.selectionArea) {
+				this.selectionArea.destroy();
+				this.selectionArea = null;
+			}
 			this.entitiesToEdit.length = 0;
 			
 			if (this.entitiesInSelection.length > 0) {
 				this.selectedEntities.push(...this.entitiesInSelection);
 				this.entitiesInSelection.forEach(entity => {
-					entity.getComponent('EditorWidget').selected = true;
+					entity.getComponent('EditorWidget').select();
 				});
+				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, false);
 				this.entitiesInSelection.length = 0;
 				this.selectSelectedEntitiesInEditor();
 			}
@@ -267,17 +307,37 @@ class SceneModule extends Module {
 		}
 	}
 	
+	makeSureSceneHasEditorLayer() {
+		if (!scene.editorLayer) {
+			scene.editorLayer = new PIXI.Container();
+			scene.stage.addChild(scene.editorLayer);
+			
+			scene.widgetLayer = new PIXI.Container();
+			scene.positionHelperLayer = new PIXI.Container();
+			scene.selectionLayer = new PIXI.Container();
+			
+			scene.editorLayer.addChild(
+				scene.widgetLayer,
+				scene.positionHelperLayer,
+				scene.selectionLayer
+			);
+		}
+	}
+	
 	fixAspectRatio() {
 		if (this.canvas) {
 			let change = false;
-			if (this.canvas.width !== this.canvas.offsetWidth && this.canvas.offsetWidth) {
-				this.canvas.width = this.canvas.offsetWidth;
+			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth) {
+				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
 				change = true;
 			}
-			if (this.canvas.height !== this.canvas.offsetHeight && this.canvas.offsetHeight) {
-				this.canvas.height = this.canvas.offsetHeight;
+			else if (this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
+				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
 				change = true;
 			}
+
+			// scene.renderer.resize(this.canvas.width, this.canvas.height);
+			
 			if (change) {
 				this.draw();
 			}
@@ -290,6 +350,9 @@ class SceneModule extends Module {
 				this.filterDeadSelection();
 				
 				scene.draw();
+
+				return; // PIXI refactor
+				
 				scene.dispatch('onDrawHelper', scene.context);
 				sceneDraw.drawPositionHelpers(scene.getChildren('ent'));
 
@@ -303,6 +366,8 @@ class SceneModule extends Module {
 				}
 			}
 		} else {
+			return; // PIXI refactor
+			
 			this.drawNoLevel();
 			setTimeout(() => {
 				if (game.getChildren('lvl').length === 0) {
@@ -314,23 +379,27 @@ class SceneModule extends Module {
 	}
 	
 	drawNoLevel() {
+		/*
 		this.canvas.width = this.canvas.width;
 		let context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
 		context.fillText('No level selected', 20, 35);
+		*/
 	}
 	drawEmptyLevel() {
+		/*
 		let context = this.canvas.getContext('2d');
 		context.font = '20px arial';
 		context.fillStyle = 'white';
 		context.fillText('Empty level. Click a type and place it here.', 20, 35);
+		*/
 	}
 	
 	clearSelectedEntities() {
 		this.selectedEntities.forEach(entity => {
 			if (entity._alive)
-				entity.getComponent('EditorWidget').selected = false;
+				entity.getComponent('EditorWidget').deselect();
 		});
 		this.selectedEntities.length = 0;
 	}
@@ -338,6 +407,8 @@ class SceneModule extends Module {
 	clearState() {
 		this.deleteNewEntities();
 		
+		if (this.widgetUnderMouse)
+			this.widgetUnderMouse.unhover();
 		this.widgetUnderMouse = null;
 		this.clearSelectedEntities();
 		this.entitiesToEdit.length = 0;

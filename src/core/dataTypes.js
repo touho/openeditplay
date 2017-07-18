@@ -1,6 +1,7 @@
 import assert from '../util/assert';
 import { createDataType, dataType } from './propertyType';
 import Vector from '../util/vector';
+import {isHexString, Color} from '../util/color';
 
 function validateFloat(val) {
 	if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -128,4 +129,21 @@ dataType.enum = createDataType({
 	},
 	toJSON: x => x,
 	fromJSON: x => x
+});
+
+dataType.color = createDataType({
+	name: 'color',
+	validators: {
+		default(color) {
+			let newColor = new Color(color);
+			// @ifndef OPTIMIZE
+			assert(newColor.r >= 0 && newColor.r < 256);
+			assert(newColor.g >= 0 && newColor.g < 256);
+			assert(newColor.b >= 0 && newColor.b < 256);
+			// @endif
+			return newColor;
+		}
+	},
+	toJSON: x => x.toHexString(),
+	fromJSON: x => new Color(x)
 });

@@ -4,11 +4,24 @@ import EntityPrototype from '../core/entityPrototype';
 Component.register({
 	name: 'Spawner',
 	properties: [
-		Prop('typeName', '', Prop.string)
+		Prop('typeName', '', Prop.string),
+		Prop('trigger', 'start', Prop.enum, Prop.enum.values('start', 'interval')),
+		Prop('interval', 10, Prop.float, Prop.float.range(0.1, 1000000), Prop.visibleIf('trigger', 'interval'), 'Interval in seconds')
 	],
 	prototype: {
+		constructor() {
+			this.lastSpawn = 0;
+		},
+		init() {
+			this.lastSpawn = this.scene.time;
+		},
 		onStart() {
-			this.spawn();
+			if (this.trigger === 'start')
+				this.spawn();
+		},
+		onUpdate() {
+			if (this.scene.time > this.lastSpawn + this.interval)
+				this.spawn();
 		},
 		onDrawHelper(context) {
 			let size = 30;
@@ -34,6 +47,7 @@ Component.register({
 				return;
 
 			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+			this.lastSpawn = this.scene.time;
 		}
 	}
 });

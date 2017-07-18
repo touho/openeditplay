@@ -1,8 +1,8 @@
-'use strict';
-
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var fs = _interopDefault(require('fs'));
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(factory());
+}(this, (function () { 'use strict';
 
 var isClient = typeof window !== 'undefined';
 var isServer = typeof module !== 'undefined';
@@ -545,116 +545,11 @@ function addChange(type, reference) {
 	// @endif
 }
 
-function executeExternal(callback) {
-	setChangeOrigin('external');
-	if (externalChange) { return callback(); }
-	externalChange = true;
-	callback();
-	externalChange = false;
-}
+
 
 var listeners = [];
 
-function addChangeListener(callback) {
-	assert(typeof callback === 'function');
-	listeners.push(callback);
-}
-
-function packChange(change) {
-	if (change.packedChange)
-		{ return change.packedChange; } // optimization
-	
-	var packed = {};
-	try {
-		if (change.parent)
-			{ change.parentId = change.parent.id; }
-		
-		if (change.type === changeType.addSerializableToTree) {
-			if (change.reference) {
-				change.value = change.reference.toJSON();
-			} else {
-				assert(false, 'invalid change of type addSerializableToTree', change);
-			}
-		} else if (change.value !== undefined) {
-			change.value = change.reference.propertyType.type.toJSON(change.value);
-		}
-
-		Object.keys(keyToShortKey).forEach(function (key) {
-			if (change[key] !== undefined) {
-				if (key === 'type' && change[key] === changeType.setPropertyValue) { return; } // optimize most common type
-				packed[keyToShortKey[key]] = change[key];
-			}
-		});
-	} catch(e) {
-		console.log('PACK ERROR', e);
-	}
-	return packed;
-}
-
-function unpackChange(packedChange) {
-	var change = {
-		packedChange: packedChange // optimization
-	};
-	Object.keys(packedChange).forEach(function (shortKey) {
-		var key = shortKeyToKey[shortKey];
-		change[key] = packedChange[shortKey];
-	});
-	if (!change.type)
-		{ change.type = changeType.setPropertyValue; }
-	
-	if (change.type === changeType.addSerializableToTree) {
-		// reference does not exist because it has not been created yet
-		change.id = change.value.id;
-	} else {
-		change.reference = getSerializable$1(change.id);
-		if (change.reference) {
-			change.id = change.reference.id;
-		} else {
-			console.error('received a change with unknown id', change, 'packed:', packedChange);
-			return null;
-		}
-	}
-	
-	if (change.parentId)
-		{ change.parent = getSerializable$1(change.parentId); }
-	return change;
-}
-
-function executeChange(change) {
-	var newScene;
-	
-	executeExternal(function () {
-		console.log('execute change', change.type, change.id || change.value);
-		if (change.type === changeType.setPropertyValue) {
-			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
-		} else if (change.type === changeType.addSerializableToTree) {
-			if (change.parent) {
-				var obj = Serializable.fromJSON(change.value);
-				change.parent.addChild(obj);
-				if (obj.threeLetterType === 'ent') {
-					obj.localMaster = false;
-				}
-			} else {
-				var obj$1 = Serializable.fromJSON(change.value); // Scene does not need a parent
-				if (obj$1.threeLetterType === 'sce')
-					{ newScene = obj$1; }
-			}
-		} else if (change.type === changeType.deleteAllChildren) {
-			change.reference.deleteChildren();
-		} else if (change.type === changeType.deleteSerializable) {
-			change.reference.delete();
-		} else if (change.type === changeType.move) {
-			change.reference.move(change.parent);
-		}
-	});
-	
-	if (newScene)
-		{ newScene.play(); }
-}
-
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -665,7 +560,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -752,10 +646,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2643,8 +2533,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3384,7 +3272,7 @@ Component.register({
 				angle: this.Transform.angle,
 				velocity: [0, 0],
 				angularVelocity: 0,
-				sleepTimeLimit: 0.6,
+				sleepTimeLimit: 0.5,
 				sleepSpeedLimit: 0.3,
 				damping: this.drag,
 				angularDamping: this.rotationalDrag
@@ -3497,358 +3385,213 @@ Component.register({
 	}
 });
 
-function gameIdToFilename(gameId) {
-	// File system can be case-insensitive. Add '_' before every uppercase letter.
-	return gameId.replace(/([A-Z])/g, '_$1') + '.txt';
-}
-
-var isGameFileRegExp = /^gam[A-Za-z0-9_]+\.txt$/;
-
-
-function readFile(path) {
-	return new Promise(function (resolve, reject) {
-		fs.readFile(DIR_ROOT + path, function (err, data) {
-			if (err)
-				{ return reject(err); }
-			resolve(data);
-		});
-	});
-}
-
-// GameInfo cache
-var cachedGameInfo = [];
-function updateCachedGameData() {
-	return getGameFilenames().then(function (filenames) {
-		var p = Promise.resolve();
-		
-		var gameInfo = [];
-		
-		filenames.forEach(function (filename) {
-			p = p.then(function () {
-				return readFile(("/gameData/" + filename)).then(function (data) {
-					var obj = JSON.parse(data);
-					var id = obj.id;
-					var nameObj = obj.c.find(function (child) { return child.n === 'name' && child.id.startsWith('prp'); });
-					var levels = obj.c.filter(function (child) { return child.id.startsWith('lvl'); }).length;
-					var name = nameObj ? nameObj.v : 'NULL';
-					var size = data.length;
-					gameInfo.push({
-						id: id,
-						name: name,
-						size: size,
-						levels: levels
-					});
-				});
-			});
-		});
-		
-		p = p.then(function () {
-			cachedGameInfo = gameInfo;
-		});
-		
-		return p;
-	}).catch(function (err) {
-		console.error('updateCachedGameData error', err);
-	});
-}
-setInterval(updateCachedGameData, 1000 * 5);
-updateCachedGameData();
-
-function getGameFilenames() {
-	return new Promise(function(resolve, reject) {
-		fs.readdir(global.DIR_GAMEDATA, function (err, files) {
-			if (err)
-				{ return reject(err); }
-			files = files.filter(function (filename) { return isGameFileRegExp.test(filename); });
-			resolve(files);
-		});
-	});
-}
-
-
-
-function removeDummyGames() {
-	getGameFilenames().then(function (filenames) {
-		var timeoutMs = 0;
-		filenames.forEach(function (filename) {
-			setTimeout(function () {
-				fs.stat((DIR_GAMEDATA + "/" + filename), function (err, stat) {
-					if (stat.size < 500 && new Date() - new Date(stat.mtime) > 1000*60*60)
-						{ fs.unlink((DIR_GAMEDATA + "/" + filename)); }
-				});
-			}, timeoutMs);
-			timeoutMs += 50;
-		});
-	});
-}
-
-var idToGameServer = {}; // gameId => GameServer
-addChangeListener(function (change) {
-	var root = change.reference.getRoot();
-	if (root.threeLetterType === 'gam') {
-		var gameServer = idToGameServer[root.id];
-		if (gameServer) {
-			gameServer.saveNeeded = true;
-			gameServer.lastUsed = new Date();
-			return;
-		} else {
-			// console.log('Invalid change, gameServer does not exist', change, root.id);
-		}
-	} else {
-		console.log('Invalid change, root is not game', change, root);
-	}
-});
-
-
-var GameServer = function GameServer(game$$1) {
-	this.id = game$$1.id;
-	this.game = game$$1;
-	console.log('open GameServer', game$$1.id);
-	this.connections = getConnectionsForGameServer(game$$1.id);
-	this.lastUsed = new Date();
-	this.saveNeeded = false;
-		
-	idToGameServer[this.id] = this;
-};
-GameServer.prototype.addConnection = function addConnection (connection) {
-	this.connections.add(connection);
-};
-GameServer.prototype.removeConnection = function removeConnection (connection) {
-	this.connections.delete(connection);
-};
-GameServer.prototype.applyChange = function applyChange (change, origin) {
-		var this$1 = this;
-
-	if (change)
-		{ executeChange(change); }
-		
-	for (var connection of this$1.connections) {
-		if (connection !== origin) {
-			connection.sendChangeToOwner(change);
-		}
-	}
-};
-GameServer.prototype.save = function save () {
-	fs.writeFile((DIR_GAMEDATA + "/" + (gameIdToFilename(this.id))), JSON.stringify(this.game.toJSON()));
-	this.saveNeeded = false;
-};
-GameServer.prototype.delete = function delete$1 () {
-	this.connections.clear = 0;
-		
-	if (this.game) {
-		this.game.delete();
-		this.game = null;
-	}
-		
-	delete idToGameServer[this.id];
-};
-
-// Normal update
-setInterval(function () {
-	console.log('srvrs', Object.keys(idToGameServer));
-	Object.keys(idToGameServer).map(function (key) { return idToGameServer[key]; }).forEach(function (gameServer) {
-		if (new Date() - gameServer.lastUsed > 1000*10) {
-			console.log('GameServer delete', gameServer.id);
-			setChangeOrigin('Game clear interval');
-			gameServer.delete();
-		} else if (gameServer.saveNeeded) {
-			console.log('GameServer save', gameServer.id);
-			gameServer.save();
-		}
-	});
-}, 3000);
-
-// Delete dummy games
-setInterval(function () {
-	removeDummyGames();
-}, 5000);
-
-function createGame(gameId) {
-	var game$$1 = new Game(gameId);
-	game$$1.initWithChildren();
-	return game$$1;
-}
-
-function getOrCreateGameServer(gameId) {
-	if (!gameId || typeof gameId !== 'string' || gameId.length < 10 || !gameId.startsWith('gam')) {
-		setChangeOrigin(getOrCreateGameServer);
-		return Promise.resolve(new GameServer(createGame()));
-	}
-	
-	if (idToGameServer[gameId]) {
-		return Promise.resolve(idToGameServer[gameId]);
-	}
-	
-	return new Promise(function (resolve, reject) {
-		// We are in dist folder
-		fs.readFile((__dirname + "/../gameData/" + (gameIdToFilename(gameId))), function (err, data) {
-			if (idToGameServer[gameId])
-				{ resolve(idToGameServer[gameId]); } // if someone else started the game at the same time
-			
-			setChangeOrigin(getOrCreateGameServer);
-			
-			var game$$1;
-			if (err) {
-				game$$1 = createGame(gameId); // gameId is valid here
-			} else {
-				if (Buffer.isBuffer(data)) {
-					data = data.toString('utf8');
-				}
-				var json = JSON.parse(data);
-				game$$1 = Serializable.fromJSON(json);
+test(function (done) {
+	var game = Serializable.fromJSON({
+		id: 'gam123',
+		c: [
+			{
+				id: 'prp123123',
+				n: 'name',
+				v: 'Game name'
 			}
-			
-			resolve(new GameServer(game$$1));
-		});
+		]
 	});
-}
 
-var connections = new Set();
-var requiredClientTime = Date.now();
-
-
-process.on('message', function (msg) {
-	console.log(msg);
-	requiredClientTime = Date.now();
-	for (var connection of connections)
-		connection.refreshIfOld();
+	eq(game.threeLetterType, 'gam');
+	eq(getSerializable$1('gam123').id, 'gam123');
+	eq(game.findChild('prp', function (prp) { return prp.name === 'name'; }).value, 'Game name');
+	
+	done();
 });
 
-var Connection = function Connection(socket) {
-	var this$1 = this;
+var constuctorCalls = 0;
+var preInitCalls = 0;
+var initCalls = 0;
+var sleepCalls = 0;
+var deleteCalls = 0;
 
-	this.socket = socket;
-	this.gameId = null;
-
-	socket.on('disconnect', function () {
-		if (idToGameServer[this$1.gameId])
-			{ idToGameServer[this$1.gameId].removeConnection(this$1); }
-		connections.delete(this$1);
-		console.log('socket count', connections.size);
-	});
-
-	// change event
-	socket.on('c', function (changes) {
-		getOrCreateGameServer(this$1.gameId).then(function (gameServer) {
-			setChangeOrigin(this$1);
-			// console.log('changes', changes);
-			changes.map(unpackChange).forEach(function (change) {
-				if (change.type === changeType.addSerializableToTree && change.value.id.startsWith('gam')) {
-					console.log('ERROR, Client should not create a game.');
-					return; // Should not happen. Server creates all the games
-				} else if (gameServer) {
-					gameServer.applyChange(change, this$1);
-				} else {
-					console.log('ERROR, No gameServer for', this$1.gameId);
-				}
-			});
-		});
-	});
-		
-	socket.on('gameId', function (gameId) {
-		this$1.setGameServer(gameId);
-	});
-		
-	socket.on('requestGameData', function (gameId) {
-		getOrCreateGameServer(gameId).then(function (gameServer) {
-			gameServer.addConnection(this$1);
-			this$1.setGameServer(gameServer.id);
-			socket.emit('gameData', gameServer.game.toJSON());
-		});
-	});
-		
-	connections.add(this);
-	console.log('socket count', connections.size);
-		
-	this.requestGameId();
-	this.refreshIfOld();
-};
-Connection.prototype.sendChangeToOwner = function sendChangeToOwner (change) {
-	console.log('SENDING', change.type);
-	change = packChange(change);
-	this.socket.emit('c', [change]);
-};
-Connection.prototype.setGameServer = function setGameServer (gameId) {
-		
-	if (gameId !== this.gameId) {
-		if (idToGameServer[this.gameId])
-			{ idToGameServer[this.gameId].removeConnection(this); }
-		this.gameId = gameId;
+// Export so that other components can have this component as parent
+Component.register({
+	name: 'TestBuild',
+	description: 'Description of what this component does',
+	category: 'Core', // You can also make up new categories.
+	icon: 'fa-bars', // Font Awesome id
+	requirements: ['Transform'], // These shared components are autofilled. Error if component is not found.
+	children: ['Image', 'Image', 'Sound'], // These private components are also autofilled. Error if component is not found.
+	properties: [
+		createPropertyType('var1', 0, createPropertyType.float),
+		createPropertyType('var2', 1, createPropertyType.float),
+		createPropertyType('var3', 3, createPropertyType.float, createPropertyType.float.range(3, 4)) ],
+	prototype: {
+		staticVariable: 'Example class info',
+		constructor: function constructor() {
+			constuctorCalls++;
+		},
+		preInit: function preInit() {
+			preInitCalls++;
+		},
+		init: function init() {
+			initCalls++;
+		},
+		sleep: function sleep() {
+			sleepCalls++;
+		},
+		delete: function delete$1() {
+			deleteCalls++;
+		}
 	}
-};
-Connection.prototype.requestGameId = function requestGameId () {
-	this.socket.emit('requestGameId');
-};
-Connection.prototype.refreshIfOld = function refreshIfOld () {
-	this.socket.emit('refreshIfOlderThan', requiredClientTime);
-};
+});
 
-setInterval(function () {
-	console.log('connections', Array.from(connections).map(function (conn) { return conn.gameId; }));
-}, 5000);
+test(function (done) {
+	// Test component alone
+	var component = Component.create('TestBuild');
+	ok(component);
+	eq(component.threeLetterType, 'com');
+	eq(constuctorCalls, 1);
+	eq(preInitCalls, 0);
+	
+	// Test component with entity
+	var proto = Prototype.create('TestPrototype');
+	var componentData = new ComponentData('TestBuild');
+	componentData.initWithChildren([
+		new Property({
+			name: 'var2',
+			value: 66
+		}
+	)]);
+	var entityPrototype = EntityPrototype.createFromPrototype(proto, [
+		componentData
+	]);
+	var entity = entityPrototype.createEntity();
+	component = entity.getComponent('TestBuild');
+	ok(component);
+	
+	eq(constuctorCalls, 2);
+	eq(preInitCalls, 1);
+	eq(initCalls, 1);
+	eq(sleepCalls, 0);
+	eq(deleteCalls, 0);
+	
+	
+	// Test component's properties
+	
+	eq(component.var1, 0);
+	eq(component.var2, 66);
+	eq(component.var3, 3);
+	
+	component.var1 = -2;
+	component.var2 = -2;
+	component.var3 = -2;
+	
+	eq(component.var1, -2);
+	eq(component.var2, -2);
+	eq(component.var3, 3);
 
-function addSocket(socket) {
-	new Connection(socket);
-}
+	component.var3 = 444;
 
-function getConnectionsForGameServer(gameId) {
+	eq(component.var3, 4);
+	
+	
+	// Test component events
+	
+	entity.sleep();
+
+	eq(constuctorCalls, 2);
+	eq(preInitCalls, 1);
+	eq(initCalls, 1);
+	eq(sleepCalls, 1);
+	eq(deleteCalls, 0);
+	
+	entity.wakeUp();
+
+	eq(constuctorCalls, 2);
+	eq(preInitCalls, 2);
+	eq(initCalls, 2);
+	eq(sleepCalls, 1);
+	eq(deleteCalls, 0);
+	
+	entity.delete();
+
+	eq(constuctorCalls, 2);
+	eq(preInitCalls, 2);
+	eq(initCalls, 2);
+	eq(sleepCalls, 2);
+	eq(deleteCalls, 1);
+
+	done();
+});
+
+test(function (done) {
 	var set = new Set();
-	for (var connection of connections) {
-		if (connection.gameId === gameId)
-			{ set.add(connection); }
+	for (var i = 0; i < 10000; ++i) {
+		var id = createStringId();
+		ok(!set.has(id));
+		set.add(id);
 	}
-	return set;
+	
+	set = new Set();
+	var clashFound = false;
+	for (var i$1 = 0; i$1 < 5000; ++i$1) {
+		var id$1 = createStringId('...', 2);
+		if (set.has(id$1)) {
+			clashFound = true;
+			break;
+		}
+		set.add(id$1);
+	}
+	ok(clashFound);
+	
+	done();
+});
+
+var deepStrictEqual = require('deep-strict-equal');
+var testsStarted;
+var testsDone;
+var allTestsStarted = false;
+setTimeout(function () {
+	allTestsStarted = true;
+	endCheck();
+}, 10);
+setTimeout(function () {
+	if (testsStarted > testsDone) {
+		console.log(("Tests failed! " + (testsStarted - testsDone) + " test(s) haven't called done() in 2000ms."));
+		process.exit(1);
+	}
+}, 2000);
+
+function endCheck() {
+	if (allTestsStarted && testsDone === testsStarted) {
+		console.log((testsDone + " tests OK!"));
+		process.exit(0);
+	}
 }
 
-var _ = require('lodash');
-function readFileSync(filename) {
-	return fs.readFileSync((DIR_TEMPLATE + "/" + filename));
+function done() {
+	testsDone = testsDone ? testsDone + 1 : 1;
+	endCheck();
 }
 
-
-function createTemplateSync(filename) {
-	var fileData = readFileSync(filename);
-	return _.template(fileData);
+function test(funcOrName, func) {
+	testsStarted = testsStarted ? testsStarted + 1 : 1;
+	try {
+		setChangeOrigin('tests');
+		if (typeof funcOrName === 'function')
+			{ funcOrName(done); }
+		else
+			{ func(); }
+	} catch(e) {
+		console.error('Test failed.', e, typeof funcOrName === 'string' ? funcOrName : '');
+		process.exit(1);
+	}
+}
+function ok(condition, message) {
+	if (!condition)
+		{ console.error(); }
+	return internalAssert.call(null, condition, message);
+}
+function eq(a, b, message) {
+	return deepStrictEqual.call(null, a, b, message);
 }
 
-var express = require('express');
-var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var compression = require('compression');
-var fs$1 = require('fs');
-
-
-app.use(compression({
-	level: 1
-}));
-app.use(express.static('public'));
-
-var frontPageTemplate = createTemplateSync('frontPage.html');
-app.get('/', function (req, res) {
-	res.send(frontPageTemplate({
-		gameInfo: cachedGameInfo
-	}));
-	/*
-	getGameIdList().then(gameIds => {
-		res.send(frontPageTemplate({
-			gameIds
-		}));
-	}).catch(err => {
-		res.status(500).send('Error');
-	});
-	*/
-});
-
-http.listen(3000, function(){
-	console.log('listening on *:3000');
-});
-
-io.on('connection', function(socket) {
-	addSocket(socket);
-});
-
-process.on('uncaughtException', function (err) {
-	console.error("Node.js Exception. " + err + " - " + err.stack);
-});
-//# sourceMappingURL=explore.server.js.map
+})));
+//# sourceMappingURL=explore.tests.js.map

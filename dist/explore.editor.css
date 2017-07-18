@@ -1,5 +1,6 @@
 
 /*$editor-effect-color: $cool-cyan;*/
+/*$editor-effect-color: #f3ebd8;*/
 .button {
   cursor: pointer;
   opacity: 0.7;
@@ -295,8 +296,8 @@ img.logo:hover {
   overflow: hidden;
 }
 .module-scene canvas {
-  width: 100%;
-  height: 100%;
+  /*width: 100% !important; *//* PIXI tries to override by settings the actual resolution. That's why !important *//**/
+  /*height: 100% !important;*/
   margin: 0;
   padding: 0
 }
