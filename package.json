@@ -1,12 +1,12 @@
 {
-  "name": "explore",
+  "name": "openeditplay",
   "version": "0.0.1",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
     "dev": "node autobuild",
     "server": "node server",
-    "clean": "rm -f dist/explore* && rm -f public/explore* && rm -f public/play/explore* && rm -f public/play/css/explore* && rm -f public/edit/explore* && rm -f public/edit/css/explore*"
+    "clean": "rm -f builds/openeditplay* && rm -f public/openeditplay* && rm -f public/play/openeditplay* && rm -f public/play/css/openeditplay* && rm -f public/edit/openeditplay* && rm -f public/edit/css/openeditplay*"
   },
   "devDependencies": {
     "chokidar": "^1.6.1",

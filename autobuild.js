@@ -43,41 +43,41 @@ if (!global.TARGET_NONE) {
 
 	// Editor CSS
 	watch('src/**/*.scss', () => {
-		buildCss('src/editorMain.scss', 'builds/explore.editor.css', () => {
-			copy('builds/explore.editor.cs*', 'public/edit/css/');
+		buildCss('src/editorMain.scss', 'builds/openeditplay.editor.css', () => {
+			copy('builds/openeditplay.editor.cs*', 'public/edit/css/');
 		});
 	}, true);
 
 	// Editor CSS Dependencies
-	concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/explore.editor.dependencies.css`, err => {
+	concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/openeditplay.editor.dependencies.css`, err => {
 		if (err) throw new Error(err);
-		console.log(`Built builds/explore.editor.dependencies.css`);
-		copy('builds/explore.editor.dependencies.css', 'public/edit/css/');
+		console.log(`Built builds/openeditplay.editor.dependencies.css`);
+		copy('builds/openeditplay.editor.dependencies.css', 'public/edit/css/');
 	});
 
 	// Editor JS Dependencies
-	concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/explore.editor.dependencies.js`, err => {
+	concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/openeditplay.editor.dependencies.js`, err => {
 		if (err) throw new Error(err);
-		console.log(`Built builds/explore.editor.dependencies.js`);
-		copy('builds/explore.editor.dependencies.js', 'public/edit/');
+		console.log(`Built builds/openeditplay.editor.dependencies.js`);
+		copy('builds/openeditplay.editor.dependencies.js', 'public/edit/');
 	});
 
 	// Game engine JS Dependencies
 	if (target === 'all') {
-		concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/explore.dependencies.js`, err => {
+		concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/openeditplay.dependencies.js`, err => {
 			if (err) throw new Error(err);
-			console.log(`Built builds/explore.dependencies.js`);
-			copy('builds/explore.dependencies.js', 'public/play/');
+			console.log(`Built builds/openeditplay.dependencies.js`);
+			copy('builds/openeditplay.dependencies.js', 'public/play/');
 		});
 	}
 
 	// Game engine JS
 	if (target === 'all') {
-		autobuildJs('src/main.js', 'builds/explore.js', {
+		autobuildJs('src/main.js', 'builds/openeditplay.js', {
 			copyTo: 'public/play/',
 			optimize: true
 		});
-		autobuildJs('src/main.js', 'builds/explore.min.js', {
+		autobuildJs('src/main.js', 'builds/openeditplay.min.js', {
 			uglify: true,
 			copyTo: 'public/play/',
 			optimize: true
@@ -85,10 +85,10 @@ if (!global.TARGET_NONE) {
 	}
 
 	// Editor JS
-	autobuildJs('src/editorMain.js', 'builds/explore.editor.js', {
+	autobuildJs('src/editorMain.js', 'builds/openeditplay.editor.js', {
 		copyTo: 'public/edit/'
 	});
-	// autobuildJs('src/editorMain.js', 'builds/explore.editor.min.js', {
+	// autobuildJs('src/editorMain.js', 'builds/openeditplay.editor.min.js', {
 	// 	uglify: true,
 	// 	copyTo: 'public/'
 	// });
@@ -99,19 +99,19 @@ if (!global.TARGET_NONE) {
 	});
 
 	// Server JS
-	autobuildJs('src/serverMain.js', 'builds/explore.server.js', {
+	autobuildJs('src/serverMain.js', 'builds/openeditplay.server.js', {
 		format: 'cjs',
 		allowForOf: true, // node supports for-of
 		externalDependencies: ['fs']
 	});
 
 	if (target === 'all') {
-		autobuildJs('src/testMain.js', 'builds/explore.tests.js');
+		autobuildJs('src/testMain.js', 'builds/openeditplay.tests.js');
 	}
 
 	// Server restarter
 	let serverProcess = null;
-	watch(['builds/explore.server.js', 'template/*'], args => {
+	watch(['builds/openeditplay.server.js', 'template/*'], args => {
 		if (serverProcess === 'wait')
 			return;
 
