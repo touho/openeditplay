@@ -3441,6 +3441,7 @@ Component$1.register({
 			}));
 			this.listenProperty(this, 'friction', update(function (friction) { return this$1.updateMaterial(); }));
 			this.listenProperty(this, 'drag', update(function (drag) { return this$1.body.damping = drag; }));
+			this.listenProperty(this, 'rotationalDrag', update(function (rotationalDrag) { return this$1.body.angularDamping = rotationalDrag; }));
 			this.listenProperty(this, 'type', update(function (type) {
 				this$1.body.type = type[this$1.type];
 				this$1.entity.sleep();

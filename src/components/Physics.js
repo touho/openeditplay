@@ -66,6 +66,7 @@ Component.register({
 			}));
 			this.listenProperty(this, 'friction', update(friction => this.updateMaterial()));
 			this.listenProperty(this, 'drag', update(drag => this.body.damping = drag));
+			this.listenProperty(this, 'rotationalDrag', update(rotationalDrag => this.body.angularDamping = rotationalDrag));
 			this.listenProperty(this, 'type', update(type => {
 				this.body.type = type[this.type];
 				this.entity.sleep();

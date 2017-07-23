@@ -600,7 +600,6 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 	}
 });
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -687,10 +686,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2560,8 +2555,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3364,6 +3357,7 @@ Component.register({
 			}));
 			this.listenProperty(this, 'friction', update(function (friction) { return this$1.updateMaterial(); }));
 			this.listenProperty(this, 'drag', update(function (drag) { return this$1.body.damping = drag; }));
+			this.listenProperty(this, 'rotationalDrag', update(function (rotationalDrag) { return this$1.body.angularDamping = rotationalDrag; }));
 			this.listenProperty(this, 'type', update(function (type) {
 				this$1.body.type = type[this$1.type];
 				this$1.entity.sleep();
