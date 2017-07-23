@@ -4,6 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
+    "build": "node autobuild all",
     "dev": "node autobuild",
     "server": "node server",
     "clean": "rm -f builds/openeditplay* && rm -f public/openeditplay* && rm -f public/play/openeditplay* && rm -f public/play/css/openeditplay* && rm -f public/edit/openeditplay* && rm -f public/edit/css/openeditplay*"

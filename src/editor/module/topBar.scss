@@ -22,7 +22,8 @@ div.top {
 img.logo {
   height: 100%;
   margin: 0;
-  padding: 0;
+  padding: 10px;
+  box-sizing: border-box;
 }
 img.logo:hover {
   animation: rainbow 7s infinite;

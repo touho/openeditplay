@@ -6,7 +6,7 @@ import events from '../events';
 export class TopBarModule extends Module {
 	constructor() {
 		super(
-			this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_reflection_medium.png' }),
+			this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }),
 			this.buttons = el('div.buttonContainer.select-none')
 		);
 		this.id = 'topbar';
