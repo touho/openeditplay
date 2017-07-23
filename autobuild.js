@@ -43,41 +43,41 @@ if (!global.TARGET_NONE) {
 
 	// Editor CSS
 	watch('src/**/*.scss', () => {
-		buildCss('src/editorMain.scss', 'dist/explore.editor.css', () => {
-			copy('dist/explore.editor.cs*', 'public/edit/css/');
+		buildCss('src/editorMain.scss', 'builds/explore.editor.css', () => {
+			copy('builds/explore.editor.cs*', 'public/edit/css/');
 		});
 	}, true);
 
 	// Editor CSS Dependencies
-	concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.css`, err => {
+	concat(editorCssDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/explore.editor.dependencies.css`, err => {
 		if (err) throw new Error(err);
-		console.log(`Built dist/explore.editor.dependencies.css`);
-		copy('dist/explore.editor.dependencies.css', 'public/edit/css/');
+		console.log(`Built builds/explore.editor.dependencies.css`);
+		copy('builds/explore.editor.dependencies.css', 'public/edit/css/');
 	});
 
 	// Editor JS Dependencies
-	concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.editor.dependencies.js`, err => {
+	concat(editorJsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/explore.editor.dependencies.js`, err => {
 		if (err) throw new Error(err);
-		console.log(`Built dist/explore.editor.dependencies.js`);
-		copy('dist/explore.editor.dependencies.js', 'public/edit/');
+		console.log(`Built builds/explore.editor.dependencies.js`);
+		copy('builds/explore.editor.dependencies.js', 'public/edit/');
 	});
 
 	// Game engine JS Dependencies
 	if (target === 'all') {
-		concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}dist/explore.dependencies.js`, err => {
+		concat(jsDependencies.map(dep => `${ROOT}${dep}`), `${ROOT}builds/explore.dependencies.js`, err => {
 			if (err) throw new Error(err);
-			console.log(`Built dist/explore.dependencies.js`);
-			copy('dist/explore.dependencies.js', 'public/play/');
+			console.log(`Built builds/explore.dependencies.js`);
+			copy('builds/explore.dependencies.js', 'public/play/');
 		});
 	}
 
 	// Game engine JS
 	if (target === 'all') {
-		autobuildJs('src/main.js', 'dist/explore.js', {
+		autobuildJs('src/main.js', 'builds/explore.js', {
 			copyTo: 'public/play/',
 			optimize: true
 		});
-		autobuildJs('src/main.js', 'dist/explore.min.js', {
+		autobuildJs('src/main.js', 'builds/explore.min.js', {
 			uglify: true,
 			copyTo: 'public/play/',
 			optimize: true
@@ -85,10 +85,10 @@ if (!global.TARGET_NONE) {
 	}
 
 	// Editor JS
-	autobuildJs('src/editorMain.js', 'dist/explore.editor.js', {
+	autobuildJs('src/editorMain.js', 'builds/explore.editor.js', {
 		copyTo: 'public/edit/'
 	});
-	// autobuildJs('src/editorMain.js', 'dist/explore.editor.min.js', {
+	// autobuildJs('src/editorMain.js', 'builds/explore.editor.min.js', {
 	// 	uglify: true,
 	// 	copyTo: 'public/'
 	// });
@@ -99,19 +99,19 @@ if (!global.TARGET_NONE) {
 	});
 
 	// Server JS
-	autobuildJs('src/serverMain.js', 'dist/explore.server.js', {
+	autobuildJs('src/serverMain.js', 'builds/explore.server.js', {
 		format: 'cjs',
 		allowForOf: true, // node supports for-of
 		externalDependencies: ['fs']
 	});
 
 	if (target === 'all') {
-		autobuildJs('src/testMain.js', 'dist/explore.tests.js');
+		autobuildJs('src/testMain.js', 'builds/explore.tests.js');
 	}
 
 	// Server restarter
 	let serverProcess = null;
-	watch(['dist/explore.server.js', 'template/*'], args => {
+	watch(['builds/explore.server.js', 'template/*'], args => {
 		if (serverProcess === 'wait')
 			return;
 
