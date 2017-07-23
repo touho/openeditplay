@@ -70,7 +70,7 @@ export function setChangeOrigin(_origin) {
 		}
 		
 		if (CHECK_FOR_INVALID_ORIGINS)
-			setTimeout(resetOrigin);
+			setTimeout(resetOrigin, 0);
 	}
 	// @endif
 }

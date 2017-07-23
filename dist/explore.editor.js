@@ -496,7 +496,7 @@ function setChangeOrigin$1(_origin) {
 		}
 		
 		if (CHECK_FOR_INVALID_ORIGINS)
-			{ setTimeout(resetOrigin); }
+			{ setTimeout(resetOrigin, 0); }
 	}
 	// @endif
 }
@@ -653,6 +653,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -663,6 +665,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -749,6 +752,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2639,6 +2646,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3097,9 +3106,11 @@ Component$1.register({
 	icon: 'fa-stop',
 	allowMultiple: true,
 	properties: [
-		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle')),
+		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
 		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
+		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 8), createPropertyType.visibleIf('type', 'convex')),
+		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'convex')),
 		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderWidth', 1, createPropertyType.float)
@@ -3133,7 +3144,9 @@ Component$1.register({
 				'size',
 				'fillColor',
 				'borderColor',
-				'borderWidth'
+				'borderWidth',
+				'points',
+				'topPointDistance'
 			];
 
 			propertiesThatRequireRedraw.forEach(function (propName) {
@@ -3174,7 +3187,75 @@ Component$1.register({
 				this.graphics.beginFill(this.fillColor.toHexNumber());
 				this.graphics.drawCircle(0, 0, this.radius * averageScale);
 				this.graphics.endFill();
+			} else if (this.type === 'convex') {
+				var path = this.getConvexPoints(PIXI$2.Point);
+				path.push(path[0]); // Close the path
+				
+				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				this.graphics.beginFill(this.fillColor.toHexNumber());
+				this.graphics.drawPolygon(path);
+				this.graphics.endFill();
 			}
+		},
+		getConvexPoints: function getConvexPoints(vectorClass) {
+			var this$1 = this;
+			if ( vectorClass === void 0 ) vectorClass = Vector;
+
+			var centerAngle = Math.PI * 2 / this.points;
+			var isNotEventPolygon = this.topPointDistance !== 0.5;
+			
+			var minDistanceMultiplier;
+			var maxDistanceMultiplier;
+			if (isNotEventPolygon) {
+				var segmentAngle = Math.PI - centerAngle;
+				var unitSegmentLength = 2 * Math.sin(centerAngle / 2);
+				var defaultMinDistanceMultiplier = 1 - unitSegmentLength * Math.cos(segmentAngle / 2);
+
+				if (this.points === 3) {
+					minDistanceMultiplier = 0.2;
+					maxDistanceMultiplier = 5;
+				} else if (this.points === 8) {
+					minDistanceMultiplier = defaultMinDistanceMultiplier;
+					maxDistanceMultiplier = 3;
+				} else {
+					minDistanceMultiplier = defaultMinDistanceMultiplier;
+					maxDistanceMultiplier = 5;
+				}
+			}
+
+			var path = [];
+
+			var currentAngle = 0;
+			for (var i = 0; i < this.points; ++i) {
+				var x = Math.sin(currentAngle) * this$1.radius;
+				var y = Math.cos(currentAngle) * this$1.radius;
+
+				if (isNotEventPolygon && i === 0) {
+					if (this$1.topPointDistance > 0.5) {
+						y *= 1 + (this$1.topPointDistance - 0.5) * (maxDistanceMultiplier - 1);
+					} else {
+						y *= 2 * this$1.topPointDistance * (1 - minDistanceMultiplier) + minDistanceMultiplier;
+					}
+				}
+
+				path.push(new vectorClass(x, -y));
+				currentAngle += centerAngle;
+			}
+			if (isNotEventPolygon) {
+				// put weight to center
+				var averageY = path.reduce(function (prev, curr) { return prev + curr.y; }, 0) / this.points;
+				path.forEach(function (p) { return p.y -= averageY; });
+			}
+
+			var scale = this.Transform.scale;
+			if (scale.x !== 1 || scale.y !== 1) {
+				path.forEach(function (p) {
+					p.x *= scale.x;
+					p.y *= scale.y;
+				});
+			}
+
+			return path;
 		},
 		sleep: function sleep() {
 			this.graphics.destroy();
@@ -3305,6 +3386,8 @@ Component$1.register({
 var PHYSICS_SCALE = 1/50;
 var PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
+var DENSITY_SCALE = 1/10;
+
 var type = {
 	dynamic: p2$1.Body.DYNAMIC,
 	kinematic: p2$1.Body.KINEMATIC,
@@ -3343,18 +3426,27 @@ Component$1.register({
 				}
 			};
 
-			var Shapes = this.entity.getComponents('Shapes');
-			for (var i = 0; i < Shapes.length; ++i) {
-				this$1.listenProperty(Shapes[i], 'type', update(function (size) { return this$1.updateShape(); }));
-				this$1.listenProperty(Shapes[i], 'size', update(function (size) { return this$1.updateShape(); }));
-				this$1.listenProperty(Shapes[i], 'radius', update(function (size) { return this$1.updateShape(); }));
-			}
+			var Shapes = this.entity.getComponents('Shape');
+			var shapePropertiesThatShouldUpdateShape = [
+				'type',
+				'size',
+				'radius',
+				'points',
+				'topPointDistance'
+			];
+			var loop = function ( i ) {
+				shapePropertiesThatShouldUpdateShape.forEach(function (property) {
+					this$1.listenProperty(Shapes[i], property, update(function () { return this$1.updateShape(); }));	
+				});
+			};
+
+			for (var i = 0; i < Shapes.length; ++i) loop( i );
 
 			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
 			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {
-				this$1.body.setDensity(density);
+				this$1.body.setDensity(density * DENSITY_SCALE);
 			}));
 			this.listenProperty(this, 'friction', update(function (friction) { return this$1.updateMaterial(); }));
 			this.listenProperty(this, 'drag', update(function (drag) { return this$1.body.damping = drag; }));
@@ -3362,7 +3454,6 @@ Component$1.register({
 				this$1.body.type = type[this$1.type];
 				this$1.entity.sleep();
 				this$1.entity.wakeUp();
-				// this.body.setDensity(this.density);
 			}));
 			this.listenProperty(this, 'bounciness', update(function (bounciness) { return this$1.updateMaterial(); }));
 
@@ -3412,6 +3503,7 @@ Component$1.register({
 
 			Shapes.forEach(function (Shape) {
 				var shape;
+				
 				if (Shape.type === 'rectangle') {
 					shape = new p2$1.Box({
 						width: Shape.size.x * PHYSICS_SCALE * scale.x,
@@ -3423,7 +3515,12 @@ Component$1.register({
 					shape = new p2$1.Circle({
 						radius: Shape.radius * PHYSICS_SCALE * averageScale
 					});
+				} else if (Shape.type === 'convex') {
+					shape = new p2$1.Convex({
+						vertices: Shape.getConvexPoints().map(function (p) { return ([p.x * PHYSICS_SCALE, p.y * PHYSICS_SCALE]); })
+					});
 				}
+				
 				if (shape)
 					{ this$1.body.addShape(shape); }
 			});
@@ -3445,7 +3542,7 @@ Component$1.register({
 		},
 		updateMass: function updateMass() {
 			if (this.type === 'dynamic')
-				{ this.body.setDensity(this.density); }
+				{ this.body.setDensity(this.density * DENSITY_SCALE); }
 		},
 		setRootType: function setRootType(rootType) {
 			if (rootType) {
@@ -3670,6 +3767,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -4264,6 +4363,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5000,6 +5100,11 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5686,6 +5791,9 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
+/// Drawing
+
+// '#53f8ff'
 var widgetColor = 'white';
 
 

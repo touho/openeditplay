@@ -6,6 +6,8 @@ import assert from '../util/assert';
 const PHYSICS_SCALE = 1/50;
 const PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
+const DENSITY_SCALE = 1/10;
+
 const type = {
 	dynamic: p2.Body.DYNAMIC,
 	kinematic: p2.Body.KINEMATIC,
@@ -42,18 +44,25 @@ Component.register({
 				}
 			};
 
-			let Shapes = this.entity.getComponents('Shapes');
+			let Shapes = this.entity.getComponents('Shape');
+			const shapePropertiesThatShouldUpdateShape = [
+				'type',
+				'size',
+				'radius',
+				'points',
+				'topPointDistance'
+			];
 			for (let i = 0; i < Shapes.length; ++i) {
-				this.listenProperty(Shapes[i], 'type', update(size => this.updateShape()));
-				this.listenProperty(Shapes[i], 'size', update(size => this.updateShape()));
-				this.listenProperty(Shapes[i], 'radius', update(size => this.updateShape()));
+				shapePropertiesThatShouldUpdateShape.forEach(property => {
+					this.listenProperty(Shapes[i], property, update(() => this.updateShape()));	
+				});
 			}
 
 			this.listenProperty(this.Transform, 'position', update(position => this.body.position = position.toArray().map(x => x * PHYSICS_SCALE)));
 			this.listenProperty(this.Transform, 'angle', update(angle => this.body.angle = angle));
 			this.listenProperty(this.Transform, 'scale', update(scale => this.updateShape()));
 			this.listenProperty(this, 'density', update(density => {
-				this.body.setDensity(density);
+				this.body.setDensity(density * DENSITY_SCALE);
 			}));
 			this.listenProperty(this, 'friction', update(friction => this.updateMaterial()));
 			this.listenProperty(this, 'drag', update(drag => this.body.damping = drag));
@@ -61,7 +70,6 @@ Component.register({
 				this.body.type = type[this.type];
 				this.entity.sleep();
 				this.entity.wakeUp();
-				// this.body.setDensity(this.density);
 			}));
 			this.listenProperty(this, 'bounciness', update(bounciness => this.updateMaterial()));
 
@@ -109,6 +117,7 @@ Component.register({
 
 			Shapes.forEach(Shape => {
 				let shape;
+				
 				if (Shape.type === 'rectangle') {
 					shape = new p2.Box({
 						width: Shape.size.x * PHYSICS_SCALE * scale.x,
@@ -120,7 +129,12 @@ Component.register({
 					shape = new p2.Circle({
 						radius: Shape.radius * PHYSICS_SCALE * averageScale
 					});
+				} else if (Shape.type === 'convex') {
+					shape = new p2.Convex({
+						vertices: Shape.getConvexPoints().map(p => ([p.x * PHYSICS_SCALE, p.y * PHYSICS_SCALE]))
+					});
 				}
+				
 				if (shape)
 					this.body.addShape(shape);
 			});
@@ -142,7 +156,7 @@ Component.register({
 		},
 		updateMass() {
 			if (this.type === 'dynamic')
-				this.body.setDensity(this.density);
+				this.body.setDensity(this.density * DENSITY_SCALE);
 		},
 		setRootType(rootType) {
 			if (rootType) {
