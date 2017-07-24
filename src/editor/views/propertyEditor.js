@@ -358,6 +358,9 @@ class Property {
 		this.el.setAttribute('type', property.propertyType.type.name);
 		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
 		this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
+		if (property.propertyType.description) {
+			mount(this.name, el('span.infoI', 'i'));
+		}
 		this.content.innerHTML = '';
 		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
 		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), {

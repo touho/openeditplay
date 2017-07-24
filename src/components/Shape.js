@@ -11,8 +11,8 @@ Component.register({
 		Prop('type', 'rectangle', Prop.enum, Prop.enum.values('rectangle', 'circle', 'convex')),
 		Prop('radius', 10, Prop.float, Prop.visibleIf('type', 'circle')),
 		Prop('size', new Vector(10, 10), Prop.vector, Prop.visibleIf('type', 'rectangle')),
-		Prop('points', 3, Prop.int, Prop.int.range(3, 8), Prop.visibleIf('type', 'convex')),
-		Prop('topPointDistance', 0.5, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'convex')),
+		Prop('points', 3, Prop.int, Prop.int.range(3, 16), Prop.visibleIf('type', 'convex')),
+		Prop('topPointDistance', 0.5, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'convex'), 'Only works with at most 8 points'),
 		Prop('fillColor', new Color(255, 255, 255), Prop.color),
 		Prop('borderColor', new Color(255, 255, 255), Prop.color),
 		Prop('borderWidth', 1, Prop.float)
@@ -99,7 +99,7 @@ Component.register({
 		},
 		getConvexPoints(vectorClass = Vector) {
 			const centerAngle = Math.PI * 2 / this.points;
-			const isNotEventPolygon = this.topPointDistance !== 0.5;
+			const isNotEventPolygon = this.topPointDistance !== 0.5 && this.points <= 8;
 			
 			let minDistanceMultiplier;
 			let maxDistanceMultiplier;

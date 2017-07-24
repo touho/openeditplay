@@ -3100,8 +3100,8 @@ Component$1.register({
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
 		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
-		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 8), createPropertyType.visibleIf('type', 'convex')),
-		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'convex')),
+		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 16), createPropertyType.visibleIf('type', 'convex')),
+		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'convex'), 'Only works with at most 8 points'),
 		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderWidth', 1, createPropertyType.float)
@@ -3193,7 +3193,7 @@ Component$1.register({
 			if ( vectorClass === void 0 ) vectorClass = Vector;
 
 			var centerAngle = Math.PI * 2 / this.points;
-			var isNotEventPolygon = this.topPointDistance !== 0.5;
+			var isNotEventPolygon = this.topPointDistance !== 0.5 && this.points <= 8;
 			
 			var minDistanceMultiplier;
 			var maxDistanceMultiplier;
@@ -5089,6 +5089,11 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5437,6 +5442,9 @@ Property$2.prototype.update = function update (property) {
 	this.el.setAttribute('type', property.propertyType.type.name);
 	this.name.textContent = variableNameToPresentableName(property.propertyType.name);
 	this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
+	if (property.propertyType.description) {
+		mount(this.name, el('span.infoI', 'i'));
+	}
 	this.content.innerHTML = '';
 	var propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
 	this.setValue = propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {

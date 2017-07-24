@@ -2994,7 +2994,7 @@ Component.register({
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
 		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
-		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 8), createPropertyType.visibleIf('type', 'convex')),
+		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 10), createPropertyType.visibleIf('type', 'convex')),
 		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'convex')),
 		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),

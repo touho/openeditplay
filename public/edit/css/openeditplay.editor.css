@@ -451,6 +451,14 @@ td.nameCell {
   max-width: 140px;
   text-overflow: ellipsis;
   overflow: hidden;
+  position: relative;
+}
+td.nameCell .infoI {
+  position: absolute;
+  top: 0px;
+  right: -2px;
+  font-size: 10px;
+  font-family: monospace;
 }
 tr.property.visibleIf.hidden {
   display: none;
