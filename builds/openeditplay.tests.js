@@ -2828,21 +2828,6 @@ Component.register({
 	}
 });
 
-var vari = 0;
-
-Component.register({
-	name: 'Test',
-	category: 'Core',
-	properties: [
-		createPropertyType('name', 'Oh right', createPropertyType.string),
-		createPropertyType('enum', 'yksi', createPropertyType.enum, createPropertyType.enum.values('yksi', 'kaksi', 'kolme', 'neljä')),
-		createPropertyType('topBarHelper', new Vector(0, 1), createPropertyType.vector),
-		createPropertyType('test' + ++vari, vari, createPropertyType.int),
-		createPropertyType('test' + ++vari, false, createPropertyType.bool),
-		createPropertyType('test' + ++vari, true, createPropertyType.bool)
-	]
-});
-
 Component.register({
 	name: 'Mover',
 	properties: [
@@ -2902,91 +2887,6 @@ Component.register({
 });
 
 Component.register({
-	name: 'Rect',
-	icon: 'fa-stop',
-	allowMultiple: true,
-	properties: [
-		createPropertyType('size', new Vector(10, 10), createPropertyType.vector),
-		createPropertyType('style', 'red', createPropertyType.string),
-		createPropertyType('randomStyle', false, createPropertyType.bool)
-	],
-	prototype: {
-		init: function init() {
-			var this$1 = this;
-
-			if (this.randomStyle)
-				{ this.style = "hsl(" + (Math.random() * 360 | 0) + ", 100%, 40%)"; }
-			
-			this.createGraphics();
-
-			this.listenProperty(this.Transform, 'position', function (position) {
-				this$1.graphics.x = position.x;
-				this$1.graphics.y = position.y;
-			});
-
-			this.listenProperty(this.Transform, 'angle', function (angle) {
-				this$1.graphics.rotation = angle;
-			});
-			
-			var redrawGraphics = function () {
-				if (this$1.graphics) {
-					this$1.drawGraphics();
-				}
-			};
-
-			this.listenProperty(this, 'size', redrawGraphics);
-			this.listenProperty(this, 'style', redrawGraphics);
-			this.listenProperty(this.Transform, 'scale', redrawGraphics);
-		},
-		createGraphics: function createGraphics() {
-			this.graphics = new PIXI$1.Graphics();
-			this.drawGraphics();
-			this.scene.mainLayer.addChild(this.graphics);
-
-			var T = this.Transform;
-			
-			this.graphics.x = T.position.x;
-			this.graphics.y = T.position.y;
-			this.graphics.rotation = T.angle;
-		},
-		drawGraphics: function drawGraphics() {
-			var scale = this.Transform.scale;
-			var
-				x = -this.size.x / 2 * scale.x,
-				y = -this.size.y / 2 * scale.y,
-				w = this.size.x * scale.x,
-				h = this.size.y * scale.y;
-			
-			this.graphics.clear();
-			this.graphics.lineStyle(2, 0xFF3300, 1);
-			this.graphics.beginFill(0x66CCFF);
-			this.graphics.drawRect(x, y, w, h);
-			this.graphics.endFill();
-		},
-		sleep: function sleep() {
-			this.graphics.destroy();
-			this.graphics = null;
-		},
-		onUpdate: function onUpdate() {
-
-		},
-		onDraw: function onDraw(context) {
-			var
-				x = this.Transform.position.x - this.size.x / 2 * this.Transform.scale.x,
-				y = this.Transform.position.y - this.size.y / 2 * this.Transform.scale.y,
-				w = this.size.x * this.Transform.scale.x,
-				h = this.size.y * this.Transform.scale.y;
-			context.save();
-			context.fillStyle = this.style;
-			context.translate(x + w / 2, y + h / 2);
-			context.rotate(this.Transform.angle);
-			context.fillRect(-w / 2, -h / 2, w, h);
-			context.restore();
-		}
-	}
-});
-
-Component.register({
 	name: 'Shape',
 	icon: 'fa-stop',
 	allowMultiple: true,
@@ -2994,8 +2894,8 @@ Component.register({
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
 		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
-		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 10), createPropertyType.visibleIf('type', 'convex')),
-		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'convex')),
+		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 16), createPropertyType.visibleIf('type', 'convex')),
+		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0.001, 1), createPropertyType.visibleIf('type', 'convex'), 'Only works with at most 8 points'), // Value 0
 		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
 		createPropertyType('borderWidth', 1, createPropertyType.float)
@@ -3087,7 +2987,7 @@ Component.register({
 			if ( vectorClass === void 0 ) vectorClass = Vector;
 
 			var centerAngle = Math.PI * 2 / this.points;
-			var isNotEventPolygon = this.topPointDistance !== 0.5;
+			var isNotEventPolygon = this.topPointDistance !== 0.5 && this.points <= 8;
 			
 			var minDistanceMultiplier;
 			var maxDistanceMultiplier;
@@ -3470,6 +3370,76 @@ Component.register({
 		setAngularForce: function setAngularForce(force) {
 			this.body.angularForce = force;
 			this.body.wakeUp();
+		}
+	}
+});
+
+Component.register({
+	name: 'CharacterController',
+	category: 'Core',
+	properties: [
+		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
+		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
+		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'))
+	],
+	prototype: {
+		init: function init() {
+			
+		},
+		getInput: function getInput() {
+			if (this.keyboardControls === 'arrows') {
+				return {
+					up: keyPressed(key.up),
+					down: keyPressed(key.down),
+					left: keyPressed(key.left),
+					right: keyPressed(key.right)
+				};
+			} else if (this.keyboardControls === 'WASD') {
+				return {
+					up: keyPressed(key.w),
+					down: keyPressed(key.s),
+					left: keyPressed(key.a),
+					right: keyPressed(key.d)
+				};
+			} else if (this.keyboardControls === 'arrows or WASD') {
+				return {
+					up: keyPressed(key.up) || keyPressed(key.w),
+					down: keyPressed(key.down) || keyPressed(key.s),
+					left: keyPressed(key.left) || keyPressed(key.a),
+					right: keyPressed(key.right) || keyPressed(key.d)
+				};
+			} else {
+				assert(false, 'Invalid CharacterController.keyboardControls');
+			}
+		},
+		onUpdate: function onUpdate(dt, t) {
+			var ref = this.getInput();
+			var up = ref.up;
+			var down = ref.down;
+			var left = ref.left;
+			var right = ref.right;
+			
+			var dx = 0,
+				dy = 0;
+			
+			if (right) {
+				dx++;
+			}
+			if (left) {
+				dx--;
+			}
+			if (up) {
+				dy--;
+			}
+			if (down) {
+				dy++;
+			}
+			
+			if (dx !== 0 || dy !== 0) {
+				var Transform = this.Transform;
+				console.log('poz', Transform.position, Transform.position.clone().add(dx * 10, dy * 10));
+				Transform.position = Transform.position.clone().add(dx * 10, dy * 10);
+			}
 		}
 	}
 });

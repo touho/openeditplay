@@ -214,13 +214,17 @@ function getDataFromPrototype(prototype, originalPrototype, filter, _depth = 0) 
 			// Most parent version of this componentId
 			data[componentData.componentId] = {
 				// ownComponent = true if the original prototype is the first one introducing this componentId
-				ownComponentData: _depth === 0 ? componentData : null, // will be given value if original prototype has this componentId
+				ownComponentData: null, // will be given value if the original prototype has this componentId
 				componentClass: componentData.componentClass,
 				componentId: componentData.componentId,
 				propertyHash: {},
 				threeLetterType: 'icd',
 				generatedForPrototype: originalPrototype,
 			};
+		}
+		
+		if (_depth === 0) {
+			data[componentData.componentId].ownComponentData = componentData;
 		}
 		
 		let propertyHash = data[componentData.componentId].propertyHash;

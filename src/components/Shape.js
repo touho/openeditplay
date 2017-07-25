@@ -12,7 +12,7 @@ Component.register({
 		Prop('radius', 10, Prop.float, Prop.visibleIf('type', 'circle')),
 		Prop('size', new Vector(10, 10), Prop.vector, Prop.visibleIf('type', 'rectangle')),
 		Prop('points', 3, Prop.int, Prop.int.range(3, 16), Prop.visibleIf('type', 'convex')),
-		Prop('topPointDistance', 0.5, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'convex'), 'Only works with at most 8 points'),
+		Prop('topPointDistance', 0.5, Prop.float, Prop.float.range(0.001, 1), Prop.visibleIf('type', 'convex'), 'Only works with at most 8 points'), // Value 0
 		Prop('fillColor', new Color(255, 255, 255), Prop.color),
 		Prop('borderColor', new Color(255, 255, 255), Prop.color),
 		Prop('borderWidth', 1, Prop.float)

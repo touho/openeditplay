@@ -89,7 +89,8 @@ Component.register({
 				sleepTimeLimit: 0.6,
 				sleepSpeedLimit: 0.3,
 				damping: this.drag,
-				angularDamping: this.rotationalDrag
+				angularDamping: this.rotationalDrag > 0.98 ? 1 : this.rotationalDrag,
+				fixedRotation: this.rotationalDrag === 1
 			});
 			this.updateShape();
 

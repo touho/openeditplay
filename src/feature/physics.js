@@ -47,7 +47,7 @@ const defaultMaterialOptions = {
 	friction: 0.3,
 	restitution: 0,
 	stiffness: 1e6,
-	relaxation: 4,
+	relaxation: 3,
 	frictionStiffness: 1e6,
 	frictionRelaxation: 4,
 	surfaceVelocity: 0
