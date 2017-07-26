@@ -432,7 +432,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 var serializables = {};
 
 var DEBUG_CHANGES = 0;
-var CHECK_FOR_INVALID_ORIGINS = 1;
+var CHECK_FOR_INVALID_ORIGINS = 0;
 
 function addSerializable(serializable) {
 // @ifndef OPTIMIZE
@@ -502,6 +502,8 @@ function setChangeOrigin$1(_origin) {
 }
 
 var externalChange = false;
+
+// addChange needs to be called if editor, server or net game needs to share changes
 function addChange(type, reference) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
@@ -653,8 +655,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -665,7 +665,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -730,8 +729,10 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
+		
 		this.dispatch('change', this._value);
-		if (this._rootType)
+		
+		if (this._rootType) // not scene or empty
 			{ addChange(changeType.setPropertyValue, this); }
 	},
 	get: function get() {
@@ -752,10 +753,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2199,6 +2196,58 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
+var UPDATE_INTERVAL = 1000; //ms
+
+var performance$1;
+performance$1 = isClient ? window.performance : { now: Date.now };
+
+var snapshotPerformance = []; // is static data for UPDATE_INTERVAL. then it changes.
+var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
+var currentPerformanceMeters = {}; // very short term
+
+var snapshotListener = null;
+
+function start(name) {
+	// @ifndef OPTIMIZE
+	currentPerformanceMeters[name] = performance$1.now();
+	// @endif
+}
+
+function stop(name) {
+	// @ifndef OPTIMIZE
+	var millis = performance$1.now() - currentPerformanceMeters[name];
+	if (cumulativePerformance[name])
+		{ cumulativePerformance[name] += millis; }
+	else
+		{ cumulativePerformance[name] = millis; }
+	return millis;
+	// @endif
+}
+
+function startPerformanceUpdates() {
+	setInterval(function () {
+		snapshotPerformance = performanceObjectToArray(cumulativePerformance);
+		cumulativePerformance = {};
+		
+		if (snapshotListener) {
+			snapshotListener(snapshotPerformance);
+		}
+	}, UPDATE_INTERVAL);
+}
+
+function setListener(listener) {
+	snapshotListener = listener;
+}
+
+function performanceObjectToArray(object) {
+	return Object.keys(object).map(function (key) { return ({
+		name: key,
+		value: object[key] / UPDATE_INTERVAL
+	}); }).sort(function (a, b) {
+		return a.value < b.value ? 1 : -1;
+	});
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2301,13 +2350,19 @@ var Scene = (function (Serializable$$1) {
 		setChangeOrigin$1(this);
 
 		// Update logic
+		start('Scene logic');
 		this.dispatch('onUpdate', dt, this.time);
+		stop('Scene logic');
 
 		// Update physics
+		start('Scene physics');
 		updateWorld(this, dt, timeInMilliseconds);
+		stop('Scene physics');
 
 		// Update graphics
+		start('Scene draw');
 		this.draw();
+		stop('Scene draw');
 
 		if (this.won) {
 			this.pause();
@@ -2479,8 +2534,17 @@ var Component$1 = (function (PropertyOwner$$1) {
 	Component.prototype._addEventListener = function _addEventListener (functionName) {
 		var func = this[functionName];
 		var self = this;
+		var performanceName = self.constructor.componentName + '.' + functionName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			// @ifndef OPTIMIZE
+			start(performanceName);
+			// @endif
+			
 			func.apply(self, arguments);
+			
+			// @ifndef OPTIMIZE
+			stop(performanceName);
+			// @endif
 		}));
 	};
 	Component.prototype._preInit = function _preInit () {
@@ -2654,8 +2718,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3168,9 +3230,6 @@ Component$1.register({
 		sleep: function sleep() {
 			this.graphics.destroy();
 			this.graphics = null;
-		},
-		onUpdate: function onUpdate() {
-
 		}
 	}
 });
@@ -3824,8 +3883,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -4254,10 +4311,12 @@ ModuleContainer.prototype.update = function update () {
 		var this$1 = this;
 
 	this.modules.forEach(function (m) {
+		start('Module: ' + m.id);
 		if (m.update() !== false) {
 			this$1._enableModule(m);
 		} else
 			{ this$1._disableModule(m); }
+		stop('Module: ' + m.id);
 	});
 	this._updateTabs();
 };
@@ -4420,7 +4479,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5157,11 +5215,6 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5851,9 +5904,6 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
-/// Drawing
-
-// '#53f8ff'
 var widgetColor = 'white';
 
 
@@ -7101,6 +7151,63 @@ var TestModule = (function (Module$$1) {
 
 Module.register(TestModule, 'left');
 
+var PerformanceModule = (function (Module$$1) {
+	function PerformanceModule() {
+		var performanceList;
+		Module$$1.call(
+			this, el('div.performanceCPU',
+				new PerformanceItem({ name: 'Name', value: 'CPU %' }),
+				performanceList = list('div.performanceList', PerformanceItem, 'name')
+			)
+		);
+		
+		this.name = 'Performance';
+		this.id = 'performance';
+		
+
+		startPerformanceUpdates();
+		setListener(function (snapshot) {
+			performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; }));
+		});
+	}
+
+	if ( Module$$1 ) PerformanceModule.__proto__ = Module$$1;
+	PerformanceModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	PerformanceModule.prototype.constructor = PerformanceModule;
+
+	return PerformanceModule;
+}(Module));
+
+var PerformanceItem = function PerformanceItem(initItem) {
+        this.el = el('div.performanceItem',
+            this.name = el('span.performanceItemName'),
+		this.value = el('span.performanceItemValue')
+        );
+        
+        if (initItem) {
+        this.name.textContent = initItem.name;
+        this.value.textContent = initItem.value;
+        	
+        this.el.classList.add('performanceHeader');
+	}
+    };
+    PerformanceItem.prototype.update = function update (snapshotItem) {
+        this.name.textContent = snapshotItem.name;
+        var value = snapshotItem.value * 100;
+        this.value.textContent = value.toFixed(1); // example: 10.0%
+		
+	if (value > 40)
+		{ this.el.style.color = '#ff7075'; }
+	else if (value > 10)
+		{ this.el.style.color = '#ffdab7'; }
+	else if (value > 0.4)
+		{ this.el.style.color = ''; }
+	else
+		{ this.el.style.color = '#888'; }
+    };
+
+Module.register(PerformanceModule, 'bottom');
+
 var TestModule$1 = (function (Module$$1) {
 	function TestModule() {
 		Module$$1.call(
@@ -7145,6 +7252,7 @@ setInterval(function () {
 }, 200);
 
 addChangeListener(function (change) {
+	start('Editor change listener');
 	events.dispatch('change', change);
 	if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
 		var game$$1 = change.reference;
@@ -7159,6 +7267,7 @@ addChangeListener(function (change) {
 		}
 		editor.dirty = true;
 	}
+	stop('Editor change listener');
 });
 
 var editor = null;

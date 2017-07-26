@@ -7,6 +7,7 @@ import { game } from './game';
 export { default as Prop } from './propertyType';
 export let componentClasses = new Map();
 import ComponentData from './componentData';
+import * as performance from '../util/performance';
 
 const eventListeners = [
 	'onUpdate'
@@ -37,8 +38,17 @@ export class Component extends PropertyOwner {
 	_addEventListener(functionName) {
 		let func = this[functionName];
 		let self = this;
+		let performanceName = self.constructor.componentName + '.' + functionName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			// @ifndef OPTIMIZE
+			performance.start(performanceName);
+			// @endif
+			
 			func.apply(self, arguments);
+			
+			// @ifndef OPTIMIZE
+			performance.stop(performanceName);
+			// @endif
 		}));
 	}
 	_preInit() {

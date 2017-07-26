@@ -55,8 +55,10 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
+		
 		this.dispatch('change', this._value);
-		if (this._rootType)
+		
+		if (this._rootType) // not scene or empty
 			addChange(changeType.setPropertyValue, this);
 	},
 	get() {

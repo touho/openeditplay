@@ -6,6 +6,7 @@ import {isClient} from '../util/environment';
 import {createWorld, deleteWorld, updateWorld} from '../feature/physics';
 import {listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed} from '../util/input';
 import {default as PIXI, getRenderer} from '../feature/graphics';
+import * as performanceTool from '../util/performance';
 
 let scene = null;
 export {scene};
@@ -104,13 +105,19 @@ export default class Scene extends Serializable {
 		setChangeOrigin(this);
 
 		// Update logic
+		performanceTool.start('Scene logic');
 		this.dispatch('onUpdate', dt, this.time);
+		performanceTool.stop('Scene logic');
 
 		// Update physics
+		performanceTool.start('Scene physics');
 		updateWorld(this, dt, timeInMilliseconds);
+		performanceTool.stop('Scene physics');
 
 		// Update graphics
+		performanceTool.start('Scene draw');
 		this.draw();
+		performanceTool.stop('Scene draw');
 
 		if (this.won) {
 			this.pause();

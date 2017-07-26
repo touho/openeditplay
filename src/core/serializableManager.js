@@ -4,7 +4,7 @@ import Serializable from './serializable';
 export let serializables = {};
 
 let DEBUG_CHANGES = 0;
-let CHECK_FOR_INVALID_ORIGINS = 1;
+let CHECK_FOR_INVALID_ORIGINS = 0;
 
 export function addSerializable(serializable) {
 // @ifndef OPTIMIZE
@@ -76,6 +76,8 @@ export function setChangeOrigin(_origin) {
 }
 
 let externalChange = false;
+
+// addChange needs to be called if editor, server or net game needs to share changes
 export function addChange(type, reference) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');

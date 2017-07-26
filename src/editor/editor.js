@@ -9,6 +9,7 @@ import './module/level';
 import './module/game';
 import './module/instances';
 import './module/levels';
+import './module/performance';
 import './module/test3';
 import { el, list, mount } from 'redom';
 import { game } from '../core/game';
@@ -18,6 +19,7 @@ import assert from '../util/assert';
 import { setNetworkEnabled } from '../util/net';
 import './help';
 import './test';
+import * as performance from '../util/performance'
 
 let loaded = false;
 
@@ -39,6 +41,7 @@ setInterval(() => {
 }, 200);
 
 addChangeListener(change => {
+	performance.start('Editor change listener');
 	events.dispatch('change', change);
 	if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
 		let game = change.reference;
@@ -53,6 +56,7 @@ addChangeListener(change => {
 		}
 		editor.dirty = true;
 	}
+	performance.stop('Editor change listener');
 });
 
 export let editor = null;

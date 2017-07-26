@@ -157,9 +157,6 @@ Component.register({
 		sleep() {
 			this.graphics.destroy();
 			this.graphics = null;
-		},
-		onUpdate() {
-
 		}
 	}
 });

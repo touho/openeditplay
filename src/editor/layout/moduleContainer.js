@@ -1,6 +1,7 @@
 import { el, list, mount } from 'redom';
 import events, { dispatch, listen } from '../events';
 import { setOption, getOption } from '../editor';
+import * as performance from '../../util/performance';
 
 export default class ModuleContainer {
 	constructor(moduleContainerName = 'unknownClass.anotherClass', packButtonIcon = 'fa-chevron-left') {
@@ -50,10 +51,12 @@ export default class ModuleContainer {
 	}
 	update() {
 		this.modules.forEach(m => {
+			performance.start('Module: ' + m.id);
 			if (m.update() !== false) {
 				this._enableModule(m);
 			} else
 				this._disableModule(m);
+			performance.stop('Module: ' + m.id);
 		});
 		this._updateTabs();
 	}

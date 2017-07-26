@@ -432,7 +432,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 var serializables = {};
 
 var DEBUG_CHANGES = 0;
-var CHECK_FOR_INVALID_ORIGINS = 1;
+var CHECK_FOR_INVALID_ORIGINS = 0;
 
 function addSerializable(serializable) {
 // @ifndef OPTIMIZE
@@ -502,6 +502,8 @@ function setChangeOrigin(_origin) {
 }
 
 var externalChange = false;
+
+// addChange needs to be called if editor, server or net game needs to share changes
 function addChange(type, reference) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
@@ -730,8 +732,10 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
+		
 		this.dispatch('change', this._value);
-		if (this._rootType)
+		
+		if (this._rootType) // not scene or empty
 			{ addChange(changeType.setPropertyValue, this); }
 	},
 	get: function get() {
@@ -2199,6 +2203,29 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
+var performance$1;
+performance$1 = isClient ? window.performance : { now: Date.now };
+
+var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
+var currentPerformanceMeters = {}; // very short term
+
+function start(name) {
+	// @ifndef OPTIMIZE
+	currentPerformanceMeters[name] = performance$1.now();
+	// @endif
+}
+
+function stop(name) {
+	// @ifndef OPTIMIZE
+	var millis = performance$1.now() - currentPerformanceMeters[name];
+	if (cumulativePerformance[name])
+		{ cumulativePerformance[name] += millis; }
+	else
+		{ cumulativePerformance[name] = millis; }
+	return millis;
+	// @endif
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2301,13 +2328,19 @@ var Scene = (function (Serializable$$1) {
 		setChangeOrigin(this);
 
 		// Update logic
+		start('Scene logic');
 		this.dispatch('onUpdate', dt, this.time);
+		stop('Scene logic');
 
 		// Update physics
+		start('Scene physics');
 		updateWorld(this, dt, timeInMilliseconds);
+		stop('Scene physics');
 
 		// Update graphics
+		start('Scene draw');
 		this.draw();
+		stop('Scene draw');
 
 		if (this.won) {
 			this.pause();
@@ -2479,8 +2512,17 @@ var Component = (function (PropertyOwner$$1) {
 	Component.prototype._addEventListener = function _addEventListener (functionName) {
 		var func = this[functionName];
 		var self = this;
+		var performanceName = self.constructor.componentName + '.' + functionName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			// @ifndef OPTIMIZE
+			start(performanceName);
+			// @endif
+			
 			func.apply(self, arguments);
+			
+			// @ifndef OPTIMIZE
+			stop(performanceName);
+			// @endif
 		}));
 	};
 	Component.prototype._preInit = function _preInit () {
@@ -3168,9 +3210,6 @@ Component.register({
 		sleep: function sleep() {
 			this.graphics.destroy();
 			this.graphics = null;
-		},
-		onUpdate: function onUpdate() {
-
 		}
 	}
 });
