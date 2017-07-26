@@ -9,7 +9,7 @@ Component.register({
 	allowMultiple: true,
 	properties: [
 		Prop('type', 'rectangle', Prop.enum, Prop.enum.values('rectangle', 'circle', 'convex')),
-		Prop('radius', 10, Prop.float, Prop.visibleIf('type', 'circle')),
+		Prop('radius', 10, Prop.float, Prop.visibleIf('type', ['circle', 'convex'])),
 		Prop('size', new Vector(10, 10), Prop.vector, Prop.visibleIf('type', 'rectangle')),
 		Prop('points', 3, Prop.int, Prop.int.range(3, 16), Prop.visibleIf('type', 'convex')),
 		Prop('topPointDistance', 0.5, Prop.float, Prop.float.range(0.001, 1), Prop.visibleIf('type', 'convex'), 'Only works with at most 8 points'), // Value 0

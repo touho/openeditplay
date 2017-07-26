@@ -65,13 +65,15 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 
 export let dataType = createPropertyType;
 
+// if value is string, property must be value
+// if value is an array, property must be one of the values
 dataType.visibleIf = function(propertyName, value) {
 	assert(typeof propertyName === 'string' && propertyName.length);
 	assert(typeof value !== 'undefined');
 	return {
 		visibleIf: true,
 		propertyName,
-		value
+		values: typeof value === 'string' ? [value] : value
 	};
 };
 

@@ -346,7 +346,7 @@ class Property {
 	updateVisibleIf() {
 		if (!this.property._editorVisibleIfTarget)
 			return;
-		$(this.el).toggleClass('hidden', this.property._editorVisibleIfTarget.value !== this.property.propertyType.visibleIf.value);
+		$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
 	}
 	update(property) {
 		if (this.visibleIfListener) {

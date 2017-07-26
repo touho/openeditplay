@@ -653,6 +653,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -663,6 +665,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -750,6 +753,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
+// info about type, validator, validatorParameters, initialValue
+
+
+
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -819,13 +826,15 @@ function createPropertyType(propertyName, defaultValue, type) {
 
 var dataType = createPropertyType;
 
+// if value is string, property must be value
+// if value is an array, property must be one of the values
 dataType.visibleIf = function(propertyName, value) {
 	assert(typeof propertyName === 'string' && propertyName.length);
 	assert(typeof value !== 'undefined');
 	return {
 		visibleIf: true,
 		propertyName: propertyName,
-		value: value
+		values: typeof value === 'string' ? [value] : value
 	};
 };
 
@@ -2045,7 +2054,10 @@ function keyPressed(key) {
 	return keys[key] || false;
 }
 
-
+function listenKeyDown(handler) {
+	keyDownListeners.push(handler);
+	return function () { return keyDownListeners.splice(keyDownListeners.indexOf(handler), 1); };
+}
 
 
 var key = {
@@ -2154,8 +2166,10 @@ if (typeof window !== 'undefined') {
 		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
 			{ return; }
 
-		keys[keyCode] = true;
-		keyDownListeners.forEach(function (l) { return l(keyCode); });
+		if (!keys[keyCode]) {
+			keys[keyCode] = true;
+			keyDownListeners.forEach(function (l) { return l(keyCode); });
+		}
 	};
 	window.onkeyup = function (event) {
 		var key = event.which || event.keyCode;
@@ -2640,6 +2654,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2999,7 +3015,7 @@ Component.register({
 	allowMultiple: true,
 	properties: [
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
-		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', 'circle')),
+		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
 		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
 		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 16), createPropertyType.visibleIf('type', 'convex')),
 		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0.001, 1), createPropertyType.visibleIf('type', 'convex'), 'Only works with at most 8 points'), // Value 0
@@ -3488,13 +3504,39 @@ Component.register({
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
-		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper'/*, 'top down', 'space ship'*/)),
+		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('speed', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
 	],
 	prototype: {
 		init: function init() {
+			var this$1 = this;
+
 			this.Physics = this.entity.getComponent('Physics');
+
+			this.keyListener = listenKeyDown(function (keyCode) {
+				if (this$1.controlType !== 'jumper' || !this$1.scene.playing)
+					{ return; }
+				
+				if (this$1.keyboardControls === 'arrows') {
+					if (keyCode === key.up)
+						{ this$1.jump(); }
+				} else if (this$1.keyboardControls === 'WASD') {
+					if (keyCode === key.w)
+						{ this$1.jump(); }
+				} else if (this$1.keyboardControls === 'arrows or WASD') {
+					if (keyCode === key.up || keyCode === key.w)
+						{ this$1.jump(); }
+				} else {
+					assert(false, 'Invalid CharacterController.keyboardControls');
+				}
+			});
+		},
+		sleep: function sleep() {
+			if (this.keyListener) {
+				this.keyListener();
+				this.keyListener = null;
+			}
 		},
 		getInput: function getInput() {
 			if (this.keyboardControls === 'arrows') {
@@ -3538,14 +3580,15 @@ Component.register({
 			if (down) { dy++; }
 			
 			if (dx !== 0 || dy !== 0) {
-				this.moveTopDown(dx, dy, dt);
+				if (this.controlType === 'top down') {
+					this.moveTopDown(dx, dy, dt);
+				} else if (this.controlType === 'jumper') {
+					this.moveJumper(dx, dy, dt);
+				}
 			}
 		},
 		// dx and dy between [-1, 1]
 		moveTopDown: function moveTopDown(dx, dy, dt) {
-			var Transform = this.Transform;
-			var p = Transform.position;
-			
 			if (this.Physics) {
 				var delta = this.acceleration * dt;
 				this.Physics.body.applyForce([dx * delta * 100, dy * delta * 100]);
@@ -3554,9 +3597,50 @@ Component.register({
 				if (velocity.length() > this.speed)
 					{ this.Physics.body.velocity = velocity.setLength(this.speed).toArray(); }
 			} else {
+				var Transform = this.Transform;
+				var p = Transform.position;
 				var delta$1 = this.speed * dt;
 				Transform.position = new Vector(p.x + dx * delta$1, p.y + dy * delta$1);
 			}
+		},
+		moveJumper: function moveJumper(dx, dy, dt) {
+			if (!this.Physics)
+				{ return false; }
+
+			var delta = this.acceleration * dt;
+			this.Physics.body.applyForce([dx * delta * 100, 0]);
+
+			var velocity = Vector.fromArray(this.Physics.body.velocity);
+			if (velocity.length() > this.speed)
+				{ this.Physics.body.velocity = velocity.setLength(this.speed).toArray(); }
+		},
+		jump: function jump() {
+			if (this.checkIfCanJump()) {
+				this.Physics.body.applyImpulse([0, -40]);
+			}
+		},
+		checkIfCanJump: function checkIfCanJump() {
+			if (!this.Physics)
+				{ return false; }
+			
+			var contactEquations = getWorld(this.scene).narrowphase.contactEquations;
+			var body = this.Physics.body;
+			
+			if (body.sleepState === p2$1.Body.SLEEPING)
+				{ return true; }
+			
+			for (var i = contactEquations.length - 1; i >= 0; --i) {
+				var contact = contactEquations[i];
+				if (contact.bodyA === body || contact.bodyB === body) {
+					var normalY = contact.normalA[1];
+					if (contact.bodyB === body)
+						{ normalY *= -1; }
+					if (normalY > 0.5)
+						{ return true; }
+				}
+			}
+			
+			return false;
 		}
 	}
 });

@@ -119,8 +119,10 @@ if (typeof window !== 'undefined') {
 		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
 			return;
 
-		keys[keyCode] = true;
-		keyDownListeners.forEach(l => l(keyCode));
+		if (!keys[keyCode]) {
+			keys[keyCode] = true;
+			keyDownListeners.forEach(l => l(keyCode));
+		}
 	};
 	window.onkeyup = event => {
 		let key = event.which || event.keyCode;
