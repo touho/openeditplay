@@ -113,12 +113,32 @@ export default Component.register({
 		},
 		init() {
 			this.listenProperty(this.Transform, 'position', position => {
-				this.updateWidgets();
+				if (this.scene.playing) {
+					this.requiresWidgetUpdate = true;
+					return;
+				}
+
 				this.positionHelper.x = position.x;
 				this.positionHelper.y = position.y;
+				
+				this.updateWidgets();
 			});
 			this.listenProperty(this.Transform, 'angle', () => {
+				if (this.scene.playing) {
+					this.requiresWidgetUpdate = true;
+					return;
+				}
+				
 				this.updateWidgets();
+			});
+			
+			this.scene.listen('pause', () => {
+				if (this.requiresWidgetUpdate) {
+					this.positionHelper.x = this.Transform.position.x;
+					this.positionHelper.y = this.Transform.position.y;
+					this.updateWidgets();
+					this.requiresWidgetUpdate = false;
+				}
 			});
 
 			

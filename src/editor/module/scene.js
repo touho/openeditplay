@@ -19,6 +19,7 @@ import { removeTheDeadFromArray } from '../../util/algorithm';
 import { help } from '../help';
 import { createNewLevel } from './levels';
 import PIXI from '../../feature/graphics';
+import * as performance from '../../util/performance';
 
 import '../components/EditorWidget';
 
@@ -131,6 +132,8 @@ class SceneModule extends Module {
 		events.listen('prototypeClicked', prototype => {
 			if (!scene)
 				return;
+
+			performance.start('Editor: Scene');
 			
 			this.clearState();
 			
@@ -139,9 +142,13 @@ class SceneModule extends Module {
 			let newEntity = entityPrototype.createEntity(this);
 			this.newEntities.push(newEntity);
 			this.draw();
+
+			performance.stop('Editor: Scene');
 		});
 		
 		events.listen('change', change => {
+			performance.start('Editor: Scene');
+			
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
 				
 				// Make sure the scene has the layers for EditorWidget
@@ -153,7 +160,7 @@ class SceneModule extends Module {
 			}
 			
 			if (scene && scene.resetting)
-				return;
+				return performance.stop('Editor: Scene');
 			
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
@@ -161,6 +168,7 @@ class SceneModule extends Module {
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
 				this.draw();
 			}
+			performance.stop('Editor: Scene');
 		});
 		
 		listenKeyDown(k => {
@@ -194,23 +202,31 @@ class SceneModule extends Module {
 			if (!scene)
 				return;
 			
+			performance.start('Editor: Scene');
+			
+			let needsDraw = false;
+			
 			setChangeOrigin(this);
 			let change = this.previousMousePos ? mousePos.clone().subtract(this.previousMousePos) : mousePos;
 			if (this.entitiesToEdit.length > 0 && this.widgetUnderMouse) {
 				// Editing entities with a widget
 				this.widgetUnderMouse.onDrag(mousePos, change, this.entitiesToEdit);
 				sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
+				needsDraw = true;
 			} else {
 				if (this.widgetUnderMouse) {
 					this.widgetUnderMouse.unhover();
 					this.widgetUnderMouse = null;
+					needsDraw = true;
 				}
 				sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
 				if (scene) {
 					if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd) {
 						this.widgetUnderMouse = sceneEdit.getWidgetUnderMouse(mousePos);
-						if (this.widgetUnderMouse)
+						if (this.widgetUnderMouse) {
 							this.widgetUnderMouse.hover();
+							needsDraw = true;
+						}
 					}
 				}
 			}
@@ -234,10 +250,16 @@ class SceneModule extends Module {
 				}
 				this.entitiesInSelection = sceneEdit.getEntitiesInSelection(this.selectionStart, this.selectionEnd);
 				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, true);
+
+				needsDraw = true;
 			}
 
 			this.previousMousePos = mousePos;
-			this.draw();
+			
+			if (needsDraw)
+				this.draw();
+
+			performance.stop('Editor: Scene');
 		});
 		listenMouseDown(this.el, mousePos => {
 			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh

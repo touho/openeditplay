@@ -5,6 +5,7 @@ import Prototype from '../../core/prototype';
 import { getSerializable, changeType, setChangeOrigin } from '../../core/serializableManager';
 import assert from '../../util/assert';
 import { editor } from '../editor';
+import * as performance from '../../util/performance';
 
 class Types extends Module {
 	constructor() {
@@ -46,6 +47,8 @@ class Types extends Module {
 			let jstree = $(this.jstree).jstree(true);
 			if (!jstree)
 				return;
+
+			performance.start('Editor: Types');
 			
 			this.externalChange = true;
 			
@@ -90,6 +93,8 @@ class Types extends Module {
 			}
 
 			this.externalChange = false;
+
+			performance.stop('Editor: Types');
 		});
 	}
 	update() {

@@ -1316,14 +1316,15 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	Class._propertyTypes = propertyTypes;
 	Class._propertyTypesByName = {};
 	propertyTypes.forEach(function (propertyType) {
-		assert(Class.prototype[propertyType.name] === undefined, 'Property name ' + propertyType.name + ' clashes');
-		Class._propertyTypesByName[propertyType.name] = propertyType;
-		Object.defineProperty(Class.prototype, propertyType.name, {
+		var propertyTypeName = propertyType.name;
+		assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+		Class._propertyTypesByName[propertyTypeName] = propertyType;
+		Object.defineProperty(Class.prototype, propertyTypeName, {
 			get: function get() {
-				return this._properties[propertyType.name].value;
+				return this._properties[propertyTypeName].value;
 			},
 			set: function set(value) {
-				this._properties[propertyType.name].value = value;
+				this._properties[propertyTypeName].value = value;
 			}
 		});
 	});
@@ -2226,6 +2227,20 @@ function stop(name) {
 	// @endif
 }
 
+
+
+
+
+var FRAME_MEMORY_LENGTH = 600;
+var frameTimes = [];
+for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	frameTimes.push(0);
+}
+function setFrameTime(seconds) {
+	frameTimes.shift();
+	frameTimes.push(seconds);
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2320,6 +2335,7 @@ var Scene = (function (Serializable$$1) {
 		var timeInMilliseconds = performance.now();
 		var t = 0.001 * timeInMilliseconds;
 		var dt = t - this._prevUpdate;
+		setFrameTime(dt);
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
@@ -2328,19 +2344,17 @@ var Scene = (function (Serializable$$1) {
 		setChangeOrigin(this);
 
 		// Update logic
-		start('Scene logic');
 		this.dispatch('onUpdate', dt, this.time);
-		stop('Scene logic');
 
 		// Update physics
-		start('Scene physics');
+		start('Physics');
 		updateWorld(this, dt, timeInMilliseconds);
-		stop('Scene physics');
+		stop('Physics');
 
 		// Update graphics
-		start('Scene draw');
+		start('Draw');
 		this.draw();
-		stop('Scene draw');
+		stop('Draw');
 
 		if (this.won) {
 			this.pause();
@@ -2391,6 +2405,8 @@ var Scene = (function (Serializable$$1) {
 		
 		this.draw();
 		delete this.resetting;
+		
+		this.dispatch('reset');
 	};
 
 	Scene.prototype.pause = function pause () {
@@ -2404,6 +2420,8 @@ var Scene = (function (Serializable$$1) {
 				{ clearTimeout(this.animationFrameId); }
 		}
 		this.animationFrameId = null;
+
+		this.dispatch('pause');
 	};
 
 	Scene.prototype.play = function play () {
@@ -2425,6 +2443,8 @@ var Scene = (function (Serializable$$1) {
 		 this.spawn(player);
 		 }
 		 */
+		
+		this.dispatch('play');
 	};
 
 	Scene.prototype.delete = function delete$1 () {
@@ -2512,7 +2532,7 @@ var Component = (function (PropertyOwner$$1) {
 	Component.prototype._addEventListener = function _addEventListener (functionName) {
 		var func = this[functionName];
 		var self = this;
-		var performanceName = self.constructor.componentName + '.' + functionName;
+		var performanceName = 'Component: ' + self.constructor.componentName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
 			// @ifndef OPTIMIZE
 			start(performanceName);

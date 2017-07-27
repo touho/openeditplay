@@ -51,3 +51,16 @@ function performanceObjectToArray(object) {
 		return a.value < b.value ? 1 : -1;
 	});
 }
+
+export let FRAME_MEMORY_LENGTH = 600;
+let frameTimes = [];
+for (let i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	frameTimes.push(0);
+}
+export function setFrameTime(seconds) {
+	frameTimes.shift();
+	frameTimes.push(seconds);
+}
+export function getFrameTimes() {
+	return frameTimes;
+}

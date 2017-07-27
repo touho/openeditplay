@@ -357,11 +357,15 @@ img.logo:hover {
 }
 .module.module-performance {
   padding: 5px 10px;
+  display: flex;
+  flex-direction: row;
 }
 .performanceList {
 }
 .performanceCPU {
   width: 280px;
+  display: inline-block;
+  vertical-align: top;
 }
 .performanceHeader {
   font-weight: bold;
@@ -375,6 +379,9 @@ img.logo:hover {
   width: 220px;
 }
 .performanceItemValue {
+}
+.fpsMeterCanvas {
+  flex: 1;
 }
 .jstree-default .jstree-search {
   color: #c3c3c3;
@@ -603,6 +610,9 @@ div.popup div.popupButtons {
 }
 div.popup div.buttonContainer {
   display: flex;
+}
+* {
+  box-sizing: border-box;
 }
 body, html {
   background: #363636;

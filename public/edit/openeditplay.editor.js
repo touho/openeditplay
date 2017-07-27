@@ -1309,14 +1309,15 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	Class._propertyTypes = propertyTypes;
 	Class._propertyTypesByName = {};
 	propertyTypes.forEach(function (propertyType) {
-		assert(Class.prototype[propertyType.name] === undefined, 'Property name ' + propertyType.name + ' clashes');
-		Class._propertyTypesByName[propertyType.name] = propertyType;
-		Object.defineProperty(Class.prototype, propertyType.name, {
+		var propertyTypeName = propertyType.name;
+		assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+		Class._propertyTypesByName[propertyTypeName] = propertyType;
+		Object.defineProperty(Class.prototype, propertyTypeName, {
 			get: function get() {
-				return this._properties[propertyType.name].value;
+				return this._properties[propertyTypeName].value;
 			},
 			set: function set(value) {
-				this._properties[propertyType.name].value = value;
+				this._properties[propertyTypeName].value = value;
 			}
 		});
 	});
@@ -2248,6 +2249,19 @@ function performanceObjectToArray(object) {
 	});
 }
 
+var FRAME_MEMORY_LENGTH = 600;
+var frameTimes = [];
+for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	frameTimes.push(0);
+}
+function setFrameTime(seconds) {
+	frameTimes.shift();
+	frameTimes.push(seconds);
+}
+function getFrameTimes() {
+	return frameTimes;
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2342,6 +2356,7 @@ var Scene = (function (Serializable$$1) {
 		var timeInMilliseconds = performance.now();
 		var t = 0.001 * timeInMilliseconds;
 		var dt = t - this._prevUpdate;
+		setFrameTime(dt);
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
@@ -2350,19 +2365,17 @@ var Scene = (function (Serializable$$1) {
 		setChangeOrigin$1(this);
 
 		// Update logic
-		start('Scene logic');
 		this.dispatch('onUpdate', dt, this.time);
-		stop('Scene logic');
 
 		// Update physics
-		start('Scene physics');
+		start('Physics');
 		updateWorld(this, dt, timeInMilliseconds);
-		stop('Scene physics');
+		stop('Physics');
 
 		// Update graphics
-		start('Scene draw');
+		start('Draw');
 		this.draw();
-		stop('Scene draw');
+		stop('Draw');
 
 		if (this.won) {
 			this.pause();
@@ -2413,6 +2426,8 @@ var Scene = (function (Serializable$$1) {
 		
 		this.draw();
 		delete this.resetting;
+		
+		this.dispatch('reset');
 	};
 
 	Scene.prototype.pause = function pause () {
@@ -2426,6 +2441,8 @@ var Scene = (function (Serializable$$1) {
 				{ clearTimeout(this.animationFrameId); }
 		}
 		this.animationFrameId = null;
+
+		this.dispatch('pause');
 	};
 
 	Scene.prototype.play = function play () {
@@ -2447,6 +2464,8 @@ var Scene = (function (Serializable$$1) {
 		 this.spawn(player);
 		 }
 		 */
+		
+		this.dispatch('play');
 	};
 
 	Scene.prototype.delete = function delete$1 () {
@@ -2534,7 +2553,7 @@ var Component$1 = (function (PropertyOwner$$1) {
 	Component.prototype._addEventListener = function _addEventListener (functionName) {
 		var func = this[functionName];
 		var self = this;
-		var performanceName = self.constructor.componentName + '.' + functionName;
+		var performanceName = 'Component: ' + self.constructor.componentName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
 			// @ifndef OPTIMIZE
 			start(performanceName);
@@ -4311,12 +4330,13 @@ ModuleContainer.prototype.update = function update () {
 		var this$1 = this;
 
 	this.modules.forEach(function (m) {
-		start('Module: ' + m.id);
+		var performanceName = 'Editor: ' + m.id[0].toUpperCase() + m.id.substring(1);
+		start(performanceName);
 		if (m.update() !== false) {
 			this$1._enableModule(m);
 		} else
 			{ this$1._disableModule(m); }
-		stop('Module: ' + m.id);
+		stop(performanceName);
 	});
 	this._updateTabs();
 };
@@ -4408,8 +4428,16 @@ var ModuleTab = function ModuleTab() {
 	};
 };
 ModuleTab.prototype.update = function update (module) {
+	if (this.module === module && this._sel === module._selected && this._ena === module._enabled)
+		{ return; }
+		
 	this.module = module;
-	this.el.innerHTML = module.name;
+	if (this.el.innerHTML !== module.name)
+		{ this.el.innerHTML = module.name; }
+		
+	this._sel = module._selected;
+	this._ena = module._enabled;
+		
 	this.el.classList.toggle('moduleSelected', module._selected);
 	this.el.classList.toggle('moduleEnabled', module._enabled);
 };
@@ -4619,14 +4647,27 @@ var Button = function Button() {
 	}});
 };
 Button.prototype.update = function update (button) {
+	var newClassName = button.class ? ("button " + (button.class)) : 'button';
+		
+	if (
+		this.el.textContent === button.text
+		&& this._prevIcon === button.icon
+		&& this.el.className === newClassName
+		&& (!button.color || this.el.style['border-color'] === button.color)
+	) {
+		return; // optimize
+	}
+		
 	this.el.textContent = button.text;
+		
+	this._prevIcon = button.icon;
 	if (button.icon) {
 		var icon = el('i.fa.' + button.icon);
 		if (button.color)
 			{ icon.style.color = button.color; }
 		mount(this.el, icon, this.el.firstChild);
 	}
-	this.el.className = button.class ? ("button " + (button.class)) : 'button';
+	this.el.className = newClassName;
 	this.callback = button.callback;
 	if (button.color)
 		{ this.el.style['border-color'] = button.color; }
@@ -5218,7 +5259,7 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
-	this.el = el('div.propertyEditor');
+	this.el = el('div.propertyEditor'); // TODO: Add list of containers here
 	this.dirty = true;
 	this.editingProperty = false;
 	
@@ -5474,7 +5515,8 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 	}
 };
 Container.prototype.updateEntity = function updateEntity () {
-	this.title.textContent = this.item.prototype.name;
+	if (this.title.textContent !== this.item.prototype.name)
+		{ this.title.textContent = this.item.prototype.name; }
 	this.containers.update(this.item.getListOfAllComponents());
 	// this.properties.update(this.item.getChildren('prp'));
 };
@@ -5554,6 +5596,16 @@ Property$2.prototype.updateVisibleIf = function updateVisibleIf () {
 Property$2.prototype.update = function update (property) {
 		var this$1 = this;
 
+	/*
+	console.log('update', this.property, property, this._previousValue, property.value);
+	// Optimization
+	if (this.property === property && this._previousValue === property.value)
+		return;
+	this._previousValue = property.value;
+	//
+	console.log('update2');
+	*/
+		
 	if (this.visibleIfListener) {
 		this.visibleIfListener(); // unlisten
 		this.visibleIfListener = null;
@@ -5742,6 +5794,8 @@ var Types = (function (Module$$1) {
 			var jstree = $(this$1.jstree).jstree(true);
 			if (!jstree)
 				{ return; }
+
+			start('Editor: Types');
 			
 			this$1.externalChange = true;
 			
@@ -5786,6 +5840,8 @@ var Types = (function (Module$$1) {
 			}
 
 			this$1.externalChange = false;
+
+			stop('Editor: Types');
 		});
 	}
 
@@ -6491,12 +6547,32 @@ Component$1.register({
 			var this$1 = this;
 
 			this.listenProperty(this.Transform, 'position', function (position) {
-				this$1.updateWidgets();
+				if (this$1.scene.playing) {
+					this$1.requiresWidgetUpdate = true;
+					return;
+				}
+
 				this$1.positionHelper.x = position.x;
 				this$1.positionHelper.y = position.y;
+				
+				this$1.updateWidgets();
 			});
 			this.listenProperty(this.Transform, 'angle', function () {
+				if (this$1.scene.playing) {
+					this$1.requiresWidgetUpdate = true;
+					return;
+				}
+				
 				this$1.updateWidgets();
+			});
+			
+			this.scene.listen('pause', function () {
+				if (this$1.requiresWidgetUpdate) {
+					this$1.positionHelper.x = this$1.Transform.position.x;
+					this$1.positionHelper.y = this$1.Transform.position.y;
+					this$1.updateWidgets();
+					this$1.requiresWidgetUpdate = false;
+				}
 			});
 
 			
@@ -6716,6 +6792,8 @@ var SceneModule = (function (Module$$1) {
 		events.listen('prototypeClicked', function (prototype) {
 			if (!scene)
 				{ return; }
+
+			start('Editor: Scene');
 			
 			this$1.clearState();
 			
@@ -6724,9 +6802,13 @@ var SceneModule = (function (Module$$1) {
 			var newEntity = entityPrototype.createEntity(this$1);
 			this$1.newEntities.push(newEntity);
 			this$1.draw();
+
+			stop('Editor: Scene');
 		});
 		
 		events.listen('change', function (change) {
+			start('Editor: Scene');
+			
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
 				
 				// Make sure the scene has the layers for EditorWidget
@@ -6738,7 +6820,7 @@ var SceneModule = (function (Module$$1) {
 			}
 			
 			if (scene && scene.resetting)
-				{ return; }
+				{ return stop('Editor: Scene'); }
 			
 			// console.log('sceneModule change', change);
 			if (change.origin !== this$1) {
@@ -6746,6 +6828,7 @@ var SceneModule = (function (Module$$1) {
 				syncAChangeBetweenSceneAndLevel(change);
 				this$1.draw();
 			}
+			stop('Editor: Scene');
 		});
 		
 		listenKeyDown(function (k) {
@@ -6780,23 +6863,31 @@ var SceneModule = (function (Module$$1) {
 			if (!scene)
 				{ return; }
 			
+			start('Editor: Scene');
+			
+			var needsDraw = false;
+			
 			setChangeOrigin$1(this$1);
 			var change = this$1.previousMousePos ? mousePos.clone().subtract(this$1.previousMousePos) : mousePos;
 			if (this$1.entitiesToEdit.length > 0 && this$1.widgetUnderMouse) {
 				// Editing entities with a widget
 				this$1.widgetUnderMouse.onDrag(mousePos, change, this$1.entitiesToEdit);
 				copyTransformPropertiesFromEntitiesToEntityPrototypes(this$1.entitiesToEdit);
+				needsDraw = true;
 			} else {
 				if (this$1.widgetUnderMouse) {
 					this$1.widgetUnderMouse.unhover();
 					this$1.widgetUnderMouse = null;
+					needsDraw = true;
 				}
 				setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
 				if (scene) {
 					if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd) {
 						this$1.widgetUnderMouse = getWidgetUnderMouse(mousePos);
-						if (this$1.widgetUnderMouse)
-							{ this$1.widgetUnderMouse.hover(); }
+						if (this$1.widgetUnderMouse) {
+							this$1.widgetUnderMouse.hover();
+							needsDraw = true;
+						}
 					}
 				}
 			}
@@ -6820,10 +6911,16 @@ var SceneModule = (function (Module$$1) {
 				}
 				this$1.entitiesInSelection = getEntitiesInSelection(this$1.selectionStart, this$1.selectionEnd);
 				setEntitiesInSelectionArea(this$1.entitiesInSelection, true);
+
+				needsDraw = true;
 			}
 
 			this$1.previousMousePos = mousePos;
-			this$1.draw();
+			
+			if (needsDraw)
+				{ this$1.draw(); }
+
+			stop('Editor: Scene');
 		});
 		listenMouseDown(this.el, function (mousePos) {
 			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
@@ -7154,11 +7251,13 @@ Module.register(TestModule, 'left');
 var PerformanceModule = (function (Module$$1) {
 	function PerformanceModule() {
 		var performanceList;
+		var fpsMeter;
 		Module$$1.call(
 			this, el('div.performanceCPU',
 				new PerformanceItem({ name: 'Name', value: 'CPU %' }),
 				performanceList = list('div.performanceList', PerformanceItem, 'name')
-			)
+			),
+			fpsMeter = new FPSMeter()
 		);
 		
 		this.name = 'Performance';
@@ -7167,8 +7266,16 @@ var PerformanceModule = (function (Module$$1) {
 
 		startPerformanceUpdates();
 		setListener(function (snapshot) {
+			start('Editor: Performance');
 			performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; }));
+			stop('Editor: Performance');
 		});
+		
+		setInterval(function () {
+			start('Editor: Performance');
+			fpsMeter.update(getFrameTimes());
+			stop('Editor: Performance');
+		}, 50);
 	}
 
 	if ( Module$$1 ) PerformanceModule.__proto__ = Module$$1;
@@ -7177,6 +7284,7 @@ var PerformanceModule = (function (Module$$1) {
 
 	return PerformanceModule;
 }(Module));
+Module.register(PerformanceModule, 'bottom');
 
 var PerformanceItem = function PerformanceItem(initItem) {
         this.el = el('div.performanceItem',
@@ -7206,7 +7314,60 @@ var PerformanceItem = function PerformanceItem(initItem) {
 		{ this.el.style.color = '#888'; }
     };
 
-Module.register(PerformanceModule, 'bottom');
+var FPSMeter = function FPSMeter() {
+	this.el = el('canvas.fpsMeterCanvas', { width: FRAME_MEMORY_LENGTH, height: 100 });
+	this.context = this.el.getContext('2d');
+};
+FPSMeter.prototype.update = function update (fpsData) {
+	this.el.width = this.el.width; // clear
+	var c = this.context;
+	var yPixelsPerSecond = 30 / 16 * 1000;
+	function secToY(secs) {
+		return ~~(100 - secs * yPixelsPerSecond) + 0.5;
+	}
+
+	c.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+	c.beginPath();
+	for (var i = 60.5; i < FRAME_MEMORY_LENGTH; i += 60) {
+		c.moveTo(i, 0);
+		c.lineTo(i, 100);
+	}
+	c.moveTo(0, secToY(1 / 60));
+	c.lineTo(600, secToY(1 / 60));
+	c.stroke();
+		
+		
+	var normalStrokeStyle = '#aaa'; 
+	c.strokeStyle = normalStrokeStyle;
+	c.beginPath();
+	c.moveTo(0, secToY(fpsData[0]));
+	for (var i$1 = 1; i$1 < fpsData.length; ++i$1) {
+		var secs = fpsData[i$1];
+		if (secs > 1 / 30) {
+			c.stroke();
+			c.strokeStyle = '#ff7385';
+			c.beginPath();
+			c.moveTo(i$1-1, secToY(fpsData[i$1-1]));
+			c.lineTo(i$1, secToY(secs));
+			c.stroke();
+			c.strokeStyle = normalStrokeStyle;
+			c.beginPath();
+		} else if (secs > 1 / 40) {
+			c.stroke();
+			c.strokeStyle = '#ffc5a4';
+			c.beginPath();
+			c.moveTo(i$1-1, secToY(fpsData[i$1-1]));
+			c.lineTo(i$1, secToY(secs));
+			c.stroke();
+			c.strokeStyle = normalStrokeStyle;
+			c.beginPath();
+		} else {
+			c.lineTo(i$1, secToY(secs));
+		}
+	}
+	c.stroke();
+		
+};
 
 var TestModule$1 = (function (Module$$1) {
 	function TestModule() {
@@ -7252,7 +7413,7 @@ setInterval(function () {
 }, 200);
 
 addChangeListener(function (change) {
-	start('Editor change listener');
+	start('Editor: General');
 	events.dispatch('change', change);
 	if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
 		var game$$1 = change.reference;
@@ -7267,7 +7428,7 @@ addChangeListener(function (change) {
 		}
 		editor.dirty = true;
 	}
-	stop('Editor change listener');
+	stop('Editor: General');
 });
 
 var editor = null;

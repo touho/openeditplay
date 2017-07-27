@@ -97,6 +97,7 @@ export default class Scene extends Serializable {
 		let timeInMilliseconds = performance.now();
 		let t = 0.001 * timeInMilliseconds;
 		let dt = t - this._prevUpdate;
+		performanceTool.setFrameTime(dt);
 		if (dt > 0.05)
 			dt = 0.05;
 		this._prevUpdate = t;
@@ -105,19 +106,17 @@ export default class Scene extends Serializable {
 		setChangeOrigin(this);
 
 		// Update logic
-		performanceTool.start('Scene logic');
 		this.dispatch('onUpdate', dt, this.time);
-		performanceTool.stop('Scene logic');
 
 		// Update physics
-		performanceTool.start('Scene physics');
+		performanceTool.start('Physics');
 		updateWorld(this, dt, timeInMilliseconds);
-		performanceTool.stop('Scene physics');
+		performanceTool.stop('Physics');
 
 		// Update graphics
-		performanceTool.start('Scene draw');
+		performanceTool.start('Draw');
 		this.draw();
-		performanceTool.stop('Scene draw');
+		performanceTool.stop('Draw');
 
 		if (this.won) {
 			this.pause();
@@ -166,6 +165,8 @@ export default class Scene extends Serializable {
 		
 		this.draw();
 		delete this.resetting;
+		
+		this.dispatch('reset');
 	}
 
 	pause() {
@@ -179,6 +180,8 @@ export default class Scene extends Serializable {
 				clearTimeout(this.animationFrameId);
 		}
 		this.animationFrameId = null;
+
+		this.dispatch('pause');
 	}
 
 	play() {
@@ -200,6 +203,8 @@ export default class Scene extends Serializable {
 		 this.spawn(player);
 		 }
 		 */
+		
+		this.dispatch('play');
 	}
 
 	delete() {

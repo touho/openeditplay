@@ -51,12 +51,13 @@ export default class ModuleContainer {
 	}
 	update() {
 		this.modules.forEach(m => {
-			performance.start('Module: ' + m.id);
+			let performanceName = 'Editor: ' + m.id[0].toUpperCase() + m.id.substring(1);
+			performance.start(performanceName);
 			if (m.update() !== false) {
 				this._enableModule(m);
 			} else
 				this._disableModule(m);
-			performance.stop('Module: ' + m.id);
+			performance.stop(performanceName);
 		});
 		this._updateTabs();
 	}
@@ -138,8 +139,16 @@ class ModuleTab {
 		};
 	}
 	update(module) {
+		if (this.module === module && this._sel === module._selected && this._ena === module._enabled)
+			return;
+		
 		this.module = module;
-		this.el.innerHTML = module.name;
+		if (this.el.innerHTML !== module.name)
+			this.el.innerHTML = module.name;
+		
+		this._sel = module._selected;
+		this._ena = module._enabled;
+		
 		this.el.classList.toggle('moduleSelected', module._selected);
 		this.el.classList.toggle('moduleEnabled', module._enabled);
 	}

@@ -41,7 +41,7 @@ setInterval(() => {
 }, 200);
 
 addChangeListener(change => {
-	performance.start('Editor change listener');
+	performance.start('Editor: General');
 	events.dispatch('change', change);
 	if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
 		let game = change.reference;
@@ -56,7 +56,7 @@ addChangeListener(change => {
 		}
 		editor.dirty = true;
 	}
-	performance.stop('Editor change listener');
+	performance.stop('Editor: General');
 });
 
 export let editor = null;

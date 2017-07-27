@@ -38,7 +38,7 @@ export class Component extends PropertyOwner {
 	_addEventListener(functionName) {
 		let func = this[functionName];
 		let self = this;
-		let performanceName = self.constructor.componentName + '.' + functionName;
+		let performanceName = 'Component: ' + self.constructor.componentName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
 			// @ifndef OPTIMIZE
 			performance.start(performanceName);

@@ -1,5 +1,7 @@
 .module.module-performance {
   padding: 5px 10px;
+  display: flex;
+  flex-direction: row;
 }
 
 .performanceList {
@@ -7,6 +9,8 @@
 
 .performanceCPU {
   width: 280px;
+  display: inline-block;
+  vertical-align: top;
 }
 
 .performanceHeader {
@@ -22,4 +26,8 @@
   width: 220px;
 }
 .performanceItemValue {
+}
+
+.fpsMeterCanvas {
+  flex: 1;
 }

@@ -95,14 +95,15 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	Class._propertyTypes = propertyTypes;
 	Class._propertyTypesByName = {};
 	propertyTypes.forEach(propertyType => {
-		assert(Class.prototype[propertyType.name] === undefined, 'Property name ' + propertyType.name + ' clashes');
-		Class._propertyTypesByName[propertyType.name] = propertyType;
-		Object.defineProperty(Class.prototype, propertyType.name, {
+		const propertyTypeName = propertyType.name;
+		assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+		Class._propertyTypesByName[propertyTypeName] = propertyType;
+		Object.defineProperty(Class.prototype, propertyTypeName, {
 			get() {
-				return this._properties[propertyType.name].value;
+				return this._properties[propertyTypeName].value;
 			},
 			set(value) {
-				this._properties[propertyType.name].value = value;
+				this._properties[propertyTypeName].value = value;
 			}
 		});
 	});

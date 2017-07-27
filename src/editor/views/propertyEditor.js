@@ -19,7 +19,7 @@ Reference: Unbounce
 
 export default class PropertyEditor {
 	constructor() {
-		this.el = el('div.propertyEditor');
+		this.el = el('div.propertyEditor'); // TODO: Add list of containers here
 		this.dirty = true;
 		this.editingProperty = false;
 	
@@ -269,7 +269,8 @@ class Container {
 		}
 	}
 	updateEntity() {
-		this.title.textContent = this.item.prototype.name;
+		if (this.title.textContent !== this.item.prototype.name)
+			this.title.textContent = this.item.prototype.name;
 		this.containers.update(this.item.getListOfAllComponents());
 		// this.properties.update(this.item.getChildren('prp'));
 	}
@@ -349,6 +350,16 @@ class Property {
 		$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
 	}
 	update(property) {
+		/*
+		console.log('update', this.property, property, this._previousValue, property.value);
+		// Optimization
+		if (this.property === property && this._previousValue === property.value)
+			return;
+		this._previousValue = property.value;
+		//
+		console.log('update2');
+		*/
+		
 		if (this.visibleIfListener) {
 			this.visibleIfListener(); // unlisten
 			this.visibleIfListener = null;

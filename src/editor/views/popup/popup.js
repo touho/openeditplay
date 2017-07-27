@@ -33,14 +33,27 @@ export class Button {
 		}});
 	}
 	update(button) {
+		let newClassName = button.class ? `button ${button.class}` : 'button';
+		
+		if (
+			this.el.textContent === button.text
+			&& this._prevIcon === button.icon
+			&& this.el.className === newClassName
+			&& (!button.color || this.el.style['border-color'] === button.color)
+		) {
+			return; // optimize
+		}
+		
 		this.el.textContent = button.text;
+		
+		this._prevIcon = button.icon;
 		if (button.icon) {
 			let icon = el('i.fa.' + button.icon);
 			if (button.color)
 				icon.style.color = button.color;
 			mount(this.el, icon, this.el.firstChild);
 		}
-		this.el.className = button.class ? `button ${button.class}` : 'button';
+		this.el.className = newClassName;
 		this.callback = button.callback;
 		if (button.color)
 			this.el.style['border-color'] = button.color;
