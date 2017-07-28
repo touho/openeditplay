@@ -432,7 +432,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 var serializables = {};
 
 var DEBUG_CHANGES = 0;
-var CHECK_FOR_INVALID_ORIGINS = 1;
+var CHECK_FOR_INVALID_ORIGINS = 0;
 
 function addSerializable(serializable) {
 // @ifndef OPTIMIZE
@@ -502,6 +502,8 @@ function setChangeOrigin(_origin) {
 }
 
 var externalChange = false;
+
+// addChange needs to be called if editor, server or net game needs to share changes
 function addChange(type, reference) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
@@ -627,8 +629,10 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set: function set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
+		
 		this.dispatch('change', this._value);
-		if (this._rootType)
+		
+		if (this._rootType) // not scene or empty
 			{ addChange(changeType.setPropertyValue, this); }
 	},
 	get: function get() {
@@ -1209,14 +1213,15 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	Class._propertyTypes = propertyTypes;
 	Class._propertyTypesByName = {};
 	propertyTypes.forEach(function (propertyType) {
-		assert(Class.prototype[propertyType.name] === undefined, 'Property name ' + propertyType.name + ' clashes');
-		Class._propertyTypesByName[propertyType.name] = propertyType;
-		Object.defineProperty(Class.prototype, propertyType.name, {
+		var propertyTypeName = propertyType.name;
+		assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+		Class._propertyTypesByName[propertyTypeName] = propertyType;
+		Object.defineProperty(Class.prototype, propertyTypeName, {
 			get: function get() {
-				return this._properties[propertyType.name].value;
+				return this._properties[propertyTypeName].value;
 			},
 			set: function set(value) {
-				this._properties[propertyType.name].value = value;
+				this._properties[propertyTypeName].value = value;
 			}
 		});
 	});
@@ -2096,6 +2101,45 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
+var performance$1;
+performance$1 = isClient ? window.performance : { now: Date.now };
+
+var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
+var currentPerformanceMeters = {}; // very short term
+
+function start(name) {
+	// @ifndef OPTIMIZE
+	currentPerformanceMeters[name] = performance$1.now();
+	// @endif
+}
+
+function stop(name) {
+	// @ifndef OPTIMIZE
+	var millis = performance$1.now() - currentPerformanceMeters[name];
+	if (cumulativePerformance[name])
+		{ cumulativePerformance[name] += millis; }
+	else
+		{ cumulativePerformance[name] = millis; }
+	return millis;
+	// @endif
+}
+
+
+
+
+
+var FRAME_MEMORY_LENGTH = 600;
+var frameTimes = [];
+for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	frameTimes.push(0);
+}
+function setFrameTime(seconds) {
+	// @ifndef OPTIMIZE
+	frameTimes.shift();
+	frameTimes.push(seconds);
+	// @endif
+}
+
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2190,6 +2234,9 @@ var Scene = (function (Serializable$$1) {
 		var timeInMilliseconds = performance.now();
 		var t = 0.001 * timeInMilliseconds;
 		var dt = t - this._prevUpdate;
+		
+		setFrameTime(dt);
+		
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
@@ -2201,10 +2248,14 @@ var Scene = (function (Serializable$$1) {
 		this.dispatch('onUpdate', dt, this.time);
 
 		// Update physics
+		start('Physics');
 		updateWorld(this, dt, timeInMilliseconds);
+		stop('Physics');
 
 		// Update graphics
+		start('Draw');
 		this.draw();
+		stop('Draw');
 
 		if (this.won) {
 			this.pause();
@@ -2255,6 +2306,8 @@ var Scene = (function (Serializable$$1) {
 		
 		this.draw();
 		delete this.resetting;
+		
+		this.dispatch('reset');
 	};
 
 	Scene.prototype.pause = function pause () {
@@ -2268,6 +2321,8 @@ var Scene = (function (Serializable$$1) {
 				{ clearTimeout(this.animationFrameId); }
 		}
 		this.animationFrameId = null;
+
+		this.dispatch('pause');
 	};
 
 	Scene.prototype.play = function play () {
@@ -2289,6 +2344,8 @@ var Scene = (function (Serializable$$1) {
 		 this.spawn(player);
 		 }
 		 */
+		
+		this.dispatch('play');
 	};
 
 	Scene.prototype.delete = function delete$1 () {
@@ -2376,8 +2433,17 @@ var Component = (function (PropertyOwner$$1) {
 	Component.prototype._addEventListener = function _addEventListener (functionName) {
 		var func = this[functionName];
 		var self = this;
+		var performanceName = 'Component: ' + self.constructor.componentName;
 		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+			// @ifndef OPTIMIZE
+			start(performanceName);
+			// @endif
+			
 			func.apply(self, arguments);
+			
+			// @ifndef OPTIMIZE
+			stop(performanceName);
+			// @endif
 		}));
 	};
 	Component.prototype._preInit = function _preInit () {
@@ -3065,9 +3131,6 @@ Component.register({
 		sleep: function sleep() {
 			this.graphics.destroy();
 			this.graphics = null;
-		},
-		onUpdate: function onUpdate() {
-
 		}
 	}
 });

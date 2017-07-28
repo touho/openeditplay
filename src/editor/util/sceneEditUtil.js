@@ -273,9 +273,17 @@ export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) 
 			let entityPrototypeTransform = e.prototype.getTransform();
 			let entityTransform = e.getComponent('Transform');
 			
-			entityPrototypeTransform.findChild('prp', prp => prp.name === 'position').value = entityTransform.position;
-			entityPrototypeTransform.findChild('prp', prp => prp.name === 'scale').value = entityTransform.scale;
-			entityPrototypeTransform.findChild('prp', prp => prp.name === 'angle').value = entityTransform.angle;
+			let position = entityPrototypeTransform.findChild('prp', prp => prp.name === 'position');
+			if (!position.value.isEqualTo(entityTransform.position))
+				position.value = entityTransform.position;
+			
+			let scale = entityPrototypeTransform.findChild('prp', prp => prp.name === 'scale');
+			if (!scale.value.isEqualTo(entityTransform.scale))
+				scale.value = entityTransform.scale;
+			
+			let angle = entityPrototypeTransform.findChild('prp', prp => prp.name === 'angle');
+			if (angle.value !== entityTransform.angle)
+				angle.value = entityTransform.angle;
 		});
 	}
 }

@@ -128,6 +128,9 @@ export default class ModuleContainer {
 			this._updateTabs();
 		}
 	}
+	isPacked() {
+		return this.el.classList.contains('packed');
+	}
 }
 
 class ModuleTab {

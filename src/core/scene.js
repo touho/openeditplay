@@ -97,7 +97,9 @@ export default class Scene extends Serializable {
 		let timeInMilliseconds = performance.now();
 		let t = 0.001 * timeInMilliseconds;
 		let dt = t - this._prevUpdate;
+		
 		performanceTool.setFrameTime(dt);
+		
 		if (dt > 0.05)
 			dt = 0.05;
 		this._prevUpdate = t;

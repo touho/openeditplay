@@ -2237,8 +2237,10 @@ for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
 }
 function setFrameTime(seconds) {
+	// @ifndef OPTIMIZE
 	frameTimes.shift();
 	frameTimes.push(seconds);
+	// @endif
 }
 
 var scene = null;
@@ -2335,7 +2337,9 @@ var Scene = (function (Serializable$$1) {
 		var timeInMilliseconds = performance.now();
 		var t = 0.001 * timeInMilliseconds;
 		var dt = t - this._prevUpdate;
+		
 		setFrameTime(dt);
+		
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;

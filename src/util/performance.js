@@ -58,8 +58,10 @@ for (let i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
 }
 export function setFrameTime(seconds) {
+	// @ifndef OPTIMIZE
 	frameTimes.shift();
 	frameTimes.push(seconds);
+	// @endif
 }
 export function getFrameTimes() {
 	return frameTimes;

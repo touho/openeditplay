@@ -655,6 +655,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -665,6 +667,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -753,6 +756,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2255,8 +2262,10 @@ for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
 }
 function setFrameTime(seconds) {
+	// @ifndef OPTIMIZE
 	frameTimes.shift();
 	frameTimes.push(seconds);
+	// @endif
 }
 function getFrameTimes() {
 	return frameTimes;
@@ -2356,7 +2365,9 @@ var Scene = (function (Serializable$$1) {
 		var timeInMilliseconds = performance.now();
 		var t = 0.001 * timeInMilliseconds;
 		var dt = t - this._prevUpdate;
+		
 		setFrameTime(dt);
+		
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
@@ -2737,6 +2748,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3902,6 +3915,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -4417,6 +4432,9 @@ ModuleContainer.prototype._disableModule = function _disableModule (module) {
 		this._updateTabs();
 	}
 };
+ModuleContainer.prototype.isPacked = function isPacked () {
+	return this.el.classList.contains('packed');
+};
 
 var ModuleTab = function ModuleTab() {
 	var this$1 = this;
@@ -4507,6 +4525,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5192,9 +5211,17 @@ function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) {
 			var entityPrototypeTransform = e.prototype.getTransform();
 			var entityTransform = e.getComponent('Transform');
 			
-			entityPrototypeTransform.findChild('prp', function (prp) { return prp.name === 'position'; }).value = entityTransform.position;
-			entityPrototypeTransform.findChild('prp', function (prp) { return prp.name === 'scale'; }).value = entityTransform.scale;
-			entityPrototypeTransform.findChild('prp', function (prp) { return prp.name === 'angle'; }).value = entityTransform.angle;
+			var position = entityPrototypeTransform.findChild('prp', function (prp) { return prp.name === 'position'; });
+			if (!position.value.isEqualTo(entityTransform.position))
+				{ position.value = entityTransform.position; }
+			
+			var scale = entityPrototypeTransform.findChild('prp', function (prp) { return prp.name === 'scale'; });
+			if (!scale.value.isEqualTo(entityTransform.scale))
+				{ scale.value = entityTransform.scale; }
+			
+			var angle = entityPrototypeTransform.findChild('prp', function (prp) { return prp.name === 'angle'; });
+			if (angle.value !== entityTransform.angle)
+				{ angle.value = entityTransform.angle; }
 		});
 	}
 }
@@ -5256,13 +5283,20 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
-	this.el = el('div.propertyEditor'); // TODO: Add list of containers here
+	this.el = el('div.propertyEditor',
+		this.list = list('div.propertyEditorList', Container)
+	);
 	this.dirty = true;
 	this.editingProperty = false;
-	
+		
 	// Change in serializable tree
 	events.listen('change', function (change) {
 		if (change.type === 'editorSelection') {
@@ -5307,24 +5341,39 @@ var PropertyEditor = function PropertyEditor() {
 };
 PropertyEditor.prototype.update = function update (items, threeLetterType) {
 	if (!this.dirty) { return; }
-	$(this.el).empty();
 	if (!items) { return; }
 		
 	if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
 	|| items.length === 1 && items[0] instanceof PropertyOwner) {
 		this.item = items[0];
-		var prototypeEditor = new Container();
-		prototypeEditor.update(this.item);
-		mount(this.el, prototypeEditor);
+		this.list.update([this.item]);
+	} else {
+		this.list.update([]);
 	}
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
 
 	this.el = el('div.container',
-		this.title = el('div.containerTitle'),
+		this.title = el('div.containerTitle',
+			this.titleText = el('span.containerTitleText'),
+			this.titleIcon = el('i.icon.fa')
+		),
 		this.content = el('div.containerContent',
 			this.properties = list('table', Property$2, null, this.propertyEditor),
 			this.containers = list('div', Container, null, this.propertyEditor),
@@ -5357,11 +5406,18 @@ var Container = function Container() {
 	});
 };
 Container.prototype.update = function update (state) {
-	this.item = state;
-	this.el.setAttribute('type', this.item.threeLetterType);
-	this.controls.innerHTML = '';
-	this.titleClickedCallback = null;
+	var itemChanged = this.item !== state;
 		
+	if (itemChanged) {
+		this.item = state;
+		this.el.setAttribute('type', this.item.threeLetterType);
+	}
+		
+	if (this.controls.innerHTML !== '')
+		{ this.controls.innerHTML = ''; }
+		
+	this.titleClickedCallback = null;
+
 	if (this.item.threeLetterType === 'icd') { this.updateInheritedComponentData(); }
 	else if (this.item.threeLetterType === 'ent') { this.updateEntity(); }
 	else if (this.item.threeLetterType === 'com') { this.updateComponent(); }
@@ -5515,23 +5571,38 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 	}
 };
 Container.prototype.updateEntity = function updateEntity () {
-	if (this.title.textContent !== this.item.prototype.name)
-		{ this.title.textContent = this.item.prototype.name; }
+	if (this.titleText.textContent !== this.item.prototype.name)
+		{ this.titleText.textContent = this.item.prototype.name; }
 	this.containers.update(this.item.getListOfAllComponents());
 	// this.properties.update(this.item.getChildren('prp'));
 };
 Container.prototype.updateComponent = function updateComponent () {
+	if (this.el.classList.contains('packed'))
+		{ this.el.classList.remove('packed'); }
+
 	this.updateComponentKindOfThing(this.item.constructor);
-	this.properties.update(this.item.getChildren('prp'));
+
+	var getChildren = this.item.getChildren('prp');
+
+	this.properties.update(getChildren);
 };
 Container.prototype.updateComponentKindOfThing = function updateComponentKindOfThing (componentClass) {
-	this.title.textContent = componentClass.componentName;
+	if (this.titleText.textContent !== componentClass.componentName)
+		{ this.titleText.textContent = componentClass.componentName; }
 
-	var icon = el('i.icon.fa.' + componentClass.icon);
-	mount(this.title, icon);
-	this.title.style.color = componentClass.color;
-	this.title.setAttribute('title', componentClass.description);
-	this.el.style['border-color'] = componentClass.color;
+	var className = 'icon fa ' + componentClass.icon;
+	if (this.titleIcon.className !== className)
+		{ this.titleIcon.className = className; }
+		
+	if (this.componentClassColorCache !== componentClass.color) {
+		this.componentClassColorCache = componentClass.color;
+			
+		this.title.style.color = componentClass.color;
+		this.el.style['border-color'] = componentClass.color;
+	}
+		
+	if (this.title.getAttribute('title') !== componentClass.description)
+		{ this.title.setAttribute('title', componentClass.description); }
 };
 Container.prototype.updatePropertyOwner = function updatePropertyOwner () {
 	this.properties.update(this.item.getChildren('prp'));
@@ -5596,36 +5667,58 @@ Property$2.prototype.updateVisibleIf = function updateVisibleIf () {
 Property$2.prototype.update = function update (property) {
 		var this$1 = this;
 
-	/*
-	console.log('update', this.property, property, this._previousValue, property.value);
 	// Optimization
 	if (this.property === property && this._previousValue === property.value)
-		return;
+		{ return; }
+		
+	var propertyChanged = this.property !== property;
+		
 	this._previousValue = property.value;
-	//
-	console.log('update2');
-	*/
 		
 	if (this.visibleIfListener) {
 		this.visibleIfListener(); // unlisten
 		this.visibleIfListener = null;
 	}
 	this.property = property;
-	this.el.setAttribute('name', property.name);
-	this.el.setAttribute('type', property.propertyType.type.name);
-	this.name.textContent = variableNameToPresentableName(property.propertyType.name);
-	this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
-	if (property.propertyType.description) {
-		mount(this.name, el('span.infoI', 'i'));
+	if (propertyChanged) {
+		this.el.setAttribute('name', property.name);
+		this.el.setAttribute('type', property.propertyType.type.name);
+		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
+		this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
+		if (property.propertyType.description) {
+			mount(this.name, el('span.infoI', 'i'));
+		}
+		this.content.innerHTML = '';
+		this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
+		this.setValue = this.propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
+			propertyType: property.propertyType,
+			placeholder: property._editorPlaceholder
+		});
+			
+		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
+		this.el.classList.toggle('ownProperty', !!this.property.id);
+
+		if (this.property.id) {
+			var parent = this.property.getParent();
+			if (parent.threeLetterType === 'cda'
+				&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
+			// Can not delete anything from entity prototype transform 
+			{
+				this.name.style.color = parent.componentClass.color;
+
+				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
+					onclick: function () {
+						dispatch(this$1, 'makingChanges');
+						this$1.reset();
+					}
+				}));
+			} else if (parent.threeLetterType === 'com') {
+				this.name.style.color = parent.constructor.color;
+			}
+		} else
+			{ this.name.style.color = 'inherit'; }
 	}
-	this.content.innerHTML = '';
-	var propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-	this.setValue = propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
-		propertyType: property.propertyType,
-		placeholder: property._editorPlaceholder
-	});
 	this.setValueFromProperty();
-	this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 	if (property._editorVisibleIfTarget) {
 		this.updateVisibleIf();
 		this.visibleIfListener = property._editorVisibleIfTarget.listen('change', function (_) {
@@ -5637,26 +5730,6 @@ Property$2.prototype.update = function update (property) {
 			return this$1.updateVisibleIf()
 		});
 	}
-	this.el.classList.toggle('ownProperty', !!this.property.id);
-	if (this.property.id) {
-		var parent = this.property.getParent();
-		if (parent.threeLetterType === 'cda'
-			&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
-			// Can not delete anything from entity prototype transform 
-		{
-			this.name.style.color = parent.componentClass.color;
-
-			mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
-				onclick: function () {
-					dispatch(this$1, 'makingChanges');
-					this$1.reset();
-				}
-			}));
-		} else if (parent.threeLetterType === 'com') {
-			this.name.style.color = parent.constructor.color;
-		}
-	} else
-		{ this.name.style.color = 'inherit'; }
 };
 
 function isInDom(element) {
@@ -5732,6 +5805,9 @@ var Instance = (function (Module$$1) {
 	Instance.prototype.update = function update () {
 		if (editor.selection.items.length != 1)
 			{ return false; } // multiedit not supported yet
+		
+		if (!this._selected || this.moduleContainer.isPacked())
+			{ return; } // if the tab is not visible, do not waste CPU
 		
 		if (editor.selection.type === 'ent') {
 			if (scene.isInInitialState()) {
@@ -5960,6 +6036,9 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
+/// Drawing
+
+// '#53f8ff'
 var widgetColor = 'white';
 
 
@@ -7250,6 +7329,8 @@ Module.register(TestModule, 'left');
 
 var PerformanceModule = (function (Module$$1) {
 	function PerformanceModule() {
+		var this$1 = this;
+
 		var performanceList;
 		var fpsMeter;
 		Module$$1.call(
@@ -7267,13 +7348,15 @@ var PerformanceModule = (function (Module$$1) {
 		startPerformanceUpdates();
 		setListener(function (snapshot) {
 			start('Editor: Performance');
-			performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; }));
+			if (!this$1.moduleContainer.isPacked())
+				{ performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; })); }
 			stop('Editor: Performance');
 		});
 		
 		setInterval(function () {
 			start('Editor: Performance');
-			fpsMeter.update(getFrameTimes());
+			if (!this$1.moduleContainer.isPacked())
+				{ fpsMeter.update(getFrameTimes()); }
 			stop('Editor: Performance');
 		}, 50);
 	}

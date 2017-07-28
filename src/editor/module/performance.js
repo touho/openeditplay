@@ -22,13 +22,15 @@ class PerformanceModule extends Module {
 		performance.startPerformanceUpdates();
 		performance.setListener(snapshot => {
 			performance.start('Editor: Performance');
-			performanceList.update(snapshot.slice(0, 10).filter(item => item.value > 0.0005));
+			if (!this.moduleContainer.isPacked())
+				performanceList.update(snapshot.slice(0, 10).filter(item => item.value > 0.0005));
 			performance.stop('Editor: Performance');
 		});
 		
 		setInterval(() => {
 			performance.start('Editor: Performance');
-			fpsMeter.update(performance.getFrameTimes());
+			if (!this.moduleContainer.isPacked())
+				fpsMeter.update(performance.getFrameTimes());
 			performance.stop('Editor: Performance');
 		}, 50);
 	}

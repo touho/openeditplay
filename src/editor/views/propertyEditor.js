@@ -11,6 +11,7 @@ import { setOption, getOption, editor } from '../editor';
 import { scene } from '../../core/scene';
 import * as sceneEdit from '../util/sceneEditUtil';
 import PropertyOwner from '../../core/propertyOwner';
+import * as performance from '../../util/performance'
 
 /*
 Reference: Unbounce
@@ -19,10 +20,12 @@ Reference: Unbounce
 
 export default class PropertyEditor {
 	constructor() {
-		this.el = el('div.propertyEditor'); // TODO: Add list of containers here
+		this.el = el('div.propertyEditor',
+			this.list = list('div.propertyEditorList', Container)
+		);
 		this.dirty = true;
 		this.editingProperty = false;
-	
+		
 		// Change in serializable tree
 		events.listen('change', change => {
 			if (change.type === 'editorSelection') {
@@ -67,24 +70,39 @@ export default class PropertyEditor {
 	}
 	update(items, threeLetterType) {
 		if (!this.dirty) return;
-		$(this.el).empty();
 		if (!items) return;
 		
 		if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
 		|| items.length === 1 && items[0] instanceof PropertyOwner) {
 			this.item = items[0];
-			let prototypeEditor = new Container();
-			prototypeEditor.update(this.item);
-			mount(this.el, prototypeEditor);
+			this.list.update([this.item]);
+		} else {
+			this.list.update([]);
 		}
 		this.dirty = false;
 	}
 }
 
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
+
 class Container {
 	constructor() {
 		this.el = el('div.container',
-			this.title = el('div.containerTitle'),
+			this.title = el('div.containerTitle',
+				this.titleText = el('span.containerTitleText'),
+				this.titleIcon = el('i.icon.fa')
+			),
 			this.content = el('div.containerContent',
 				this.properties = list('table', Property, null, this.propertyEditor),
 				this.containers = list('div', Container, null, this.propertyEditor),
@@ -117,11 +135,18 @@ class Container {
 		});
 	}
 	update(state) {
-		this.item = state;
-		this.el.setAttribute('type', this.item.threeLetterType);
-		this.controls.innerHTML = '';
-		this.titleClickedCallback = null;
+		let itemChanged = this.item !== state;
 		
+		if (itemChanged) {
+			this.item = state;
+			this.el.setAttribute('type', this.item.threeLetterType);
+		}
+		
+		if (this.controls.innerHTML !== '')
+			this.controls.innerHTML = '';
+		
+		this.titleClickedCallback = null;
+
 		if (this.item.threeLetterType === 'icd') this.updateInheritedComponentData();
 		else if (this.item.threeLetterType === 'ent') this.updateEntity();
 		else if (this.item.threeLetterType === 'com') this.updateComponent();
@@ -269,23 +294,38 @@ class Container {
 		}
 	}
 	updateEntity() {
-		if (this.title.textContent !== this.item.prototype.name)
-			this.title.textContent = this.item.prototype.name;
+		if (this.titleText.textContent !== this.item.prototype.name)
+			this.titleText.textContent = this.item.prototype.name;
 		this.containers.update(this.item.getListOfAllComponents());
 		// this.properties.update(this.item.getChildren('prp'));
 	}
 	updateComponent() {
+		if (this.el.classList.contains('packed'))
+			this.el.classList.remove('packed');
+
 		this.updateComponentKindOfThing(this.item.constructor);
-		this.properties.update(this.item.getChildren('prp'));
+
+		let getChildren = this.item.getChildren('prp');
+
+		this.properties.update(getChildren);
 	}
 	updateComponentKindOfThing(componentClass) {
-		this.title.textContent = componentClass.componentName;
+		if (this.titleText.textContent !== componentClass.componentName)
+			this.titleText.textContent = componentClass.componentName;
 
-		let icon = el('i.icon.fa.' + componentClass.icon);
-		mount(this.title, icon);
-		this.title.style.color = componentClass.color;
-		this.title.setAttribute('title', componentClass.description);
-		this.el.style['border-color'] = componentClass.color;
+		let className = 'icon fa ' + componentClass.icon;
+		if (this.titleIcon.className !== className)
+			this.titleIcon.className = className;
+		
+		if (this.componentClassColorCache !== componentClass.color) {
+			this.componentClassColorCache = componentClass.color;
+			
+			this.title.style.color = componentClass.color;
+			this.el.style['border-color'] = componentClass.color;
+		}
+		
+		if (this.title.getAttribute('title') !== componentClass.description)
+			this.title.setAttribute('title', componentClass.description);
 	}
 	updatePropertyOwner() {
 		this.properties.update(this.item.getChildren('prp'));
@@ -350,36 +390,58 @@ class Property {
 		$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
 	}
 	update(property) {
-		/*
-		console.log('update', this.property, property, this._previousValue, property.value);
 		// Optimization
 		if (this.property === property && this._previousValue === property.value)
 			return;
+		
+		const propertyChanged = this.property !== property;
+		
 		this._previousValue = property.value;
-		//
-		console.log('update2');
-		*/
 		
 		if (this.visibleIfListener) {
 			this.visibleIfListener(); // unlisten
 			this.visibleIfListener = null;
 		}
 		this.property = property;
-		this.el.setAttribute('name', property.name);
-		this.el.setAttribute('type', property.propertyType.type.name);
-		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
-		this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
-		if (property.propertyType.description) {
-			mount(this.name, el('span.infoI', 'i'));
+		if (propertyChanged) {
+			this.el.setAttribute('name', property.name);
+			this.el.setAttribute('type', property.propertyType.type.name);
+			this.name.textContent = variableNameToPresentableName(property.propertyType.name);
+			this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
+			if (property.propertyType.description) {
+				mount(this.name, el('span.infoI', 'i'));
+			}
+			this.content.innerHTML = '';
+			this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
+			this.setValue = this.propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), {
+				propertyType: property.propertyType,
+				placeholder: property._editorPlaceholder
+			});
+			
+			this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
+			this.el.classList.toggle('ownProperty', !!this.property.id);
+
+			if (this.property.id) {
+				let parent = this.property.getParent();
+				if (parent.threeLetterType === 'cda'
+					&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
+				// Can not delete anything from entity prototype transform 
+				{
+					this.name.style.color = parent.componentClass.color;
+
+					mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
+						onclick: () => {
+							dispatch(this, 'makingChanges');
+							this.reset();
+						}
+					}));
+				} else if (parent.threeLetterType === 'com') {
+					this.name.style.color = parent.constructor.color;
+				}
+			} else
+				this.name.style.color = 'inherit';
 		}
-		this.content.innerHTML = '';
-		let propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-		this.setValue = propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), {
-			propertyType: property.propertyType,
-			placeholder: property._editorPlaceholder
-		});
 		this.setValueFromProperty();
-		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 		if (property._editorVisibleIfTarget) {
 			this.updateVisibleIf();
 			this.visibleIfListener = property._editorVisibleIfTarget.listen('change', _ => {
@@ -391,26 +453,6 @@ class Property {
 				return this.updateVisibleIf()
 			});
 		}
-		this.el.classList.toggle('ownProperty', !!this.property.id);
-		if (this.property.id) {
-			let parent = this.property.getParent();
-			if (parent.threeLetterType === 'cda'
-				&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
-				// Can not delete anything from entity prototype transform 
-			{
-				this.name.style.color = parent.componentClass.color;
-
-				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
-					onclick: () => {
-						dispatch(this, 'makingChanges');
-						this.reset();
-					}
-				}));
-			} else if (parent.threeLetterType === 'com') {
-				this.name.style.color = parent.constructor.color;
-			}
-		} else
-			this.name.style.color = 'inherit';
 	}
 }
 
