@@ -224,7 +224,6 @@ export default class Scene extends Serializable {
 		this.stage.destroy();
 		this.stage = null;
 
-		console.log('scene.delete');
 		return true;
 	}
 

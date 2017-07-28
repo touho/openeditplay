@@ -3,6 +3,8 @@ import './components'
 import { keyPressed, key, listenKeyDown } from './util/input'
 import { scene, listenSceneCreation } from './core/scene';
 import { startSceneWhenGameLoaded, setNetworkEnabled } from './util/net'
+import { enableChanges } from './core/property';
+enableChanges(false);
 
 startSceneWhenGameLoaded();
 setNetworkEnabled(true);

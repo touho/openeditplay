@@ -2,6 +2,11 @@ import Serializable from './serializable';
 import { addChange, changeType, setChangeOrigin } from './serializableManager'; 
 import assert from '../util/assert';
 
+let changesEnabled = true;
+export function enableChanges(enable) {
+	changesEnabled = enable;
+}
+
 // Instance of a property
 export default class Property extends Serializable {
 	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
@@ -58,7 +63,7 @@ Object.defineProperty(Property.prototype, 'value', {
 		
 		this.dispatch('change', this._value);
 		
-		if (this._rootType) // not scene or empty
+		if (changesEnabled && this._rootType) // not scene or empty
 			addChange(changeType.setPropertyValue, this);
 	},
 	get() {

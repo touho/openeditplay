@@ -564,6 +564,9 @@ function assert(condition, message) {
 	// @endif
 }
 
+var changesEnabled = true;
+
+
 // Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
@@ -632,7 +635,7 @@ Object.defineProperty(Property.prototype, 'value', {
 		
 		this.dispatch('change', this._value);
 		
-		if (this._rootType) // not scene or empty
+		if (changesEnabled && this._rootType) // not scene or empty
 			{ addChange(changeType.setPropertyValue, this); }
 	},
 	get: function get() {
@@ -2389,7 +2392,6 @@ var Scene = (function (Serializable$$1) {
 		this.stage.destroy();
 		this.stage = null;
 
-		console.log('scene.delete');
 		return true;
 	};
 
