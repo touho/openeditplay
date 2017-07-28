@@ -45,7 +45,6 @@ class SceneModule extends Module {
 		
 		window.addEventListener("resize", fixAspectRatio);
 		events.listen('layoutResize', () => {
-			console.log('listen');
 			setTimeout(fixAspectRatio, 500);
 		});
 		setTimeout(fixAspectRatio, 0);

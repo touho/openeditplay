@@ -1,20 +1,24 @@
 import './core'
 import './components'
+import { keyPressed, key, listenKeyDown } from './util/input'
+import { scene, listenSceneCreation } from './core/scene';
 import { startSceneWhenGameLoaded, setNetworkEnabled } from './util/net'
 
 startSceneWhenGameLoaded();
 setNetworkEnabled(true);
 
-let canvas;
-window.addEventListener('load', () => {
-	canvas = document.querySelector('canvas.openEditPlayCanvas');
-	resizeCanvas();
-});
 window.addEventListener('resize', resizeCanvas);
+listenSceneCreation(resizeCanvas);
+
+listenKeyDown(keyValue => {
+	if (keyValue === key.space && scene)
+		scene.win();
+})
 
 function resizeCanvas() {
-	if (!canvas)
+	if (!scene)
 		return;
-	canvas.width = window.innerWidth;
-	canvas.height = window.innerHeight;
+
+	let parentElement = scene.canvas.parentElement;
+	scene.renderer.resize(parentElement.offsetWidth, parentElement.offsetHeight);
 }

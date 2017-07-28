@@ -13,6 +13,7 @@ export function createWorld(owner, options) {
 	assert(!owner._p2World);
 	owner._p2World = new p2.World({
 		gravity: [0, 9.81]
+		// gravity: [0, 0]
 	});
 
 	// Stress test says that Body sleeping performs better than Island sleeping when idling.

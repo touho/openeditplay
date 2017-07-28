@@ -76,14 +76,11 @@ export default class Scene extends Serializable {
 
 		addChange(changeType.addSerializableToTree, this);
 
-		if (predefinedId)
-			console.log('scene import');
-		else
-			console.log('scene created');
-
 		createWorld(this, physicsOptions);
 
 		this.draw();
+
+		sceneCreateListeners.forEach(listener => listener());
 	}
 
 	win() {
@@ -254,3 +251,11 @@ export default class Scene extends Serializable {
 Scene.prototype.isRoot = true;
 
 Serializable.registerSerializable(Scene, 'sce');
+
+let sceneCreateListeners = [];
+export function listenSceneCreation(listener) {
+	sceneCreateListeners.push(listener);
+
+	if (scene)
+		listener();
+}

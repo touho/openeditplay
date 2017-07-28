@@ -9,11 +9,6 @@ let propertyTypes = [
 export default class Level extends PropertyOwner {
 	constructor(predefinedId) {
 		super(...arguments);
-
-		if (predefinedId)
-			console.log('level import');
-		else
-			console.log('level created');
 	}
 	createScene(predefinedSceneObject = false) {
 		if (!predefinedSceneObject)

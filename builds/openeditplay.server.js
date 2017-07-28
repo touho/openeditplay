@@ -655,6 +655,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -665,6 +667,7 @@ function assert(condition, message) {
 	// @endif
 }
 
+// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -753,6 +756,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -903,9 +910,19 @@ Vector.prototype.add = function add (vec) {
 	this.y += vec.y;
 	return this;
 };
+Vector.prototype.addScalars = function addScalars (x, y) {
+	this.x += x;
+	this.y += y;
+	return this;
+};
 Vector.prototype.subtract = function subtract (vec) {
 	this.x -= vec.x;
 	this.y -= vec.y;
+	return this;
+};
+Vector.prototype.subtractScalars = function subtractScalars (x, y) {
+	this.x -= x;
+	this.y -= y;
 	return this;
 };
 Vector.prototype.multiply = function multiply (vec) {
@@ -1924,6 +1941,8 @@ var Game = (function (PropertyOwner$$1) {
 		if (isClient$1) {
 			game = this;
 		}
+
+		gameCreateListeners.forEach(function (listener) { return listener(); });
 	}
 
 	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;
@@ -1952,6 +1971,8 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
 
+var gameCreateListeners = [];
+
 var p2;
 if (isClient)
 	{ p2 = window.p2; }
@@ -1964,6 +1985,7 @@ function createWorld(owner, options) {
 	assert(!owner._p2World);
 	owner._p2World = new p2.World({
 		gravity: [0, 9.81]
+		// gravity: [0, 0]
 	});
 
 	// Stress test says that Body sleeping performs better than Island sleeping when idling.
@@ -2316,14 +2338,11 @@ var Scene = (function (Serializable$$1) {
 
 		addChange(changeType.addSerializableToTree, this);
 
-		if (predefinedId)
-			{ console.log('scene import'); }
-		else
-			{ console.log('scene created'); }
-
 		createWorld(this, physicsOptions);
 
 		this.draw();
+
+		sceneCreateListeners.forEach(function (listener) { return listener(); });
 	}
 
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
@@ -2503,6 +2522,8 @@ var Scene = (function (Serializable$$1) {
 Scene.prototype.isRoot = true;
 
 Serializable.registerSerializable(Scene, 'sce');
+
+var sceneCreateListeners = [];
 
 var componentClasses = new Map();
 var eventListeners = [
@@ -2724,6 +2745,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2952,11 +2975,6 @@ var propertyTypes$2 = [
 var Level = (function (PropertyOwner$$1) {
 	function Level(predefinedId) {
 		PropertyOwner$$1.apply(this, arguments);
-
-		if (predefinedId)
-			{ console.log('level import'); }
-		else
-			{ console.log('level created'); }
 	}
 
 	if ( PropertyOwner$$1 ) Level.__proto__ = PropertyOwner$$1;
@@ -3426,7 +3444,11 @@ Component.register({
 			}));
 			this.listenProperty(this, 'friction', update(function (friction) { return this$1.updateMaterial(); }));
 			this.listenProperty(this, 'drag', update(function (drag) { return this$1.body.damping = drag; }));
-			this.listenProperty(this, 'rotationalDrag', update(function (rotationalDrag) { return this$1.body.angularDamping = rotationalDrag; }));
+			this.listenProperty(this, 'rotationalDrag', update(function (rotationalDrag) {
+				this$1.body.angularDamping = rotationalDrag > 0.98 ? 1 : rotationalDrag;
+				this$1.body.fixedRotation = rotationalDrag === 1;
+				this$1.body.updateMassProperties();
+			}));
 			this.listenProperty(this, 'type', update(function (type) {
 				this$1.body.type = type[this$1.type];
 				this$1.entity.sleep();
@@ -3573,8 +3595,10 @@ Component.register({
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
+		createPropertyType('jumpSpeed', 30, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('speed', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
-		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
+		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
+		createPropertyType('breaking', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
 	],
 	prototype: {
 		init: function init() {
@@ -3647,48 +3671,58 @@ Component.register({
 			if (up) { dy--; }
 			if (down) { dy++; }
 			
-			if (dx !== 0 || dy !== 0) {
-				if (this.controlType === 'top down') {
-					this.moveTopDown(dx, dy, dt);
-				} else if (this.controlType === 'jumper') {
-					this.moveJumper(dx, dy, dt);
-				}
+			if (this.controlType === 'top down') {
+				this.moveTopDown(dx, dy, dt);
+			} else if (this.controlType === 'jumper') {
+				this.moveJumper(dx, dy, dt);
 			}
 		},
 		// dx and dy between [-1, 1]
 		moveTopDown: function moveTopDown(dx, dy, dt) {
-			if (this.Physics) {
-				var delta = this.acceleration * dt;
-				this.Physics.body.applyForce([dx * delta * 100, dy * delta * 100]);
-				
-				var velocity = Vector.fromArray(this.Physics.body.velocity);
-				if (velocity.length() > this.speed)
-					{ this.Physics.body.velocity = velocity.setLength(this.speed).toArray(); }
-			} else {
-				var Transform = this.Transform;
-				var p = Transform.position;
-				var delta$1 = this.speed * dt;
-				Transform.position = new Vector(p.x + dx * delta$1, p.y + dy * delta$1);
+			if (!this.Physics) {
+				if (dx !== 0 || dy !== 0) {
+					var Transform = this.Transform;
+					var p = Transform.position;
+					var delta = this.speed * dt;
+					Transform.position = new Vector(p.x + dx * delta, p.y + dy * delta);
+				}
+				return;
 			}
+
+			if (!this.Physics.body)
+				{ return; }
+			
+			// Physics based
+			// #############
+
+			var bodyVelocity = this.Physics.body.velocity;
+
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
+			return;
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
-			if (!this.Physics)
+			if (!this.Physics || !this.Physics.body)
 				{ return false; }
+			
+			var bodyVelocity = this.Physics.body.velocity;
 
-			var delta = this.acceleration * dt;
-			this.Physics.body.applyForce([dx * delta * 100, 0]);
-
-			var velocity = Vector.fromArray(this.Physics.body.velocity);
-			if (velocity.length() > this.speed)
-				{ this.Physics.body.velocity = velocity.setLength(this.speed).toArray(); }
+			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0], dx, dt);
 		},
 		jump: function jump() {
 			if (this.checkIfCanJump()) {
-				this.Physics.body.applyImpulse([0, -40]);
+				var bodyVelocity = this.Physics.body.velocity;
+				if (bodyVelocity[1] > 0) {
+					// going down
+					bodyVelocity[1] = -this.jumpSpeed;
+				} else {
+					// going up
+					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed;
+				}
 			}
 		},
 		checkIfCanJump: function checkIfCanJump() {
-			if (!this.Physics)
+			if (!this.Physics || this.controlType !== 'jumper')
 				{ return false; }
 			
 			var contactEquations = getWorld(this.scene).narrowphase.contactEquations;
@@ -3709,9 +3743,50 @@ Component.register({
 			}
 			
 			return false;
+		},
+		calculateNewVelocity: function calculateNewVelocity(velocity, input, dt) {
+			if (input !== 0) {
+				if (velocity >= this.speed && input > 0) {
+					// don't do anything
+				} else if (velocity <= -this.speed && input < 0) {
+					// don't do anything
+				} else {
+					// do something
+					velocity += input * this.acceleration * dt;
+
+					if (input < 0 && velocity < -this.speed)
+						{ velocity = -this.speed; }
+
+					if (input > 0 && velocity > this.speed)
+						{ velocity = this.speed; }
+				}
+			} else {
+				if (velocity !== 0 && (this.checkIfCanJump() || this.controlType !== 'jumper')) {
+					var absVel = Math.abs(velocity);
+					absVel -= this.breaking * dt;
+					if (absVel < 0)
+						{ absVel = 0; }
+
+					if (velocity > 0)
+						{ velocity = absVel; }
+					else
+						{ velocity = -absVel; }
+				}
+			}
+			
+			return velocity;
 		}
 	}
 });
+
+function absLimit(value, absMax) {
+	if (value > absMax)
+		{ return absMax; }
+	else if (value < -absMax)
+		{ return -absMax; }
+	else
+		{ return value; }
+}
 
 function gameIdToFilename(gameId) {
 	// File system can be case-insensitive. Add '_' before every uppercase letter.

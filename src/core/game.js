@@ -30,6 +30,8 @@ export default class Game extends PropertyOwner {
 		if (isClient) {
 			game = this;
 		}
+
+		gameCreateListeners.forEach(listener => listener());
 	}
 	initWithChildren() {
 		super.initWithChildren(...arguments);
@@ -50,3 +52,11 @@ PropertyOwner.defineProperties(Game, propertyTypes);
 Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam');
+
+let gameCreateListeners = [];
+export function listenGameCreation(listener) {
+	gameCreateListeners.push(listener);
+	
+	if (game)
+		listener();
+}

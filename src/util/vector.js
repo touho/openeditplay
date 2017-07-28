@@ -8,9 +8,19 @@ export default class Vector {
 		this.y += vec.y;
 		return this;
 	}
+	addScalars(x, y) {
+		this.x += x;
+		this.y += y;
+		return this;
+	}
 	subtract(vec) {
 		this.x -= vec.x;
 		this.y -= vec.y;
+		return this;
+	}
+	subtractScalars(x, y) {
+		this.x -= x;
+		this.y -= y;
 		return this;
 	}
 	multiply(vec) {
