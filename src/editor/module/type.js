@@ -22,6 +22,9 @@ class Type extends Module {
 	update() {
 		if (editor.selection.items.length != 1)
 			return false;
+
+		if (!this._selected || this.moduleContainer.isPacked())
+			return; // if the tab is not visible, do not waste CPU
 		
 		if (editor.selection.type === 'prt') {
 			this.propertyEditor.update(editor.selection.items, editor.selection.type);

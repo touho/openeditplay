@@ -655,8 +655,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -667,7 +665,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -756,10 +753,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2185,20 +2178,32 @@ if (typeof window !== 'undefined') {
 
 var PIXI;
 
-if (isClient)
-	{ PIXI = window.PIXI; }
+if (isClient) {
+	PIXI = window.PIXI;
+	PIXI.ticker.shared.stop();
+}
 
 var PIXI$1 = PIXI;
 
 var renderer = null; // Only one PIXI renderer supported for now
 
 function getRenderer(canvas) {
+	/*
+	return {
+		render: () => {},
+		resize: () => {}
+	};
+	*/
+	
 	if (!renderer) {
 		renderer = PIXI.autoDetectRenderer({
 			view: canvas,
 			autoResize: true,
 			antialias: true
 		});
+
+		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
+		renderer.plugins.interaction.destroy();
 	}
 	
 	return renderer;
@@ -2223,7 +2228,6 @@ function stop(name) {
 		{ cumulativePerformance[name] += millis; }
 	else
 		{ cumulativePerformance[name] = millis; }
-	return millis;
 	// @endif
 }
 
@@ -2231,7 +2235,7 @@ function stop(name) {
 
 
 
-var FRAME_MEMORY_LENGTH = 600;
+var FRAME_MEMORY_LENGTH = 60 * 8;
 var frameTimes = [];
 for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
@@ -2265,7 +2269,7 @@ var Scene = (function (Serializable$$1) {
 			}
 			scene = this;
 
-			this.canvas = document.querySelector('canvas.anotherCanvas');
+			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI$1.Container();
 			var self = this;
@@ -2720,8 +2724,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3365,6 +3367,9 @@ var type = {
 	static: p2$1.Body.STATIC
 };
 
+var SLEEPING = p2$1.Body.SLEEPING;
+var STATIC = p2$1.Body.STATIC;
+
 Component.register({
 	name: 'Physics',
 	icon: 'fa-stop',
@@ -3526,7 +3531,7 @@ Component.register({
 		},
 		onUpdate: function onUpdate() {
 			var b = this.body;
-			if (!b || b.sleepState === p2$1.Body.SLEEPING)
+			if (!b || b.sleepState === SLEEPING || b.type === STATIC)
 				{ return; }
 			
 			this.updatingOthers = true;

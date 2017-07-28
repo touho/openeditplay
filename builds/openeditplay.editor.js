@@ -655,8 +655,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -667,7 +665,6 @@ function assert(condition, message) {
 	// @endif
 }
 
-// Instance of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -756,10 +753,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2185,20 +2178,32 @@ if (typeof window !== 'undefined') {
 
 var PIXI$1;
 
-if (isClient)
-	{ PIXI$1 = window.PIXI; }
+if (isClient) {
+	PIXI$1 = window.PIXI;
+	PIXI$1.ticker.shared.stop();
+}
 
 var PIXI$2 = PIXI$1;
 
 var renderer = null; // Only one PIXI renderer supported for now
 
 function getRenderer(canvas) {
+	/*
+	return {
+		render: () => {},
+		resize: () => {}
+	};
+	*/
+	
 	if (!renderer) {
 		renderer = PIXI$1.autoDetectRenderer({
 			view: canvas,
 			autoResize: true,
 			antialias: true
 		});
+
+		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
+		renderer.plugins.interaction.destroy();
 	}
 	
 	return renderer;
@@ -2228,13 +2233,14 @@ function stop(name) {
 		{ cumulativePerformance[name] += millis; }
 	else
 		{ cumulativePerformance[name] = millis; }
-	return millis;
 	// @endif
 }
 
 function startPerformanceUpdates() {
 	setInterval(function () {
-		snapshotPerformance = performanceObjectToArray(cumulativePerformance);
+		printPrivatePerformance(cumulativePerformance);
+		
+		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
 		cumulativePerformance = {};
 		
 		if (snapshotListener) {
@@ -2247,8 +2253,22 @@ function setListener(listener) {
 	snapshotListener = listener;
 }
 
-function performanceObjectToArray(object) {
-	return Object.keys(object).map(function (key) { return ({
+function printPrivatePerformance(object) {
+	var msg = '';
+	Object.keys(object).filter(function (key) { return key.startsWith('#'); }).map(function (key) { return ({
+		name: key,
+		value: object[key] / UPDATE_INTERVAL
+	}); }).sort(function (a, b) {
+		return a.value < b.value ? 1 : -1;
+	}).forEach(function (perf) {
+		msg += "\n   " + (perf.name.substring(1)) + ": " + (perf.value * 100);
+	});
+	if (msg)
+		{ console.log('#Performance:' + msg); }
+}
+
+function performanceObjectToPublicArray(object) {
+	return Object.keys(object).filter(function (key) { return !key.startsWith('#'); }).map(function (key) { return ({
 		name: key,
 		value: object[key] / UPDATE_INTERVAL
 	}); }).sort(function (a, b) {
@@ -2256,7 +2276,7 @@ function performanceObjectToArray(object) {
 	});
 }
 
-var FRAME_MEMORY_LENGTH = 600;
+var FRAME_MEMORY_LENGTH = 60 * 8;
 var frameTimes = [];
 for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
@@ -2293,7 +2313,7 @@ var Scene = (function (Serializable$$1) {
 			}
 			scene = this;
 
-			this.canvas = document.querySelector('canvas.anotherCanvas');
+			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI$2.Container();
 			var self = this;
@@ -2748,8 +2768,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3393,6 +3411,9 @@ var type = {
 	static: p2$1.Body.STATIC
 };
 
+var SLEEPING = p2$1.Body.SLEEPING;
+var STATIC = p2$1.Body.STATIC;
+
 Component$1.register({
 	name: 'Physics',
 	icon: 'fa-stop',
@@ -3554,7 +3575,7 @@ Component$1.register({
 		},
 		onUpdate: function onUpdate() {
 			var b = this.body;
-			if (!b || b.sleepState === p2$1.Body.SLEEPING)
+			if (!b || b.sleepState === SLEEPING || b.type === STATIC)
 				{ return; }
 			
 			this.updatingOthers = true;
@@ -3736,6 +3757,49 @@ Component$1.register({
 	}
 });
 
+/*
+ milliseconds: how often callback can be called
+ callbackLimitMode:
+ 	- instant: if it has been quiet, call callback() instantly
+ 	- soon: if it has been quiet, call callback() instantly after current code loop
+ 	- next: if it has been quiet, call callback() after waiting milliseconds.
+ 	
+ When calling the callback, limitMode can be overridden: func(callLimitMode);
+ */
+function limit(milliseconds, callbackLimitMode, callback) {
+	if ( callbackLimitMode === void 0 ) callbackLimitMode = 'soon';
+
+	if (!['instant', 'soon', 'next'].includes(callbackLimitMode))
+		{ throw new Error('Invalid callbackLimitMode'); }
+	
+	var callTimeout = null;
+	var lastTimeoutCall = 0;
+	
+	function timeoutCallback() {
+		lastTimeoutCall = Date.now();
+		callTimeout = null;
+		
+		callback();
+	}
+	return function(callLimitMode) {
+		if (callTimeout)
+			{ return; }
+		
+		var timeToNextPossibleCall = lastTimeoutCall + milliseconds - Date.now();
+		if (timeToNextPossibleCall > 0) {
+			callTimeout = setTimeout(timeoutCallback, timeToNextPossibleCall);
+		} else {
+			callTimeout = setTimeout(timeoutCallback, milliseconds);
+
+			var mode = callLimitMode || callbackLimitMode;
+			if (mode === 'instant')
+				{ callback(); }
+			else if (mode === 'soon')
+				{ setTimeout(callback, 0); }
+		}
+	}
+}
+
 // LZW-compress a string
 
 
@@ -3792,17 +3856,17 @@ function tryToLoad() {
 			valueChanges[change.id] = change;
 		}
 		changes.push(change);
+
+		sendChanges();
 	});
 	
-	setInterval(function () {
-		if (changes.length === 0)
-			{ return; }
+	var sendChanges = limit(100, 'soon', function () {
 		var packedChanges = changes.map(packChange);
 		changes.length = 0;
 		valueChanges = {};
 		console.log('sending', packedChanges);
 		socket.emit('c', packedChanges);
-	}, 100);
+	});
 
 	socket.on('c', function (packedChanges) {
 		console.log('RECEIVE,', networkEnabled);
@@ -3834,7 +3898,7 @@ function tryToLoad() {
 		executeExternal(function () {
 			Serializable.fromJSON(gameData);
 		});
-		localStorage.anotherGameId = gameData.id;
+		localStorage.openEditPlayGameId = gameData.id;
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
 		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
@@ -3859,7 +3923,7 @@ function tryToLoad() {
 	});
 	
 	setTimeout(function () {
-		var gameId = getQueryVariable('gameId') || localStorage.anotherGameId;
+		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
 		console.log('requestGameData', gameId);
 		socket.emit('requestGameData', gameId);
 	}, 100);
@@ -3915,8 +3979,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -4307,15 +4369,18 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 		
 	if (packButtonIcon) {
 		var packId = 'moduleContainerPacked_' + moduleContainerName;
-		if (getOption(packId))
-			{ this.el.classList.add('packed'); }
+		if (getOption(packId)) {
+			this.el.classList.add('packed');
+		}
 				
 		this.el.onclick = function () {
 			setOption(packId, '');
+			events.dispatch('layoutResize');
 			return this$1.el.classList.contains('packed') && this$1.el.classList.remove('packed') || undefined;
 		};
 		this.packButton.onclick = function (e) {
 			this$1.el.classList.add('packed');
+			events.dispatch('layoutResize');
 			setOption(packId, 'true');
 			e.stopPropagation();
 			return false;
@@ -4373,8 +4438,10 @@ ModuleContainer.prototype.activateModule = function activateModule (module, unpa
 		while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
 
 		if ( unpackModuleView === void 0 ) unpackModuleView = true;
-	if (unpackModuleView)
-		{ this.el.classList.remove('packed'); }
+	if (unpackModuleView) {
+		this.el.classList.remove('packed');
+		events.dispatch('layoutResize');
+	}
 	this._activateModule(module, args);
 };
 ModuleContainer.prototype.activateOneOfModules = function activateOneOfModules (modules, unpackModuleView) {
@@ -4383,8 +4450,10 @@ ModuleContainer.prototype.activateOneOfModules = function activateOneOfModules (
 		while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
 
 		if ( unpackModuleView === void 0 ) unpackModuleView = true;
-	if (unpackModuleView)
-		{ this.el.classList.remove('packed'); }
+	if (unpackModuleView) {
+		this.el.classList.remove('packed');
+		events.dispatch('layoutResize');
+	}
 
 	for (var i = 0; i < this.modules.length; ++i) {
 		var m = this$1.modules[i];
@@ -4408,6 +4477,7 @@ ModuleContainer.prototype._activateModule = function _activateModule (module, ar
 	module._enabled = true;
 	module._show();
 	this._updateTabs();
+	module.update();
 	module.activate.apply(module, args);
 };
 ModuleContainer.prototype._enableModule = function _enableModule (module) {
@@ -4525,7 +4595,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5283,11 +5352,6 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5350,21 +5414,9 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 	} else {
 		this.list.update([]);
 	}
+		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -5406,11 +5458,19 @@ var Container = function Container() {
 	});
 };
 Container.prototype.update = function update (state) {
+		var this$1 = this;
+
 	var itemChanged = this.item !== state;
 		
 	if (itemChanged) {
 		this.item = state;
 		this.el.setAttribute('type', this.item.threeLetterType);
+
+		// Skip transitions when changing item
+		this.el.classList.add('skipPropertyEditorTransitions');
+		setTimeout(function () {
+			this$1.el.classList.remove('skipPropertyEditorTransitions');
+		}, 10);
 	}
 		
 	if (this.controls.innerHTML !== '')
@@ -5762,6 +5822,9 @@ var Type = (function (Module$$1) {
 	Type.prototype.update = function update () {
 		if (editor.selection.items.length != 1)
 			{ return false; }
+
+		if (!this._selected || this.moduleContainer.isPacked())
+			{ return; } // if the tab is not visible, do not waste CPU
 		
 		if (editor.selection.type === 'prt') {
 			this.propertyEditor.update(editor.selection.items, editor.selection.type);
@@ -6036,9 +6099,6 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
-/// Drawing
-
-// '#53f8ff'
 var widgetColor = 'white';
 
 
@@ -6766,7 +6826,7 @@ var SceneModule = (function (Module$$1) {
 
 		var canvas;
 		Module$$1.call(
-			this, canvas = el('canvas.anotherCanvas', {
+			this, canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -6780,12 +6840,14 @@ var SceneModule = (function (Module$$1) {
 		this.el.classList.add('hidePauseButtons');
 		this.canvas = canvas;
 
-		setInterval(function () {
-			this$1.fixAspectRatio();
-		}, 200);
-		setTimeout(function () {
-			this$1.fixAspectRatio();
-		}, 0);
+		var fixAspectRatio = function () { return this$1.fixAspectRatio(); };
+		
+		window.addEventListener("resize", fixAspectRatio);
+		events.listen('layoutResize', function () {
+			console.log('listen');
+			setTimeout(fixAspectRatio, 500);
+		});
+		setTimeout(fixAspectRatio, 0);
 		
 		this.id = 'scene';
 		this.name = 'Scene';
@@ -6959,7 +7021,10 @@ var SceneModule = (function (Module$$1) {
 					this$1.widgetUnderMouse = null;
 					needsDraw = true;
 				}
-				setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
+				if (this$1.newEntities.length > 0) {
+					setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
+					needsDraw = true;
+				}
 				if (scene) {
 					if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd) {
 						this$1.widgetUnderMouse = getWidgetUnderMouse(mousePos);
@@ -7347,16 +7412,20 @@ var PerformanceModule = (function (Module$$1) {
 
 		startPerformanceUpdates();
 		setListener(function (snapshot) {
+			if (this$1.moduleContainer.isPacked())
+				{ return; }
+			
 			start('Editor: Performance');
-			if (!this$1.moduleContainer.isPacked())
-				{ performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; })); }
+			performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; }));
 			stop('Editor: Performance');
 		});
 		
 		setInterval(function () {
+			if (!scene.playing || this$1.moduleContainer.isPacked())
+				{ return; }
+			
 			start('Editor: Performance');
-			if (!this$1.moduleContainer.isPacked())
-				{ fpsMeter.update(getFrameTimes()); }
+			fpsMeter.update(getFrameTimes());
 			stop('Editor: Performance');
 		}, 50);
 	}
@@ -7403,12 +7472,13 @@ var FPSMeter = function FPSMeter() {
 };
 FPSMeter.prototype.update = function update (fpsData) {
 	this.el.width = this.el.width; // clear
+		
 	var c = this.context;
 	var yPixelsPerSecond = 30 / 16 * 1000;
 	function secToY(secs) {
 		return ~~(100 - secs * yPixelsPerSecond) + 0.5;
 	}
-
+		
 	c.strokeStyle = 'rgba(255, 255, 255, 0.1)';
 	c.beginPath();
 	for (var i = 60.5; i < FRAME_MEMORY_LENGTH; i += 60) {
@@ -7416,14 +7486,14 @@ FPSMeter.prototype.update = function update (fpsData) {
 		c.lineTo(i, 100);
 	}
 	c.moveTo(0, secToY(1 / 60));
-	c.lineTo(600, secToY(1 / 60));
+	c.lineTo(FRAME_MEMORY_LENGTH, secToY(1 / 60));
 	c.stroke();
-		
 		
 	var normalStrokeStyle = '#aaa'; 
 	c.strokeStyle = normalStrokeStyle;
 	c.beginPath();
 	c.moveTo(0, secToY(fpsData[0]));
+		
 	for (var i$1 = 1; i$1 < fpsData.length; ++i$1) {
 		var secs = fpsData[i$1];
 		if (secs > 1 / 30) {
@@ -7448,8 +7518,8 @@ FPSMeter.prototype.update = function update (fpsData) {
 			c.lineTo(i$1, secToY(secs));
 		}
 	}
-	c.stroke();
 		
+	c.stroke();
 };
 
 var TestModule$1 = (function (Module$$1) {
@@ -7491,9 +7561,9 @@ loadedPromise.then(function () {
 	editor.setLevel(game.getChildren('lvl')[0]);
 });
 
-setInterval(function () {
-	editor && editor.dirty && editor.update();
-}, 200);
+var editorUpdateLimited = limit(200, 'soon', function () {
+	editor.update();
+});
 
 addChangeListener(function (change) {
 	start('Editor: General');
@@ -7509,7 +7579,7 @@ addChangeListener(function (change) {
 				editor.setLevel(null);
 			}
 		}
-		editor.dirty = true;
+		editorUpdateLimited();
 	}
 	stop('Editor: General');
 });
@@ -7520,7 +7590,6 @@ var Editor = function Editor(game$$1) {
 		
 	this.layout = new Layout();
 		
-	this.dirty = true;
 	this.game = game$$1;
 	this.selectedLevel = null;
 		
@@ -7556,20 +7625,18 @@ Editor.prototype.select = function select (items, origin) {
 	else
 		{ this.selection.type = 'mixed'; }
 		
-	this.dirty = true;
-		
 	events.dispatch('change', {
 		type: 'editorSelection',
 		reference: this.selection,
 		origin: origin
 	});
 		
+	// editorUpdateLimited(); // doesn't work for some reason
 	this.update();
 };
 Editor.prototype.update = function update () {
-	if (!this.dirty || !this.game) { return; }
+	if (!this.game) { return; }
 	this.layout.update();
-	this.dirty = false;
 };
 
 
@@ -7577,7 +7644,7 @@ var options = null;
 function loadOptions() {
 	if (!options) {
 		try {
-			options = JSON.parse(localStorage.anotherOptions);
+			options = JSON.parse(localStorage.openEditPlayOptions);
 		} catch(e) {
 			options = {};
 		}
@@ -7587,7 +7654,7 @@ function setOption(id, stringValue) {
 	loadOptions();
 	options[id] = stringValue;
 	try {
-		localStorage.anotherOptions = JSON.stringify(options);
+		localStorage.openEditPlayOptions = JSON.stringify(options);
 	} catch(e) {
 	}
 }

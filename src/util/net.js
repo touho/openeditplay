@@ -3,6 +3,8 @@ import Serializable from '../core/serializable';
 import { game } from '../core/game';
 import { isClient } from './environment';
 
+import { limit } from './callLimiter';
+
 import { lzw_decode, lzw_encode } from './compression';
 
 let networkEnabled = false;
@@ -56,17 +58,17 @@ function tryToLoad() {
 			valueChanges[change.id] = change;
 		}
 		changes.push(change);
+
+		sendChanges();
 	});
 	
-	setInterval(() => {
-		if (changes.length === 0)
-			return;
+	let sendChanges = limit(100, 'soon', () => {
 		let packedChanges = changes.map(packChange);
 		changes.length = 0;
 		valueChanges = {};
 		console.log('sending', packedChanges);
 		socket.emit('c', packedChanges);
-	}, 100);
+	});
 
 	socket.on('c', packedChanges => {
 		console.log('RECEIVE,', networkEnabled);
@@ -98,7 +100,7 @@ function tryToLoad() {
 		executeExternal(() => {
 			Serializable.fromJSON(gameData);
 		});
-		localStorage.anotherGameId = gameData.id;
+		localStorage.openEditPlayGameId = gameData.id;
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, `?gameId=${gameData.id}`);
 		console.log('replaced with', `${location.origin}${location.pathname}?gameId=${gameData.id}`);
@@ -123,7 +125,7 @@ function tryToLoad() {
 	});
 	
 	setTimeout(() => {
-		let gameId = getQueryVariable('gameId') || localStorage.anotherGameId;
+		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
 		console.log('requestGameData', gameId);
 		socket.emit('requestGameData', gameId);
 	}, 100);

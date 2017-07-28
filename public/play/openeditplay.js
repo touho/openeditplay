@@ -2105,20 +2105,32 @@ if (typeof window !== 'undefined') {
 
 var PIXI;
 
-if (isClient)
-	{ PIXI = window.PIXI; }
+if (isClient) {
+	PIXI = window.PIXI;
+	PIXI.ticker.shared.stop();
+}
 
 var PIXI$1 = PIXI;
 
 var renderer = null; // Only one PIXI renderer supported for now
 
 function getRenderer(canvas) {
+	/*
+	return {
+		render: () => {},
+		resize: () => {}
+	};
+	*/
+	
 	if (!renderer) {
 		renderer = PIXI.autoDetectRenderer({
 			view: canvas,
 			autoResize: true,
 			antialias: true
 		});
+
+		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
+		renderer.plugins.interaction.destroy();
 	}
 	
 	return renderer;
@@ -2137,7 +2149,7 @@ function stop(name) {
 
 
 
-var FRAME_MEMORY_LENGTH = 600;
+var FRAME_MEMORY_LENGTH = 60 * 8;
 var frameTimes = [];
 for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
@@ -2167,7 +2179,7 @@ var Scene = (function (Serializable$$1) {
 			}
 			scene = this;
 
-			this.canvas = document.querySelector('canvas.anotherCanvas');
+			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI$1.Container();
 			var self = this;
@@ -3601,6 +3613,49 @@ Component.register({
 	}
 });
 
+/*
+ milliseconds: how often callback can be called
+ callbackLimitMode:
+ 	- instant: if it has been quiet, call callback() instantly
+ 	- soon: if it has been quiet, call callback() instantly after current code loop
+ 	- next: if it has been quiet, call callback() after waiting milliseconds.
+ 	
+ When calling the callback, limitMode can be overridden: func(callLimitMode);
+ */
+function limit(milliseconds, callbackLimitMode, callback) {
+	if ( callbackLimitMode === void 0 ) callbackLimitMode = 'soon';
+
+	if (!['instant', 'soon', 'next'].includes(callbackLimitMode))
+		{ throw new Error('Invalid callbackLimitMode'); }
+	
+	var callTimeout = null;
+	var lastTimeoutCall = 0;
+	
+	function timeoutCallback() {
+		lastTimeoutCall = Date.now();
+		callTimeout = null;
+		
+		callback();
+	}
+	return function(callLimitMode) {
+		if (callTimeout)
+			{ return; }
+		
+		var timeToNextPossibleCall = lastTimeoutCall + milliseconds - Date.now();
+		if (timeToNextPossibleCall > 0) {
+			callTimeout = setTimeout(timeoutCallback, timeToNextPossibleCall);
+		} else {
+			callTimeout = setTimeout(timeoutCallback, milliseconds);
+
+			var mode = callLimitMode || callbackLimitMode;
+			if (mode === 'instant')
+				{ callback(); }
+			else if (mode === 'soon')
+				{ setTimeout(callback, 0); }
+		}
+	}
+}
+
 // LZW-compress a string
 
 
@@ -3659,17 +3714,17 @@ function tryToLoad() {
 			valueChanges[change.id] = change;
 		}
 		changes.push(change);
+
+		sendChanges();
 	});
 	
-	setInterval(function () {
-		if (changes.length === 0)
-			{ return; }
+	var sendChanges = limit(100, 'soon', function () {
 		var packedChanges = changes.map(packChange);
 		changes.length = 0;
 		valueChanges = {};
 		console.log('sending', packedChanges);
 		socket.emit('c', packedChanges);
-	}, 100);
+	});
 
 	socket.on('c', function (packedChanges) {
 		console.log('RECEIVE,', networkEnabled);
@@ -3701,7 +3756,7 @@ function tryToLoad() {
 		executeExternal(function () {
 			Serializable.fromJSON(gameData);
 		});
-		localStorage.anotherGameId = gameData.id;
+		localStorage.openEditPlayGameId = gameData.id;
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
 		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
@@ -3726,7 +3781,7 @@ function tryToLoad() {
 	});
 	
 	setTimeout(function () {
-		var gameId = getQueryVariable('gameId') || localStorage.anotherGameId;
+		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
 		console.log('requestGameData', gameId);
 		socket.emit('requestGameData', gameId);
 	}, 100);
@@ -3740,7 +3795,7 @@ setNetworkEnabled(true);
 
 var canvas;
 window.addEventListener('load', function () {
-	canvas = document.querySelector('canvas.anotherCanvas');
+	canvas = document.querySelector('canvas.openEditPlayCanvas');
 	resizeCanvas();
 });
 window.addEventListener('resize', resizeCanvas);

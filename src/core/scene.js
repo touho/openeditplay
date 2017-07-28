@@ -29,7 +29,7 @@ export default class Scene extends Serializable {
 			}
 			scene = this;
 
-			this.canvas = document.querySelector('canvas.anotherCanvas');
+			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI.Container();
 			let self = this;

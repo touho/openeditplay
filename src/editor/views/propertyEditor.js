@@ -79,6 +79,7 @@ export default class PropertyEditor {
 		} else {
 			this.list.update([]);
 		}
+		
 		this.dirty = false;
 	}
 }
@@ -140,6 +141,12 @@ class Container {
 		if (itemChanged) {
 			this.item = state;
 			this.el.setAttribute('type', this.item.threeLetterType);
+
+			// Skip transitions when changing item
+			this.el.classList.add('skipPropertyEditorTransitions');
+			setTimeout(() => {
+				this.el.classList.remove('skipPropertyEditorTransitions');
+			}, 10);
 		}
 		
 		if (this.controls.innerHTML !== '')

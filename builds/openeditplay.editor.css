@@ -53,6 +53,8 @@ button.button i.fa {
 .moduleContainer {
   display: flex;
   flex-direction: column;
+  max-width: 100vw;
+  max-height: 100vh;
 }
 .tabs {
   padding-left: 2px;
@@ -434,6 +436,9 @@ div.propertyEditor div.container.packed .containerContent {
   opacity: 0;
   max-height: 0;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(0, 1, 1, 1);
+}
+.skipPropertyEditorTransitions * {
+  transition-duration: 0s !important;
 }
 div.propertyEditor div.container {
   position: relative;

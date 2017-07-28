@@ -27,7 +27,7 @@ class SceneModule extends Module {
 	constructor() {
 		let canvas;
 		super(
-			canvas = el('canvas.anotherCanvas', {
+			canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -41,12 +41,14 @@ class SceneModule extends Module {
 		this.el.classList.add('hidePauseButtons');
 		this.canvas = canvas;
 
-		setInterval(() => {
-			this.fixAspectRatio();
-		}, 200);
-		setTimeout(() => {
-			this.fixAspectRatio();
-		}, 0);
+		let fixAspectRatio = () => this.fixAspectRatio();
+		
+		window.addEventListener("resize", fixAspectRatio);
+		events.listen('layoutResize', () => {
+			console.log('listen');
+			setTimeout(fixAspectRatio, 500);
+		});
+		setTimeout(fixAspectRatio, 0);
 		
 		this.id = 'scene';
 		this.name = 'Scene';
@@ -219,7 +221,10 @@ class SceneModule extends Module {
 					this.widgetUnderMouse = null;
 					needsDraw = true;
 				}
-				sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
+				if (this.newEntities.length > 0) {
+					sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
+					needsDraw = true;
+				}
 				if (scene) {
 					if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd) {
 						this.widgetUnderMouse = sceneEdit.getWidgetUnderMouse(mousePos);

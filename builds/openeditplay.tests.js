@@ -2082,20 +2082,32 @@ if (typeof window !== 'undefined') {
 
 var PIXI;
 
-if (isClient)
-	{ PIXI = window.PIXI; }
+if (isClient) {
+	PIXI = window.PIXI;
+	PIXI.ticker.shared.stop();
+}
 
 var PIXI$1 = PIXI;
 
 var renderer = null; // Only one PIXI renderer supported for now
 
 function getRenderer(canvas) {
+	/*
+	return {
+		render: () => {},
+		resize: () => {}
+	};
+	*/
+	
 	if (!renderer) {
 		renderer = PIXI.autoDetectRenderer({
 			view: canvas,
 			autoResize: true,
 			antialias: true
 		});
+
+		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
+		renderer.plugins.interaction.destroy();
 	}
 	
 	return renderer;
@@ -2128,7 +2140,7 @@ function stop(name) {
 
 
 
-var FRAME_MEMORY_LENGTH = 600;
+var FRAME_MEMORY_LENGTH = 60 * 8;
 var frameTimes = [];
 for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);
@@ -2162,7 +2174,7 @@ var Scene = (function (Serializable$$1) {
 			}
 			scene = this;
 
-			this.canvas = document.querySelector('canvas.anotherCanvas');
+			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI$1.Container();
 			var self = this;

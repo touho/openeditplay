@@ -24,13 +24,14 @@ export function stop(name) {
 		cumulativePerformance[name] += millis;
 	else
 		cumulativePerformance[name] = millis;
-	return millis;
 	// @endif
 }
 
 export function startPerformanceUpdates() {
 	setInterval(() => {
-		snapshotPerformance = performanceObjectToArray(cumulativePerformance);
+		printPrivatePerformance(cumulativePerformance);
+		
+		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
 		cumulativePerformance = {};
 		
 		if (snapshotListener) {
@@ -43,8 +44,22 @@ export function setListener(listener) {
 	snapshotListener = listener;
 }
 
-function performanceObjectToArray(object) {
-	return Object.keys(object).map(key => ({
+function printPrivatePerformance(object) {
+	let msg = '';
+	Object.keys(object).filter(key => key.startsWith('#')).map(key => ({
+		name: key,
+		value: object[key] / UPDATE_INTERVAL
+	})).sort((a, b) => {
+		return a.value < b.value ? 1 : -1;
+	}).forEach(perf => {
+		msg += `\n   ${perf.name.substring(1)}: ${perf.value * 100}`;
+	});
+	if (msg)
+		console.log('#Performance:' + msg);
+}
+
+function performanceObjectToPublicArray(object) {
+	return Object.keys(object).filter(key => !key.startsWith('#')).map(key => ({
 		name: key,
 		value: object[key] / UPDATE_INTERVAL
 	})).sort((a, b) => {
@@ -52,7 +67,7 @@ function performanceObjectToArray(object) {
 	});
 }
 
-export let FRAME_MEMORY_LENGTH = 600;
+export let FRAME_MEMORY_LENGTH = 60 * 8;
 let frameTimes = [];
 for (let i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
 	frameTimes.push(0);

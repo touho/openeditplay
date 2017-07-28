@@ -2,6 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import events, { dispatch, listen } from '../events';
 import * as performance from '../../util/performance';
+import { scene } from '../../core/scene';
 
 class PerformanceModule extends Module {
 	constructor() {
@@ -21,16 +22,20 @@ class PerformanceModule extends Module {
 
 		performance.startPerformanceUpdates();
 		performance.setListener(snapshot => {
+			if (this.moduleContainer.isPacked())
+				return;
+			
 			performance.start('Editor: Performance');
-			if (!this.moduleContainer.isPacked())
-				performanceList.update(snapshot.slice(0, 10).filter(item => item.value > 0.0005));
+			performanceList.update(snapshot.slice(0, 10).filter(item => item.value > 0.0005));
 			performance.stop('Editor: Performance');
 		});
 		
 		setInterval(() => {
+			if (!scene.playing || this.moduleContainer.isPacked())
+				return;
+			
 			performance.start('Editor: Performance');
-			if (!this.moduleContainer.isPacked())
-				fpsMeter.update(performance.getFrameTimes());
+			fpsMeter.update(performance.getFrameTimes());
 			performance.stop('Editor: Performance');
 		}, 50);
 	}
@@ -74,12 +79,13 @@ class FPSMeter {
 	}
 	update(fpsData) {
 		this.el.width = this.el.width; // clear
+		
 		const c = this.context;
 		let yPixelsPerSecond = 30 / 16 * 1000;
 		function secToY(secs) {
 			return ~~(100 - secs * yPixelsPerSecond) + 0.5;
 		}
-
+		
 		c.strokeStyle = 'rgba(255, 255, 255, 0.1)';
 		c.beginPath();
 		for (let i = 60.5; i < performance.FRAME_MEMORY_LENGTH; i += 60) {
@@ -87,14 +93,14 @@ class FPSMeter {
 			c.lineTo(i, 100);
 		}
 		c.moveTo(0, secToY(1 / 60));
-		c.lineTo(600, secToY(1 / 60));
+		c.lineTo(performance.FRAME_MEMORY_LENGTH, secToY(1 / 60));
 		c.stroke();
-		
 		
 		const normalStrokeStyle = '#aaa'; 
 		c.strokeStyle = normalStrokeStyle;
 		c.beginPath();
 		c.moveTo(0, secToY(fpsData[0]));
+		
 		for (let i = 1; i < fpsData.length; ++i) {
 			let secs = fpsData[i];
 			if (secs > 1 / 30) {
@@ -119,7 +125,7 @@ class FPSMeter {
 				c.lineTo(i, secToY(secs));
 			}
 		}
-		c.stroke();
 		
+		c.stroke();
 	}
 }

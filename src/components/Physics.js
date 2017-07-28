@@ -14,6 +14,9 @@ const type = {
 	static: p2.Body.STATIC
 };
 
+const SLEEPING = p2.Body.SLEEPING;
+const STATIC = p2.Body.STATIC;
+
 Component.register({
 	name: 'Physics',
 	icon: 'fa-stop',
@@ -169,7 +172,7 @@ Component.register({
 		},
 		onUpdate() {
 			let b = this.body;
-			if (!b || b.sleepState === p2.Body.SLEEPING)
+			if (!b || b.sleepState === SLEEPING || b.type === STATIC)
 				return;
 			
 			this.updatingOthers = true;

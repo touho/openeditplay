@@ -15,15 +15,18 @@ export default class ModuleContainer {
 		
 		if (packButtonIcon) {
 			let packId = 'moduleContainerPacked_' + moduleContainerName;
-			if (getOption(packId))
+			if (getOption(packId)) {
 				this.el.classList.add('packed');
+			}
 				
 			this.el.onclick = () => {
 				setOption(packId, '');
+				events.dispatch('layoutResize');
 				return this.el.classList.contains('packed') && this.el.classList.remove('packed') || undefined;
 			};
 			this.packButton.onclick = e => {
 				this.el.classList.add('packed');
+				events.dispatch('layoutResize');
 				setOption(packId, 'true');
 				e.stopPropagation();
 				return false;
@@ -75,13 +78,17 @@ export default class ModuleContainer {
 		this.el.classList.toggle('noModules', noModules);
 	}
 	activateModule(module, unpackModuleView = true, ...args) {
-		if (unpackModuleView)
+		if (unpackModuleView) {
 			this.el.classList.remove('packed');
+			events.dispatch('layoutResize');
+		}
 		this._activateModule(module, args);
 	}
 	activateOneOfModules(modules, unpackModuleView = true, ...args) {
-		if (unpackModuleView)
+		if (unpackModuleView) {
 			this.el.classList.remove('packed');
+			events.dispatch('layoutResize');
+		}
 
 		for (let i = 0; i < this.modules.length; ++i) {
 			let m = this.modules[i];
@@ -104,6 +111,7 @@ export default class ModuleContainer {
 		module._enabled = true;
 		module._show();
 		this._updateTabs();
+		module.update();
 		module.activate(...args);
 	}
 	_enableModule(module) {

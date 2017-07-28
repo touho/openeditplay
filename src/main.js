@@ -7,7 +7,7 @@ setNetworkEnabled(true);
 
 let canvas;
 window.addEventListener('load', () => {
-	canvas = document.querySelector('canvas.anotherCanvas');
+	canvas = document.querySelector('canvas.openEditPlayCanvas');
 	resizeCanvas();
 });
 window.addEventListener('resize', resizeCanvas);

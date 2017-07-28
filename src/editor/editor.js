@@ -20,6 +20,7 @@ import { setNetworkEnabled } from '../util/net';
 import './help';
 import './test';
 import * as performance from '../util/performance'
+import { limit } from '../util/callLimiter';
 
 let loaded = false;
 
@@ -36,9 +37,9 @@ loadedPromise.then(() => {
 	editor.setLevel(game.getChildren('lvl')[0]);
 });
 
-setInterval(() => {
-	editor && editor.dirty && editor.update();
-}, 200);
+let editorUpdateLimited = limit(200, 'soon', () => {
+	editor.update();
+});
 
 addChangeListener(change => {
 	performance.start('Editor: General');
@@ -54,7 +55,7 @@ addChangeListener(change => {
 				editor.setLevel(null);
 			}
 		}
-		editor.dirty = true;
+		editorUpdateLimited();
 	}
 	performance.stop('Editor: General');
 });
@@ -66,7 +67,6 @@ class Editor {
 		
 		this.layout = new Layout();
 		
-		this.dirty = true;
 		this.game = game;
 		this.selectedLevel = null;
 		
@@ -102,20 +102,18 @@ class Editor {
 		else
 			this.selection.type = 'mixed';
 		
-		this.dirty = true;
-		
 		events.dispatch('change', {
 			type: 'editorSelection',
 			reference: this.selection,
 			origin
 		});
 		
+		// editorUpdateLimited(); // doesn't work for some reason
 		this.update();
 	}
 	update() {
-		if (!this.dirty || !this.game) return;
+		if (!this.game) return;
 		this.layout.update();
-		this.dirty = false;
 	}
 }
 
@@ -124,7 +122,7 @@ let options = null;
 function loadOptions() {
 	if (!options) {
 		try {
-			options = JSON.parse(localStorage.anotherOptions);
+			options = JSON.parse(localStorage.openEditPlayOptions);
 		} catch(e) {
 			options = {};
 		}
@@ -134,7 +132,7 @@ export function setOption(id, stringValue) {
 	loadOptions();
 	options[id] = stringValue;
 	try {
-		localStorage.anotherOptions = JSON.stringify(options);
+		localStorage.openEditPlayOptions = JSON.stringify(options);
 	} catch(e) {
 	}
 }
