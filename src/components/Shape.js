@@ -1,7 +1,7 @@
 import {Component, Prop} from '../core/component';
 import Vector from '../util/vector';
 import {Color} from '../util/color';
-import {default as PIXI} from '../feature/graphics';
+import {default as PIXI, generateTexture, getHashedTexture} from '../feature/graphics';
 
 Component.register({
 	name: 'Shape',
@@ -19,21 +19,19 @@ Component.register({
 	],
 	prototype: {
 		init() {
-			this.createGraphics();
+			this.initSprite();
 
 			this.listenProperty(this.Transform, 'position', position => {
-				this.graphics.x = position.x;
-				this.graphics.y = position.y;
+				this.sprite.x = position.x;
+				this.sprite.y = position.y;
 			});
 
 			this.listenProperty(this.Transform, 'angle', angle => {
-				this.graphics.rotation = angle;
+				this.sprite.rotation = angle;
 			});
 
 			let redrawGraphics = () => {
-				if (this.graphics) {
-					this.drawGraphics();
-				}
+				this.updateTexture();
 			};
 			
 			this.listenProperty(this.Transform, 'scale', redrawGraphics);
@@ -53,21 +51,35 @@ Component.register({
 				this.listenProperty(this, propName, redrawGraphics);
 			});
 		},
-		createGraphics() {
-			this.graphics = new PIXI.Graphics();
-			this.drawGraphics();
-			
-			this.scene.mainLayer.addChild(this.graphics);
+		initSprite() {
+			this.sprite = new PIXI.Sprite(this.getTexture());
+			this.sprite.anchor.set(0.5, 0.5);
 
 			let T = this.Transform;
 
-			this.graphics.x = T.position.x;
-			this.graphics.y = T.position.y;
-			this.graphics.rotation = T.angle;
+			this.sprite.x = T.position.x;
+			this.sprite.y = T.position.y;
+			this.sprite.rotation = T.angle;
+
+			this.scene.mainLayer.addChild(this.sprite);
 		},
-		drawGraphics() {
+		updateTexture() {
+			this.sprite.texture = this.getTexture();
+		},
+		getTexture() {
+			let hash = this.createPropertyHash() + this.Transform.scale;
+			let texture = getHashedTexture(hash);
+			
+			if (!texture) {
+				let graphics = this.createGraphics();
+				texture = generateTexture(graphics, hash);
+				graphics.destroy();
+			}
+			return texture;
+		},
+		createGraphics() {
 			let scale = this.Transform.scale;
-			this.graphics.clear();
+			let graphics = new PIXI.Graphics();
 			
 			if (this.type === 'rectangle') {
 				let
@@ -76,26 +88,28 @@ Component.register({
 					w = this.size.x * scale.x,
 					h = this.size.y * scale.y;
 
-				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
-				this.graphics.beginFill(this.fillColor.toHexNumber());
-				this.graphics.drawRect(x, y, w, h);
-				this.graphics.endFill();
+				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				graphics.beginFill(this.fillColor.toHexNumber());
+				graphics.drawRect(x, y, w, h);
+				graphics.endFill();
 			} else if (this.type === 'circle') {
 				let averageScale = (scale.x + scale.y) / 2;
 				
-				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
-				this.graphics.beginFill(this.fillColor.toHexNumber());
-				this.graphics.drawCircle(0, 0, this.radius * averageScale);
-				this.graphics.endFill();
+				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				graphics.beginFill(this.fillColor.toHexNumber());
+				graphics.drawCircle(0, 0, this.radius * averageScale);
+				graphics.endFill();
 			} else if (this.type === 'convex') {
 				let path = this.getConvexPoints(PIXI.Point);
 				path.push(path[0]); // Close the path
 				
-				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
-				this.graphics.beginFill(this.fillColor.toHexNumber());
-				this.graphics.drawPolygon(path);
-				this.graphics.endFill();
+				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				graphics.beginFill(this.fillColor.toHexNumber());
+				graphics.drawPolygon(path);
+				graphics.endFill();
 			}
+			
+			return graphics;
 		},
 		getConvexPoints(vectorClass = Vector) {
 			const centerAngle = Math.PI * 2 / this.points;
@@ -155,8 +169,8 @@ Component.register({
 			return path;
 		},
 		sleep() {
-			this.graphics.destroy();
-			this.graphics = null;
+			this.sprite.destroy();
+			this.sprite = null;
 		}
 	}
 });

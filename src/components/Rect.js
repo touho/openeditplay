@@ -29,7 +29,7 @@ Component.register({
 			
 			let redrawGraphics = () => {
 				if (this.graphics) {
-					this.drawGraphics();
+					this.createGraphics();
 				}
 			}
 
@@ -39,7 +39,7 @@ Component.register({
 		},
 		createGraphics() {
 			this.graphics = new PIXI.Graphics();
-			this.drawGraphics();
+			this.createGraphics();
 			this.scene.mainLayer.addChild(this.graphics);
 
 			let T = this.Transform;
@@ -48,7 +48,7 @@ Component.register({
 			this.graphics.y = T.position.y;
 			this.graphics.rotation = T.angle;
 		},
-		drawGraphics() {
+		createGraphics() {
 			let scale = this.Transform.scale;
 			let
 				x = -this.size.x / 2 * scale.x,

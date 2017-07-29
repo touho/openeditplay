@@ -361,6 +361,7 @@ img.logo:hover {
   padding: 5px 10px;
   display: flex;
   flex-direction: row;
+  overflow: hidden;
 }
 .performanceList {
 }

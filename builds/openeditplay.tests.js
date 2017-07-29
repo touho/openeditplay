@@ -264,21 +264,22 @@ Serializable.prototype.listen = function listen (event, callback) {
 Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
 		var this$1 = this;
 
-	if (this._listeners.hasOwnProperty(event)) {
-		var listeners = this._listeners[event];
-		for (var i = listeners.length - 1; i >= 0; --i) {
+	var listeners = this._listeners[event];
+	if (!listeners)
+		{ return; }
+
+	for (var i = listeners.length - 1; i >= 0; --i) {
 // @ifndef OPTIMIZE
-			try {
+		try {
 // @endif
 
-				listeners[i](a, b, c);
-					
+			listeners[i](a, b, c);
+
 // @ifndef OPTIMIZE
-			} catch(e) {
-				console.error(("Event " + event + " listener crashed."), this$1._listeners[event][i], e);
-			}
-// @endif
+		} catch(e) {
+			console.error(("Event " + event + " listener crashed."), this$1._listeners[event][i], e);
 		}
+// @endif
 	}
 };
 Serializable.prototype.hasDescendant = function hasDescendant (child) {
@@ -565,6 +566,13 @@ function assert(condition, message) {
 }
 
 var changesEnabled = true;
+var scenePropertyFilter = null;
+// true / false to enable / disable property value change sharing.
+// if object is passed, changes are only sent 
+
+
+
+
 
 
 // Instance of a property
@@ -635,8 +643,18 @@ Object.defineProperty(Property.prototype, 'value', {
 		
 		this.dispatch('change', this._value);
 		
-		if (changesEnabled && this._rootType) // not scene or empty
-			{ addChange(changeType.setPropertyValue, this); }
+		if (changesEnabled && this._rootType) { // not scene or empty
+			if (typeof changesEnabled === 'object') {
+				
+			}
+			
+			if (scenePropertyFilter === null
+				|| this._rootType !== 'sce'
+				|| scenePropertyFilter(this)
+			) {
+				addChange(changeType.setPropertyValue, this);
+			}
+		}
 	},
 	get: function get() {
 		return this._value;
@@ -953,6 +971,9 @@ Color.prototype.toHexString = function toHexString () {
 Color.prototype.toHexNumber = function toHexNumber () {
 	return this.r * 256 * 256 + this.g * 256 + this.b;
 };
+Color.prototype.toString = function toString () {
+	return ("[" + (this.r) + "," + (this.g) + "," + (this.b) + "]");
+};
 
 function hexToRgb(hex) {
 	var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -1207,6 +1228,9 @@ var PropertyOwner = (function (Serializable$$1) {
 			assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
 			this._properties[child.propertyType.name] = child;
 		}
+	};
+	PropertyOwner.prototype.createPropertyHash = function createPropertyHash () {
+		return this.getChildren('prp').map(function (property) { return '' + property._value; }).join(',');
 	};
 	PropertyOwner.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
@@ -2131,6 +2155,17 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
+var textures = {};
+
+function getHashedTexture(hash) {
+	return textures[hash];
+}
+function generateTexture(graphicsObject, hash) {
+	if (!textures[hash])
+		{ textures[hash] = renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2); }
+	return textures[hash];
+}
+
 var performance$1;
 performance$1 = isClient ? window.performance : { now: Date.now };
 
@@ -2196,6 +2231,7 @@ var Scene = (function (Serializable$$1) {
 			this.stage = new PIXI$1.Container();
 			var self = this;
 			function createLayer() {
+				// let layer = new PIXI.Container();
 				var layer = new PIXI$1.Container();
 				self.stage.addChild(layer);
 				return layer;
@@ -3012,21 +3048,19 @@ Component.register({
 		init: function init() {
 			var this$1 = this;
 
-			this.createGraphics();
+			this.initSprite();
 
 			this.listenProperty(this.Transform, 'position', function (position) {
-				this$1.graphics.x = position.x;
-				this$1.graphics.y = position.y;
+				this$1.sprite.x = position.x;
+				this$1.sprite.y = position.y;
 			});
 
 			this.listenProperty(this.Transform, 'angle', function (angle) {
-				this$1.graphics.rotation = angle;
+				this$1.sprite.rotation = angle;
 			});
 
 			var redrawGraphics = function () {
-				if (this$1.graphics) {
-					this$1.drawGraphics();
-				}
+				this$1.updateTexture();
 			};
 			
 			this.listenProperty(this.Transform, 'scale', redrawGraphics);
@@ -3046,21 +3080,35 @@ Component.register({
 				this$1.listenProperty(this$1, propName, redrawGraphics);
 			});
 		},
-		createGraphics: function createGraphics() {
-			this.graphics = new PIXI$1.Graphics();
-			this.drawGraphics();
-			
-			this.scene.mainLayer.addChild(this.graphics);
+		initSprite: function initSprite() {
+			this.sprite = new PIXI$1.Sprite(this.getTexture());
+			this.sprite.anchor.set(0.5, 0.5);
 
 			var T = this.Transform;
 
-			this.graphics.x = T.position.x;
-			this.graphics.y = T.position.y;
-			this.graphics.rotation = T.angle;
+			this.sprite.x = T.position.x;
+			this.sprite.y = T.position.y;
+			this.sprite.rotation = T.angle;
+
+			this.scene.mainLayer.addChild(this.sprite);
 		},
-		drawGraphics: function drawGraphics() {
+		updateTexture: function updateTexture() {
+			this.sprite.texture = this.getTexture();
+		},
+		getTexture: function getTexture() {
+			var hash = this.createPropertyHash() + this.Transform.scale;
+			var texture = getHashedTexture(hash);
+			
+			if (!texture) {
+				var graphics = this.createGraphics();
+				texture = generateTexture(graphics, hash);
+				graphics.destroy();
+			}
+			return texture;
+		},
+		createGraphics: function createGraphics() {
 			var scale = this.Transform.scale;
-			this.graphics.clear();
+			var graphics = new PIXI$1.Graphics();
 			
 			if (this.type === 'rectangle') {
 				var
@@ -3069,26 +3117,28 @@ Component.register({
 					w = this.size.x * scale.x,
 					h = this.size.y * scale.y;
 
-				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
-				this.graphics.beginFill(this.fillColor.toHexNumber());
-				this.graphics.drawRect(x, y, w, h);
-				this.graphics.endFill();
+				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				graphics.beginFill(this.fillColor.toHexNumber());
+				graphics.drawRect(x, y, w, h);
+				graphics.endFill();
 			} else if (this.type === 'circle') {
 				var averageScale = (scale.x + scale.y) / 2;
 				
-				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
-				this.graphics.beginFill(this.fillColor.toHexNumber());
-				this.graphics.drawCircle(0, 0, this.radius * averageScale);
-				this.graphics.endFill();
+				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				graphics.beginFill(this.fillColor.toHexNumber());
+				graphics.drawCircle(0, 0, this.radius * averageScale);
+				graphics.endFill();
 			} else if (this.type === 'convex') {
 				var path = this.getConvexPoints(PIXI$1.Point);
 				path.push(path[0]); // Close the path
 				
-				this.graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
-				this.graphics.beginFill(this.fillColor.toHexNumber());
-				this.graphics.drawPolygon(path);
-				this.graphics.endFill();
+				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
+				graphics.beginFill(this.fillColor.toHexNumber());
+				graphics.drawPolygon(path);
+				graphics.endFill();
 			}
+			
+			return graphics;
 		},
 		getConvexPoints: function getConvexPoints(vectorClass) {
 			var this$1 = this;
@@ -3151,8 +3201,8 @@ Component.register({
 			return path;
 		},
 		sleep: function sleep() {
-			this.graphics.destroy();
-			this.graphics = null;
+			this.sprite.destroy();
+			this.sprite = null;
 		}
 	}
 });

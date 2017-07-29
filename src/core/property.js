@@ -3,8 +3,20 @@ import { addChange, changeType, setChangeOrigin } from './serializableManager';
 import assert from '../util/assert';
 
 let changesEnabled = true;
-export function enableChanges(enable) {
-	changesEnabled = enable;
+let scenePropertyFilter = null;
+// true / false to enable / disable property value change sharing.
+// if object is passed, changes are only sent 
+export function filterSceneChanges(_scenePropertyFilter) {
+	scenePropertyFilter = _scenePropertyFilter;
+	changesEnabled = true;
+}
+
+export function disableAllChanges() {
+	changesEnabled = false;
+}
+
+export function enableAllChanges() {
+	changesEnabled = true;
 }
 
 // Instance of a property
@@ -63,8 +75,18 @@ Object.defineProperty(Property.prototype, 'value', {
 		
 		this.dispatch('change', this._value);
 		
-		if (changesEnabled && this._rootType) // not scene or empty
-			addChange(changeType.setPropertyValue, this);
+		if (changesEnabled && this._rootType) { // not scene or empty
+			if (typeof changesEnabled === 'object') {
+				
+			}
+			
+			if (scenePropertyFilter === null
+				|| this._rootType !== 'sce'
+				|| scenePropertyFilter(this)
+			) {
+				addChange(changeType.setPropertyValue, this);
+			}
+		}
 	},
 	get() {
 		return this._value;

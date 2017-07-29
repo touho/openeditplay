@@ -32,3 +32,19 @@ export function getRenderer(canvas) {
 	
 	return renderer;
 }
+
+let textures = {};
+export function resetTextures() {
+	for (let texture in textures) {
+		texture.destroy();
+	}
+	textures = {};
+}
+export function getHashedTexture(hash) {
+	return textures[hash];
+}
+export function generateTexture(graphicsObject, hash) {
+	if (!textures[hash])
+		textures[hash] = renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2);
+	return textures[hash];
+}

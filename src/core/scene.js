@@ -34,6 +34,7 @@ export default class Scene extends Serializable {
 			this.stage = new PIXI.Container();
 			let self = this;
 			function createLayer() {
+				// let layer = new PIXI.Container();
 				let layer = new PIXI.Container();
 				self.stage.addChild(layer);
 				return layer;

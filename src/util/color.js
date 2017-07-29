@@ -25,6 +25,9 @@ export class Color {
 	toHexNumber() {
 		return this.r * 256 * 256 + this.g * 256 + this.b;
 	}
+	toString() {
+		return `[${this.r},${this.g},${this.b}]`;
+	}
 }
 
 export function hexToRgb(hex) {

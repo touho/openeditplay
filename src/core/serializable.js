@@ -231,21 +231,22 @@ export default class Serializable {
 		};
 	}
 	dispatch(event, a, b, c) {
-		if (this._listeners.hasOwnProperty(event)) {
-			let listeners = this._listeners[event];
-			for (var i = listeners.length - 1; i >= 0; --i) {
+		let listeners = this._listeners[event];
+		if (!listeners)
+			return;
+
+		for (var i = listeners.length - 1; i >= 0; --i) {
 // @ifndef OPTIMIZE
-				try {
+			try {
 // @endif
 
-					listeners[i](a, b, c);
-					
+				listeners[i](a, b, c);
+
 // @ifndef OPTIMIZE
-				} catch(e) {
-					console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
-				}
-// @endif
+			} catch(e) {
+				console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
 			}
+// @endif
 		}
 	}
 	hasDescendant(child) {

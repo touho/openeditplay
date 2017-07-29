@@ -20,6 +20,7 @@ import { help } from '../help';
 import { createNewLevel } from './levels';
 import PIXI from '../../feature/graphics';
 import * as performance from '../../util/performance';
+import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
 
 import '../components/EditorWidget';
 
@@ -97,6 +98,7 @@ class SceneModule extends Module {
 					scene.play();
 				}
 				this.updatePlayPauseButtonStates();
+				this.updatePropertyChangeCreationFilter();
 			}
 		});
 		this.stopButton = new TopButton({
@@ -118,9 +120,9 @@ class SceneModule extends Module {
 		events.listen('setLevel', lvl => {
 			console.log('scenemodule.setLevel');
 			if (lvl)
-				lvl.createScene(false, this);
+				lvl.createScene(false);
 			else if (scene) {
-				scene.delete(this);
+				scene.delete();
 			}
 			
 			this.updatePlayPauseButtonStates();
@@ -158,6 +160,8 @@ class SceneModule extends Module {
 				change.reference.addComponents([
 					Component.create('EditorWidget')
 				]);
+			} else if (change.type === 'editorSelection') {
+				this.updatePropertyChangeCreationFilter();
 			}
 			
 			if (scene && scene.resetting)
@@ -465,10 +469,12 @@ class SceneModule extends Module {
 			editor.select(editor.selection.items.map(ent => ent.prototype.prototype), this);
 		}
 		if (scene)
-			scene.reset(this);
+			scene.reset();
 		this.playButton.icon.className = 'fa fa-play';
 		this.updatePlayPauseButtonStates();
 		this.draw();
+		
+		this.updatePropertyChangeCreationFilter();
 	}
 	
 	filterDeadSelection() {
@@ -481,6 +487,25 @@ class SceneModule extends Module {
 				entity.prototype.delete();
 				entity.delete();
 			}
+		}
+	}
+	
+	updatePropertyChangeCreationFilter() {
+		if (!scene)
+			return;
+		
+		if (scene.isInInitialState()) {
+			enableAllChanges();
+			console.log('enable all');
+		} else if (editor.selection.type === 'ent') {
+			filterSceneChanges(property => {
+				let selectedEntities = editor.selection.items;
+				return !!property.findParent('ent', serializable => selectedEntities.includes(serializable));
+			});
+			console.log('set filter');
+		} else {
+			disableAllChanges();
+			console.log('disable all');
 		}
 	}
 }
