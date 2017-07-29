@@ -22,7 +22,9 @@ export default class ModuleContainer {
 			this.el.onclick = () => {
 				setOption(packId, '');
 				events.dispatch('layoutResize');
-				return this.el.classList.contains('packed') && this.el.classList.remove('packed') || undefined;
+				this.el.classList.contains('packed') && this.el.classList.remove('packed');
+				this.update();
+				return;
 			};
 			this.packButton.onclick = e => {
 				this.el.classList.add('packed');

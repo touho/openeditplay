@@ -23,10 +23,11 @@ class Instance extends Module {
 		if (editor.selection.items.length != 1)
 			return false; // multiedit not supported yet
 		
-		if (!this._selected || this.moduleContainer.isPacked())
-			return; // if the tab is not visible, do not waste CPU
-		
 		if (editor.selection.type === 'ent') {
+			if (!this._selected || this.moduleContainer.isPacked()) {
+				return; // if the tab is not visible, do not waste CPU
+			}
+			
 			if (scene.isInInitialState()) {
 				this.propertyEditor.update(editor.selection.items.map(entity => entity.prototype), 'epr');
 			} else {

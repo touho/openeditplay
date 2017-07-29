@@ -655,8 +655,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -759,10 +757,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2791,8 +2785,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4056,8 +4048,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -4455,7 +4445,9 @@ var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIc
 		this.el.onclick = function () {
 			setOption(packId, '');
 			events.dispatch('layoutResize');
-			return this$1.el.classList.contains('packed') && this$1.el.classList.remove('packed') || undefined;
+			this$1.el.classList.contains('packed') && this$1.el.classList.remove('packed');
+			this$1.update();
+			return;
 		};
 		this.packButton.onclick = function (e) {
 			this$1.el.classList.add('packed');
@@ -4674,7 +4666,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5432,11 +5423,6 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5502,19 +5488,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -5967,10 +5940,11 @@ var Instance = (function (Module$$1) {
 		if (editor.selection.items.length != 1)
 			{ return false; } // multiedit not supported yet
 		
-		if (!this._selected || this.moduleContainer.isPacked())
-			{ return; } // if the tab is not visible, do not waste CPU
-		
 		if (editor.selection.type === 'ent') {
+			if (!this._selected || this.moduleContainer.isPacked()) {
+				return; // if the tab is not visible, do not waste CPU
+			}
+			
 			if (scene.isInInitialState()) {
 				this.propertyEditor.update(editor.selection.items.map(function (entity) { return entity.prototype; }), 'epr');
 			} else {
@@ -6197,9 +6171,6 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 
 Module.register(Types, 'left');
 
-/// Drawing
-
-// '#53f8ff'
 var widgetColor = 'white';
 
 
