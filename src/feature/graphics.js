@@ -33,18 +33,27 @@ export function getRenderer(canvas) {
 	return renderer;
 }
 
-let textures = {};
-export function resetTextures() {
-	for (let texture in textures) {
-		texture.destroy();
+let texturesAndAnchors = {};
+export function resetTexturesAndAnchors() {
+	for (let textureAndAnchor in texturesAndAnchors) {
+		textureAndAnchor.texture.destroy();
 	}
-	textures = {};
+	texturesAndAnchors = {};
 }
-export function getHashedTexture(hash) {
-	return textures[hash];
+export function getHashedTextureAndAnchor(hash) {
+	return texturesAndAnchors[hash];
 }
-export function generateTexture(graphicsObject, hash) {
-	if (!textures[hash])
-		textures[hash] = renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2);
-	return textures[hash];
+export function generateTextureAndAnchor(graphicsObject, hash) {
+	if (!texturesAndAnchors[hash]) {
+		let bounds = graphicsObject.getLocalBounds();
+		let anchor = {
+			x: -bounds.x / bounds.width,
+			y: -bounds.y / bounds.height
+		};
+		texturesAndAnchors[hash] = {
+			texture: renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2),
+			anchor
+		};
+	}
+	return texturesAndAnchors[hash];
 }

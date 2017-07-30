@@ -1526,6 +1526,14 @@ var Entity = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
 	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Entity.prototype.constructor = Entity;
+	
+	Entity.prototype.makeUpAName = function makeUpAName () {
+		if (this.prototype) {
+			return this.prototype.makeUpAName();
+		} else {
+			return 'Entity without a prototype';
+		}
+	};
 
 	// Get the first component of given name
 	Entity.prototype.getComponent = function getComponent (name) {
@@ -1705,6 +1713,14 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
 	Prototype.prototype.constructor = Prototype;
 	
+	Prototype.prototype.makeUpAName = function makeUpAName () {
+		var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; }, true);
+		if (nameProperty)
+			{ return nameProperty.value; }
+		else
+			{ return 'Prototype without a name'; }
+	};
+	
 	Prototype.prototype.addChild = function addChild (child) {
 		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
 			{ assert(this.findChild('cda', function (cda) { return cda.componentId === child.componentId; }) === null, ("Can't have multiple " + (child.name) + " components. See Component.allowMultiple")); }
@@ -1823,8 +1839,8 @@ var Prototype = (function (PropertyOwner$$1) {
 		var entity = new Entity();
 		var inheritedComponentDatas = this.getInheritedComponentDatas();
 		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
-		entity.addComponents(components);
 		entity.prototype = this;
+		entity.addComponents(components);
 		
 		this.previouslyCreatedEntity = entity;
 		return entity;
@@ -2259,15 +2275,24 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
-var textures = {};
+var texturesAndAnchors = {};
 
-function getHashedTexture(hash) {
-	return textures[hash];
+function getHashedTextureAndAnchor(hash) {
+	return texturesAndAnchors[hash];
 }
-function generateTexture(graphicsObject, hash) {
-	if (!textures[hash])
-		{ textures[hash] = renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2); }
-	return textures[hash];
+function generateTextureAndAnchor(graphicsObject, hash) {
+	if (!texturesAndAnchors[hash]) {
+		var bounds = graphicsObject.getLocalBounds();
+		var anchor = {
+			x: -bounds.x / bounds.width,
+			y: -bounds.y / bounds.height
+		};
+		texturesAndAnchors[hash] = {
+			texture: renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2),
+			anchor: anchor
+		};
+	}
+	return texturesAndAnchors[hash];
 }
 
 var performance$1;
@@ -2798,6 +2823,17 @@ var EntityPrototype = (function (Prototype$$1) {
 	if ( Prototype$$1 ) EntityPrototype.__proto__ = Prototype$$1;
 	EntityPrototype.prototype = Object.create( Prototype$$1 && Prototype$$1.prototype );
 	EntityPrototype.prototype.constructor = EntityPrototype;
+
+	EntityPrototype.prototype.makeUpAName = function makeUpAName () {
+		var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
+		if (nameProperty && nameProperty.value)
+			{ return nameProperty.value; }
+		else if (this.prototype)
+			{ return this.prototype.makeUpAName(); }
+		else
+			{ return 'Entity prototype without a name'; }
+	};
+	
 	EntityPrototype.prototype.getTransform = function getTransform () {
 		return this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	};
@@ -3127,8 +3163,9 @@ Component.register({
 			});
 		},
 		initSprite: function initSprite() {
-			this.sprite = new PIXI$1.Sprite(this.getTexture());
-			this.sprite.anchor.set(0.5, 0.5);
+			var textureAndAnchor = this.getTextureAndAnchor();
+			this.sprite = new PIXI$1.Sprite(textureAndAnchor.texture);
+			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 
 			var T = this.Transform;
 
@@ -3139,18 +3176,20 @@ Component.register({
 			this.scene.mainLayer.addChild(this.sprite);
 		},
 		updateTexture: function updateTexture() {
-			this.sprite.texture = this.getTexture();
+			var textureAndAnchor = this.getTextureAndAnchor();
+			this.sprite.texture = textureAndAnchor.texture;
+			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 		},
-		getTexture: function getTexture() {
+		getTextureAndAnchor: function getTextureAndAnchor() {
 			var hash = this.createPropertyHash() + this.Transform.scale;
-			var texture = getHashedTexture(hash);
+			var textureAndAnchor = getHashedTextureAndAnchor(hash);
 			
-			if (!texture) {
+			if (!textureAndAnchor) {
 				var graphics = this.createGraphics();
-				texture = generateTexture(graphics, hash);
+				textureAndAnchor = generateTextureAndAnchor(graphics, hash);
 				graphics.destroy();
 			}
-			return texture;
+			return textureAndAnchor;
 		},
 		createGraphics: function createGraphics() {
 			var scale = this.Transform.scale;
@@ -3760,7 +3799,7 @@ Component.register({
 				p.sprite.x += this.Transform.position.x;
 				p.sprite.y += this.Transform.position.y;
 				
-				if (this.Physics) {
+				if (this.Physics && this.Physics.body) {
 					var vel = this.Physics.body.velocity;
 					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
 					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;
@@ -3918,6 +3957,7 @@ Component.register({
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 30, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
+		createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('speed', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('breaking', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
@@ -4021,7 +4061,6 @@ Component.register({
 
 			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
 			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
-			return;
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -4083,7 +4122,7 @@ Component.register({
 						{ velocity = this.speed; }
 				}
 			} else {
-				if (velocity !== 0 && (this.checkIfCanJump() || this.controlType !== 'jumper')) {
+				if (velocity !== 0 && (this.controlType !== 'jumper' || this.breakInTheAir || this.checkIfCanJump())) {
 					var absVel = Math.abs(velocity);
 					absVel -= this.breaking * dt;
 					if (absVel < 0)

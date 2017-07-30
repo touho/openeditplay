@@ -16,6 +16,17 @@ export default class EntityPrototype extends Prototype {
 		// this._parent is level, not prototype. We need a link to parent-prototype.
 		this.prototype = null;
 	}
+
+	makeUpAName() {
+		let nameProperty = this.findChild('prp', property => property.name === 'name');
+		if (nameProperty && nameProperty.value)
+			return nameProperty.value;
+		else if (this.prototype)
+			return this.prototype.makeUpAName();
+		else
+			return 'Entity prototype without a name';
+	}
+	
 	getTransform() {
 		return this.findChild('cda', cda => cda.name === 'Transform');
 	}

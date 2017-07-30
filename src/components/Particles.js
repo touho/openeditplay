@@ -1,7 +1,7 @@
 import {Component, Prop} from '../core/component';
 import Vector from '../util/vector';
 import {Color} from '../util/color';
-import {default as PIXI, generateTexture, getHashedTexture} from '../feature/graphics';
+import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics';
 import { isClient } from '../util/environment';
 
 import { PHYSICS_SCALE } from './Physics';
@@ -175,7 +175,7 @@ Component.register({
 				p.sprite.x += this.Transform.position.x;
 				p.sprite.y += this.Transform.position.y;
 				
-				if (this.Physics) {
+				if (this.Physics && this.Physics.body) {
 					let vel = this.Physics.body.velocity;
 					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
 					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;

@@ -4,12 +4,20 @@ import assert from '../util/assert';
 const ALIVE_ERROR = 'entity is already dead';
 
 export default class Entity extends Serializable {
-	constructor(predefinedId = false) {
+		constructor(predefinedId = false) {
 		super(predefinedId);
 		this.components = new Map(); // name -> array
 		this.sleeping = false;
 		this.prototype = null; // should be set immediately after constructor
 		this.localMaster = true; // set false if entity is controlled over the net
+	}
+	
+	makeUpAName() {
+		if (this.prototype) {
+			return this.prototype.makeUpAName();
+		} else {
+			return 'Entity without a prototype';
+		}
 	}
 
 	// Get the first component of given name

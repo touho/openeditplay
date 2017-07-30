@@ -30391,7 +30391,7 @@ var TextureManager = function () {
      */
     ;
 
-    TextureManager.prototype.getTexture = function getTexture() {}
+    TextureManager.prototype.getTextureAndAnchor = function getTexture() {}
     // empty
 
 
@@ -41794,7 +41794,7 @@ function deprecation(core) {
     }
 
     core.DisplayObject.prototype.generateTexture = function generateTexture(renderer, scaleMode, resolution) {
-        warn('generateTexture has moved to the renderer, please use renderer.generateTexture(displayObject)');
+        warn('generateTextureAndAnchor has moved to the renderer, please use renderer.generateTextureAndAnchor(displayObject)');
 
         return renderer.generateTexture(this, scaleMode, resolution);
     };

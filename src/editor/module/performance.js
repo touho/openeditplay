@@ -31,7 +31,7 @@ class PerformanceModule extends Module {
 		});
 		
 		setInterval(() => {
-			if (!scene.playing || this.moduleContainer.isPacked())
+			if (!scene || !scene.playing || this.moduleContainer.isPacked())
 				return;
 			
 			performance.start('Editor: Performance');

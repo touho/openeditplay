@@ -12,6 +12,7 @@ Component.register({
 		Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		Prop('controlType', 'jumper', Prop.enum, Prop.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		Prop('jumpSpeed', 30, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('controlType', 'jumper')),
+		Prop('breakInTheAir', true, Prop.bool, Prop.visibleIf('controlType', 'jumper')),
 		Prop('speed', 500, Prop.float, Prop.float.range(0, 1000)),
 		Prop('acceleration', 500, Prop.float, Prop.float.range(0, 1000)),
 		Prop('breaking', 500, Prop.float, Prop.float.range(0, 1000))
@@ -109,7 +110,6 @@ Component.register({
 
 			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
 			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
-			return;
 		},
 		moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -171,7 +171,7 @@ Component.register({
 						velocity = this.speed;
 				}
 			} else {
-				if (velocity !== 0 && (this.checkIfCanJump() || this.controlType !== 'jumper')) {
+				if (velocity !== 0 && (this.controlType !== 'jumper' || this.breakInTheAir || this.checkIfCanJump())) {
 					let absVel = Math.abs(velocity);
 					absVel -= this.breaking * dt;
 					if (absVel < 0)

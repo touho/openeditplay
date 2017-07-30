@@ -1,7 +1,7 @@
 import {Component, Prop} from '../core/component';
 import Vector from '../util/vector';
 import {Color} from '../util/color';
-import {default as PIXI, generateTexture, getHashedTexture} from '../feature/graphics';
+import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics';
 
 Component.register({
 	name: 'Shape',
@@ -52,8 +52,9 @@ Component.register({
 			});
 		},
 		initSprite() {
-			this.sprite = new PIXI.Sprite(this.getTexture());
-			this.sprite.anchor.set(0.5, 0.5);
+			let textureAndAnchor = this.getTextureAndAnchor();
+			this.sprite = new PIXI.Sprite(textureAndAnchor.texture);
+			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 
 			let T = this.Transform;
 
@@ -64,18 +65,20 @@ Component.register({
 			this.scene.mainLayer.addChild(this.sprite);
 		},
 		updateTexture() {
-			this.sprite.texture = this.getTexture();
+			let textureAndAnchor = this.getTextureAndAnchor();
+			this.sprite.texture = textureAndAnchor.texture;
+			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 		},
-		getTexture() {
+		getTextureAndAnchor() {
 			let hash = this.createPropertyHash() + this.Transform.scale;
-			let texture = getHashedTexture(hash);
+			let textureAndAnchor = getHashedTextureAndAnchor(hash);
 			
-			if (!texture) {
+			if (!textureAndAnchor) {
 				let graphics = this.createGraphics();
-				texture = generateTexture(graphics, hash);
+				textureAndAnchor = generateTextureAndAnchor(graphics, hash);
 				graphics.destroy();
 			}
-			return texture;
+			return textureAndAnchor;
 		},
 		createGraphics() {
 			let scale = this.Transform.scale;

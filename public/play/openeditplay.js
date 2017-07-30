@@ -439,7 +439,8 @@ Serializable.prototype.listen = function listen (event, callback) {
 		if (!this$1._alive)
 			{ return; } // listeners already deleted
 		var index = this$1._listeners[event].indexOf(callback);
-		this$1._listeners[event].splice(index, 1);
+		if (index >= 0)
+			{ this$1._listeners[event].splice(index, 1); }
 	};
 };
 Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
@@ -714,6 +715,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1443,6 +1448,14 @@ var Entity = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
 	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Entity.prototype.constructor = Entity;
+	
+	Entity.prototype.makeUpAName = function makeUpAName () {
+		if (this.prototype) {
+			return this.prototype.makeUpAName();
+		} else {
+			return 'Entity without a prototype';
+		}
+	};
 
 	// Get the first component of given name
 	Entity.prototype.getComponent = function getComponent (name) {
@@ -1622,6 +1635,14 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
 	Prototype.prototype.constructor = Prototype;
 	
+	Prototype.prototype.makeUpAName = function makeUpAName () {
+		var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; }, true);
+		if (nameProperty)
+			{ return nameProperty.value; }
+		else
+			{ return 'Prototype without a name'; }
+	};
+	
 	Prototype.prototype.addChild = function addChild (child) {
 		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
 			{ assert(this.findChild('cda', function (cda) { return cda.componentId === child.componentId; }) === null, ("Can't have multiple " + (child.name) + " components. See Component.allowMultiple")); }
@@ -1740,8 +1761,8 @@ var Prototype = (function (PropertyOwner$$1) {
 		var entity = new Entity();
 		var inheritedComponentDatas = this.getInheritedComponentDatas();
 		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
-		entity.addComponents(components);
 		entity.prototype = this;
+		entity.addComponents(components);
 		
 		this.previouslyCreatedEntity = entity;
 		return entity;
@@ -2176,15 +2197,24 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
-var textures = {};
+var texturesAndAnchors = {};
 
-function getHashedTexture(hash) {
-	return textures[hash];
+function getHashedTextureAndAnchor(hash) {
+	return texturesAndAnchors[hash];
 }
-function generateTexture(graphicsObject, hash) {
-	if (!textures[hash])
-		{ textures[hash] = renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2); }
-	return textures[hash];
+function generateTextureAndAnchor(graphicsObject, hash) {
+	if (!texturesAndAnchors[hash]) {
+		var bounds = graphicsObject.getLocalBounds();
+		var anchor = {
+			x: -bounds.x / bounds.width,
+			y: -bounds.y / bounds.height
+		};
+		texturesAndAnchors[hash] = {
+			texture: renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2),
+			anchor: anchor
+		};
+	}
+	return texturesAndAnchors[hash];
 }
 
 var performance$1;
@@ -2681,6 +2711,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2693,6 +2725,17 @@ var EntityPrototype = (function (Prototype$$1) {
 	if ( Prototype$$1 ) EntityPrototype.__proto__ = Prototype$$1;
 	EntityPrototype.prototype = Object.create( Prototype$$1 && Prototype$$1.prototype );
 	EntityPrototype.prototype.constructor = EntityPrototype;
+
+	EntityPrototype.prototype.makeUpAName = function makeUpAName () {
+		var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
+		if (nameProperty && nameProperty.value)
+			{ return nameProperty.value; }
+		else if (this.prototype)
+			{ return this.prototype.makeUpAName(); }
+		else
+			{ return 'Entity prototype without a name'; }
+	};
+	
 	EntityPrototype.prototype.getTransform = function getTransform () {
 		return this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	};
@@ -3022,8 +3065,9 @@ Component.register({
 			});
 		},
 		initSprite: function initSprite() {
-			this.sprite = new PIXI$1.Sprite(this.getTexture());
-			this.sprite.anchor.set(0.5, 0.5);
+			var textureAndAnchor = this.getTextureAndAnchor();
+			this.sprite = new PIXI$1.Sprite(textureAndAnchor.texture);
+			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 
 			var T = this.Transform;
 
@@ -3034,18 +3078,20 @@ Component.register({
 			this.scene.mainLayer.addChild(this.sprite);
 		},
 		updateTexture: function updateTexture() {
-			this.sprite.texture = this.getTexture();
+			var textureAndAnchor = this.getTextureAndAnchor();
+			this.sprite.texture = textureAndAnchor.texture;
+			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 		},
-		getTexture: function getTexture() {
+		getTextureAndAnchor: function getTextureAndAnchor() {
 			var hash = this.createPropertyHash() + this.Transform.scale;
-			var texture = getHashedTexture(hash);
+			var textureAndAnchor = getHashedTextureAndAnchor(hash);
 			
-			if (!texture) {
+			if (!textureAndAnchor) {
 				var graphics = this.createGraphics();
-				texture = generateTexture(graphics, hash);
+				textureAndAnchor = generateTextureAndAnchor(graphics, hash);
 				graphics.destroy();
 			}
-			return texture;
+			return textureAndAnchor;
 		},
 		createGraphics: function createGraphics() {
 			var scale = this.Transform.scale;
@@ -3531,23 +3577,61 @@ Component.register({
 			});
 			
 			// Blend mode
-			this.container.blendMode = blendModes[this.blendMode];
 			this.listenProperty(this, 'blendMode', function (blendMode) {
-				this$1.container.blendMode = blendModes[blendMode];
+				if (!this$1.particles)
+					{ return; }
+				
+				this$1.particles.forEach(function (p) {
+					if (p.sprite)
+						{ p.sprite.blendMode = blendModes[blendMode]; }
+				});
 			});
 			
 			this.scene.mainLayer.addChild(this.container);
 			
 			this.initParticles();
+			['particleLifetime', 'particleCount'].forEach(function (propertyName) {
+				this$1.listenProperty(this$1, propertyName, function () {
+					this$1.initParticles();
+				});
+			});
 
-			if (!this.globalCoordinates) {
-				this.listenProperty(this.Transform, 'position', function (position) {
+			this.updateGlobalCoordinatesProperty();
+			this.listenProperty(this, 'globalCoordinates', function () {
+				this$1.updateGlobalCoordinatesProperty();
+			});
+			
+			this.Physics = this.entity.getComponent('Physics');
+		},
+		
+		updateGlobalCoordinatesProperty: function updateGlobalCoordinatesProperty() {
+			var this$1 = this;
+
+			if (this.positionListener) {
+				this.positionListener();
+				this.positionListener = null;
+			}
+			if (this.globalCoordinates) {
+				this.particles.forEach(function (p) {
+					if (p.sprite) {
+						p.sprite.x += this$1.container.position.x;
+						p.sprite.y += this$1.container.position.y;
+					}
+				});
+				this.container.position.set(0, 0);
+			} else {
+				this.positionListener = this.Transform._properties.position.listen('change', function (position) {
 					this$1.container.position.set(position.x, position.y);
 				});
 				this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+
+				this.particles.forEach(function (p) {
+					if (p.sprite) {
+						p.sprite.x -= this$1.container.position.x;
+						p.sprite.y -= this$1.container.position.y;
+					}
+				});
 			}
-			
-			this.Physics = this.entity.getComponent('Physics');
 		},
 		
 		updateTexture: function updateTexture() {
@@ -3563,6 +3647,12 @@ Component.register({
 		initParticles: function initParticles() {
 			var this$1 = this;
 
+			if (this.particles) {
+				this.particles.forEach(function (p) {
+					if (p.sprite)
+						{ p.sprite.destroy(); }
+				});
+			}
 			this.particles = [];
 			var interval = this.particleLifetime / this.particleCount;
 			var firstBirth = this.scene.time + Math.random() * interval;
@@ -3611,7 +3701,7 @@ Component.register({
 				p.sprite.x += this.Transform.position.x;
 				p.sprite.y += this.Transform.position.y;
 				
-				if (this.Physics) {
+				if (this.Physics && this.Physics.body) {
 					var vel = this.Physics.body.velocity;
 					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
 					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;
@@ -3696,6 +3786,11 @@ Component.register({
 			
 			this.container.destroy();
 			this.container = null;
+
+			if (this.positionListener) {
+				this.positionListener();
+				this.positionListener = null;
+			}
 			
 			// do not destroy textures. we can reuse them.
 		}
@@ -3764,6 +3859,7 @@ Component.register({
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 30, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
+		createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('speed', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('breaking', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
@@ -3867,7 +3963,6 @@ Component.register({
 
 			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
 			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
-			return;
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -3929,7 +4024,7 @@ Component.register({
 						{ velocity = this.speed; }
 				}
 			} else {
-				if (velocity !== 0 && (this.checkIfCanJump() || this.controlType !== 'jumper')) {
+				if (velocity !== 0 && (this.controlType !== 'jumper' || this.breakInTheAir || this.checkIfCanJump())) {
 					var absVel = Math.abs(velocity);
 					absVel -= this.breaking * dt;
 					if (absVel < 0)

@@ -19,6 +19,14 @@ export default class Prototype extends PropertyOwner {
 		this.previouslyCreatedEntity = null;
 	}
 	
+	makeUpAName() {
+		let nameProperty = this.findChild('prp', property => property.name === 'name', true);
+		if (nameProperty)
+			return nameProperty.value;
+		else
+			return 'Prototype without a name';
+	}
+	
 	addChild(child) {
 		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
 			assert(this.findChild('cda', cda => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
@@ -133,8 +141,8 @@ export default class Prototype extends PropertyOwner {
 		let entity = new Entity();
 		let inheritedComponentDatas = this.getInheritedComponentDatas();
 		let components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
-		entity.addComponents(components);
 		entity.prototype = this;
+		entity.addComponents(components);
 		
 		this.previouslyCreatedEntity = entity;
 		return entity;

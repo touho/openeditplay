@@ -355,7 +355,7 @@ class SceneModule extends Module {
 	}
 	
 	fixAspectRatio() {
-		if (this.canvas) {
+		if (scene && this.canvas) {
 			let change = false;
 			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth) {
 				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
