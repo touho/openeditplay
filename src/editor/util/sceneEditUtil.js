@@ -55,7 +55,6 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 		return affectedPrototypes.has(epr.prototype)
 			&& (!prototypeFilter || prototypeFilter(epr));
 	}).map(epr => epr.previouslyCreatedEntity).filter(ent => ent && ent._alive);
-	console.log('returning', entities);
 	return entities;
 }
 

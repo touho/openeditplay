@@ -496,16 +496,13 @@ class SceneModule extends Module {
 		
 		if (scene.isInInitialState()) {
 			enableAllChanges();
-			console.log('enable all');
 		} else if (editor.selection.type === 'ent') {
 			filterSceneChanges(property => {
 				let selectedEntities = editor.selection.items;
 				return !!property.findParent('ent', serializable => selectedEntities.includes(serializable));
 			});
-			console.log('set filter');
 		} else {
 			disableAllChanges();
-			console.log('disable all');
 		}
 	}
 }

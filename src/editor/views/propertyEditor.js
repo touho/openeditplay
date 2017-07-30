@@ -12,6 +12,7 @@ import { scene } from '../../core/scene';
 import * as sceneEdit from '../util/sceneEditUtil';
 import PropertyOwner from '../../core/propertyOwner';
 import * as performance from '../../util/performance'
+import InstanceMoreButtonContextMenu from './popup/instanceMoreButtonContextMenu'
 
 /*
 Reference: Unbounce
@@ -444,6 +445,12 @@ class Property {
 					}));
 				} else if (parent.threeLetterType === 'com') {
 					this.name.style.color = parent.constructor.color;
+
+					mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
+						onclick: () => {
+							new InstanceMoreButtonContextMenu(this.property);
+						}
+					}));
 				}
 			} else
 				this.name.style.color = 'inherit';

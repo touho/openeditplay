@@ -859,7 +859,7 @@ dataType.visibleIf = function(propertyName, value) {
 	return {
 		visibleIf: true,
 		propertyName: propertyName,
-		values: typeof value === 'string' ? [value] : value
+		values: Array.isArray(value) ? value : [value]
 	};
 };
 
@@ -3076,64 +3076,6 @@ Component.register({
 });
 
 Component.register({
-	name: 'Mover',
-	properties: [
-		createPropertyType('change', new Vector(10, 10), createPropertyType.vector),
-		createPropertyType('userControlled', false, createPropertyType.bool),
-		createPropertyType('speed', 1, createPropertyType.float),
-		createPropertyType('rotationSpeed', 0, createPropertyType.float, 'Degrees per second', createPropertyType.flagDegreesInEditor)
-	],
-	prototype: {
-		init: function init() {
-			this.Physics = this.entity.getComponent('Physics');
-		},
-		onUpdate: function onUpdate(dt, t) {
-			if (!this._rootType)
-				{ return; }
-			
-			if (this.userControlled) {
-				if (!this.entity.localMaster) { return; }
-				
-				var dx = 0;
-				var dy = 0;
-				
-				if (keyPressed(key.left)) { dx -= 1; }
-				if (keyPressed(key.right)) { dx += 1; }
-				if (keyPressed(key.up)) { dy -= 1; }
-				if (keyPressed(key.down)) { dy += 1; }
-				if (this.Physics) {
-					if (dx || dy) {
-						var force = new Vector(
-							dx * this.Physics.getMass() * this.speed * dt,
-							dy * this.Physics.getMass() * this.speed * dt
-						);
-						this.Physics.applyForce(force);
-					}
-					if (dx && this.rotationSpeed) {
-						this.Physics.setAngularForce(dx * this.rotationSpeed * dt);
-					}
-				} else {
-					if (dx) { this.Transform.position.x += dx * this.speed * dt; }
-					if (dy) { this.Transform.position.y += dy * this.speed * dt; }
-					if (dx || dy) {
-						this.Transform.position = this.Transform.position;
-					}
-					if (dx && this.rotationSpeed) {
-						this.Transform.angle += dt * dx * this.rotationSpeed;
-					}
-				}
-			} else {
-				var change = new Vector(dt, 0).rotate(t * this.speed).multiply(this.change);
-				this.Transform.position.set(this.Transform.position).add(change);
-				
-				if (this.rotationSpeed)
-					{ this.Transform.angle += dt * this.rotationSpeed; }
-			}
-		}
-	}
-});
-
-Component.register({
 	name: 'Shape',
 	icon: 'fa-stop',
 	allowMultiple: true,
@@ -3639,6 +3581,269 @@ Component.register({
 		}
 	}
 });
+
+Component.register({
+	name: 'Particles',
+	allowMultiple: true,
+	properties: [
+		createPropertyType('startColor', new Color(150, 40, 40), createPropertyType.color),
+		createPropertyType('endColor', new Color(255, 255, 40), createPropertyType.color),
+		createPropertyType('alpha', 1, createPropertyType.float, createPropertyType.float.range(0, 1)),
+		createPropertyType('particleSize', 20, createPropertyType.float, createPropertyType.float.range(1, 100)),
+		createPropertyType('particleCount', 40, createPropertyType.int, createPropertyType.int.range(0, 10000)),
+		createPropertyType('particleLifetime', 1, createPropertyType.float, createPropertyType.float.range(0.1, 10), 'in seconds'),
+		createPropertyType('particleHardness', 0.2, createPropertyType.float, createPropertyType.float.range(0, 1)),
+		createPropertyType('blendMode', 'add', createPropertyType.enum, createPropertyType.enum.values('add', 'normal')),
+		createPropertyType('spawnType', 'circle', createPropertyType.enum, createPropertyType.enum.values('circle', 'rectangle')),
+		createPropertyType('spawnRadius', 20, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('spawnType', 'circle')),
+		createPropertyType('spawnRandom', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('spawnType', 'circle')),
+		createPropertyType('spawnRect', new Vector(50, 50), createPropertyType.vector, createPropertyType.visibleIf('spawnType', 'rectangle')),
+		createPropertyType('speedToOutside', 50, createPropertyType.float, createPropertyType.float.range(-1000, 1000), createPropertyType.visibleIf('spawnType', 'circle')),
+		createPropertyType('speed', new Vector(50, 50), createPropertyType.vector),
+		createPropertyType('speedRandom', 50, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
+		createPropertyType('acceleration', new Vector(0, -50), createPropertyType.vector),
+		createPropertyType('globalCoordinates', true, createPropertyType.bool),
+		createPropertyType('followInstance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
+	],
+	prototype: {
+		init: function init() {
+			var this$1 = this;
+
+			{
+				this.container = new PIXI$1.Container();
+			}
+			
+			this.updateTexture();
+
+			// Color
+			this.listenProperty(this, 'startColor', function (startColor) {
+			});
+			
+			// Blend mode
+			this.container.blendMode = blendModes[this.blendMode];
+			this.listenProperty(this, 'blendMode', function (blendMode) {
+				this$1.container.blendMode = blendModes[blendMode];
+			});
+			
+			this.scene.mainLayer.addChild(this.container);
+			
+			this.initParticles();
+
+			if (!this.globalCoordinates) {
+				this.listenProperty(this.Transform, 'position', function (position) {
+					this$1.container.position.set(position.x, position.y);
+				});
+				this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+			}
+			
+			this.Physics = this.entity.getComponent('Physics');
+		},
+		
+		updateTexture: function updateTexture() {
+			var this$1 = this;
+
+			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, {r: 255, g: 255, b: 255, a: this.alpha});
+			// this.container.baseTexture = this.texture;
+			if (this.particles) {
+				this.particles.forEach(function (p) { return p.sprite.texture = this$1.texture; });
+			}
+		},
+		
+		initParticles: function initParticles() {
+			var this$1 = this;
+
+			this.particles = [];
+			var interval = this.particleLifetime / this.particleCount;
+			var firstBirth = this.scene.time + Math.random() * interval;
+			for (var i = 0; i < this.particleCount; ++i) {
+				this$1.particles.push({
+					alive: false,
+					nextBirth: firstBirth + i * interval
+				});
+			}
+		},
+		
+		resetParticle: function resetParticle(p) {
+			
+			p.vx = this.speed.x;
+			p.vy = this.speed.y;
+			if (this.speedRandom > 0) {
+				var randomSpeed = this.speedRandom * Math.random();
+				var randomAngle = Math.random() * Math.PI * 2;
+				p.vx += Math.sin(randomAngle) * randomSpeed;
+				p.vy += Math.cos(randomAngle) * randomSpeed;
+			}
+
+			// Calculate starting position
+			if (this.spawnType === 'circle') {
+				var r = this.spawnRadius;
+				if (this.spawnRandom > 0) {
+					r = this.spawnRandom * Math.random() * r + (1 - this.spawnRandom) * r;
+				}
+				var angle = Math.random() * Math.PI * 2;
+				p.sprite.x = Math.cos(angle) * r;
+				p.sprite.y = Math.sin(angle) * r;
+				if (this.speedToOutside !== 0) {
+					p.vx += Math.cos(angle) * this.speedToOutside;
+					p.vy += Math.sin(angle) * this.speedToOutside;
+				}
+			} else {
+				// Rectangle
+				p.sprite.x = -this.spawnRect.x / 2 + Math.random() * this.spawnRect.x;
+				p.sprite.y = -this.spawnRect.y / 2 + Math.random() * this.spawnRect.y;
+			}
+			
+			p.age = this.scene.time - p.nextBirth;
+			p.nextBirth += this.particleLifetime;
+
+			if (this.globalCoordinates) {
+				p.sprite.x += this.Transform.position.x;
+				p.sprite.y += this.Transform.position.y;
+				
+				if (this.Physics) {
+					var vel = this.Physics.body.velocity;
+					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
+					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;
+				}
+			}
+		},
+		
+		onUpdate: function onUpdate(dt, t) {
+			var this$1 = this;
+
+			var particleLifetime = this.particleLifetime;
+			var invParticleLifetime = 1 / particleLifetime;
+			var particles = this.particles;
+			var accelerationX = this.acceleration.x * dt;
+			var accelerationY = this.acceleration.y * dt;
+			
+			// Fast color interpolation
+			var startColor = this.startColor;
+			var endColor = this.endColor;
+			var rMultiplier = 256 * 256;
+			function colorLerp(lerp) {
+				var startMultiplier = 1 - lerp;
+				var r = (startColor.r * startMultiplier + endColor.r * lerp) | 0; // to int
+				var g = (startColor.g * startMultiplier + endColor.g * lerp) | 0;
+				var b = (startColor.b * startMultiplier + endColor.b * lerp) | 0;
+				return 65536 * r + 256 * g + b;
+			}
+			
+			var sprite, 
+				spritePos,
+				scale,
+				lerp,
+				p;
+			
+			for (var i = this.particleCount - 1; i >= 0; --i) {
+				p = particles[i];
+				
+				if (!p.alive) {
+					// Not alive
+					if (t >= p.nextBirth) {
+						// The birth!
+						p.sprite = new PIXI$1.Sprite(this$1.texture);
+						p.sprite.blendMode = blendModes[this$1.blendMode];
+						p.sprite.anchor.set(0.5, 0.5);
+						p.alive = true;
+						this$1.resetParticle(p);
+						this$1.container.addChild(p.sprite);
+					} else {
+						continue;
+					}
+				}
+				
+				// Is alive
+
+				sprite = p.sprite;
+				spritePos = sprite.transform.position;
+				
+				p.age += dt;
+				lerp = p.age * invParticleLifetime;
+				if (lerp >= 1) {
+					this$1.resetParticle(p);
+					lerp = p.age * invParticleLifetime;
+				} else {
+					p.vx += accelerationX;
+					p.vy += accelerationY;
+					spritePos.x += p.vx * dt;
+					spritePos.y += p.vy * dt;
+				}
+				
+				sprite.tint = colorLerp(lerp);
+				
+				sprite.alpha = alphaLerp(lerp);
+				
+				scale = scaleLerp(lerp);
+				sprite.scale.set(scale, scale);
+
+			}
+		},
+		
+		sleep: function sleep() {
+			this.particles = null;
+			
+			this.container.destroy();
+			this.container = null;
+			
+			// do not destroy textures. we can reuse them.
+		}
+	}
+});
+
+function alphaLerp(lerp) {
+	if (lerp > 0.5) {
+		return (1 - lerp) / 0.5;
+	} else if (lerp > 0.2) {
+		return 1;
+	} else {
+		return lerp * 5;
+	}
+}
+
+function scaleLerp(lerp) {
+	if (lerp > 0.5) {
+		return 1;
+	} else {
+		return 0.5 + lerp;
+	}
+}
+
+var blendModes = {
+	add: isClient ? PIXI$1.BLEND_MODES.ADD : 0,
+	normal: isClient ? PIXI$1.BLEND_MODES.NORMAL: 0
+};
+
+var textureCache = {};
+
+// size: pixels
+// gradientHardness: 0..1
+function getParticleTexture(size, gradientHardness, rgb) {
+	if ( gradientHardness === void 0 ) gradientHardness = 0;
+	if ( rgb === void 0 ) rgb = {r: 255, g: 255, b: 255, a: 1};
+
+	var hash = size + "-" + gradientHardness + "-" + (rgb.r) + "-" + (rgb.g) + "-" + (rgb.b) + "-" + (rgb.a);
+	if (!textureCache[hash]) {
+		var canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
+		var context = canvas.getContext('2d');
+		var gradient = context.createRadialGradient(
+			size * 0.5,
+			size * 0.5,
+			size * 0.5 * (gradientHardness), // inner r
+			size * 0.5,
+			size * 0.5,
+			size * 0.5 // outer r
+		);
+		gradient.addColorStop(0, ("rgba(" + (rgb.r) + ", " + (rgb.g) + ", " + (rgb.b) + ", " + (rgb.a) + ")"));
+		gradient.addColorStop(1, ("rgba(" + (rgb.r) + ", " + (rgb.g) + ", " + (rgb.b) + ", 0)"));
+		context.fillStyle = gradient;
+		context.fillRect(0, 0, size, size);
+		textureCache[hash] = PIXI$1.Texture.fromCanvas(canvas);
+	}
+	return textureCache[hash];
+}
 
 Component.register({
 	name: 'CharacterController',

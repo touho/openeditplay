@@ -4,6 +4,7 @@ import p2, { addBody, deleteBody, createMaterial, getWorld } from '../feature/ph
 import assert from '../util/assert';
 
 const PHYSICS_SCALE = 1/50;
+export { PHYSICS_SCALE };
 const PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
 const DENSITY_SCALE = 1/10;

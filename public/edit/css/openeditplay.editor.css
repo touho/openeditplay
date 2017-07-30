@@ -522,6 +522,15 @@ td.propertyContent {
 .property .resetButton:hover {
   color: #ff6969;
 }
+.property .moreButton {
+  position: absolute;
+  top: 3px;
+  right: 15px;
+  color: #8a998c;
+}
+.property .moreButton:hover {
+  color: #91ffa0;
+}
 .logButton {
   position: absolute;
   top: 5px;

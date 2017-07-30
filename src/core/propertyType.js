@@ -73,7 +73,7 @@ dataType.visibleIf = function(propertyName, value) {
 	return {
 		visibleIf: true,
 		propertyName,
-		values: typeof value === 'string' ? [value] : value
+		values: Array.isArray(value) ? value : [value]
 	};
 };
 

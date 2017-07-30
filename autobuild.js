@@ -34,11 +34,11 @@ if (!global.TARGET_NONE) {
 		'node_modules/jquery/dist/jquery.min.js',
 		'src/external/jstree.min.js',
 		'src/external/p2.js',
-		'src/external/pixi.js',
+		'src/external/pixi.js'
 	];
 	const jsDependencies = [
 		'src/external/p2.min.js',
-		'src/external/pixi.min.js',
+		'src/external/pixi.min.js'
 	];
 
 	// Editor CSS
