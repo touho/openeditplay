@@ -258,7 +258,8 @@ Serializable.prototype.listen = function listen (event, callback) {
 		if (!this$1._alive)
 			{ return; } // listeners already deleted
 		var index = this$1._listeners[event].indexOf(callback);
-		this$1._listeners[event].splice(index, 1);
+		if (index >= 0)
+			{ this$1._listeners[event].splice(index, 1); }
 	};
 };
 Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
@@ -3660,34 +3661,87 @@ Component$1.register({
 		init: function init() {
 			var this$1 = this;
 
-			{
-				this.container = new PIXI$2.Container();
-			}
+			/* ParticleContainer does not work properly!
 			
-			this.updateTexture();
+			// maxSize < 40 will crash
+			// With many Particle-components with few particles, this is deadly-expensive.
+			// And also crashes now and then with low maxValue.
+			this.container = new PIXI.particles.ParticleContainer(15000, {
+				position: true,
+				alpha: false,
+				scale: false,
+				rotation: false,
+				uvs: false
+			});
+			*/
 
-			// Color
-			this.listenProperty(this, 'startColor', function (startColor) {
+			// Use normal container instead
+			this.container = new PIXI$2.Container();
+			
+			// Texture
+			this.updateTexture();
+			['particleSize', 'particleHardness', 'alpha'].forEach(function (propertyName) {
+				this$1.listenProperty(this$1, propertyName, function () {
+					this$1.updateTexture();
+				});				
 			});
 			
 			// Blend mode
-			this.container.blendMode = blendModes[this.blendMode];
 			this.listenProperty(this, 'blendMode', function (blendMode) {
-				this$1.container.blendMode = blendModes[blendMode];
+				if (!this$1.particles)
+					{ return; }
+				
+				this$1.particles.forEach(function (p) {
+					if (p.sprite)
+						{ p.sprite.blendMode = blendModes[blendMode]; }
+				});
 			});
 			
 			this.scene.mainLayer.addChild(this.container);
 			
 			this.initParticles();
+			['particleLifetime', 'particleCount'].forEach(function (propertyName) {
+				this$1.listenProperty(this$1, propertyName, function () {
+					this$1.initParticles();
+				});
+			});
 
-			if (!this.globalCoordinates) {
-				this.listenProperty(this.Transform, 'position', function (position) {
+			this.updateGlobalCoordinatesProperty();
+			this.listenProperty(this, 'globalCoordinates', function () {
+				this$1.updateGlobalCoordinatesProperty();
+			});
+			
+			this.Physics = this.entity.getComponent('Physics');
+		},
+		
+		updateGlobalCoordinatesProperty: function updateGlobalCoordinatesProperty() {
+			var this$1 = this;
+
+			if (this.positionListener) {
+				this.positionListener();
+				this.positionListener = null;
+			}
+			if (this.globalCoordinates) {
+				this.particles.forEach(function (p) {
+					if (p.sprite) {
+						p.sprite.x += this$1.container.position.x;
+						p.sprite.y += this$1.container.position.y;
+					}
+				});
+				this.container.position.set(0, 0);
+			} else {
+				this.positionListener = this.Transform._properties.position.listen('change', function (position) {
 					this$1.container.position.set(position.x, position.y);
 				});
 				this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+
+				this.particles.forEach(function (p) {
+					if (p.sprite) {
+						p.sprite.x -= this$1.container.position.x;
+						p.sprite.y -= this$1.container.position.y;
+					}
+				});
 			}
-			
-			this.Physics = this.entity.getComponent('Physics');
 		},
 		
 		updateTexture: function updateTexture() {
@@ -3703,6 +3757,12 @@ Component$1.register({
 		initParticles: function initParticles() {
 			var this$1 = this;
 
+			if (this.particles) {
+				this.particles.forEach(function (p) {
+					if (p.sprite)
+						{ p.sprite.destroy(); }
+				});
+			}
 			this.particles = [];
 			var interval = this.particleLifetime / this.particleCount;
 			var firstBirth = this.scene.time + Math.random() * interval;
@@ -3836,6 +3896,11 @@ Component$1.register({
 			
 			this.container.destroy();
 			this.container = null;
+
+			if (this.positionListener) {
+				this.positionListener();
+				this.positionListener = null;
+			}
 			
 			// do not destroy textures. we can reuse them.
 		}

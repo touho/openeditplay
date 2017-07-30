@@ -31,45 +31,85 @@ Component.register({
 	],
 	prototype: {
 		init() {
-			if (false) {
-				// maxSize < 40 will crash
-				// With many Particle-components with few particles, this is deadly-expensive.
-				// And also crashes now and then with low maxValue.
-				this.container = new PIXI.particles.ParticleContainer(15000, {
-					position: true,
-					alpha: false,
-					scale: false,
-					rotation: false,
-					uvs: false
-				});
-			} else {
-				this.container = new PIXI.Container();
-			}
+			/* ParticleContainer does not work properly!
 			
-			this.updateTexture();
+			// maxSize < 40 will crash
+			// With many Particle-components with few particles, this is deadly-expensive.
+			// And also crashes now and then with low maxValue.
+			this.container = new PIXI.particles.ParticleContainer(15000, {
+				position: true,
+				alpha: false,
+				scale: false,
+				rotation: false,
+				uvs: false
+			});
+			*/
 
-			// Color
-			this.listenProperty(this, 'startColor', startColor => {
+			// Use normal container instead
+			this.container = new PIXI.Container();
+			
+			// Texture
+			this.updateTexture();
+			['particleSize', 'particleHardness', 'alpha'].forEach(propertyName => {
+				this.listenProperty(this, propertyName, () => {
+					this.updateTexture();
+				});				
 			});
 			
 			// Blend mode
-			this.container.blendMode = blendModes[this.blendMode];
 			this.listenProperty(this, 'blendMode', blendMode => {
-				this.container.blendMode = blendModes[blendMode];
+				if (!this.particles)
+					return;
+				
+				this.particles.forEach(p => {
+					if (p.sprite)
+						p.sprite.blendMode = blendModes[blendMode];
+				});
 			});
 			
 			this.scene.mainLayer.addChild(this.container);
 			
 			this.initParticles();
+			['particleLifetime', 'particleCount'].forEach(propertyName => {
+				this.listenProperty(this, propertyName, () => {
+					this.initParticles();
+				});
+			});
 
-			if (!this.globalCoordinates) {
-				this.listenProperty(this.Transform, 'position', position => {
+			this.updateGlobalCoordinatesProperty();
+			this.listenProperty(this, 'globalCoordinates', () => {
+				this.updateGlobalCoordinatesProperty();
+			});
+			
+			this.Physics = this.entity.getComponent('Physics');
+		},
+		
+		updateGlobalCoordinatesProperty() {
+			if (this.positionListener) {
+				this.positionListener();
+				this.positionListener = null;
+			}
+			if (this.globalCoordinates) {
+				this.particles.forEach(p => {
+					if (p.sprite) {
+						p.sprite.x += this.container.position.x;
+						p.sprite.y += this.container.position.y;
+					}
+				});
+				this.container.position.set(0, 0);
+			} else {
+				this.positionListener = this.Transform._properties.position.listen('change', position => {
 					this.container.position.set(position.x, position.y);
 				});
 				this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+
+				this.particles.forEach(p => {
+					if (p.sprite) {
+						p.sprite.x -= this.container.position.x;
+						p.sprite.y -= this.container.position.y;
+					}
+				});
 			}
-			
-			this.Physics = this.entity.getComponent('Physics');
 		},
 		
 		updateTexture() {
@@ -81,6 +121,12 @@ Component.register({
 		},
 		
 		initParticles() {
+			if (this.particles) {
+				this.particles.forEach(p => {
+					if (p.sprite)
+						p.sprite.destroy();
+				});
+			}
 			this.particles = [];
 			let interval = this.particleLifetime / this.particleCount;
 			let firstBirth = this.scene.time + Math.random() * interval;
@@ -213,6 +259,11 @@ Component.register({
 			
 			this.container.destroy();
 			this.container = null;
+
+			if (this.positionListener) {
+				this.positionListener();
+				this.positionListener = null;
+			}
 			
 			// do not destroy textures. we can reuse them.
 		}

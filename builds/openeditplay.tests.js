@@ -553,8 +553,6 @@ function addChange(type, reference) {
 var listeners = [];
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -674,10 +672,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2680,8 +2674,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3506,14 +3498,29 @@ Component.register({
 		init: function init() {
 			var this$1 = this;
 
-			{
-				this.container = new PIXI$1.Container();
-			}
+			/* ParticleContainer does not work properly!
 			
-			this.updateTexture();
+			// maxSize < 40 will crash
+			// With many Particle-components with few particles, this is deadly-expensive.
+			// And also crashes now and then with low maxValue.
+			this.container = new PIXI.particles.ParticleContainer(15000, {
+				position: true,
+				alpha: false,
+				scale: false,
+				rotation: false,
+				uvs: false
+			});
+			*/
 
-			// Color
-			this.listenProperty(this, 'startColor', function (startColor) {
+			// Use normal container instead
+			this.container = new PIXI$1.Container();
+			
+			// Texture
+			this.updateTexture();
+			['particleSize', 'particleHardness', 'alpha'].forEach(function (propertyName) {
+				this$1.listenProperty(this$1, propertyName, function () {
+					this$1.updateTexture();
+				});				
 			});
 			
 			// Blend mode
