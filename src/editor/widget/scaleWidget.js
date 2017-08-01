@@ -1,5 +1,6 @@
 import {default as Widget, defaultWidgetDistance, centerWidgetRadius} from './widget';
 import Vector from '../../util/vector';
+import { scene } from '../../core/scene'
 
 const MIN_SCALE = 0.1;
 
@@ -13,7 +14,7 @@ export default class ScaleWidget extends Widget {
 
 	updatePosition() {
 		let Transform = this.component.Transform;
-		let pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
+		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(Transform.angle).add(Transform.position);
 		this.x = pos.x;
 		this.y = pos.y;
 
@@ -82,45 +83,4 @@ export default class ScaleWidget extends Widget {
 		});
 	}
 
-	draw(context) {
-		let p = this.component.Transform.position;
-
-		let relativePosition = Vector.fromObject(this).subtract(p);
-		let angle = relativePosition.horizontalAngle();
-
-		let lineStart = relativePosition.clone().setLength(centerWidgetRadius).add(p);
-		let lineEnd = relativePosition.clone().setLength(relativePosition.length() + this.r).add(p);
-
-		context.fillStyle = 'rgba(0, 0, 0, 0.3)';
-		context.beginPath();
-		context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-		context.fill();
-
-		context.beginPath();
-		context.moveTo(lineStart.x, lineStart.y);
-		context.lineTo(lineEnd.x, lineEnd.y);
-		context.stroke();
-
-
-		let arrowTailPos = lineStart.clone().subtract(lineEnd).setLength(this.r * 2);
-
-		let arrowTailPos1 = arrowTailPos.clone().rotate(0.5).add(lineEnd);
-		let arrowTailPos2 = arrowTailPos.clone().rotate(-0.5).add(lineEnd);
-
-		context.save();
-
-		context.lineWidth = 2;
-
-		context.beginPath();
-		context.moveTo(lineEnd.x, lineEnd.y);
-		context.lineTo(arrowTailPos1.x, arrowTailPos1.y);
-		context.stroke();
-
-		context.beginPath();
-		context.moveTo(lineEnd.x, lineEnd.y);
-		context.lineTo(arrowTailPos2.x, arrowTailPos2.y);
-		context.stroke();
-
-		context.restore();
-	}
 }

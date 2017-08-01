@@ -3,6 +3,7 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor';
 import { game } from '../../core/game';
 import PropertyOwner from '../../core/propertyOwner'
+import { TopButton } from './topBar'
 
 class Game extends Module {
 	constructor() {
@@ -12,6 +13,13 @@ class Game extends Module {
 		);
 		this.id = 'game';
 		this.name = 'Game';
+		
+		new TopButton({
+			text: 'Play song',
+			callback: () => {
+				window.open('https://open.spotify.com/track/2RECYFqYTiQxGvT0IY9KAw');
+			}
+		})
 	}
 	update() {
 		if (game)

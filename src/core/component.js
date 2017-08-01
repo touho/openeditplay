@@ -11,11 +11,7 @@ import * as performance from '../util/performance';
 
 const eventListeners = [
 	'onUpdate'
-	,'onDraw'
 	,'onStart'
-// @ifndef OPTIMIZE
-	,'onDrawHelper'
-// @endif
 ];
 
 // Instance of a component, see _componentExample.js

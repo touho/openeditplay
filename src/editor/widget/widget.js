@@ -1,5 +1,6 @@
 import Vector from '../../util/vector';
 import PIXI from '../../feature/graphics';
+import { scene } from '../../core/scene'
 
 export let defaultWidgetRadius = 5;
 export let centerWidgetRadius = 10;
@@ -31,7 +32,7 @@ export default class Widget {
 	
 	// Optimized for many function calls
 	isMouseInWidget(mousePosition) {
-		let r = this.r;
+		let r = this.r / scene.cameraZoom;
 		
 		if (mousePosition.x >= this.x - r
 			&& mousePosition.x <= this.x + r
@@ -81,6 +82,9 @@ export default class Widget {
 		this.updatePosition();
 		this.updateVisibility();
 		this.component.scene.positionHelperLayer.addChild(this.graphics);
+
+		let invZoom = 1 / scene.cameraZoom;
+		this.graphics.scale.set(invZoom, invZoom);
 	}
 	
 	sleep() {

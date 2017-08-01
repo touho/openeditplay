@@ -62,7 +62,10 @@ export const key = {
 	'9': 57,
 	backspace: 8,
 	enter: 13,
-	esc: 27
+	esc: 27,
+	plus: 187,
+	minus: 189,
+	questionMark: 191
 };
 
 export function listenMouseMove(element, handler) {
@@ -123,6 +126,8 @@ if (typeof window !== 'undefined') {
 			keys[keyCode] = true;
 			keyDownListeners.forEach(l => l(keyCode));
 		}
+		
+		// console.log(keyCode);
 	};
 	window.onkeyup = event => {
 		let key = event.which || event.keyCode;

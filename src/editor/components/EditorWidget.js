@@ -104,13 +104,6 @@ export default Component.register({
 				this.widgets[i].updatePosition();
 			}
 		},
-		preInit() {
-			/*
-			this._addEventListener('onMouseMove');
-			this._addEventListener('onMouseDown');
-			this._addEventListener('onMouseUp');
-			*/
-		},
 		init() {
 			this.listenProperty(this.Transform, 'position', position => {
 				if (this.scene.playing) {
@@ -165,12 +158,28 @@ export default Component.register({
 			// gra.x = 0;
 			// gra.y = 0;
 			// this.stage.addChild(gra);
+			
+			this.zoomListener = this.scene.listen('zoomChange', zoomLevel => {
+				let invZoom = 1 / zoomLevel;
+				this.positionHelper.scale.set(invZoom, invZoom);
+				
+				this.widgets.forEach(w => {
+					w.graphics && w.graphics.scale.set(invZoom, invZoom);
+				});
+				
+				this.updateWidgets();
+			});
 		},
 		sleep() {
 			this.selected = true;
 			this.widgets.forEach(widget => {
 				widget.sleep();
 			});
+			
+			if (this.zoomListener) {
+				this.zoomListener();
+				this.zoomListener = null;
+			}
 		},
 		delete() {
 			this.widgets.forEach(widget => {
@@ -185,62 +194,6 @@ export default Component.register({
 			
 			this.positionHelper.destroy();
 			this.positionHelper = null;
-		},
-		onMouseMove(mousePosition) {
-			return;
-			let p = this.Transform.position;
-			this.mouseOnWidget = null;
-			
-			if (this.activeWidget) {
-				this.activeWidget.onDrag(mousePosition);
-				this.updateWidgets();
-			} else {
-				if (this.selected) {
-					if (isMouseInPotentialWidgetArea(mousePosition, p)) {
-						this.mouseOnWidget = this.widgets.find(widget => widget.isMouseInWidget(mousePosition));
-					}
-					this.updateWidgets();
-				} else {
-					if (this.position.isMouseInWidget(mousePosition))
-						this.mouseOnWidget = this.position;
-				}
-			}
-			
-		},
-		onMouseDown(mousePosition) {
-			return;
-			if (this.mouseOnWidget) {
-				this.select();
-				this.activeWidget = this.mouseOnWidget;
-			}
-		},
-		onMouseUp(mousePosition) {
-			return;
-			if (this.selected) {
-				this.updateWidgets();
-			}
-			this.activeWidget = null;
-		},
-		onDrawHelper(context) {
-			if (!this.selected && !this.mouseOnWidget)
-				return;
-			
-			context.fillStyle = 'black';
-			context.strokeStyle = secondaryColor;
-
-			
-			
-			if (this.selected) {
-				for (let i = 0; i < this.widgets.length; ++i) {
-					this.widgets[i].draw(context);
-				}
-			}
-			
-
-			if (this.mouseOnWidget) {
-				context.strokeStyle = 'white';
-				this.mouseOnWidget.draw(context);
-			}
 		}
 	}
 });

@@ -1,4 +1,4 @@
-
+/*@import "main.scss";*/
 /*$editor-effect-color: $cool-cyan;*/
 /*$editor-effect-color: #f3ebd8;*/
 .button {
@@ -313,7 +313,7 @@ img.logo:hover {
   left: 0;
   */
 }
-.module-scene.hidePauseButtons .pauseInfo {
+.module-scene.hideScenePauseInformation .pauseInfo {
   display: none;
 }
 .module-scene .pauseInfo {
@@ -356,6 +356,23 @@ img.logo:hover {
   color: rgb(255, 255, 255);
   text-shadow: 0 0 3px black;
   opacity: 0.7;
+}
+.zoomButtons {
+  display: none; /* This will be overridden */
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.isInitialState .zoomButtons {
+  display: block;
+}
+.zoomButtons > i {
+  font-size: 20px;
+  float: right;
+  clear: both;
+}
+.zoomButtons > i:hover {
+  
 }
 .module.module-performance {
   padding: 5px 10px;

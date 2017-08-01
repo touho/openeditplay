@@ -10,11 +10,11 @@ Component.register({
 	name: 'Particles',
 	allowMultiple: true,
 	properties: [
-		Prop('startColor', new Color(150, 40, 40), Prop.color),
-		Prop('endColor', new Color(255, 255, 40), Prop.color),
+		Prop('startColor', new Color('#68c07f'), Prop.color),
+		Prop('endColor', new Color('#59abc0'), Prop.color),
 		Prop('alpha', 1, Prop.float, Prop.float.range(0, 1)),
-		Prop('particleSize', 20, Prop.float, Prop.float.range(1, 100)),
-		Prop('particleCount', 40, Prop.int, Prop.int.range(0, 10000)),
+		Prop('particleSize', 10, Prop.float, Prop.float.range(1, 100)),
+		Prop('particleCount', 30, Prop.int, Prop.int.range(0, 10000)),
 		Prop('particleLifetime', 1, Prop.float, Prop.float.range(0.1, 10), 'in seconds'),
 		Prop('particleHardness', 0.2, Prop.float, Prop.float.range(0, 1)),
 		Prop('blendMode', 'add', Prop.enum, Prop.enum.values('add', 'normal')),
@@ -23,11 +23,11 @@ Component.register({
 		Prop('spawnRandom', 0.5, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('spawnType', 'circle')),
 		Prop('spawnRect', new Vector(50, 50), Prop.vector, Prop.visibleIf('spawnType', 'rectangle')),
 		Prop('speedToOutside', 50, Prop.float, Prop.float.range(-1000, 1000), Prop.visibleIf('spawnType', 'circle')),
-		Prop('speed', new Vector(50, 50), Prop.vector),
-		Prop('speedRandom', 50, Prop.float, Prop.float.range(0, 1000), 'Max random velocity to random direction'),
-		Prop('acceleration', new Vector(0, -50), Prop.vector),
+		Prop('speed', new Vector(0, 0), Prop.vector),
+		Prop('speedRandom', 0, Prop.float, Prop.float.range(0, 1000), 'Max random velocity to random direction'),
+		Prop('acceleration', new Vector(0, 0), Prop.vector),
 		Prop('globalCoordinates', true, Prop.bool),
-		Prop('followInstance', 0.5, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('globalCoordinates', true))
+		Prop('followInstance', 0.4, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('globalCoordinates', true))
 	],
 	prototype: {
 		init() {
@@ -116,7 +116,10 @@ Component.register({
 			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, {r: 255, g: 255, b: 255, a: this.alpha});
 			// this.container.baseTexture = this.texture;
 			if (this.particles) {
-				this.particles.forEach(p => p.sprite.texture = this.texture);
+				this.particles.forEach(p => {
+					if (p.sprite)
+						p.sprite.texture = this.texture;
+				});
 			}
 		},
 		

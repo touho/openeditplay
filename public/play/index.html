@@ -4,28 +4,13 @@
     <link rel="icon" type="image/png" href="/img/logo_graphics.png" />
     <meta charset="UTF-8">
     <title>Open Edit Play</title>
-    <style>
-        html, body {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            background: black;
-            margin: 0;
-            padding: 0;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100% !important;
-            height: 100% !important;
-        }
-    </style>
+    <link type="text/css" rel="stylesheet" href="/play/css/openeditplay.css">
     <script src="openeditplay.dependencies.js"></script>
     <script src="openeditplay.js"></script>
 </head>
 <body>
 <canvas id="canvas" class="openEditPlayCanvas"></canvas>
+<div id="fullscreenInfo">Click for fullscreen</div>
 <script src="/socket.io/socket.io.js"></script>
 </body>
 </html>

@@ -71,7 +71,7 @@ if (!global.TARGET_NONE) {
 		});
 	}
 
-	// Game engine JS
+	// Game engine JS and CSS
 	if (target === 'all') {
 		autobuildJs('src/main.js', 'builds/openeditplay.js', {
 			copyTo: 'public/play/',
@@ -82,6 +82,12 @@ if (!global.TARGET_NONE) {
 			copyTo: 'public/play/',
 			optimize: true
 		});
+
+		if (target === 'all') {
+			buildCss('src/main.scss', 'builds/openeditplay.css', () => {
+				copy('builds/openeditplay.cs*', 'public/play/css/');
+			});
+		}
 	}
 
 	// Editor JS

@@ -1037,6 +1037,11 @@ Vector.prototype.set = function set (vec) {
 	this.y = vec.y;
 	return this;
 };
+Vector.prototype.setScalars = function setScalars (x, y) {
+	this.x = x;
+	this.y = y;
+	return this;
+};
 Vector.prototype.toString = function toString () {
 	return ("[" + (this.x) + ", " + (this.y) + "]");
 };
@@ -2173,7 +2178,10 @@ var key = {
 	'9': 57,
 	backspace: 8,
 	enter: 13,
-	esc: 27
+	esc: 27,
+	plus: 187,
+	minus: 189,
+	questionMark: 191
 };
 
 function listenMouseMove(element, handler) {
@@ -2234,6 +2242,8 @@ if (typeof window !== 'undefined') {
 			keys[keyCode] = true;
 			keyDownListeners.forEach(function (l) { return l(keyCode); });
 		}
+		
+		// console.log(keyCode);
 	};
 	window.onkeyup = function (event) {
 		var key = event.which || event.keyCode;
@@ -2358,6 +2368,9 @@ var Scene = (function (Serializable$$1) {
 			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI$1.Container();
+			this.cameraPosition = new Vector(0, 0);
+			this.cameraZoom = 1;
+			
 			var self = this;
 			function createLayer() {
 				// let layer = new PIXI.Container();
@@ -2413,6 +2426,23 @@ var Scene = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+	
+	Scene.prototype.updateCamera = function updateCamera () {
+		if (this.playing) {
+			var pos = new Vector(0, 0);
+			var count = 0;
+			this.getComponents('CharacterController').forEach(function (characterController) {
+				pos.add(characterController.Transform.position);
+				count++;
+			});
+			if (count > 0) {
+				this.cameraPosition.set(pos.divideScalar(count));
+			}
+		}
+		// pivot is camera top left corner position
+		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
+		this.stage.scale.set(this.cameraZoom, this.cameraZoom);
+	};
 
 	Scene.prototype.win = function win () {
 		this.won = true;
@@ -2472,6 +2502,8 @@ var Scene = (function (Serializable$$1) {
 		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		// this.dispatch('onDraw', this.context);
 		
+		this.updateCamera();
+		
 		this.renderer.render(this.stage, null, true);
 	};
 
@@ -2491,6 +2523,9 @@ var Scene = (function (Serializable$$1) {
 
 		this.won = false;
 		this.time = 0;
+		
+		// this.cameraZoom = 1;
+		// this.cameraPosition.setScalars(0, 0);
 
 		if (this.level)
 			{ this.level.createScene(this); }
@@ -2521,6 +2556,9 @@ var Scene = (function (Serializable$$1) {
 
 		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
+		
+		// this.cameraZoom = 1;
+		// this.cameraPosition.setScalars(0, 0);
 
 		this.requestAnimFrame();
 
@@ -2579,6 +2617,13 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.getComponents = function getComponents (componentName) {
 		return this.components.get(componentName) || new Set;
 	};
+	
+	Scene.prototype.mouseToWorld = function mouseToWorld (mousePosition) {
+		return new Vector(
+			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
+			this.stage.pivot.y + mousePosition.y / this.cameraZoom
+		);
+	};
 
 	return Scene;
 }(Serializable));
@@ -2592,11 +2637,7 @@ var sceneCreateListeners = [];
 var componentClasses = new Map();
 var eventListeners = [
 	'onUpdate'
-	,'onDraw'
 	,'onStart'
-// @ifndef OPTIMIZE
-	,'onDrawHelper'
-// @endif
 ];
 
 // Instance of a component, see _componentExample.js
@@ -3118,13 +3159,13 @@ Component.register({
 	allowMultiple: true,
 	properties: [
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
-		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
-		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
+		createPropertyType('radius', 20, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
+		createPropertyType('size', new Vector(20, 20), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
 		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 16), createPropertyType.visibleIf('type', 'convex')),
 		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0.001, 1), createPropertyType.visibleIf('type', 'convex'), 'Only works with at most 8 points'), // Value 0
-		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
+		createPropertyType('fillColor', new Color(222, 222, 222), createPropertyType.color),
 		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
-		createPropertyType('borderWidth', 1, createPropertyType.float)
+		createPropertyType('borderWidth', 1, createPropertyType.float, createPropertyType.float.range(0, 30))
 	],
 	prototype: {
 		init: function init() {
@@ -3354,24 +3395,6 @@ Component.register({
 		createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win'))
 	],
 	prototype: {
-		onDrawHelper: function onDrawHelper(context) {
-			var size = 30;
-			var
-				x = this.Transform.position.x - size * this.Transform.scale.x/2,
-				y = this.Transform.position.y - size * this.Transform.scale.y/2,
-				w = size * this.Transform.scale.x,
-				h = size * this.Transform.scale.y;
-			context.save();
-			context.fillStyle = 'blue';
-			context.strokeStyle = 'white';
-			context.lineWidth = 1;
-			context.font = '40px FontAwesome';
-			context.textAlign = 'center';
-			context.fillText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-			context.strokeText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-			
-			context.restore();
-		},
 		preInit: function preInit() {
 			this.storeProp = "__Trigger_" + (this._componentId);
 		},
@@ -3379,9 +3402,9 @@ Component.register({
 			var this$1 = this;
 
 			if (this.trigger === 'playerComesNear') {
-				var componentSet = this.scene.getComponents('Mover');
+				var componentSet = this.scene.getComponents('CharacterController');
 				var entities = [];
-				componentSet.forEach(function (c) { return entities.push(c.entity); });
+				componentSet.forEach(function (c) { return entities.push(c.entity); });	
 				var distSq = this.radius * this.radius;
 				var pos = this.Transform.position;
 				for (var i = 0; i < entities.length; ++i) {
@@ -3397,6 +3420,7 @@ Component.register({
 		},
 		
 		// Return false if other triggers should not be checked
+		// Note: check this return false logic. Looks weird.
 		launchTrigger: function launchTrigger(entity) {
 			if (this.action === 'win') {
 				console.log('will win');
@@ -3626,11 +3650,11 @@ Component.register({
 	name: 'Particles',
 	allowMultiple: true,
 	properties: [
-		createPropertyType('startColor', new Color(150, 40, 40), createPropertyType.color),
-		createPropertyType('endColor', new Color(255, 255, 40), createPropertyType.color),
+		createPropertyType('startColor', new Color('#68c07f'), createPropertyType.color),
+		createPropertyType('endColor', new Color('#59abc0'), createPropertyType.color),
 		createPropertyType('alpha', 1, createPropertyType.float, createPropertyType.float.range(0, 1)),
-		createPropertyType('particleSize', 20, createPropertyType.float, createPropertyType.float.range(1, 100)),
-		createPropertyType('particleCount', 40, createPropertyType.int, createPropertyType.int.range(0, 10000)),
+		createPropertyType('particleSize', 10, createPropertyType.float, createPropertyType.float.range(1, 100)),
+		createPropertyType('particleCount', 30, createPropertyType.int, createPropertyType.int.range(0, 10000)),
 		createPropertyType('particleLifetime', 1, createPropertyType.float, createPropertyType.float.range(0.1, 10), 'in seconds'),
 		createPropertyType('particleHardness', 0.2, createPropertyType.float, createPropertyType.float.range(0, 1)),
 		createPropertyType('blendMode', 'add', createPropertyType.enum, createPropertyType.enum.values('add', 'normal')),
@@ -3639,11 +3663,11 @@ Component.register({
 		createPropertyType('spawnRandom', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('spawnType', 'circle')),
 		createPropertyType('spawnRect', new Vector(50, 50), createPropertyType.vector, createPropertyType.visibleIf('spawnType', 'rectangle')),
 		createPropertyType('speedToOutside', 50, createPropertyType.float, createPropertyType.float.range(-1000, 1000), createPropertyType.visibleIf('spawnType', 'circle')),
-		createPropertyType('speed', new Vector(50, 50), createPropertyType.vector),
-		createPropertyType('speedRandom', 50, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
-		createPropertyType('acceleration', new Vector(0, -50), createPropertyType.vector),
+		createPropertyType('speed', new Vector(0, 0), createPropertyType.vector),
+		createPropertyType('speedRandom', 0, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
+		createPropertyType('acceleration', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('globalCoordinates', true, createPropertyType.bool),
-		createPropertyType('followInstance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
+		createPropertyType('followInstance', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
 	],
 	prototype: {
 		init: function init() {
@@ -3738,7 +3762,10 @@ Component.register({
 			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, {r: 255, g: 255, b: 255, a: this.alpha});
 			// this.container.baseTexture = this.texture;
 			if (this.particles) {
-				this.particles.forEach(function (p) { return p.sprite.texture = this$1.texture; });
+				this.particles.forEach(function (p) {
+					if (p.sprite)
+						{ p.sprite.texture = this$1.texture; }
+				});
 			}
 		},
 		
@@ -3949,6 +3976,15 @@ function getParticleTexture(size, gradientHardness, rgb) {
 	return textureCache[hash];
 }
 
+function absLimit(value, absMax) {
+	if (value > absMax)
+		{ return absMax; }
+	else if (value < -absMax)
+		{ return -absMax; }
+	else
+		{ return value; }
+}
+
 Component.register({
 	name: 'CharacterController',
 	category: 'Core',
@@ -3956,11 +3992,11 @@ Component.register({
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
-		createPropertyType('jumpSpeed', 30, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
+		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
-		createPropertyType('speed', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
-		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
-		createPropertyType('breaking', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
+		createPropertyType('speed', 200, createPropertyType.float, createPropertyType.float.range(0, 1000)),
+		createPropertyType('acceleration', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000)),
+		createPropertyType('breaking', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000))
 	],
 	prototype: {
 		init: function init() {
@@ -4059,8 +4095,8 @@ Component.register({
 
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
-			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed * PHYSICS_SCALE);
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed * PHYSICS_SCALE);
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -4068,17 +4104,17 @@ Component.register({
 			
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0], dx, dt);
+			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump: function jump() {
 			if (this.checkIfCanJump()) {
 				var bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
-					bodyVelocity[1] = -this.jumpSpeed;
+					bodyVelocity[1] = -this.jumpSpeed * PHYSICS_SCALE;
 				} else {
 					// going up
-					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed;
+					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},
@@ -4139,15 +4175,6 @@ Component.register({
 		}
 	}
 });
-
-function absLimit(value, absMax) {
-	if (value > absMax)
-		{ return absMax; }
-	else if (value < -absMax)
-		{ return -absMax; }
-	else
-		{ return value; }
-}
 
 function gameIdToFilename(gameId) {
 	// File system can be case-insensitive. Add '_' before every uppercase letter.

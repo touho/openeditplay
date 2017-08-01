@@ -4,3 +4,12 @@ export function removeTheDeadFromArray(array) {
 			array.splice(i, 1);
 	}
 }
+
+export function absLimit(value, absMax) {
+	if (value > absMax)
+		return absMax;
+	else if (value < -absMax)
+		return -absMax;
+	else
+		return value;
+}

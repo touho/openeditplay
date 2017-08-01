@@ -1044,6 +1044,11 @@ Vector.prototype.set = function set (vec) {
 	this.y = vec.y;
 	return this;
 };
+Vector.prototype.setScalars = function setScalars (x, y) {
+	this.x = x;
+	this.y = y;
+	return this;
+};
 Vector.prototype.toString = function toString () {
 	return ("[" + (this.x) + ", " + (this.y) + "]");
 };
@@ -2129,7 +2134,10 @@ function listenKeyDown(handler) {
 	keyDownListeners.push(handler);
 	return function () { return keyDownListeners.splice(keyDownListeners.indexOf(handler), 1); };
 }
-
+function listenKeyUp(handler) {
+	keyUpListeners.push(handler);
+	return function () { return keyUpListeners.splice(keyUpListeners.indexOf(handler), 1); };
+}
 
 var key = {
 	left: 37,
@@ -2180,7 +2188,10 @@ var key = {
 	'9': 57,
 	backspace: 8,
 	enter: 13,
-	esc: 27
+	esc: 27,
+	plus: 187,
+	minus: 189,
+	questionMark: 191
 };
 
 function listenMouseMove(element, handler) {
@@ -2241,6 +2252,8 @@ if (typeof window !== 'undefined') {
 			keys[keyCode] = true;
 			keyDownListeners.forEach(function (l) { return l(keyCode); });
 		}
+		
+		// console.log(keyCode);
 	};
 	window.onkeyup = function (event) {
 		var key = event.which || event.keyCode;
@@ -2409,6 +2422,9 @@ var Scene = (function (Serializable$$1) {
 			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI$2.Container();
+			this.cameraPosition = new Vector(0, 0);
+			this.cameraZoom = 1;
+			
 			var self = this;
 			function createLayer() {
 				// let layer = new PIXI.Container();
@@ -2464,6 +2480,23 @@ var Scene = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+	
+	Scene.prototype.updateCamera = function updateCamera () {
+		if (this.playing) {
+			var pos = new Vector(0, 0);
+			var count = 0;
+			this.getComponents('CharacterController').forEach(function (characterController) {
+				pos.add(characterController.Transform.position);
+				count++;
+			});
+			if (count > 0) {
+				this.cameraPosition.set(pos.divideScalar(count));
+			}
+		}
+		// pivot is camera top left corner position
+		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
+		this.stage.scale.set(this.cameraZoom, this.cameraZoom);
+	};
 
 	Scene.prototype.win = function win () {
 		this.won = true;
@@ -2523,6 +2556,8 @@ var Scene = (function (Serializable$$1) {
 		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		// this.dispatch('onDraw', this.context);
 		
+		this.updateCamera();
+		
 		this.renderer.render(this.stage, null, true);
 	};
 
@@ -2542,6 +2577,9 @@ var Scene = (function (Serializable$$1) {
 
 		this.won = false;
 		this.time = 0;
+		
+		// this.cameraZoom = 1;
+		// this.cameraPosition.setScalars(0, 0);
 
 		if (this.level)
 			{ this.level.createScene(this); }
@@ -2572,6 +2610,9 @@ var Scene = (function (Serializable$$1) {
 
 		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
+		
+		// this.cameraZoom = 1;
+		// this.cameraPosition.setScalars(0, 0);
 
 		this.requestAnimFrame();
 
@@ -2630,6 +2671,13 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.getComponents = function getComponents (componentName) {
 		return this.components.get(componentName) || new Set;
 	};
+	
+	Scene.prototype.mouseToWorld = function mouseToWorld (mousePosition) {
+		return new Vector(
+			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
+			this.stage.pivot.y + mousePosition.y / this.cameraZoom
+		);
+	};
 
 	return Scene;
 }(Serializable));
@@ -2643,11 +2691,7 @@ var sceneCreateListeners = [];
 var componentClasses = new Map();
 var eventListeners = [
 	'onUpdate'
-	,'onDraw'
 	,'onStart'
-// @ifndef OPTIMIZE
-	,'onDrawHelper'
-// @endif
 ];
 
 // Instance of a component, see _componentExample.js
@@ -3169,13 +3213,13 @@ Component$1.register({
 	allowMultiple: true,
 	properties: [
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
-		createPropertyType('radius', 10, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
-		createPropertyType('size', new Vector(10, 10), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
+		createPropertyType('radius', 20, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
+		createPropertyType('size', new Vector(20, 20), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
 		createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 16), createPropertyType.visibleIf('type', 'convex')),
 		createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0.001, 1), createPropertyType.visibleIf('type', 'convex'), 'Only works with at most 8 points'), // Value 0
-		createPropertyType('fillColor', new Color(255, 255, 255), createPropertyType.color),
+		createPropertyType('fillColor', new Color(222, 222, 222), createPropertyType.color),
 		createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
-		createPropertyType('borderWidth', 1, createPropertyType.float)
+		createPropertyType('borderWidth', 1, createPropertyType.float, createPropertyType.float.range(0, 30))
 	],
 	prototype: {
 		init: function init() {
@@ -3405,24 +3449,6 @@ Component$1.register({
 		createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win'))
 	],
 	prototype: {
-		onDrawHelper: function onDrawHelper(context) {
-			var size = 30;
-			var
-				x = this.Transform.position.x - size * this.Transform.scale.x/2,
-				y = this.Transform.position.y - size * this.Transform.scale.y/2,
-				w = size * this.Transform.scale.x,
-				h = size * this.Transform.scale.y;
-			context.save();
-			context.fillStyle = 'blue';
-			context.strokeStyle = 'white';
-			context.lineWidth = 1;
-			context.font = '40px FontAwesome';
-			context.textAlign = 'center';
-			context.fillText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-			context.strokeText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-			
-			context.restore();
-		},
 		preInit: function preInit() {
 			this.storeProp = "__Trigger_" + (this._componentId);
 		},
@@ -3430,9 +3456,9 @@ Component$1.register({
 			var this$1 = this;
 
 			if (this.trigger === 'playerComesNear') {
-				var componentSet = this.scene.getComponents('Mover');
+				var componentSet = this.scene.getComponents('CharacterController');
 				var entities = [];
-				componentSet.forEach(function (c) { return entities.push(c.entity); });
+				componentSet.forEach(function (c) { return entities.push(c.entity); });	
 				var distSq = this.radius * this.radius;
 				var pos = this.Transform.position;
 				for (var i = 0; i < entities.length; ++i) {
@@ -3448,6 +3474,7 @@ Component$1.register({
 		},
 		
 		// Return false if other triggers should not be checked
+		// Note: check this return false logic. Looks weird.
 		launchTrigger: function launchTrigger(entity) {
 			if (this.action === 'win') {
 				console.log('will win');
@@ -3677,11 +3704,11 @@ Component$1.register({
 	name: 'Particles',
 	allowMultiple: true,
 	properties: [
-		createPropertyType('startColor', new Color(150, 40, 40), createPropertyType.color),
-		createPropertyType('endColor', new Color(255, 255, 40), createPropertyType.color),
+		createPropertyType('startColor', new Color('#68c07f'), createPropertyType.color),
+		createPropertyType('endColor', new Color('#59abc0'), createPropertyType.color),
 		createPropertyType('alpha', 1, createPropertyType.float, createPropertyType.float.range(0, 1)),
-		createPropertyType('particleSize', 20, createPropertyType.float, createPropertyType.float.range(1, 100)),
-		createPropertyType('particleCount', 40, createPropertyType.int, createPropertyType.int.range(0, 10000)),
+		createPropertyType('particleSize', 10, createPropertyType.float, createPropertyType.float.range(1, 100)),
+		createPropertyType('particleCount', 30, createPropertyType.int, createPropertyType.int.range(0, 10000)),
 		createPropertyType('particleLifetime', 1, createPropertyType.float, createPropertyType.float.range(0.1, 10), 'in seconds'),
 		createPropertyType('particleHardness', 0.2, createPropertyType.float, createPropertyType.float.range(0, 1)),
 		createPropertyType('blendMode', 'add', createPropertyType.enum, createPropertyType.enum.values('add', 'normal')),
@@ -3690,11 +3717,11 @@ Component$1.register({
 		createPropertyType('spawnRandom', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('spawnType', 'circle')),
 		createPropertyType('spawnRect', new Vector(50, 50), createPropertyType.vector, createPropertyType.visibleIf('spawnType', 'rectangle')),
 		createPropertyType('speedToOutside', 50, createPropertyType.float, createPropertyType.float.range(-1000, 1000), createPropertyType.visibleIf('spawnType', 'circle')),
-		createPropertyType('speed', new Vector(50, 50), createPropertyType.vector),
-		createPropertyType('speedRandom', 50, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
-		createPropertyType('acceleration', new Vector(0, -50), createPropertyType.vector),
+		createPropertyType('speed', new Vector(0, 0), createPropertyType.vector),
+		createPropertyType('speedRandom', 0, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
+		createPropertyType('acceleration', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('globalCoordinates', true, createPropertyType.bool),
-		createPropertyType('followInstance', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
+		createPropertyType('followInstance', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
 	],
 	prototype: {
 		init: function init() {
@@ -3789,7 +3816,10 @@ Component$1.register({
 			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, {r: 255, g: 255, b: 255, a: this.alpha});
 			// this.container.baseTexture = this.texture;
 			if (this.particles) {
-				this.particles.forEach(function (p) { return p.sprite.texture = this$1.texture; });
+				this.particles.forEach(function (p) {
+					if (p.sprite)
+						{ p.sprite.texture = this$1.texture; }
+				});
 			}
 		},
 		
@@ -4000,6 +4030,22 @@ function getParticleTexture(size, gradientHardness, rgb) {
 	return textureCache[hash];
 }
 
+function removeTheDeadFromArray(array) {
+	for (var i = array.length - 1; i >= 0; --i) {
+		if (array[i]._alive === false)
+			{ array.splice(i, 1); }
+	}
+}
+
+function absLimit(value, absMax) {
+	if (value > absMax)
+		{ return absMax; }
+	else if (value < -absMax)
+		{ return -absMax; }
+	else
+		{ return value; }
+}
+
 Component$1.register({
 	name: 'CharacterController',
 	category: 'Core',
@@ -4007,11 +4053,11 @@ Component$1.register({
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
-		createPropertyType('jumpSpeed', 30, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
+		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
-		createPropertyType('speed', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
-		createPropertyType('acceleration', 500, createPropertyType.float, createPropertyType.float.range(0, 1000)),
-		createPropertyType('breaking', 500, createPropertyType.float, createPropertyType.float.range(0, 1000))
+		createPropertyType('speed', 200, createPropertyType.float, createPropertyType.float.range(0, 1000)),
+		createPropertyType('acceleration', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000)),
+		createPropertyType('breaking', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000))
 	],
 	prototype: {
 		init: function init() {
@@ -4110,8 +4156,8 @@ Component$1.register({
 
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
-			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed * PHYSICS_SCALE);
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed * PHYSICS_SCALE);
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -4119,17 +4165,17 @@ Component$1.register({
 			
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0], dx, dt);
+			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump: function jump() {
 			if (this.checkIfCanJump()) {
 				var bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
-					bodyVelocity[1] = -this.jumpSpeed;
+					bodyVelocity[1] = -this.jumpSpeed * PHYSICS_SCALE;
 				} else {
 					// going up
-					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed;
+					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},
@@ -4190,15 +4236,6 @@ Component$1.register({
 		}
 	}
 });
-
-function absLimit(value, absMax) {
-	if (value > absMax)
-		{ return absMax; }
-	else if (value < -absMax)
-		{ return -absMax; }
-	else
-		{ return value; }
-}
 
 /*
  milliseconds: how often callback can be called
@@ -4337,14 +4374,13 @@ function tryToLoad() {
 	});
 	
 	socket.on('gameData', function (gameData) {
-		console.log('gameData', gameData);
+		// console.log('gameData', gameData);
 		executeExternal(function () {
 			Serializable.fromJSON(gameData);
 		});
 		localStorage.openEditPlayGameId = gameData.id;
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
-		console.log('replaced with', ("" + (location.origin) + (location.pathname) + "?gameId=" + (gameData.id)));
 		
 		if (shouldStartSceneWhenGameLoaded) {
 			var levelIndex = 0;
@@ -4367,7 +4403,7 @@ function tryToLoad() {
 	
 	setTimeout(function () {
 		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		console.log('requestGameData', gameId);
+		// console.log('requestGameData', gameId);
 		socket.emit('requestGameData', gameId);
 	}, 100);
 }
@@ -5074,15 +5110,6 @@ Module.register = function(moduleClass, moduleContainerName) {
 	});
 };
 
-var nextTopBarPriorityNumber = 1;
-Module.registerTopButton = function(topButton, priority) {
-	if ( priority === void 0 ) priority = nextTopBarPriorityNumber++;
-
-	registerPromise = registerPromise.then(function () {
-		events.dispatch('registerTopButton', topButton, priority);
-	});
-};
-
 
 var registerPromise = new Promise(function(resolve) {
 	events.listen('registerModules', function() {
@@ -5375,7 +5402,7 @@ Widget.prototype.updatePosition = function updatePosition () {
 	
 // Optimized for many function calls
 Widget.prototype.isMouseInWidget = function isMouseInWidget (mousePosition) {
-	var r = this.r;
+	var r = this.r / scene.cameraZoom;
 		
 	if (mousePosition.x >= this.x - r
 		&& mousePosition.x <= this.x + r
@@ -5425,6 +5452,9 @@ Widget.prototype.init = function init () {
 	this.updatePosition();
 	this.updateVisibility();
 	this.component.scene.positionHelperLayer.addChild(this.graphics);
+
+	var invZoom = 1 / scene.cameraZoom;
+	this.graphics.scale.set(invZoom, invZoom);
 };
 	
 Widget.prototype.sleep = function sleep () {
@@ -6668,33 +6698,6 @@ function drawSelection(start, end, entitiesInsideSelection) {
 	scene.context.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y);
 }
 
-function drawPositionHelpers(entities) {
-	return; // PIXI refactor
-	
-	scene.context.fillStyle = 'white';
-	var size = 3;
-	var halfSize = size/2;
-	entities.forEach(function (e) {
-		var p = e.position;
-		scene.context.fillRect(p.x - halfSize, p.y - halfSize, size, size);
-	});
-
-	scene.context.fillStyle = 'black';
-	size = 2;
-	halfSize = size/2;
-	entities.forEach(function (e) {
-		var p = e.position;
-		scene.context.fillRect(p.x - halfSize, p.y - halfSize, size, size);
-	});
-}
-
-function removeTheDeadFromArray(array) {
-	for (var i = array.length - 1; i >= 0; --i) {
-		if (array[i]._alive === false)
-			{ array.splice(i, 1); }
-	}
-}
-
 var Help = function Help () {};
 
 var prototypeAccessors = { game: {},editor: {},level: {},scene: {},entities: {},world: {},Vector: {},serializables: {},serializablesArray: {},selectedEntity: {} };
@@ -6871,7 +6874,7 @@ var AngleWidget = (function (Widget$$1) {
 
 	AngleWidget.prototype.updatePosition = function updatePosition () {
 		var Transform = this.component.Transform;
-		var pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
+		var pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(Transform.angle).add(Transform.position);
 		this.x = pos.x;
 		this.y = pos.y;
 
@@ -6909,36 +6912,6 @@ var AngleWidget = (function (Widget$$1) {
 		graphics.lineTo(head.x, head.y);
 
 		return graphics;
-	};
-
-	AngleWidget.prototype.draw = function draw (context) {
-		var p = this.component.Transform.position;
-
-		var relativePosition = Vector.fromObject(this).subtract(p);
-		var angle = relativePosition.horizontalAngle();
-
-		var lineStart = relativePosition.clone().setLength(centerWidgetRadius).add(p);
-		var lineEnd = relativePosition.clone().setLength(relativePosition.length()).add(p);
-
-		context.fillStyle = 'rgba(0, 0, 0, 0.3)';
-		context.beginPath();
-		context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-		context.fill();
-		
-		context.beginPath();
-		context.moveTo(lineStart.x, lineStart.y);
-		context.lineTo(lineEnd.x, lineEnd.y);
-		context.stroke();
-		
-		var a = this.r*2 / defaultWidgetDistance;
-		
-		context.save();
-		context.lineWidth = 4;
-		context.fillStyle = 'green';
-		context.beginPath();
-		context.arc(p.x, p.y, defaultWidgetDistance, angle - a/2, angle + a/2, false);
-		context.stroke();
-		context.restore();
 	};
 
 	return AngleWidget;
@@ -7003,7 +6976,7 @@ var ScaleWidget = (function (Widget$$1) {
 
 	ScaleWidget.prototype.updatePosition = function updatePosition () {
 		var Transform = this.component.Transform;
-		var pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
+		var pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(Transform.angle).add(Transform.position);
 		this.x = pos.x;
 		this.y = pos.y;
 
@@ -7072,63 +7045,8 @@ var ScaleWidget = (function (Widget$$1) {
 		});
 	};
 
-	ScaleWidget.prototype.draw = function draw (context) {
-		var p = this.component.Transform.position;
-
-		var relativePosition = Vector.fromObject(this).subtract(p);
-		var angle = relativePosition.horizontalAngle();
-
-		var lineStart = relativePosition.clone().setLength(centerWidgetRadius).add(p);
-		var lineEnd = relativePosition.clone().setLength(relativePosition.length() + this.r).add(p);
-
-		context.fillStyle = 'rgba(0, 0, 0, 0.3)';
-		context.beginPath();
-		context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-		context.fill();
-
-		context.beginPath();
-		context.moveTo(lineStart.x, lineStart.y);
-		context.lineTo(lineEnd.x, lineEnd.y);
-		context.stroke();
-
-
-		var arrowTailPos = lineStart.clone().subtract(lineEnd).setLength(this.r * 2);
-
-		var arrowTailPos1 = arrowTailPos.clone().rotate(0.5).add(lineEnd);
-		var arrowTailPos2 = arrowTailPos.clone().rotate(-0.5).add(lineEnd);
-
-		context.save();
-
-		context.lineWidth = 2;
-
-		context.beginPath();
-		context.moveTo(lineEnd.x, lineEnd.y);
-		context.lineTo(arrowTailPos1.x, arrowTailPos1.y);
-		context.stroke();
-
-		context.beginPath();
-		context.moveTo(lineEnd.x, lineEnd.y);
-		context.lineTo(arrowTailPos2.x, arrowTailPos2.y);
-		context.stroke();
-
-		context.restore();
-	};
-
 	return ScaleWidget;
 }(Widget));
-
-var secondaryColor = 'rgb(200, 200, 200)';
-var radius$1 = 10;
-var smallR = 5;
-var widgetDistance = 30;
-var aabbSize = widgetDistance + smallR;
-
-function isMouseInPotentialWidgetArea(mousePosition, position) {
-	return mousePosition.x > position.x - aabbSize
-		&& mousePosition.x < position.x + aabbSize
-		&& mousePosition.y > position.y - aabbSize
-		&& mousePosition.y < position.y + radius$1;
-}
 
 /*
 How mouse interaction works?
@@ -7211,13 +7129,6 @@ Component$1.register({
 				this$1.widgets[i].updatePosition();
 			}
 		},
-		preInit: function preInit() {
-			/*
-			this._addEventListener('onMouseMove');
-			this._addEventListener('onMouseDown');
-			this._addEventListener('onMouseUp');
-			*/
-		},
 		init: function init() {
 			var this$1 = this;
 
@@ -7274,12 +7185,28 @@ Component$1.register({
 			// gra.x = 0;
 			// gra.y = 0;
 			// this.stage.addChild(gra);
+			
+			this.zoomListener = this.scene.listen('zoomChange', function (zoomLevel) {
+				var invZoom = 1 / zoomLevel;
+				this$1.positionHelper.scale.set(invZoom, invZoom);
+				
+				this$1.widgets.forEach(function (w) {
+					w.graphics && w.graphics.scale.set(invZoom, invZoom);
+				});
+				
+				this$1.updateWidgets();
+			});
 		},
 		sleep: function sleep() {
 			this.selected = true;
 			this.widgets.forEach(function (widget) {
 				widget.sleep();
 			});
+			
+			if (this.zoomListener) {
+				this.zoomListener();
+				this.zoomListener = null;
+			}
 		},
 		delete: function delete$1() {
 			this.widgets.forEach(function (widget) {
@@ -7294,67 +7221,13 @@ Component$1.register({
 			
 			this.positionHelper.destroy();
 			this.positionHelper = null;
-		},
-		onMouseMove: function onMouseMove(mousePosition) {
-			return;
-			var p = this.Transform.position;
-			this.mouseOnWidget = null;
-			
-			if (this.activeWidget) {
-				this.activeWidget.onDrag(mousePosition);
-				this.updateWidgets();
-			} else {
-				if (this.selected) {
-					if (isMouseInPotentialWidgetArea(mousePosition, p)) {
-						this.mouseOnWidget = this.widgets.find(function (widget) { return widget.isMouseInWidget(mousePosition); });
-					}
-					this.updateWidgets();
-				} else {
-					if (this.position.isMouseInWidget(mousePosition))
-						{ this.mouseOnWidget = this.position; }
-				}
-			}
-			
-		},
-		onMouseDown: function onMouseDown(mousePosition) {
-			return;
-			if (this.mouseOnWidget) {
-				this.select();
-				this.activeWidget = this.mouseOnWidget;
-			}
-		},
-		onMouseUp: function onMouseUp(mousePosition) {
-			return;
-			if (this.selected) {
-				this.updateWidgets();
-			}
-			this.activeWidget = null;
-		},
-		onDrawHelper: function onDrawHelper(context) {
-			var this$1 = this;
-
-			if (!this.selected && !this.mouseOnWidget)
-				{ return; }
-			
-			context.fillStyle = 'black';
-			context.strokeStyle = secondaryColor;
-
-			
-			
-			if (this.selected) {
-				for (var i = 0; i < this.widgets.length; ++i) {
-					this$1.widgets[i].draw(context);
-				}
-			}
-			
-
-			if (this.mouseOnWidget) {
-				context.strokeStyle = 'white';
-				this.mouseOnWidget.draw(context);
-			}
 		}
 	}
 });
+
+var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark];
+var MIN_ZOOM = 0.1;
+var MAX_ZOOM = 10;
 
 var SceneModule = (function (Module$$1) {
 	function SceneModule() {
@@ -7371,9 +7244,23 @@ var SceneModule = (function (Module$$1) {
 			el('i.fa.fa-pause.pauseInfo.topLeft'),
 			el('i.fa.fa-pause.pauseInfo.topRight'),
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
-			el('i.fa.fa-pause.pauseInfo.bottomRight')
+			el('i.fa.fa-pause.pauseInfo.bottomRight'),
+			el('div.zoomButtons',
+				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', { onclick: function () {
+					if (!scene) { return; }
+					scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * 1.4);
+					scene.dispatch('zoomChange', scene.cameraZoom);
+					this$1.draw();
+				} }),
+				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', { onclick: function () {
+					if (!scene) { return; }
+					scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / 1.4);
+					scene.dispatch('zoomChange', scene.cameraZoom);
+					this$1.draw();
+				} })
+			)
 		);
-		this.el.classList.add('hidePauseButtons');
+		this.el.classList.add('hideScenePauseInformation');
 		this.canvas = canvas;
 
 		var fixAspectRatio = function () { return this$1.fixAspectRatio(); };
@@ -7402,7 +7289,8 @@ var SceneModule = (function (Module$$1) {
 		
 		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
-		this.previousMousePos = null;
+		this.previousMousePosInWorldCoordinates = null;
+		this.previousMousePosInMouseCoordinates = null;
 		
 		this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
 		this.selectedEntities = [];
@@ -7431,7 +7319,7 @@ var SceneModule = (function (Module$$1) {
 					scene.editorLayer.visible = false;
 					scene.play();
 				}
-				this$1.updatePlayPauseButtonStates();
+				this$1.playingModeChanged();
 				this$1.updatePropertyChangeCreationFilter();
 			}
 		});
@@ -7447,19 +7335,18 @@ var SceneModule = (function (Module$$1) {
 		});
 
 		game.listen('levelCompleted', function () {
-			this$1.updatePlayPauseButtonStates();
+			this$1.playingModeChanged();
 			this$1.draw();
 		});
 		
 		events.listen('setLevel', function (lvl) {
-			console.log('scenemodule.setLevel');
 			if (lvl)
 				{ lvl.createScene(false); }
 			else if (scene) {
 				scene.delete();
 			}
 			
-			this$1.updatePlayPauseButtonStates();
+			this$1.playingModeChanged();
 			
 			this$1.clearState();
 			this$1.draw();
@@ -7510,6 +7397,8 @@ var SceneModule = (function (Module$$1) {
 			stop('Editor: Scene');
 		});
 		
+		this.zoomInButtonPressed = false;
+		
 		listenKeyDown(function (k) {
 			if (!scene)
 				{ return; }
@@ -7527,86 +7416,38 @@ var SceneModule = (function (Module$$1) {
 					this$1.deleteNewEntities();
 					(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
 					this$1.clearSelectedEntities();
-					setEntityPositions(this$1.newEntities, this$1.previousMousePos);
+					setEntityPositions(this$1.newEntities, this$1.previousMousePosInWorldCoordinates);
 					this$1.draw();
 				}
 			} else if (k === key.p) {
 				this$1.playButton.click();
 			} else if (k === key.r) {
 				this$1.stopButton.click();
+			} else if (scene) {
+				// Scene controls
+				if (k === key['0']) {
+					scene.cameraZoom = 1;
+					this$1.draw();
+				} else if (MOVEMENT_KEYS.includes(k)) {
+					if (k === key.plus || k === key.questionMark)
+						{ this$1.zoomInButtonPressed = true; }
+					this$1.startListeningMovementInput();
+				}
 			}
 			var ref;
 		});
-
-		listenMouseMove(this.el, function (mousePos) {
-			if (!scene)
-				{ return; }
-			
-			start('Editor: Scene');
-			
-			var needsDraw = false;
-			
-			setChangeOrigin$1(this$1);
-			var change = this$1.previousMousePos ? mousePos.clone().subtract(this$1.previousMousePos) : mousePos;
-			if (this$1.entitiesToEdit.length > 0 && this$1.widgetUnderMouse) {
-				// Editing entities with a widget
-				this$1.widgetUnderMouse.onDrag(mousePos, change, this$1.entitiesToEdit);
-				copyTransformPropertiesFromEntitiesToEntityPrototypes(this$1.entitiesToEdit);
-				needsDraw = true;
-			} else {
-				if (this$1.widgetUnderMouse) {
-					this$1.widgetUnderMouse.unhover();
-					this$1.widgetUnderMouse = null;
-					needsDraw = true;
-				}
-				if (this$1.newEntities.length > 0) {
-					setEntityPositions(this$1.newEntities, mousePos); // these are not in scene
-					needsDraw = true;
-				}
-				if (scene) {
-					if (!scene.playing && this$1.newEntities.length === 0 && !this$1.selectionEnd) {
-						this$1.widgetUnderMouse = getWidgetUnderMouse(mousePos);
-						if (this$1.widgetUnderMouse) {
-							this$1.widgetUnderMouse.hover();
-							needsDraw = true;
-						}
-					}
-				}
-			}
-			
-			if (this$1.selectionEnd) {
-				this$1.selectionEnd.add(change);
-				this$1.selectionArea.clear();
-				this$1.selectionArea.lineStyle(2, 0xFFFF00, 0.7);
-				this$1.selectionArea.beginFill(0xFFFF00, 0.3);
-				this$1.selectionArea.drawRect(
-					this$1.selectionStart.x,
-					this$1.selectionStart.y,
-					this$1.selectionEnd.x - this$1.selectionStart.x,
-					this$1.selectionEnd.y - this$1.selectionStart.y
-				);
-				
-				this$1.selectionArea.endFill();
-				
-				if (this$1.entitiesInSelection.length > 0) {
-					setEntitiesInSelectionArea(this$1.entitiesInSelection, false);
-				}
-				this$1.entitiesInSelection = getEntitiesInSelection(this$1.selectionStart, this$1.selectionEnd);
-				setEntitiesInSelectionArea(this$1.entitiesInSelection, true);
-
-				needsDraw = true;
-			}
-
-			this$1.previousMousePos = mousePos;
-			
-			if (needsDraw)
-				{ this$1.draw(); }
-
-			stop('Editor: Scene');
+		
+		listenKeyUp(function (k) {
+			if (k === key.plus || k === key.questionMark)
+				{ this$1.zoomInButtonPressed = false; }
 		});
+
+		listenMouseMove(this.el, this.onMouseMove.bind(this));
 		listenMouseDown(this.el, function (mousePos) {
 			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
 				{ return; }
+
+			mousePos = scene.mouseToWorld(mousePos);
 			
 			setChangeOrigin$1(this$1);
 			if (this$1.newEntities.length > 0)
@@ -7631,9 +7472,10 @@ var SceneModule = (function (Module$$1) {
 			this$1.draw();
 			var ref;
 		});
-		listenMouseUp(this.el, function (mousePos) {
+		listenMouseUp(this.el, function (/*mousePos*/) {
 			if (!scene)
 				{ return; }
+			// mousePos = scene.mouseToWorld(mousePos);
 			
 			this$1.selectionStart = null;
 			this$1.selectionEnd = null;
@@ -7661,18 +7503,165 @@ var SceneModule = (function (Module$$1) {
 	if ( Module$$1 ) SceneModule.__proto__ = Module$$1;
 	SceneModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
 	SceneModule.prototype.constructor = SceneModule;
+	// mousePos is optional
+	SceneModule.prototype.onMouseMove = function onMouseMove (mouseCoordinatePosition) {
+		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
+			{ return; }
+		
+		start('Editor: Scene');
+		
+		var mousePos = scene.mouseToWorld(mouseCoordinatePosition || this.previousMousePosInMouseCoordinates);
+		
+		if (mouseCoordinatePosition)
+			{ this.previousMousePosInMouseCoordinates = mouseCoordinatePosition; }
+
+		var needsDraw = false;
+
+		setChangeOrigin$1(this);
+		var change = this.previousMousePosInWorldCoordinates ? mousePos.clone().subtract(this.previousMousePosInWorldCoordinates) : mousePos;
+		if (this.entitiesToEdit.length > 0 && this.widgetUnderMouse) {
+			// Editing entities with a widget
+			this.widgetUnderMouse.onDrag(mousePos, change, this.entitiesToEdit);
+			copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
+			needsDraw = true;
+		} else {
+			if (this.widgetUnderMouse) {
+				this.widgetUnderMouse.unhover();
+				this.widgetUnderMouse = null;
+				needsDraw = true;
+			}
+			if (this.newEntities.length > 0) {
+				setEntityPositions(this.newEntities, mousePos); // these are not in scene
+				needsDraw = true;
+			}
+			if (scene) {
+				if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd) {
+					this.widgetUnderMouse = getWidgetUnderMouse(mousePos);
+					if (this.widgetUnderMouse) {
+						this.widgetUnderMouse.hover();
+						needsDraw = true;
+					}
+				}
+			}
+		}
+
+		if (this.selectionEnd) {
+			this.selectionEnd.add(change);
+			this.selectionArea.clear();
+			this.selectionArea.lineStyle(2, 0xFFFF00, 0.7);
+			this.selectionArea.beginFill(0xFFFF00, 0.3);
+			this.selectionArea.drawRect(
+				this.selectionStart.x,
+				this.selectionStart.y,
+				this.selectionEnd.x - this.selectionStart.x,
+				this.selectionEnd.y - this.selectionStart.y
+			);
+
+			this.selectionArea.endFill();
+
+			if (this.entitiesInSelection.length > 0) {
+				setEntitiesInSelectionArea(this.entitiesInSelection, false);
+			}
+			this.entitiesInSelection = getEntitiesInSelection(this.selectionStart, this.selectionEnd);
+			setEntitiesInSelectionArea(this.entitiesInSelection, true);
+
+			needsDraw = true;
+		}
+
+		this.previousMousePosInWorldCoordinates = mousePos;
+
+		if (needsDraw)
+			{ this.draw(); }
+
+		stop('Editor: Scene');
+	};
+	SceneModule.prototype.startListeningMovementInput = function startListeningMovementInput () {
+		var this$1 = this;
+
+		var clear = function () {
+			if (this$1.movementInputListener) {
+				clearTimeout(this$1.movementInputListener);
+				this$1.movementInputListener = null;
+			}
+		};
+		clear();
+		
+		var cameraPositionSpeed = 8;
+		var cameraZoomSpeed = 0.02;
+		
+		var update = function () {
+			if (!scene)
+				{ return clear(); }
+			
+			var dx = 0,
+				dy = 0,
+				dz = 0;
+			
+			if (keyPressed(key.up) || keyPressed(key.w)) { dy -= 1; }
+			if (keyPressed(key.down) || keyPressed(key.s)) { dy += 1; }
+			if (keyPressed(key.left) || keyPressed(key.a)) { dx -= 1; }
+			if (keyPressed(key.right) || keyPressed(key.d)) { dx += 1; }
+			if (this$1.zoomInButtonPressed) { dz += 1; }
+			if (keyPressed(key.minus)) { dz -= 1; }
+			
+			if (dx === 0 && dy === 0 && dz === 0) {
+				if (!MOVEMENT_KEYS.find(keyPressed)) 
+					{ clear(); }
+			} else {
+				var speed = 1;
+				if (keyPressed(key.shift))
+					{ speed *= 3; }
+				
+				var cameraMovementSpeed = speed * cameraPositionSpeed / scene.cameraZoom;
+				scene.cameraPosition.x = absLimit(scene.cameraPosition.x + dx * cameraMovementSpeed, 5000);
+				scene.cameraPosition.y = absLimit(scene.cameraPosition.y + dy * cameraMovementSpeed, 5000);
+				
+				
+				if (dz !== 0) {
+					var zoomMultiplier = 1 + speed * cameraZoomSpeed;
+					if (dz > 0)
+						{ scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier); }
+					else if (dz < 0)
+						{ scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier); }
+					
+					scene.dispatch('zoomChange', scene.cameraZoom);
+				}
+				
+				scene.updateCamera();
+				
+				this$1.onMouseMove();
+				
+				this$1.draw();
+			}
+		};
+		
+		if (scene && !scene.playing) {
+			this.movementInputListener = setInterval(update, 25);
+			update();
+		}
+	};
 	SceneModule.prototype.update = function update () {
 		this.draw();
 	};
-	SceneModule.prototype.updatePlayPauseButtonStates = function updatePlayPauseButtonStates () {
-		if (!scene)
-			{ return; }
+	SceneModule.prototype.playingModeChanged = function playingModeChanged () {
+		if (!scene) {
+			this.el.classList.add('noScene');
+			this.el.classList.remove('playing', 'hideScenePauseInformation');
+			return;
+		}
+		
+		var isInitialState = scene.isInInitialState();
+		
+		this.el.classList.toggle('isInitialState', isInitialState);
+		
 		if (scene.playing) {
-			this.el.classList.add('hidePauseButtons');
+			this.el.classList.remove('noScene');
+			this.el.classList.add('hideScenePauseInformation', 'playing');
 			this.playButton.icon.className = 'fa fa-pause';
 			this.playButton.text.innerHTML = '<u>P</u>ause';
 		} else {
-			this.el.classList.toggle('hidePauseButtons', scene.isInInitialState());
+			this.el.classList.remove('noScene', 'playing');
+			this.el.classList.toggle('hideScenePauseInformation', isInitialState);
 			this.playButton.icon.className = 'fa fa-play';
 			this.playButton.text.innerHTML = '<u>P</u>lay';
 		}
@@ -7726,9 +7715,6 @@ var SceneModule = (function (Module$$1) {
 
 				return; // PIXI refactor
 				
-				scene.dispatch('onDrawHelper', scene.context);
-				drawPositionHelpers(scene.getChildren('ent'));
-
 				scene.context.strokeStyle = 'white';
 				if (this.widgetUnderMouse)
 					{ this.widgetUnderMouse.draw(scene.context); }
@@ -7814,7 +7800,7 @@ var SceneModule = (function (Module$$1) {
 		if (scene)
 			{ scene.reset(); }
 		this.playButton.icon.className = 'fa fa-play';
-		this.updatePlayPauseButtonStates();
+		this.playingModeChanged();
 		this.draw();
 		
 		this.updatePropertyChangeCreationFilter();
@@ -7905,6 +7891,13 @@ var Game$2 = (function (Module$$1) {
 		);
 		this.id = 'game';
 		this.name = 'Game';
+		
+		new TopButton({
+			text: 'Play song',
+			callback: function () {
+				window.open('https://open.spotify.com/track/2RECYFqYTiQxGvT0IY9KAw');
+			}
+		});
 	}
 
 	if ( Module$$1 ) Game.__proto__ = Module$$1;

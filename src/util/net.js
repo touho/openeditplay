@@ -96,14 +96,13 @@ function tryToLoad() {
 	});
 	
 	socket.on('gameData', gameData => {
-		console.log('gameData', gameData);
+		// console.log('gameData', gameData);
 		executeExternal(() => {
 			Serializable.fromJSON(gameData);
 		});
 		localStorage.openEditPlayGameId = gameData.id;
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		history.replaceState({}, null, `?gameId=${gameData.id}`);
-		console.log('replaced with', `${location.origin}${location.pathname}?gameId=${gameData.id}`);
 		
 		if (shouldStartSceneWhenGameLoaded) {
 			let levelIndex = 0;
@@ -126,7 +125,7 @@ function tryToLoad() {
 	
 	setTimeout(() => {
 		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		console.log('requestGameData', gameId);
+		// console.log('requestGameData', gameId);
 		socket.emit('requestGameData', gameId);
 	}, 100);
 }

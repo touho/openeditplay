@@ -113,6 +113,11 @@ export default class Vector {
 		this.y = vec.y;
 		return this;
 	}
+	setScalars(x, y) {
+		this.x = x;
+		this.y = y;
+		return this;
+	}
 	toString() {
 		return `[${this.x}, ${this.y}]`;
 	}

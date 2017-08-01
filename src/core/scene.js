@@ -7,6 +7,7 @@ import {createWorld, deleteWorld, updateWorld} from '../feature/physics';
 import {listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed} from '../util/input';
 import {default as PIXI, getRenderer} from '../feature/graphics';
 import * as performanceTool from '../util/performance';
+import Vector from '../util/vector';
 
 let scene = null;
 export {scene};
@@ -32,6 +33,9 @@ export default class Scene extends Serializable {
 			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
 			this.stage = new PIXI.Container();
+			this.cameraPosition = new Vector(0, 0);
+			this.cameraZoom = 1;
+			
 			let self = this;
 			function createLayer() {
 				// let layer = new PIXI.Container();
@@ -82,6 +86,23 @@ export default class Scene extends Serializable {
 		this.draw();
 
 		sceneCreateListeners.forEach(listener => listener());
+	}
+	
+	updateCamera() {
+		if (this.playing) {
+			let pos = new Vector(0, 0);
+			let count = 0;
+			this.getComponents('CharacterController').forEach(characterController => {
+				pos.add(characterController.Transform.position);
+				count++;
+			});
+			if (count > 0) {
+				this.cameraPosition.set(pos.divideScalar(count));
+			}
+		}
+		// pivot is camera top left corner position
+		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
+		this.stage.scale.set(this.cameraZoom, this.cameraZoom);
 	}
 
 	win() {
@@ -140,6 +161,8 @@ export default class Scene extends Serializable {
 		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		// this.dispatch('onDraw', this.context);
 		
+		this.updateCamera();
+		
 		this.renderer.render(this.stage, null, true);
 	}
 
@@ -159,6 +182,9 @@ export default class Scene extends Serializable {
 
 		this.won = false;
 		this.time = 0;
+		
+		// this.cameraZoom = 1;
+		// this.cameraPosition.setScalars(0, 0);
 
 		if (this.level)
 			this.level.createScene(this);
@@ -189,6 +215,9 @@ export default class Scene extends Serializable {
 
 		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
+		
+		// this.cameraZoom = 1;
+		// this.cameraPosition.setScalars(0, 0);
 
 		this.requestAnimFrame();
 
@@ -246,6 +275,13 @@ export default class Scene extends Serializable {
 
 	getComponents(componentName) {
 		return this.components.get(componentName) || new Set;
+	}
+	
+	mouseToWorld(mousePosition) {
+		return new Vector(
+			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
+			this.stage.pivot.y + mousePosition.y / this.cameraZoom
+		);
 	}
 }
 Scene.prototype.isRoot = true;

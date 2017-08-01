@@ -10,32 +10,14 @@ Component.register({
 		Prop('action', 'win', Prop.enum, Prop.enum.values('win'))
 	],
 	prototype: {
-		onDrawHelper(context) {
-			let size = 30;
-			let
-				x = this.Transform.position.x - size * this.Transform.scale.x/2,
-				y = this.Transform.position.y - size * this.Transform.scale.y/2,
-				w = size * this.Transform.scale.x,
-				h = size * this.Transform.scale.y;
-			context.save();
-			context.fillStyle = 'blue';
-			context.strokeStyle = 'white';
-			context.lineWidth = 1;
-			context.font = '40px FontAwesome';
-			context.textAlign = 'center';
-			context.fillText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-			context.strokeText('\uf085', this.Transform.position.x, this.Transform.position.y + 15);
-			
-			context.restore();
-		},
 		preInit() {
 			this.storeProp = `__Trigger_${this._componentId}`;
 		},
 		onUpdate() {
 			if (this.trigger === 'playerComesNear') {
-				let componentSet = this.scene.getComponents('Mover');
+				let componentSet = this.scene.getComponents('CharacterController');
 				let entities = [];
-				componentSet.forEach(c => entities.push(c.entity));
+				componentSet.forEach(c => entities.push(c.entity));	
 				let distSq = this.radius * this.radius;
 				let pos = this.Transform.position;
 				for (let i = 0; i < entities.length; ++i) {
@@ -51,6 +33,7 @@ Component.register({
 		},
 		
 		// Return false if other triggers should not be checked
+		// Note: check this return false logic. Looks weird.
 		launchTrigger(entity) {
 			if (this.action === 'win') {
 				console.log('will win');

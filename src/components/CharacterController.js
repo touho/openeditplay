@@ -3,6 +3,8 @@ import { key, keyPressed, listenKeyDown } from '../util/input';
 import assert from '../util/assert'
 import Vector from '../util/vector';
 import { getWorld, default as p2 } from '../feature/physics';
+import {PHYSICS_SCALE} from './Physics'
+import { absLimit } from '../util/algorithm';
 
 Component.register({
 	name: 'CharacterController',
@@ -11,11 +13,11 @@ Component.register({
 		Prop('type', 'player', Prop.enum, Prop.enum.values('player', 'AI')),
 		Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		Prop('controlType', 'jumper', Prop.enum, Prop.enum.values('jumper', 'top down'/*, 'space ship'*/)),
-		Prop('jumpSpeed', 30, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('controlType', 'jumper')),
+		Prop('jumpSpeed', 300, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('controlType', 'jumper')),
 		Prop('breakInTheAir', true, Prop.bool, Prop.visibleIf('controlType', 'jumper')),
-		Prop('speed', 500, Prop.float, Prop.float.range(0, 1000)),
-		Prop('acceleration', 500, Prop.float, Prop.float.range(0, 1000)),
-		Prop('breaking', 500, Prop.float, Prop.float.range(0, 1000))
+		Prop('speed', 200, Prop.float, Prop.float.range(0, 1000)),
+		Prop('acceleration', 2000, Prop.float, Prop.float.range(0, 10000)),
+		Prop('breaking', 2000, Prop.float, Prop.float.range(0, 10000))
 	],
 	prototype: {
 		init() {
@@ -108,8 +110,8 @@ Component.register({
 
 			let bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0], dx, dt), this.speed);
-			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1], dy, dt), this.speed);
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed * PHYSICS_SCALE);
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed * PHYSICS_SCALE);
 		},
 		moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -117,17 +119,17 @@ Component.register({
 			
 			let bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0], dx, dt);
+			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump() {
 			if (this.checkIfCanJump()) {
 				let bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
-					bodyVelocity[1] = -this.jumpSpeed;
+					bodyVelocity[1] = -this.jumpSpeed * PHYSICS_SCALE;
 				} else {
 					// going up
-					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed;
+					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},
@@ -188,12 +190,3 @@ Component.register({
 		}
 	}
 });
-
-function absLimit(value, absMax) {
-	if (value > absMax)
-		return absMax;
-	else if (value < -absMax)
-		return -absMax;
-	else
-		return value;
-}

@@ -55,13 +55,6 @@ Module.register = function(moduleClass, moduleContainerName) {
 	});
 };
 
-let nextTopBarPriorityNumber = 1;
-Module.registerTopButton = function(topButton, priority = nextTopBarPriorityNumber++) {
-	registerPromise = registerPromise.then(() => {
-		events.dispatch('registerTopButton', topButton, priority);
-	});
-};
-
 
 let registerPromise = new Promise(function(resolve) {
 	events.listen('registerModules', function() {

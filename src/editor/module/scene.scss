@@ -19,7 +19,7 @@
   left: 0;
   */
 }
-.module-scene.hidePauseButtons .pauseInfo {
+.module-scene.hideScenePauseInformation .pauseInfo {
   display: none;
 }
 
@@ -65,4 +65,24 @@
   color: rgb(255, 255, 255);
   text-shadow: 0 0 3px black;
   opacity: 0.7;
+}
+
+.zoomButtons {
+  display: none; /* This will be overridden */
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.isInitialState .zoomButtons {
+  display: block;
+}
+
+.zoomButtons > i {
+  font-size: 20px;
+  float: right;
+  clear: both;
+}
+.zoomButtons > i:hover {
+  
 }
