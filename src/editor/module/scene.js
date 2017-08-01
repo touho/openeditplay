@@ -24,7 +24,7 @@ import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../cor
 
 import '../components/EditorWidget';
 
-const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark];
+const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 10;
 
@@ -226,15 +226,16 @@ class SceneModule extends Module {
 					scene.cameraZoom = 1;
 					this.draw();
 				} else if (MOVEMENT_KEYS.includes(k)) {
-					if (k === key.plus || k === key.questionMark)
+					if (k === key.plus || k === key.questionMark || k === key.e)
 						this.zoomInButtonPressed = true;
+					
 					this.startListeningMovementInput();
 				}
 			}
 		});
 		
 		listenKeyUp(k => {
-			if (k === key.plus || k === key.questionMark)
+			if (k === key.plus || k === key.questionMark || k === key.e)
 				this.zoomInButtonPressed = false;
 		});
 
@@ -291,6 +292,18 @@ class SceneModule extends Module {
 			}
 			
 			this.draw();
+		});
+		
+		let ticking = false;
+		this.canvas.addEventListener('scroll', function(e) {
+			last_known_scroll_position = window.scrollY;
+			if (!ticking) {
+				window.requestAnimationFrame(function() {
+					console.log('moi');
+					ticking = false;
+				});
+			}
+			ticking = true;
 		});
 	}
 	// mousePos is optional
@@ -390,7 +403,7 @@ class SceneModule extends Module {
 			if (keyPressed(key.left) || keyPressed(key.a)) dx -= 1;
 			if (keyPressed(key.right) || keyPressed(key.d)) dx += 1;
 			if (this.zoomInButtonPressed) dz += 1;
-			if (keyPressed(key.minus)) dz -= 1;
+			if (keyPressed(key.minus) || keyPressed(key.q)) dz -= 1;
 			
 			if (dx === 0 && dy === 0 && dz === 0) {
 				if (!MOVEMENT_KEYS.find(keyPressed)) 
