@@ -8,6 +8,8 @@ import { PHYSICS_SCALE } from './Physics';
 
 Component.register({
 	name: 'Particles',
+	category: 'Graphics',
+	description: 'Particle engine gives eye candy.',
 	allowMultiple: true,
 	properties: [
 		Prop('startColor', new Color('#68c07f'), Prop.color),

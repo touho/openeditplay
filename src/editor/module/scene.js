@@ -101,10 +101,12 @@ class SceneModule extends Module {
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: btn => {
-				if (!scene)
+				if (!scene || !scene.level)
 					return;
 				
 				setChangeOrigin(this);
+
+				this.makeSureSceneHasEditorLayer();
 
 				this.clearState();
 				
@@ -127,7 +129,8 @@ class SceneModule extends Module {
 				setChangeOrigin(this);
 				this.stopAndReset();
 
-				scene.editorLayer.visible = true;
+				if (scene.editorLayer)
+					scene.editorLayer.visible = true;
 			}
 		});
 
@@ -243,6 +246,8 @@ class SceneModule extends Module {
 		listenMouseDown(this.el, mousePos => {
 			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
 				return;
+
+			this.makeSureSceneHasEditorLayer();
 
 			mousePos = scene.mouseToWorld(mousePos);
 			
@@ -515,18 +520,12 @@ class SceneModule extends Module {
 				return; // PIXI refactor
 				
 				scene.context.strokeStyle = 'white';
-				if (this.widgetUnderMouse)
-					this.widgetUnderMouse.draw(scene.context);
 				
-				sceneDraw.drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
 				if (scene.level && scene.level.isEmpty()) {
 					this.drawEmptyLevel();
 				}
 			}
 		} else {
-			return; // PIXI refactor
-			
-			this.drawNoLevel();
 			setTimeout(() => {
 				if (game.getChildren('lvl').length === 0) {
 					setChangeOrigin(this);

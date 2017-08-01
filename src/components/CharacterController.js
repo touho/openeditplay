@@ -8,7 +8,8 @@ import { absLimit } from '../util/algorithm';
 
 Component.register({
 	name: 'CharacterController',
-	category: 'Core',
+	description: 'Lets user control the instance.',
+	category: 'Common',
 	properties: [
 		Prop('type', 'player', Prop.enum, Prop.enum.values('player', 'AI')),
 		Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),

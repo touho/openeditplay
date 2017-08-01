@@ -601,6 +601,36 @@ td.propertyContent {
   width: auto;
   margin-right: 10px;
 }
+.componentAdderContent {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  
+  max-width: 901px;
+}
+.componentAdderContent .categoryItem {
+  overflow: auto;
+  margin: 10px;
+  max-width: 450px;
+
+  border: 1px solid white;
+  padding: 15px;
+  border-radius: 8px;
+  background: #888;
+  max-width: 400px;
+
+  box-shadow: 2px 2px 8px 1px #555;
+}
+.componentAdderContent div.categoryName {
+  margin-bottom: 12px;
+}
+.componentAdderContent span.description {
+  margin-left: 10px;
+}
+.componentAdderContent .buttonWithDescription {
+  float: left;
+  clear: both;
+}
 div.popup {
   position: fixed;
   width: 100%;

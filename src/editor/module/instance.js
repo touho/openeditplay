@@ -14,7 +14,7 @@ class Instance extends Module {
 		this.name = '<u>I</u>nstance';
 
 		listenKeyDown(k => {
-			if (k === key.i) {
+			if (k === key.i && this._enabled) {
 				Module.activateModule('instance', true);
 			}
 		});

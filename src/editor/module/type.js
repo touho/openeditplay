@@ -14,7 +14,7 @@ class Type extends Module {
 		this.name = '<u>T</u>ype';
 
 		listenKeyDown(k => {
-			if (k === key.t) {
+			if (k === key.t && this._enabled) {
 				Module.activateModule('type', true);
 			}
 		});
@@ -23,12 +23,16 @@ class Type extends Module {
 		if (editor.selection.items.length != 1)
 			return false;
 
-		if (!this._selected || this.moduleContainer.isPacked())
-			return; // if the tab is not visible, do not waste CPU
+		// if the tab is not visible, do not waste CPU
+		let skipUpdate = !this._selected || this.moduleContainer.isPacked();
 		
 		if (editor.selection.type === 'prt') {
+			if (skipUpdate)
+				return;
 			this.propertyEditor.update(editor.selection.items, editor.selection.type);
 		} else if (editor.selection.type === 'ent') {
+			if (skipUpdate)
+				return;
 			this.propertyEditor.update(editor.selection.items.map(e => e.prototype.prototype), editor.selection.type);
 		} else {
 			return false; // hide

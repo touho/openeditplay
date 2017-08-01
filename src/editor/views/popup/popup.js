@@ -9,7 +9,9 @@ export default class Popup {
 		width = null,
 		content = el('div', 'Undefined content')
 	}) {
-		this.el = el('div.popup', { style: { 'z-index': 1000 + popupDepth++ } },
+		this.el = el('div.popup', {
+				style: { 'z-index': 1000 + popupDepth++ }
+			},
 			new Layer(this),
 			el('div.popupContent',
 				this.text = el('div.popupTitle', title),
@@ -17,6 +19,8 @@ export default class Popup {
 			)
 		);
 		this.cancelCallback = cancelCallback;
+		
+		this.el.onkeydown = () => this.remove();
 		
 		mount(document.body, this.el);
 	}

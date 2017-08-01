@@ -5,8 +5,10 @@ import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} fr
 
 Component.register({
 	name: 'Shape',
+	category: 'Common',
 	icon: 'fa-stop',
 	allowMultiple: true,
+	description: 'Draws shape on the screen.',
 	properties: [
 		Prop('type', 'rectangle', Prop.enum, Prop.enum.values('rectangle', 'circle', 'convex')),
 		Prop('radius', 20, Prop.float, Prop.visibleIf('type', ['circle', 'convex'])),

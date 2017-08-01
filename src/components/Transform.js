@@ -3,7 +3,6 @@ import Vector from '../util/vector';
 
 Component.register({
 	name: 'Transform',
-	category: 'Core',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [

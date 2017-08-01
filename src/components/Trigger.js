@@ -3,6 +3,8 @@ import Vector from '../util/vector';
 
 Component.register({
 	name: 'Trigger',
+	description: 'When _ then _.',
+	category: 'Logic',
 	allowMultiple: true,
 	properties: [
 		Prop('trigger', 'playerComesNear', Prop.enum, Prop.enum.values('playerComesNear')),

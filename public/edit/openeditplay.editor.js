@@ -657,6 +657,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -783,6 +785,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2898,6 +2904,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3165,7 +3173,6 @@ Serializable.registerSerializable(Level, 'lvl');
 
 Component$1.register({
 	name: 'Transform',
-	category: 'Core',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3177,7 +3184,7 @@ Component$1.register({
 
 Component$1.register({
 	name: 'TransformVariance',
-	category: 'Core',
+	description: 'Adds random factor to instance transform/orientation.',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3201,8 +3208,10 @@ Component$1.register({
 
 Component$1.register({
 	name: 'Shape',
+	category: 'Common',
 	icon: 'fa-stop',
 	allowMultiple: true,
+	description: 'Draws shape on the screen.',
 	properties: [
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 20, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
@@ -3381,6 +3390,7 @@ Component$1.register({
 
 Component$1.register({
 	name: 'Spawner',
+	description: 'Spawns types to world.',
 	properties: [
 		createPropertyType('typeName', '', createPropertyType.string),
 		createPropertyType('trigger', 'start', createPropertyType.enum, createPropertyType.enum.values('start', 'interval')),
@@ -3434,6 +3444,8 @@ Component$1.register({
 
 Component$1.register({
 	name: 'Trigger',
+	description: 'When _ then _.',
+	category: 'Logic',
 	allowMultiple: true,
 	properties: [
 		createPropertyType('trigger', 'playerComesNear', createPropertyType.enum, createPropertyType.enum.values('playerComesNear')),
@@ -3494,6 +3506,8 @@ var STATIC = p2$1.Body.STATIC;
 
 Component$1.register({
 	name: 'Physics',
+	category: 'Common',
+	description: 'Forms physical rules for <span style="color: #84ce84;">Shapes</span>.',
 	icon: 'fa-stop',
 	allowMultiple: false,
 	properties: [
@@ -3694,6 +3708,8 @@ Component$1.register({
 
 Component$1.register({
 	name: 'Particles',
+	category: 'Graphics',
+	description: 'Particle engine gives eye candy.',
 	allowMultiple: true,
 	properties: [
 		createPropertyType('startColor', new Color('#68c07f'), createPropertyType.color),
@@ -4040,7 +4056,8 @@ function absLimit(value, absMax) {
 
 Component$1.register({
 	name: 'CharacterController',
-	category: 'Core',
+	description: 'Lets user control the instance.',
+	category: 'Common',
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
@@ -4450,6 +4467,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5068,6 +5087,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5170,12 +5190,15 @@ TopButton.prototype.click = function click () {
 var popupDepth = 0;
 
 var Popup = function Popup(ref) {
+	var this$1 = this;
 	var title = ref.title; if ( title === void 0 ) title = 'Undefined popup';
 	var cancelCallback = ref.cancelCallback; if ( cancelCallback === void 0 ) cancelCallback = null;
 	var width = ref.width; if ( width === void 0 ) width = null;
 	var content = ref.content; if ( content === void 0 ) content = el('div', 'Undefined content');
 
-	this.el = el('div.popup', { style: { 'z-index': 1000 + popupDepth++ } },
+	this.el = el('div.popup', {
+			style: { 'z-index': 1000 + popupDepth++ }
+		},
 		new Layer(this),
 		el('div.popupContent',
 			this.text = el('div.popupTitle', title),
@@ -5183,6 +5206,8 @@ var Popup = function Popup(ref) {
 		)
 	);
 	this.cancelCallback = cancelCallback;
+		
+	this.el.onkeydown = function () { return this$1.remove(); };
 		
 	mount(document.body, this.el);
 };
@@ -5315,52 +5340,107 @@ editors.color = function (container, oninput, onchange) {
 	return function (val) { return input.value = val.toHexString(); };
 };
 
-var ComponentAdder = (function (Popup$$1) {
-	function ComponentAdder(parent, callback) {
-		var this$1 = this;
+var CATEGORY_ORDER = [
+	'Common',
+	'Logic',
+	'Graphics'
+];
 
+var HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
+
+var ComponentAdder = (function (Popup$$1) {
+	function ComponentAdder(parent) {
 		Popup$$1.call(this, {
 			title: 'Add Component',
 			width: '500px',
-			content: this.buttons = list('div', Button)
+			content: list('div.componentAdderContent', Category, undefined, parent)
 		});
 		
-		this.parent = parent;
 
-		var components = Array.from(componentClasses.values());
-		components = components.map(function (comp) {
-			return {
-				text: comp.componentName,
-				color: comp.color,
-				icon: comp.icon,
-				callback: function () {
-					this$1.addComponentToParent(comp.componentName);
-					callback && callback();
-				}
-			};
+		var componentClassArray = Array.from(componentClasses.values())
+		.filter(function (cl) { return !HIDDEN_COMPONENTS.includes(cl.componentName); })
+		.sort(function (a, b) { return a.componentName.localeCompare(b.componentName); });
+		
+		console.log('before set', componentClassArray.map(function (c) { return c.category; }));
+		console.log('set', new Set(componentClassArray.map(function (c) { return c.category; })));
+		console.log('set array', [].concat( new Set(componentClassArray.map(function (c) { return c.category; })) ));
+		
+		var categories = Array.from(new Set(componentClassArray.map(function (c) { return c.category; }))).map(function (categoryName) { return ({
+			categoryName: categoryName,
+			components: componentClassArray.filter(function (c) { return c.category === categoryName; })
+		}); });
+		
+		categories.sort(function (a, b) {
+			var aIdx = CATEGORY_ORDER.indexOf(a.categoryName);
+			var bIdx = CATEGORY_ORDER.indexOf(b.categoryName);
+			
+			if (aIdx < 0) { aIdx = 999; }
+			if (bIdx < 0) { bIdx = 999; }
+			
+			if (aIdx < bIdx) { return -1; }
+			else { return 1; }
 		});
 		
-		this.update(components);
+		console.log('categories', categories);
+		this.update(categories);
 	}
 
 	if ( Popup$$1 ) ComponentAdder.__proto__ = Popup$$1;
 	ComponentAdder.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
 	ComponentAdder.prototype.constructor = ComponentAdder;
-	ComponentAdder.prototype.addComponentToParent = function addComponentToParent (componentName) {
-		setChangeOrigin$1(this);
-		if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
-			var component = new ComponentData(componentName);
-			this.parent.addChild(component);
-			return component;
-		}
-		assert(false);
-	};
-	ComponentAdder.prototype.update = function update (components) {
-		this.buttons.update(components);
+	ComponentAdder.prototype.update = function update (categories) {
+		this.content.update(categories);
 	};
 
 	return ComponentAdder;
 }(Popup));
+
+var Category = function Category(parent) {
+        this.el = el('div.categoryItem',
+            this.name = el('div.categoryName'),
+            this.list = list('div.categoryButtons', ButtonWithDescription)
+        );
+        this.parent = parent;
+    };
+Category.prototype.addComponentToParent = function addComponentToParent (componentName) {
+	setChangeOrigin$1(this);
+	if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
+		var component = new ComponentData(componentName);
+		this.parent.addChild(component);
+		return component;
+	}
+	assert(false);
+};
+    Category.prototype.update = function update (category) {
+    	var this$1 = this;
+
+    this.name.textContent = category.categoryName;
+    	
+	var componentButtonData = category.components.map(function (comp) {
+		return {
+			text: ("" + (comp.componentName)),
+			description: comp.description,
+			color: comp.color,
+			icon: comp.icon,
+			callback: function () {
+				this$1.addComponentToParent(comp.componentName);
+			}
+		};
+	});
+		
+	this.list.update(componentButtonData);
+    };
+
+var ButtonWithDescription = function ButtonWithDescription() {
+        this.el = el('div.buttonWithDescription',
+            this.button = new Button(),
+            this.description = el('span.description')
+        );
+    };
+    ButtonWithDescription.prototype.update = function update (buttonData) {
+        this.description.innerHTML = buttonData.description;
+        this.button.update(buttonData);
+    };
 
 var defaultWidgetRadius = 5;
 var centerWidgetRadius = 10;
@@ -5879,6 +5959,11 @@ var InstanceMoreButtonContextMenu = (function (Popup$$1) {
 	return InstanceMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -5944,6 +6029,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -6336,6 +6434,8 @@ function variableNameToPresentableName(propertyName) {
 
 var Type = (function (Module$$1) {
 	function Type() {
+		var this$1 = this;
+
 		Module$$1.call(
 			this, this.propertyEditor = new PropertyEditor()
 		);
@@ -6343,7 +6443,7 @@ var Type = (function (Module$$1) {
 		this.name = '<u>T</u>ype';
 
 		listenKeyDown(function (k) {
-			if (k === key.t) {
+			if (k === key.t && this$1._enabled) {
 				Module$$1.activateModule('type', true);
 			}
 		});
@@ -6356,12 +6456,16 @@ var Type = (function (Module$$1) {
 		if (editor.selection.items.length != 1)
 			{ return false; }
 
-		if (!this._selected || this.moduleContainer.isPacked())
-			{ return; } // if the tab is not visible, do not waste CPU
+		// if the tab is not visible, do not waste CPU
+		var skipUpdate = !this._selected || this.moduleContainer.isPacked();
 		
 		if (editor.selection.type === 'prt') {
+			if (skipUpdate)
+				{ return; }
 			this.propertyEditor.update(editor.selection.items, editor.selection.type);
 		} else if (editor.selection.type === 'ent') {
+			if (skipUpdate)
+				{ return; }
 			this.propertyEditor.update(editor.selection.items.map(function (e) { return e.prototype.prototype; }), editor.selection.type);
 		} else {
 			return false; // hide
@@ -6382,6 +6486,8 @@ Module.register(Type, 'right');
 
 var Instance = (function (Module$$1) {
 	function Instance() {
+		var this$1 = this;
+
 		var propertyEditor = new PropertyEditor();
 		Module$$1.call(this, propertyEditor);
 		this.propertyEditor = propertyEditor;
@@ -6389,7 +6495,7 @@ var Instance = (function (Module$$1) {
 		this.name = '<u>I</u>nstance';
 
 		listenKeyDown(function (k) {
-			if (k === key.i) {
+			if (k === key.i && this$1._enabled) {
 				Module$$1.activateModule('instance', true);
 			}
 		});
@@ -6632,39 +6738,6 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 });
 
 Module.register(Types, 'left');
-
-var widgetColor = 'white';
-
-
-
-function drawSelection(start, end, entitiesInsideSelection) {
-	if ( entitiesInsideSelection === void 0 ) entitiesInsideSelection = [];
-
-	return; // PIXI refactor
-	
-	if (!start || !end)
-		{ return; }
-
-	scene.context.strokeStyle = widgetColor;
-	scene.context.lineWidth = 0.2;
-
-	var r = 10;
-
-	entitiesInsideSelection.forEach(function (e) {
-		var p = e.position;
-		scene.context.beginPath();
-		scene.context.arc(p.x, p.y, r, 0, 2*Math.PI, false);
-		scene.context.stroke();
-	});
-
-
-	scene.context.fillStyle = 'rgba(255, 255, 0, 0.2)';
-	scene.context.lineWidth = 1;
-	scene.context.strokeStyle = 'yellow';
-
-	scene.context.fillRect(start.x, start.y, end.x - start.x, end.y - start.y);
-	scene.context.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y);
-}
 
 var Help = function Help () {};
 
@@ -7016,6 +7089,22 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7256,10 +7345,12 @@ var SceneModule = (function (Module$$1) {
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: function (btn) {
-				if (!scene)
+				if (!scene || !scene.level)
 					{ return; }
 				
 				setChangeOrigin$1(this$1);
+
+				this$1.makeSureSceneHasEditorLayer();
 
 				this$1.clearState();
 				
@@ -7282,7 +7373,8 @@ var SceneModule = (function (Module$$1) {
 				setChangeOrigin$1(this$1);
 				this$1.stopAndReset();
 
-				scene.editorLayer.visible = true;
+				if (scene.editorLayer)
+					{ scene.editorLayer.visible = true; }
 			}
 		});
 
@@ -7399,6 +7491,8 @@ var SceneModule = (function (Module$$1) {
 		listenMouseDown(this.el, function (mousePos) {
 			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
 				{ return; }
+
+			this$1.makeSureSceneHasEditorLayer();
 
 			mousePos = scene.mouseToWorld(mousePos);
 			
@@ -7681,18 +7775,12 @@ var SceneModule = (function (Module$$1) {
 				return; // PIXI refactor
 				
 				scene.context.strokeStyle = 'white';
-				if (this.widgetUnderMouse)
-					{ this.widgetUnderMouse.draw(scene.context); }
 				
-				drawSelection(this.selectionStart, this.selectionEnd, this.entitiesInSelection);
 				if (scene.level && scene.level.isEmpty()) {
 					this.drawEmptyLevel();
 				}
 			}
 		} else {
-			return; // PIXI refactor
-			
-			this.drawNoLevel();
 			setTimeout(function () {
 				if (game.getChildren('lvl').length === 0) {
 					setChangeOrigin$1(this$1);

@@ -3119,7 +3119,6 @@ Serializable.registerSerializable(Level, 'lvl');
 
 Component.register({
 	name: 'Transform',
-	category: 'Core',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3131,7 +3130,7 @@ Component.register({
 
 Component.register({
 	name: 'TransformVariance',
-	category: 'Core',
+	description: 'Adds random factor to instance transform/orientation.',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3155,8 +3154,10 @@ Component.register({
 
 Component.register({
 	name: 'Shape',
+	category: 'Common',
 	icon: 'fa-stop',
 	allowMultiple: true,
+	description: 'Draws shape on the screen.',
 	properties: [
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 20, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
@@ -3335,6 +3336,7 @@ Component.register({
 
 Component.register({
 	name: 'Spawner',
+	description: 'Spawns types to world.',
 	properties: [
 		createPropertyType('typeName', '', createPropertyType.string),
 		createPropertyType('trigger', 'start', createPropertyType.enum, createPropertyType.enum.values('start', 'interval')),
@@ -3388,6 +3390,8 @@ Component.register({
 
 Component.register({
 	name: 'Trigger',
+	description: 'When _ then _.',
+	category: 'Logic',
 	allowMultiple: true,
 	properties: [
 		createPropertyType('trigger', 'playerComesNear', createPropertyType.enum, createPropertyType.enum.values('playerComesNear')),
@@ -3448,6 +3452,8 @@ var STATIC = p2$1.Body.STATIC;
 
 Component.register({
 	name: 'Physics',
+	category: 'Common',
+	description: 'Forms physical rules for <span style="color: #84ce84;">Shapes</span>.',
 	icon: 'fa-stop',
 	allowMultiple: false,
 	properties: [
@@ -3648,6 +3654,8 @@ Component.register({
 
 Component.register({
 	name: 'Particles',
+	category: 'Graphics',
+	description: 'Particle engine gives eye candy.',
 	allowMultiple: true,
 	properties: [
 		createPropertyType('startColor', new Color('#68c07f'), createPropertyType.color),
@@ -3987,7 +3995,8 @@ function absLimit(value, absMax) {
 
 Component.register({
 	name: 'CharacterController',
-	category: 'Core',
+	description: 'Lets user control the instance.',
+	category: 'Common',
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
