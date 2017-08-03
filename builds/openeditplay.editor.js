@@ -2481,17 +2481,21 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
 	
+	Scene.prototype.setCameraPositionToPlayer = function setCameraPositionToPlayer () {
+		var pos = new Vector(0, 0);
+		var count = 0;
+		this.getComponents('CharacterController').forEach(function (characterController) {
+			pos.add(characterController.Transform.position);
+			count++;
+		});
+		if (count > 0) {
+			this.cameraPosition.set(pos.divideScalar(count));
+		}
+	};
+	
 	Scene.prototype.updateCamera = function updateCamera () {
 		if (this.playing) {
-			var pos = new Vector(0, 0);
-			var count = 0;
-			this.getComponents('CharacterController').forEach(function (characterController) {
-				pos.add(characterController.Transform.position);
-				count++;
-			});
-			if (count > 0) {
-				this.cameraPosition.set(pos.divideScalar(count));
-			}
+			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
 		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
@@ -2677,6 +2681,12 @@ var Scene = (function (Serializable$$1) {
 			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
 			this.stage.pivot.y + mousePosition.y / this.cameraZoom
 		);
+	};
+	
+	Scene.prototype.setZoom = function setZoom (zoomLevel) {
+		if (zoomLevel)
+			{ this.cameraZoom = zoomLevel; }
+		this.dispatch('zoomChange', this.cameraZoom);
 	};
 
 	return Scene;
@@ -4165,8 +4175,8 @@ Component$1.register({
 
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed * PHYSICS_SCALE);
-			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed * PHYSICS_SCALE);
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed) * PHYSICS_SCALE;
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed) * PHYSICS_SCALE;
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -4240,7 +4250,6 @@ Component$1.register({
 						{ velocity = -absVel; }
 				}
 			}
-			
 			return velocity;
 		}
 	}
@@ -7286,17 +7295,38 @@ var SceneModule = (function (Module$$1) {
 			el('i.fa.fa-pause.pauseInfo.topRight'),
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
 			el('i.fa.fa-pause.pauseInfo.bottomRight'),
-			el('div.zoomButtons',
+			el('div.sceneEditorSideBarButtons',
 				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', { onclick: function () {
 					if (!scene) { return; }
-					scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * 1.4);
-					scene.dispatch('zoomChange', scene.cameraZoom);
+					scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
 					this$1.draw();
 				} }),
 				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', { onclick: function () {
 					if (!scene) { return; }
-					scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / 1.4);
-					scene.dispatch('zoomChange', scene.cameraZoom);
+					scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
+					this$1.draw();
+				} }),
+				el('i.fa.fa-globe.iconButton.button', { onclick: function () {
+					if (!scene) { return; }
+					
+					var bounds = scene.stage.getLocalBounds();
+					
+					scene.cameraPosition.setScalars(
+						bounds.x + bounds.width / 2,
+						bounds.y + bounds.height / 2
+					);
+					
+					var maxXZoom = this$1.canvas.width / bounds.width;
+					var maxYZoom = this$1.canvas.height / bounds.height;
+					scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
+					
+					this$1.draw();
+				} }),
+				el('i.fa.fa-home.iconButton.button', { onclick: function () {
+					if (!scene) { return; }
+					scene.cameraPosition.setScalars(0, 0); // If there are no players
+					scene.setCameraPositionToPlayer();
+					scene.setZoom(1);
 					this$1.draw();
 				} })
 			)

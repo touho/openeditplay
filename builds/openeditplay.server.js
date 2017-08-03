@@ -2427,17 +2427,21 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
 	
+	Scene.prototype.setCameraPositionToPlayer = function setCameraPositionToPlayer () {
+		var pos = new Vector(0, 0);
+		var count = 0;
+		this.getComponents('CharacterController').forEach(function (characterController) {
+			pos.add(characterController.Transform.position);
+			count++;
+		});
+		if (count > 0) {
+			this.cameraPosition.set(pos.divideScalar(count));
+		}
+	};
+	
 	Scene.prototype.updateCamera = function updateCamera () {
 		if (this.playing) {
-			var pos = new Vector(0, 0);
-			var count = 0;
-			this.getComponents('CharacterController').forEach(function (characterController) {
-				pos.add(characterController.Transform.position);
-				count++;
-			});
-			if (count > 0) {
-				this.cameraPosition.set(pos.divideScalar(count));
-			}
+			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
 		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
@@ -2623,6 +2627,12 @@ var Scene = (function (Serializable$$1) {
 			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
 			this.stage.pivot.y + mousePosition.y / this.cameraZoom
 		);
+	};
+	
+	Scene.prototype.setZoom = function setZoom (zoomLevel) {
+		if (zoomLevel)
+			{ this.cameraZoom = zoomLevel; }
+		this.dispatch('zoomChange', this.cameraZoom);
 	};
 
 	return Scene;
@@ -4104,8 +4114,8 @@ Component.register({
 
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed * PHYSICS_SCALE);
-			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed * PHYSICS_SCALE);
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed) * PHYSICS_SCALE;
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed) * PHYSICS_SCALE;
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -4179,7 +4189,6 @@ Component.register({
 						{ velocity = -absVel; }
 				}
 			}
-			
 			return velocity;
 		}
 	}

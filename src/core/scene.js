@@ -88,17 +88,21 @@ export default class Scene extends Serializable {
 		sceneCreateListeners.forEach(listener => listener());
 	}
 	
+	setCameraPositionToPlayer() {
+		let pos = new Vector(0, 0);
+		let count = 0;
+		this.getComponents('CharacterController').forEach(characterController => {
+			pos.add(characterController.Transform.position);
+			count++;
+		});
+		if (count > 0) {
+			this.cameraPosition.set(pos.divideScalar(count));
+		}
+	}
+	
 	updateCamera() {
 		if (this.playing) {
-			let pos = new Vector(0, 0);
-			let count = 0;
-			this.getComponents('CharacterController').forEach(characterController => {
-				pos.add(characterController.Transform.position);
-				count++;
-			});
-			if (count > 0) {
-				this.cameraPosition.set(pos.divideScalar(count));
-			}
+			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
 		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
@@ -282,6 +286,12 @@ export default class Scene extends Serializable {
 			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
 			this.stage.pivot.y + mousePosition.y / this.cameraZoom
 		);
+	}
+	
+	setZoom(zoomLevel) {
+		if (zoomLevel)
+			this.cameraZoom = zoomLevel;
+		this.dispatch('zoomChange', this.cameraZoom);
 	}
 }
 Scene.prototype.isRoot = true;

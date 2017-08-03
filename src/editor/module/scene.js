@@ -42,17 +42,38 @@ class SceneModule extends Module {
 			el('i.fa.fa-pause.pauseInfo.topRight'),
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
 			el('i.fa.fa-pause.pauseInfo.bottomRight'),
-			el('div.zoomButtons',
+			el('div.sceneEditorSideBarButtons',
 				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', { onclick: () => {
 					if (!scene) return;
-					scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * 1.4);
-					scene.dispatch('zoomChange', scene.cameraZoom);
+					scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
 					this.draw();
 				} }),
 				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', { onclick: () => {
 					if (!scene) return;
-					scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / 1.4);
-					scene.dispatch('zoomChange', scene.cameraZoom);
+					scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
+					this.draw();
+				} }),
+				el('i.fa.fa-globe.iconButton.button', { onclick: () => {
+					if (!scene) return;
+					
+					let bounds = scene.stage.getLocalBounds();
+					
+					scene.cameraPosition.setScalars(
+						bounds.x + bounds.width / 2,
+						bounds.y + bounds.height / 2
+					);
+					
+					let maxXZoom = this.canvas.width / bounds.width;
+					let maxYZoom = this.canvas.height / bounds.height;
+					scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
+					
+					this.draw();
+				} }),
+				el('i.fa.fa-home.iconButton.button', { onclick: () => {
+					if (!scene) return;
+					scene.cameraPosition.setScalars(0, 0); // If there are no players
+					scene.setCameraPositionToPlayer();
+					scene.setZoom(1);
 					this.draw();
 				} })
 			)
