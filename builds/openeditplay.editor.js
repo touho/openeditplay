@@ -657,8 +657,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -785,10 +783,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2914,8 +2908,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4476,13 +4468,11 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
 	el.dispatchEvent(new CustomEvent(type, {
-		detail: { data: data, debug: debug },
+		detail: { data: data, debug: debug, view: view },
 		bubbles: true
 	}));
 }
@@ -4490,7 +4480,7 @@ function listen(view, type, handler) {
 	var el = view === window ? view : view.el || view;
 	el.addEventListener(type, function (event) {
 		if (event instanceof CustomEvent)
-			{ handler(event.detail.data, event.detail.debug); }
+			{ handler(event.detail.data, event.detail.view); }
 		else
 			{ handler(event); }
 	});
@@ -5096,7 +5086,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6083,12 +6072,13 @@ var Container = function Container() {
 		this$1.titleClickedCallback && this$1.titleClickedCallback();
 	};
 		
-	listen(this, 'propertyInherited', function (property) {
+	listen(this, 'propertyInherited', function (property, view) {
 		if (this$1.item.threeLetterType !== 'icd') { return; }
 		// this.item is inheritedComponentData
 		var proto = this$1.item.generatedForPrototype;
-		proto.createAndAddPropertyForComponentData(this$1.item, property.name, property.value);
-		dispatch(this$1, 'markPropertyEditorDirty');
+		var newProperty = proto.createAndAddPropertyForComponentData(this$1.item, property.name, property.value);
+		view.update(newProperty);
+		// dispatch(this, 'markPropertyEditorDirty');
 	});
 };
 Container.prototype.update = function update (state) {
@@ -6318,6 +6308,9 @@ Property$2.prototype.reset = function reset () {
 		
 	dispatch(this, 'markPropertyEditorDirty');
 };
+Property$2.prototype.focus = function focus () {
+	$(this.el).find('input').focus();
+};
 Property$2.prototype.oninput = function oninput (val) {
 	try {
 		this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
@@ -6366,6 +6359,11 @@ Property$2.prototype.update = function update (property) {
 		{ return; }
 		
 	var propertyChanged = this.property !== property;
+	var keepOldInput = false;
+	if (this.property && this.property.propertyType === property.propertyType && !this.property.id && property.id) {
+		// Special case.
+		keepOldInput = true;
+	}
 		
 	this._previousValue = property.value;
 		
@@ -6382,12 +6380,15 @@ Property$2.prototype.update = function update (property) {
 		if (property.propertyType.description) {
 			mount(this.name, el('span.infoI', 'i'));
 		}
-		this.content.innerHTML = '';
-		this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-		this.setValue = this.propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
-			propertyType: property.propertyType,
-			placeholder: property._editorPlaceholder
-		});
+			
+		if (!keepOldInput) {
+			this.content.innerHTML = '';
+			this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
+			this.setValue = this.propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
+				propertyType: property.propertyType,
+				placeholder: property._editorPlaceholder
+			});
+		}
 			
 		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 		this.el.classList.toggle('ownProperty', !!this.property.id);
@@ -7098,22 +7099,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.

@@ -128,12 +128,13 @@ class Container {
 			this.titleClickedCallback && this.titleClickedCallback();
 		};
 		
-		listen(this, 'propertyInherited', property => {
+		listen(this, 'propertyInherited', (property, view) => {
 			if (this.item.threeLetterType !== 'icd') return;
 			// this.item is inheritedComponentData
 			let proto = this.item.generatedForPrototype;
-			proto.createAndAddPropertyForComponentData(this.item, property.name, property.value);
-			dispatch(this, 'markPropertyEditorDirty');
+			let newProperty = proto.createAndAddPropertyForComponentData(this.item, property.name, property.value);
+			view.update(newProperty);
+			// dispatch(this, 'markPropertyEditorDirty');
 		});
 	}
 	update(state) {
@@ -357,6 +358,9 @@ class Property {
 		
 		dispatch(this, 'markPropertyEditorDirty');
 	}
+	focus() {
+		$(this.el).find('input').focus();
+	}
 	oninput(val) {
 		try {
 			this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
@@ -403,6 +407,11 @@ class Property {
 			return;
 		
 		const propertyChanged = this.property !== property;
+		let keepOldInput = false;
+		if (this.property && this.property.propertyType === property.propertyType && !this.property.id && property.id) {
+			// Special case.
+			keepOldInput = true;
+		}
 		
 		this._previousValue = property.value;
 		
@@ -419,12 +428,15 @@ class Property {
 			if (property.propertyType.description) {
 				mount(this.name, el('span.infoI', 'i'));
 			}
-			this.content.innerHTML = '';
-			this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-			this.setValue = this.propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), {
-				propertyType: property.propertyType,
-				placeholder: property._editorPlaceholder
-			});
+			
+			if (!keepOldInput) {
+				this.content.innerHTML = '';
+				this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
+				this.setValue = this.propertyEditorInstance(this.content, val => this.oninput(val), val => this.onchange(val), {
+					propertyType: property.propertyType,
+					placeholder: property._editorPlaceholder
+				});
+			}
 			
 			this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 			this.el.classList.toggle('ownProperty', !!this.property.id);
