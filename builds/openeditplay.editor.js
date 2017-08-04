@@ -5957,11 +5957,6 @@ var InstanceMoreButtonContextMenu = (function (Popup$$1) {
 	return InstanceMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -6027,19 +6022,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -7504,7 +7486,7 @@ var SceneModule = (function (Module$$1) {
 
 		listenMouseMove(this.el, this.onMouseMove.bind(this));
 		listenMouseDown(this.el, function (mousePos) {
-			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
+			if (!scene || !mousePos || scene.playing) // !mousePos if mouse has not moved since refresh
 				{ return; }
 
 			this$1.makeSureSceneHasEditorLayer();

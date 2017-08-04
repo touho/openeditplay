@@ -265,7 +265,7 @@ class SceneModule extends Module {
 
 		listenMouseMove(this.el, this.onMouseMove.bind(this));
 		listenMouseDown(this.el, mousePos => {
-			if (!scene || !mousePos) // !mousePos if mouse has not moved since refresh
+			if (!scene || !mousePos || scene.playing) // !mousePos if mouse has not moved since refresh
 				return;
 
 			this.makeSureSceneHasEditorLayer();
