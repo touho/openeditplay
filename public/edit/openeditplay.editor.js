@@ -7313,7 +7313,16 @@ var SceneModule = (function (Module$$1) {
 			homeButton,
 			globeButton,
 			copyButton,
+			deleteButton,
 			sceneContextButtons;
+		
+		var disableMouseDown = function (e) {
+			e.returnValue = false;
+			e.preventDefault();
+			e.stopPropagation();
+			return false;
+		};
+		
 		Module$$1.call(
 			this, canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -7387,14 +7396,17 @@ var SceneModule = (function (Module$$1) {
 							}
 							var ref;
 						},
-						onmousedown: function (e) {
-							console.log('WOOT');
-							e.returnValue = false;
-							e.preventDefault();
-							e.stopPropagation();
-							return false;
+						onmousedown: disableMouseDown,
+						title: 'Copy selected instances (C)'
+					}),
+					deleteButton = el('i.fa.fa-trash.iconButton.button', {
+						onclick: function () {
+							deleteEntities(this$1.selectedEntities);
+							this$1.clearState();
+							this$1.draw();
 						},
-						title: 'Copy selected entities (C)'
+						onmousedown: disableMouseDown,
+						title: 'Delete selected instances (Backspace)'
 					})
 				)
 			)
@@ -7404,6 +7416,7 @@ var SceneModule = (function (Module$$1) {
 		this.homeButton = homeButton;
 		this.globeButton = globeButton;
 		this.copyButton = copyButton;
+		this.deleteButton = deleteButton;
 		this.sceneContextButtons = sceneContextButtons;
 
 		var fixAspectRatio = function () { return this$1.fixAspectRatio(); };
@@ -7563,9 +7576,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.clearState();
 				this$1.draw();
 			} else if (k === key.backspace) {
-				deleteEntities(this$1.selectedEntities);
-				this$1.clearState();
-				this$1.draw();
+				this$1.deleteButton.click();
 			} else if (k === key.c) {
 				this$1.copyButton.click();
 			} else if (k === key.p) {

@@ -379,6 +379,9 @@ img.logo:hover {
 .sceneContextButtons.hidden {
   display: none;
 }
+.sceneContextButtons .fa-trash:hover {
+  color: #ff745f;
+}
 .module.module-performance {
   padding: 5px 10px;
   display: flex;
