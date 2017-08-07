@@ -8,8 +8,19 @@ import { dispatch, listen } from '../events';
 
 export function createNewLevel() {
 	let lvl = new Level();
+	
+	let levelNumber = 1;
+	let newLevelName;
+	while (true) {
+		newLevelName = 'Level ' + levelNumber;
+		if (!editor.game.findChild('lvl', lvl => lvl.name === newLevelName, false)) {
+			break;
+		}
+		levelNumber++;
+	}
+	
 	lvl.initWithPropertyValues({
-		name: 'New level'
+		name: newLevelName
 	});
 	editor.game.addChild(lvl);
 	editor.setLevel(lvl);

@@ -6818,8 +6818,19 @@ window.help = help;
 
 function createNewLevel() {
 	var lvl = new Level();
+	
+	var levelNumber = 1;
+	var newLevelName;
+	while (true) {
+		newLevelName = 'Level ' + levelNumber;
+		if (!editor.game.findChild('lvl', function (lvl) { return lvl.name === newLevelName; }, false)) {
+			break;
+		}
+		levelNumber++;
+	}
+	
 	lvl.initWithPropertyValues({
-		name: 'New level'
+		name: newLevelName
 	});
 	editor.game.addChild(lvl);
 	editor.setLevel(lvl);
@@ -7125,22 +7136,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7439,7 +7434,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.clearState();
 				
 				if (scene.isInInitialState())
-					{ scene.cameraZoom = 1; }
+					{ scene.setZoom(1); }
 
 				if (scene.playing) {
 					scene.editorLayer.visible = true;
@@ -7792,12 +7787,11 @@ var SceneModule = (function (Module$$1) {
 
 				if (dz !== 0) {
 					var zoomMultiplier = 1 + speed * cameraZoomSpeed;
+					
 					if (dz > 0)
-						{ scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier); }
+						{ scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier)); }
 					else if (dz < 0)
-						{ scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier); }
-
-					scene.dispatch('zoomChange', scene.cameraZoom);
+						{ scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier)); }
 				}
 
 				this$1.cameraPositionOrZoomUpdated();
@@ -7977,8 +7971,8 @@ var SceneModule = (function (Module$$1) {
 		}
 		if (scene) {
 			scene.reset();
-			scene.cameraZoom = this.editorCameraZoom;
 			scene.cameraPosition = this.editorCameraPosition.clone();
+			scene.setZoom(this.editorCameraZoom);
 			scene.updateCamera();
 		}
 		this.playButton.icon.className = 'fa fa-play';

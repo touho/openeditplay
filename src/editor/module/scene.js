@@ -163,7 +163,7 @@ class SceneModule extends Module {
 				this.clearState();
 				
 				if (scene.isInInitialState())
-					scene.cameraZoom = 1;
+					scene.setZoom(1);
 
 				if (scene.playing) {
 					scene.editorLayer.visible = true;
@@ -507,12 +507,11 @@ class SceneModule extends Module {
 
 				if (dz !== 0) {
 					let zoomMultiplier = 1 + speed * cameraZoomSpeed;
+					
 					if (dz > 0)
-						scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier);
+						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier));
 					else if (dz < 0)
-						scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier);
-
-					scene.dispatch('zoomChange', scene.cameraZoom);
+						scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier));
 				}
 
 				this.cameraPositionOrZoomUpdated();
@@ -690,8 +689,8 @@ class SceneModule extends Module {
 		}
 		if (scene) {
 			scene.reset();
-			scene.cameraZoom = this.editorCameraZoom;
 			scene.cameraPosition = this.editorCameraPosition.clone();
+			scene.setZoom(this.editorCameraZoom);
 			scene.updateCamera();
 		}
 		this.playButton.icon.className = 'fa fa-play';
