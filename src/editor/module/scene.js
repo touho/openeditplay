@@ -284,7 +284,7 @@ class SceneModule extends Module {
 			} else if (scene) {
 				// Scene controls
 				if (k === key['0']) {
-					scene.cameraZoom = 1;
+					scene.setZoom(1);
 					this.cameraPositionOrZoomUpdated();
 					this.draw();
 				} else if (MOVEMENT_KEYS.includes(k)) {

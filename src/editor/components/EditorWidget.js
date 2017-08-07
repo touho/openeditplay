@@ -159,17 +159,21 @@ export default Component.register({
 			// gra.y = 0;
 			// this.stage.addChild(gra);
 			
-			this.zoomListener = this.scene.listen('zoomChange', zoomLevel => {
-				let invZoom = 1 / zoomLevel;
-				this.positionHelper.scale.set(invZoom, invZoom);
-				
-				this.widgets.forEach(w => {
-					w.graphics && w.graphics.scale.set(invZoom, invZoom);
-				});
-				
-				this.updateWidgets();
-			});
+			this.zoomListener = this.scene.listen('zoomChange', () => this.updateZoomLevel());
+			this.updateZoomLevel();
 		},
+		
+		updateZoomLevel() {
+			let invZoom = 1 / this.scene.cameraZoom;
+			this.positionHelper.scale.set(invZoom, invZoom);
+
+			this.widgets.forEach(w => {
+				w.graphics && w.graphics.scale.set(invZoom, invZoom);
+			});
+
+			this.updateWidgets();
+		},
+		
 		sleep() {
 			this.selected = true;
 			this.widgets.forEach(widget => {

@@ -657,8 +657,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -785,10 +783,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2917,8 +2911,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4488,8 +4480,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5108,7 +5098,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5985,11 +5974,6 @@ var InstanceMoreButtonContextMenu = (function (Popup$$1) {
 	return InstanceMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -6055,19 +6039,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -7292,17 +7263,21 @@ Component$1.register({
 			// gra.y = 0;
 			// this.stage.addChild(gra);
 			
-			this.zoomListener = this.scene.listen('zoomChange', function (zoomLevel) {
-				var invZoom = 1 / zoomLevel;
-				this$1.positionHelper.scale.set(invZoom, invZoom);
-				
-				this$1.widgets.forEach(function (w) {
-					w.graphics && w.graphics.scale.set(invZoom, invZoom);
-				});
-				
-				this$1.updateWidgets();
-			});
+			this.zoomListener = this.scene.listen('zoomChange', function () { return this$1.updateZoomLevel(); });
+			this.updateZoomLevel();
 		},
+		
+		updateZoomLevel: function updateZoomLevel() {
+			var invZoom = 1 / this.scene.cameraZoom;
+			this.positionHelper.scale.set(invZoom, invZoom);
+
+			this.widgets.forEach(function (w) {
+				w.graphics && w.graphics.scale.set(invZoom, invZoom);
+			});
+
+			this.updateWidgets();
+		},
+		
 		sleep: function sleep() {
 			this.selected = true;
 			this.widgets.forEach(function (widget) {
@@ -7585,7 +7560,7 @@ var SceneModule = (function (Module$$1) {
 			} else if (scene) {
 				// Scene controls
 				if (k === key['0']) {
-					scene.cameraZoom = 1;
+					scene.setZoom(1);
 					this$1.cameraPositionOrZoomUpdated();
 					this$1.draw();
 				} else if (MOVEMENT_KEYS.includes(k)) {
