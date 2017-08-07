@@ -78,11 +78,18 @@
   display: block;
 }
 
-.sceneEditorSideBarButtons > i {
+.sceneEditorSideBarButtons i {
   font-size: 20px;
   float: right;
   clear: both;
 }
-.sceneEditorSideBarButtons > i:hover {
-  
+
+.sceneContextButtons {
+  float: right;
+  clear: both;
+  margin-top: 20px;
+}
+
+.sceneContextButtons.hidden {
+  display: none;
 }

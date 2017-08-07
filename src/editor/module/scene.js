@@ -40,7 +40,9 @@ class SceneModule extends Module {
 	constructor() {
 		let canvas,
 			homeButton,
-			globeButton;
+			globeButton,
+			copyButton,
+			sceneContextButtons;
 		super(
 			canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -101,13 +103,36 @@ class SceneModule extends Module {
 						this.draw();
 					},
 					title: 'Go home to player or to default start position (H)'
-				})
+				}),
+				sceneContextButtons = el('div.sceneContextButtons',
+					copyButton = el('i.fa.fa-copy.iconButton.button', {
+						onclick: () => {
+							if (this.selectedEntities.length > 0) {
+								this.deleteNewEntities();
+								this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
+								this.clearSelectedEntities();
+								sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
+								this.draw();
+							}
+						},
+						onmousedown: e => {
+							console.log('WOOT')
+							e.returnValue = false;
+							e.preventDefault();
+							e.stopPropagation();
+							return false;
+						},
+						title: 'Copy selected entities (C)'
+					})
+				)
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
 		this.canvas = canvas;
 		this.homeButton = homeButton;
 		this.globeButton = globeButton;
+		this.copyButton = copyButton;
+		this.sceneContextButtons = sceneContextButtons;
 
 		let fixAspectRatio = () => this.fixAspectRatio();
 
@@ -270,13 +295,7 @@ class SceneModule extends Module {
 				this.clearState();
 				this.draw();
 			} else if (k === key.c) {
-				if (this.selectedEntities.length > 0) {
-					this.deleteNewEntities();
-					this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
-					this.clearSelectedEntities();
-					sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
-					this.draw();
-				}
+				this.copyButton.click();
 			} else if (k === key.p) {
 				this.playButton.click();
 			} else if (k === key.r) {
@@ -337,6 +356,8 @@ class SceneModule extends Module {
 				scene.selectionLayer.addChild(this.selectionArea);
 			}
 
+			this.updateSceneContextButtonVisibility();
+
 			this.draw();
 		});
 		listenMouseUp(this.el, (/*mousePos*/) => {
@@ -362,6 +383,8 @@ class SceneModule extends Module {
 				this.selectSelectedEntitiesInEditor();
 			}
 
+			this.updateSceneContextButtonVisibility();
+
 			this.draw();
 		});
 		
@@ -383,6 +406,7 @@ class SceneModule extends Module {
 			});
 			this.selectedEntities = entitiesInSelection;
 			this.selectSelectedEntitiesInEditor();
+			this.updateSceneContextButtonVisibility();
 			
 			this.draw();
 		});
@@ -651,6 +675,8 @@ class SceneModule extends Module {
 				entity.getComponent('EditorWidget').deselect();
 		});
 		this.selectedEntities.length = 0;
+
+		this.updateSceneContextButtonVisibility();
 	}
 
 	clearState() {
@@ -727,6 +753,13 @@ class SceneModule extends Module {
 		} else {
 			disableAllChanges();
 		}
+	}
+	
+	updateSceneContextButtonVisibility() {
+		if (this.selectedEntities.length > 0)
+			this.sceneContextButtons.classList.remove('hidden');
+		else
+			this.sceneContextButtons.classList.add('hidden');
 	}
 }
 

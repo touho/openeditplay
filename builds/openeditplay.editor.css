@@ -366,13 +366,18 @@ img.logo:hover {
 .isInitialState .sceneEditorSideBarButtons {
   display: block;
 }
-.sceneEditorSideBarButtons > i {
+.sceneEditorSideBarButtons i {
   font-size: 20px;
   float: right;
   clear: both;
 }
-.sceneEditorSideBarButtons > i:hover {
-  
+.sceneContextButtons {
+  float: right;
+  clear: both;
+  margin-top: 20px;
+}
+.sceneContextButtons.hidden {
+  display: none;
 }
 .module.module-performance {
   padding: 5px 10px;

@@ -7311,7 +7311,9 @@ var SceneModule = (function (Module$$1) {
 
 		var canvas,
 			homeButton,
-			globeButton;
+			globeButton,
+			copyButton,
+			sceneContextButtons;
 		Module$$1.call(
 			this, canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -7372,13 +7374,37 @@ var SceneModule = (function (Module$$1) {
 						this$1.draw();
 					},
 					title: 'Go home to player or to default start position (H)'
-				})
+				}),
+				sceneContextButtons = el('div.sceneContextButtons',
+					copyButton = el('i.fa.fa-copy.iconButton.button', {
+						onclick: function () {
+							if (this$1.selectedEntities.length > 0) {
+								this$1.deleteNewEntities();
+								(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
+								this$1.clearSelectedEntities();
+								setEntityPositions(this$1.newEntities, this$1.previousMousePosInWorldCoordinates);
+								this$1.draw();
+							}
+							var ref;
+						},
+						onmousedown: function (e) {
+							console.log('WOOT');
+							e.returnValue = false;
+							e.preventDefault();
+							e.stopPropagation();
+							return false;
+						},
+						title: 'Copy selected entities (C)'
+					})
+				)
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
 		this.canvas = canvas;
 		this.homeButton = homeButton;
 		this.globeButton = globeButton;
+		this.copyButton = copyButton;
+		this.sceneContextButtons = sceneContextButtons;
 
 		var fixAspectRatio = function () { return this$1.fixAspectRatio(); };
 
@@ -7541,13 +7567,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.clearState();
 				this$1.draw();
 			} else if (k === key.c) {
-				if (this$1.selectedEntities.length > 0) {
-					this$1.deleteNewEntities();
-					(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
-					this$1.clearSelectedEntities();
-					setEntityPositions(this$1.newEntities, this$1.previousMousePosInWorldCoordinates);
-					this$1.draw();
-				}
+				this$1.copyButton.click();
 			} else if (k === key.p) {
 				this$1.playButton.click();
 			} else if (k === key.r) {
@@ -7571,7 +7591,6 @@ var SceneModule = (function (Module$$1) {
 					}
 				}
 			}
-			var ref;
 		});
 
 		listenKeyUp(function (k) {
@@ -7609,6 +7628,8 @@ var SceneModule = (function (Module$$1) {
 				scene.selectionLayer.addChild(this$1.selectionArea);
 			}
 
+			this$1.updateSceneContextButtonVisibility();
+
 			this$1.draw();
 			var ref;
 		});
@@ -7635,6 +7656,8 @@ var SceneModule = (function (Module$$1) {
 				this$1.selectSelectedEntitiesInEditor();
 			}
 
+			this$1.updateSceneContextButtonVisibility();
+
 			this$1.draw();
 			var ref;
 		});
@@ -7657,6 +7680,7 @@ var SceneModule = (function (Module$$1) {
 			});
 			this$1.selectedEntities = entitiesInSelection;
 			this$1.selectSelectedEntitiesInEditor();
+			this$1.updateSceneContextButtonVisibility();
 			
 			this$1.draw();
 		});
@@ -7933,6 +7957,8 @@ var SceneModule = (function (Module$$1) {
 				{ entity.getComponent('EditorWidget').deselect(); }
 		});
 		this.selectedEntities.length = 0;
+
+		this.updateSceneContextButtonVisibility();
 	};
 
 	SceneModule.prototype.clearState = function clearState () {
@@ -8011,6 +8037,13 @@ var SceneModule = (function (Module$$1) {
 		} else {
 			disableAllChanges();
 		}
+	};
+	
+	SceneModule.prototype.updateSceneContextButtonVisibility = function updateSceneContextButtonVisibility () {
+		if (this.selectedEntities.length > 0)
+			{ this.sceneContextButtons.classList.remove('hidden'); }
+		else
+			{ this.sceneContextButtons.classList.add('hidden'); }
 	};
 
 	return SceneModule;
