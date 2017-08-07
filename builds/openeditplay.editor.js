@@ -657,6 +657,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -783,6 +785,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2107,7 +2113,7 @@ function createMaterial(owner, options) {
 		var o2 = m.options;
 		var contactMaterial = new p2.ContactMaterial(material, m, {
 			friction:				Math.min(o1.friction, o2.friction),
-			restitution:			o1.restitution * o2.restitution,
+			restitution:			Math.max(o1.restitution, o2.restitution), // If one is bouncy and other is not, collision is bouncy.
 			stiffness:				Math.min(o1.stiffness, o2.stiffness),
 			relaxation:				(o1.relaxation + o2.relaxation) / 2,
 			frictionStiffness:		Math.min(o1.frictionStiffness, o2.frictionStiffness),
@@ -2217,7 +2223,8 @@ function listenMouseDown(element, handler) {
 }
 // Requires listenMouseMove on the same element to get the mouse position
 function listenMouseUp(element, handler) {
-	element.addEventListener('mouseup', function (event) {
+	// listen document body because many times mouse is accidentally dragged outside of element
+	document.body.addEventListener('mouseup', function (event) {
 		if (typeof element._mx === 'number')
 			{ handler(new Vector(element._mx, element._my)); }
 		else
@@ -2479,8 +2486,10 @@ var Scene = (function (Serializable$$1) {
 		var pos = new Vector(0, 0);
 		var count = 0;
 		this.getComponents('CharacterController').forEach(function (characterController) {
-			pos.add(characterController.Transform.position);
-			count++;
+			if (characterController._rootType) {
+				pos.add(characterController.Transform.position);
+				count++;
+			}
 		});
 		if (count > 0) {
 			this.cameraPosition.set(pos.divideScalar(count));
@@ -2908,6 +2917,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4056,6 +4067,8 @@ function absLimit(value, absMax) {
 		{ return value; }
 }
 
+var JUMP_SAFE_DELAY = 0.1; // seconds
+
 Component$1.register({
 	name: 'CharacterController',
 	description: 'Lets user control the instance.',
@@ -4075,6 +4088,8 @@ Component$1.register({
 			var this$1 = this;
 
 			this.Physics = this.entity.getComponent('Physics');
+
+			this.lastJumpTime = 0;
 
 			this.keyListener = listenKeyDown(function (keyCode) {
 				if (this$1.controlType !== 'jumper' || !this$1.scene.playing)
@@ -4179,7 +4194,9 @@ Component$1.register({
 			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump: function jump() {
-			if (this.checkIfCanJump()) {
+			if (this.scene.time > this.lastJumpTime + JUMP_SAFE_DELAY && this.checkIfCanJump()) {
+				this.lastJumpTime = this.scene.time;
+				
 				var bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
@@ -4196,6 +4213,9 @@ Component$1.register({
 			
 			var contactEquations = getWorld(this.scene).narrowphase.contactEquations;
 			var body = this.Physics.body;
+			
+			if (!body)
+				{ return false; }
 			
 			if (body.sleepState === p2$1.Body.SLEEPING)
 				{ return true; }
@@ -4468,6 +4488,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5086,6 +5108,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5770,11 +5793,16 @@ function copyEntitiesToScene(entities) {
 				return epr;
 			});
 			editor.selectedLevel.addChildren(entityPrototypes);
-			scene.addChildren(entityPrototypes.map(function (epr) { return epr.createEntity(); }));
+			var newEntities = entityPrototypes.map(function (epr) { return epr.createEntity(); });
+			scene.addChildren(newEntities);
+			return newEntities;
 		} else {
-			scene.addChildren(entities.map(function (e) { return e.clone(); }));
+			var newEntities$1 = entities.map(function (e) { return e.clone(); });
+			scene.addChildren(newEntities$1);
+			return newEntities$1;
 		}
 	}
+	return null;
 }
 
 function getWidgetUnderMouse(mousePos) {
@@ -5957,6 +5985,11 @@ var InstanceMoreButtonContextMenu = (function (Popup$$1) {
 	return InstanceMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -6022,6 +6055,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -6703,30 +6749,57 @@ var Types = (function (Module$$1) {
 	return Types;
 }(Module));
 
+$(document).on('dnd_start.vakata', function (e, data) {
+	var nodeObjects = data.data.nodes.map(getSerializable$1);
+	events.dispatch('dragPrototypeStarted', nodeObjects);
+});
+
+$(document).on('dnd_move.vakata', function (e, data) {
+	if (data.event.target.nodeName === 'CANVAS') {
+		data.helper.find('.jstree-icon').css({
+			visibility: 'hidden'
+		});
+	} else {
+		data.helper.find('.jstree-icon').css({
+			visibility: 'visible'
+		});
+	}
+});
+
 $(document).on('dnd_stop.vakata', function (e, data) {
 	var jstree = $('#types-jstree').jstree(true);
-	var typesModule = $('#types-jstree').data('typesModule');
+	// let typesModule = $('#types-jstree').data('typesModule');
 	
 	setTimeout(function () {
 		// Now the nodes have moved in the DOM.
 
-		var node = jstree.get_node(data.data.obj);
-		var nodes = data.data.nodes; // these prototypes will move
-		var newParent;
-		if (node.parent === '#')
-			{ newParent = editor.game; }
-		else
-			{ newParent = getSerializable$1(node.parent); }
-		
-		var nodeObjects = nodes.map(getSerializable$1);
-		nodeObjects.forEach(assert);
-		nodeObjects.forEach(function (prototype) {
-			setChangeOrigin$1(jstree);
-			prototype.move(newParent);
-		});
-		
-		// console.log('dnd stopped from', nodes, 'to', newParent);
-	});
+		if (data.event.target.nodeName === 'CANVAS') {
+			// Drag entity to scene
+			var nodeObjects = data.data.nodes.map(getSerializable$1);
+			events.dispatch('dragPrototypeToCanvas', nodeObjects);
+		} else {
+			// Drag prototype in types view
+			
+			var node = jstree.get_node(data.data.obj);
+			var nodes = data.data.nodes; // these prototypes will move
+			var newParent;
+			if (node.parent === '#')
+				{ newParent = editor.game; }
+			else
+				{ newParent = getSerializable$1(node.parent); }
+
+			var nodeObjects$1 = nodes.map(getSerializable$1);
+			nodeObjects$1.forEach(assert);
+			nodeObjects$1.forEach(function (prototype) {
+				setChangeOrigin$1(jstree);
+				prototype.move(newParent);
+			});
+
+			events.dispatch('dragPrototypeToNonCanvas', nodeObjects$1);
+
+			// console.log('dnd stopped from', nodes, 'to', newParent);
+		}
+	}, 0);
 });
 
 Module.register(Types, 'left');
@@ -7081,6 +7154,22 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7250,7 +7339,9 @@ var SceneModule = (function (Module$$1) {
 	function SceneModule() {
 		var this$1 = this;
 
-		var canvas;
+		var canvas,
+			homeButton,
+			globeButton;
 		Module$$1.call(
 			this, canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -7263,52 +7354,70 @@ var SceneModule = (function (Module$$1) {
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
 			el('i.fa.fa-pause.pauseInfo.bottomRight'),
 			el('div.sceneEditorSideBarButtons',
-				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', { onclick: function () {
-					if (!scene) { return; }
-					scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
-					this$1.draw();
-				} }),
-				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', { onclick: function () {
-					if (!scene) { return; }
-					scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
-					this$1.draw();
-				} }),
-				el('i.fa.fa-globe.iconButton.button', { onclick: function () {
-					if (!scene) { return; }
-					
-					var bounds = scene.stage.getLocalBounds();
-					
-					scene.cameraPosition.setScalars(
-						bounds.x + bounds.width / 2,
-						bounds.y + bounds.height / 2
-					);
-					
-					var maxXZoom = this$1.canvas.width / bounds.width;
-					var maxYZoom = this$1.canvas.height / bounds.height;
-					scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
-					
-					this$1.draw();
-				} }),
-				el('i.fa.fa-home.iconButton.button', { onclick: function () {
-					if (!scene) { return; }
-					scene.cameraPosition.setScalars(0, 0); // If there are no players
-					scene.setCameraPositionToPlayer();
-					scene.setZoom(1);
-					this$1.draw();
-				} })
+				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', {
+					onclick: function () {
+						if (!scene) { return; }
+						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
+						this$1.cameraPositionOrZoomUpdated();
+						this$1.draw();
+					},
+					title: 'Zoom in (+)'
+				}),
+				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', {
+					onclick: function () {
+						if (!scene) { return; }
+						scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
+						this$1.cameraPositionOrZoomUpdated();
+						this$1.draw();
+					},
+					title: 'Zoom out (-)'
+				}),
+				globeButton = el('i.fa.fa-globe.iconButton.button', {
+					onclick: function () {
+						if (!scene) { return; }
+
+						var bounds = scene.stage.getLocalBounds();
+
+						scene.cameraPosition.setScalars(
+							bounds.x + bounds.width / 2,
+							bounds.y + bounds.height / 2
+						);
+
+						var maxXZoom = this$1.canvas.width / bounds.width;
+						var maxYZoom = this$1.canvas.height / bounds.height;
+						scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
+						this$1.cameraPositionOrZoomUpdated();
+
+						this$1.draw();
+					},
+					title: 'Zoom to globe (G)'
+				}),
+				homeButton = el('i.fa.fa-home.iconButton.button', {
+					onclick: function () {
+						if (!scene) { return; }
+						scene.cameraPosition.setScalars(0, 0); // If there are no players
+						scene.setCameraPositionToPlayer();
+						scene.setZoom(1);
+						this$1.cameraPositionOrZoomUpdated();
+						this$1.draw();
+					},
+					title: 'Go home to player or to default start position (H)'
+				})
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
 		this.canvas = canvas;
+		this.homeButton = homeButton;
+		this.globeButton = globeButton;
 
 		var fixAspectRatio = function () { return this$1.fixAspectRatio(); };
-		
+
 		window.addEventListener("resize", fixAspectRatio);
 		events.listen('layoutResize', function () {
 			setTimeout(fixAspectRatio, 500);
 		});
 		setTimeout(fixAspectRatio, 0);
-		
+
 		this.id = 'scene';
 		this.name = 'Scene';
 
@@ -7317,40 +7426,46 @@ var SceneModule = (function (Module$$1) {
 		});
 
 		/*
-		loadedPromise.then(() => {
-			if (editor.selectedLevel)
-				editor.selectedLevel.createScene();
-			else
-				this.drawNoLevel();
-		});
-		*/
-		
+		 loadedPromise.then(() => {
+		 if (editor.selectedLevel)
+		 editor.selectedLevel.createScene();
+		 else
+		 this.drawNoLevel();
+		 });
+		 */
+
 		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
 		this.previousMousePosInMouseCoordinates = null;
-		
+
 		this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
 		this.selectedEntities = [];
-		
+
+		this.editorCameraPosition = new Vector(0, 0);
+		this.editorCameraZoom = 1;
+
 		this.selectionStart = null;
 		this.selectionEnd = null;
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
-		
+
 		this.playButton = new TopButton({
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: function (btn) {
 				if (!scene || !scene.level)
 					{ return; }
-				
+
 				setChangeOrigin$1(this$1);
 
 				this$1.makeSureSceneHasEditorLayer();
 
 				this$1.clearState();
 				
+				if (scene.isInInitialState())
+					{ scene.cameraZoom = 1; }
+
 				if (scene.playing) {
 					scene.editorLayer.visible = true;
 					scene.pause();
@@ -7379,16 +7494,16 @@ var SceneModule = (function (Module$$1) {
 			this$1.playingModeChanged();
 			this$1.draw();
 		});
-		
+
 		events.listen('setLevel', function (lvl) {
 			if (lvl)
 				{ lvl.createScene(false); }
 			else if (scene) {
 				scene.delete();
 			}
-			
+
 			this$1.playingModeChanged();
-			
+
 			this$1.clearState();
 			this$1.draw();
 		});
@@ -7399,36 +7514,39 @@ var SceneModule = (function (Module$$1) {
 				{ return; }
 
 			start('Editor: Scene');
-			
+
 			this$1.clearState();
-			
-			var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
-			entityPrototype.position = new Vector(this$1.canvas.width/2, this$1.canvas.height/2);
-			var newEntity = entityPrototype.createEntity(this$1);
-			this$1.newEntities.push(newEntity);
+
+			/*
+			 let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+			 entityPrototype.position = new Vector(this.canvas.width/2, this.canvas.height/2);
+			 let newEntity = entityPrototype.createEntity(this);
+			 this.newEntities.push(newEntity);
+			 */
+
 			this$1.draw();
 
 			stop('Editor: Scene');
 		});
-		
+
 		events.listen('change', function (change) {
 			start('Editor: Scene');
-			
+
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
-				
+
 				// Make sure the scene has the layers for EditorWidget
 				this$1.makeSureSceneHasEditorLayer();
-				
+
 				change.reference.addComponents([
 					Component$1.create('EditorWidget')
 				]);
 			} else if (change.type === 'editorSelection') {
 				this$1.updatePropertyChangeCreationFilter();
 			}
-			
+
 			if (scene && scene.resetting)
 				{ return stop('Editor: Scene'); }
-			
+
 			// console.log('sceneModule change', change);
 			if (change.origin !== this$1) {
 				setChangeOrigin$1(this$1);
@@ -7437,13 +7555,13 @@ var SceneModule = (function (Module$$1) {
 			}
 			stop('Editor: Scene');
 		});
-		
+
 		this.zoomInButtonPressed = false;
-		
+
 		listenKeyDown(function (k) {
 			if (!scene)
 				{ return; }
-			
+
 			setChangeOrigin$1(this$1);
 			if (k === key.esc) {
 				this$1.clearState();
@@ -7468,17 +7586,24 @@ var SceneModule = (function (Module$$1) {
 				// Scene controls
 				if (k === key['0']) {
 					scene.cameraZoom = 1;
+					this$1.cameraPositionOrZoomUpdated();
 					this$1.draw();
 				} else if (MOVEMENT_KEYS.includes(k)) {
 					if (k === key.plus || k === key.questionMark || k === key.e)
 						{ this$1.zoomInButtonPressed = true; }
-					
+
 					this$1.startListeningMovementInput();
+				} else if (!scene.playing) {
+					if (k === key.g) {
+						$(this$1.globeButton).click();
+					} else if (k === key.h) {
+						$(this$1.homeButton).click();
+					}
 				}
 			}
 			var ref;
 		});
-		
+
 		listenKeyUp(function (k) {
 			if (k === key.plus || k === key.questionMark || k === key.e)
 				{ this$1.zoomInButtonPressed = false; }
@@ -7492,8 +7617,9 @@ var SceneModule = (function (Module$$1) {
 			this$1.makeSureSceneHasEditorLayer();
 
 			mousePos = scene.mouseToWorld(mousePos);
-			
+
 			setChangeOrigin$1(this$1);
+			
 			if (this$1.newEntities.length > 0)
 				{ copyEntitiesToScene(this$1.newEntities); }
 			else if (this$1.widgetUnderMouse) {
@@ -7512,7 +7638,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.selectionArea = new PIXI$2.Graphics();
 				scene.selectionLayer.addChild(this$1.selectionArea);
 			}
-			
+
 			this$1.draw();
 			var ref;
 		});
@@ -7520,7 +7646,7 @@ var SceneModule = (function (Module$$1) {
 			if (!scene)
 				{ return; }
 			// mousePos = scene.mouseToWorld(mousePos);
-			
+
 			this$1.selectionStart = null;
 			this$1.selectionEnd = null;
 			if (this$1.selectionArea) {
@@ -7528,7 +7654,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.selectionArea = null;
 			}
 			this$1.entitiesToEdit.length = 0;
-			
+
 			if (this$1.entitiesInSelection.length > 0) {
 				(ref = this$1.selectedEntities).push.apply(ref, this$1.entitiesInSelection);
 				this$1.entitiesInSelection.forEach(function (entity) {
@@ -7538,36 +7664,51 @@ var SceneModule = (function (Module$$1) {
 				this$1.entitiesInSelection.length = 0;
 				this$1.selectSelectedEntitiesInEditor();
 			}
-			
+
 			this$1.draw();
 			var ref;
 		});
 		
-		var ticking = false;
-		this.canvas.addEventListener('scroll', function(e) {
-			last_known_scroll_position = window.scrollY;
-			if (!ticking) {
-				window.requestAnimationFrame(function() {
-					console.log('moi');
-					ticking = false;
-				});
-			}
-			ticking = true;
+		events.listen('dragPrototypeStarted', function (prototypes) {
+			var entityPrototypes = prototypes.map(function (prototype) {
+				var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+				// entityPrototype.position = this.previousMousePosInWorldCoordinates;
+				return entityPrototype;
+			});
+
+			// editor.selectedLevel.addChildren(entityPrototypes);
+			this$1.newEntities = entityPrototypes.map(function (epr) { return epr.createEntity(); });
+		});
+		events.listen('dragPrototypeToCanvas', function (prototypes) {
+			var entitiesInSelection = copyEntitiesToScene(this$1.newEntities) || [];
+			this$1.clearState();
+			entitiesInSelection.forEach(function (entity) {
+				entity.getComponent('EditorWidget').select();
+			});
+			this$1.selectedEntities = entitiesInSelection;
+			this$1.selectSelectedEntitiesInEditor();
+			
+			this$1.draw();
+		});
+		events.listen('dragPrototypeToNonCanvas', function () {
+			this$1.clearState();
+			// this.draw();
 		});
 	}
 
 	if ( Module$$1 ) SceneModule.__proto__ = Module$$1;
 	SceneModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
 	SceneModule.prototype.constructor = SceneModule;
+
 	// mousePos is optional
 	SceneModule.prototype.onMouseMove = function onMouseMove (mouseCoordinatePosition) {
 		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
 			{ return; }
-		
+
 		start('Editor: Scene');
-		
+
 		var mousePos = scene.mouseToWorld(mouseCoordinatePosition || this.previousMousePosInMouseCoordinates);
-		
+
 		if (mouseCoordinatePosition)
 			{ this.previousMousePosInMouseCoordinates = mouseCoordinatePosition; }
 
@@ -7631,6 +7772,7 @@ var SceneModule = (function (Module$$1) {
 
 		stop('Editor: Scene');
 	};
+
 	SceneModule.prototype.startListeningMovementInput = function startListeningMovementInput () {
 		var this$1 = this;
 
@@ -7641,75 +7783,85 @@ var SceneModule = (function (Module$$1) {
 			}
 		};
 		clear();
-		
+
 		var cameraPositionSpeed = 8;
 		var cameraZoomSpeed = 0.02;
-		
+
 		var update = function () {
 			if (!scene)
 				{ return clear(); }
-			
+
 			var dx = 0,
 				dy = 0,
 				dz = 0;
-			
+
 			if (keyPressed(key.up) || keyPressed(key.w)) { dy -= 1; }
 			if (keyPressed(key.down) || keyPressed(key.s)) { dy += 1; }
 			if (keyPressed(key.left) || keyPressed(key.a)) { dx -= 1; }
 			if (keyPressed(key.right) || keyPressed(key.d)) { dx += 1; }
 			if (this$1.zoomInButtonPressed) { dz += 1; }
 			if (keyPressed(key.minus) || keyPressed(key.q)) { dz -= 1; }
-			
+
 			if (dx === 0 && dy === 0 && dz === 0) {
-				if (!MOVEMENT_KEYS.find(keyPressed)) 
+				if (!MOVEMENT_KEYS.find(keyPressed))
 					{ clear(); }
 			} else {
 				var speed = 1;
 				if (keyPressed(key.shift))
 					{ speed *= 3; }
-				
+
 				var cameraMovementSpeed = speed * cameraPositionSpeed / scene.cameraZoom;
 				scene.cameraPosition.x = absLimit(scene.cameraPosition.x + dx * cameraMovementSpeed, 5000);
 				scene.cameraPosition.y = absLimit(scene.cameraPosition.y + dy * cameraMovementSpeed, 5000);
-				
-				
+
+
 				if (dz !== 0) {
 					var zoomMultiplier = 1 + speed * cameraZoomSpeed;
 					if (dz > 0)
 						{ scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier); }
 					else if (dz < 0)
 						{ scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier); }
-					
+
 					scene.dispatch('zoomChange', scene.cameraZoom);
 				}
-				
+
+				this$1.cameraPositionOrZoomUpdated();
 				scene.updateCamera();
-				
+
 				this$1.onMouseMove();
-				
+
 				this$1.draw();
 			}
 		};
-		
+
 		if (scene && !scene.playing) {
 			this.movementInputListener = setInterval(update, 25);
 			update();
 		}
 	};
+	
+	SceneModule.prototype.cameraPositionOrZoomUpdated = function cameraPositionOrZoomUpdated () {
+		if (scene && scene.isInInitialState()) {
+			this.editorCameraPosition = scene.cameraPosition.clone();
+			this.editorCameraZoom = scene.cameraZoom;
+		}
+	};
+
 	SceneModule.prototype.update = function update () {
 		this.draw();
 	};
+
 	SceneModule.prototype.playingModeChanged = function playingModeChanged () {
 		if (!scene) {
 			this.el.classList.add('noScene');
 			this.el.classList.remove('playing', 'hideScenePauseInformation');
 			return;
 		}
-		
+
 		var isInitialState = scene.isInInitialState();
-		
+
 		this.el.classList.toggle('isInitialState', isInitialState);
-		
+
 		if (scene.playing) {
 			this.el.classList.remove('noScene');
 			this.el.classList.add('hideScenePauseInformation', 'playing');
@@ -7722,16 +7874,16 @@ var SceneModule = (function (Module$$1) {
 			this.playButton.text.innerHTML = '<u>P</u>lay';
 		}
 	};
-	
+
 	SceneModule.prototype.makeSureSceneHasEditorLayer = function makeSureSceneHasEditorLayer () {
 		if (!scene.editorLayer) {
 			scene.editorLayer = new PIXI$2.Container();
 			scene.stage.addChild(scene.editorLayer);
-			
+
 			scene.widgetLayer = new PIXI$2.Container();
 			scene.positionHelperLayer = new PIXI$2.Container();
 			scene.selectionLayer = new PIXI$2.Container();
-			
+
 			scene.editorLayer.addChild(
 				scene.widgetLayer,
 				scene.positionHelperLayer,
@@ -7739,7 +7891,7 @@ var SceneModule = (function (Module$$1) {
 			);
 		}
 	};
-	
+
 	SceneModule.prototype.fixAspectRatio = function fixAspectRatio () {
 		if (scene && this.canvas) {
 			var change = false;
@@ -7753,26 +7905,26 @@ var SceneModule = (function (Module$$1) {
 			}
 
 			// scene.renderer.resize(this.canvas.width, this.canvas.height);
-			
+
 			if (change) {
 				this.draw();
 			}
 		}
 	};
-	
+
 	SceneModule.prototype.draw = function draw () {
 		var this$1 = this;
 
 		if (scene) {
 			if (!scene.playing) {
 				this.filterDeadSelection();
-				
+
 				scene.draw();
 
 				return; // PIXI refactor
-				
+
 				scene.context.strokeStyle = 'white';
-				
+
 				if (scene.level && scene.level.isEmpty()) {
 					this.drawEmptyLevel();
 				}
@@ -7786,25 +7938,26 @@ var SceneModule = (function (Module$$1) {
 			}, 700);
 		}
 	};
-	
+
 	SceneModule.prototype.drawNoLevel = function drawNoLevel () {
 		/*
-		this.canvas.width = this.canvas.width;
-		let context = this.canvas.getContext('2d');
-		context.font = '20px arial';
-		context.fillStyle = 'white';
-		context.fillText('No level selected', 20, 35);
-		*/
+		 this.canvas.width = this.canvas.width;
+		 let context = this.canvas.getContext('2d');
+		 context.font = '20px arial';
+		 context.fillStyle = 'white';
+		 context.fillText('No level selected', 20, 35);
+		 */
 	};
+
 	SceneModule.prototype.drawEmptyLevel = function drawEmptyLevel () {
 		/*
-		let context = this.canvas.getContext('2d');
-		context.font = '20px arial';
-		context.fillStyle = 'white';
-		context.fillText('Empty level. Click a type and place it here.', 20, 35);
-		*/
+		 let context = this.canvas.getContext('2d');
+		 context.font = '20px arial';
+		 context.fillStyle = 'white';
+		 context.fillText('Empty level. Click a type and place it here.', 20, 35);
+		 */
 	};
-	
+
 	SceneModule.prototype.clearSelectedEntities = function clearSelectedEntities () {
 		this.selectedEntities.forEach(function (entity) {
 			if (entity._alive)
@@ -7812,10 +7965,10 @@ var SceneModule = (function (Module$$1) {
 		});
 		this.selectedEntities.length = 0;
 	};
-	
+
 	SceneModule.prototype.clearState = function clearState () {
 		this.deleteNewEntities();
-		
+
 		if (this.widgetUnderMouse)
 			{ this.widgetUnderMouse.unhover(); }
 		this.widgetUnderMouse = null;
@@ -7825,15 +7978,15 @@ var SceneModule = (function (Module$$1) {
 		this.selectionStart = null;
 		this.selectionEnd = null;
 	};
-	
-	SceneModule.prototype.deleteNewEntities = function deleteNewEntities () {
+
+	SceneModule.prototype.deleteNewEntities = function deleteNewEntities () {
 		this.newEntities.forEach(function (e) {
 			e.prototype.delete();
 			e.delete();
 		});
 		this.newEntities.length = 0;
 	};
-	
+
 	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
 		editor.select(this.selectedEntities, this);
 		if (shouldSyncLevelAndScene())
@@ -7841,21 +7994,25 @@ var SceneModule = (function (Module$$1) {
 		else
 			{ Module$$1.activateOneOfModules(['instance'], false); }
 	};
-	
+
 	SceneModule.prototype.stopAndReset = function stopAndReset () {
 		this.clearState();
 		if (editor.selection.type === 'ent') {
 			editor.select(editor.selection.items.map(function (ent) { return ent.prototype.prototype; }), this);
 		}
-		if (scene)
-			{ scene.reset(); }
+		if (scene) {
+			scene.reset();
+			scene.cameraZoom = this.editorCameraZoom;
+			scene.cameraPosition = this.editorCameraPosition.clone();
+			scene.updateCamera();
+		}
 		this.playButton.icon.className = 'fa fa-play';
 		this.playingModeChanged();
 		this.draw();
-		
+
 		this.updatePropertyChangeCreationFilter();
 	};
-	
+
 	SceneModule.prototype.filterDeadSelection = function filterDeadSelection () {
 		var this$1 = this;
 
@@ -7870,11 +8027,11 @@ var SceneModule = (function (Module$$1) {
 			}
 		}
 	};
-	
+
 	SceneModule.prototype.updatePropertyChangeCreationFilter = function updatePropertyChangeCreationFilter () {
 		if (!scene)
 			{ return; }
-		
+
 		if (scene.isInInitialState()) {
 			enableAllChanges();
 		} else if (editor.selection.type === 'ent') {

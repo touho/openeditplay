@@ -1,23 +1,31 @@
-import { el, list, mount } from 'redom';
+import {el, list, mount} from 'redom';
 import Module from './module';
-import events, { dispatch, listen } from '../events';
-import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, listenKeyUp, key, keyPressed } from '../../util/input';
-import Scene, { scene } from '../../core/scene';
-import { game } from '../../core/game';
+import events, {dispatch, listen} from '../events';
+import {
+	listenMouseMove,
+	listenMouseDown,
+	listenMouseUp,
+	listenKeyDown,
+	listenKeyUp,
+	key,
+	keyPressed
+} from '../../util/input';
+import Scene, {scene} from '../../core/scene';
+import {game} from '../../core/game';
 import EntityPrototype from '../../core/entityPrototype';
 import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
-import { Component } from '../../core/component';
-import { TopButton } from './topBar';
-import { editor } from '../editor';
-import { changeType, setChangeOrigin } from '../../core/serializableManager';
+import {Component} from '../../core/component';
+import {TopButton} from './topBar';
+import {editor} from '../editor';
+import {changeType, setChangeOrigin} from '../../core/serializableManager';
 import * as sceneEdit from '../util/sceneEditUtil';
 import * as sceneDraw from '../util/sceneDrawUtil';
 import Vector from '../../util/vector';
-import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
-import { help } from '../help';
-import { createNewLevel } from './levels';
+import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
+import {help} from '../help';
+import {createNewLevel} from './levels';
 import PIXI from '../../feature/graphics';
 import * as performance from '../../util/performance';
 import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
@@ -30,7 +38,9 @@ const MAX_ZOOM = 10;
 
 class SceneModule extends Module {
 	constructor() {
-		let canvas;
+		let canvas,
+			homeButton,
+			globeButton;
 		super(
 			canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -43,52 +53,70 @@ class SceneModule extends Module {
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
 			el('i.fa.fa-pause.pauseInfo.bottomRight'),
 			el('div.sceneEditorSideBarButtons',
-				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', { onclick: () => {
-					if (!scene) return;
-					scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
-					this.draw();
-				} }),
-				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', { onclick: () => {
-					if (!scene) return;
-					scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
-					this.draw();
-				} }),
-				el('i.fa.fa-globe.iconButton.button', { onclick: () => {
-					if (!scene) return;
-					
-					let bounds = scene.stage.getLocalBounds();
-					
-					scene.cameraPosition.setScalars(
-						bounds.x + bounds.width / 2,
-						bounds.y + bounds.height / 2
-					);
-					
-					let maxXZoom = this.canvas.width / bounds.width;
-					let maxYZoom = this.canvas.height / bounds.height;
-					scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
-					
-					this.draw();
-				} }),
-				el('i.fa.fa-home.iconButton.button', { onclick: () => {
-					if (!scene) return;
-					scene.cameraPosition.setScalars(0, 0); // If there are no players
-					scene.setCameraPositionToPlayer();
-					scene.setZoom(1);
-					this.draw();
-				} })
+				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', {
+					onclick: () => {
+						if (!scene) return;
+						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
+						this.cameraPositionOrZoomUpdated();
+						this.draw();
+					},
+					title: 'Zoom in (+)'
+				}),
+				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', {
+					onclick: () => {
+						if (!scene) return;
+						scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
+						this.cameraPositionOrZoomUpdated();
+						this.draw();
+					},
+					title: 'Zoom out (-)'
+				}),
+				globeButton = el('i.fa.fa-globe.iconButton.button', {
+					onclick: () => {
+						if (!scene) return;
+
+						let bounds = scene.stage.getLocalBounds();
+
+						scene.cameraPosition.setScalars(
+							bounds.x + bounds.width / 2,
+							bounds.y + bounds.height / 2
+						);
+
+						let maxXZoom = this.canvas.width / bounds.width;
+						let maxYZoom = this.canvas.height / bounds.height;
+						scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
+						this.cameraPositionOrZoomUpdated();
+
+						this.draw();
+					},
+					title: 'Zoom to globe (G)'
+				}),
+				homeButton = el('i.fa.fa-home.iconButton.button', {
+					onclick: () => {
+						if (!scene) return;
+						scene.cameraPosition.setScalars(0, 0); // If there are no players
+						scene.setCameraPositionToPlayer();
+						scene.setZoom(1);
+						this.cameraPositionOrZoomUpdated();
+						this.draw();
+					},
+					title: 'Go home to player or to default start position (H)'
+				})
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
 		this.canvas = canvas;
+		this.homeButton = homeButton;
+		this.globeButton = globeButton;
 
 		let fixAspectRatio = () => this.fixAspectRatio();
-		
+
 		window.addEventListener("resize", fixAspectRatio);
 		events.listen('layoutResize', () => {
 			setTimeout(fixAspectRatio, 500);
 		});
 		setTimeout(fixAspectRatio, 0);
-		
+
 		this.id = 'scene';
 		this.name = 'Scene';
 
@@ -97,40 +125,46 @@ class SceneModule extends Module {
 		});
 
 		/*
-		loadedPromise.then(() => {
-			if (editor.selectedLevel)
-				editor.selectedLevel.createScene();
-			else
-				this.drawNoLevel();
-		});
-		*/
-		
+		 loadedPromise.then(() => {
+		 if (editor.selectedLevel)
+		 editor.selectedLevel.createScene();
+		 else
+		 this.drawNoLevel();
+		 });
+		 */
+
 		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
 		this.previousMousePosInMouseCoordinates = null;
-		
+
 		this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
 		this.selectedEntities = [];
-		
+
+		this.editorCameraPosition = new Vector(0, 0);
+		this.editorCameraZoom = 1;
+
 		this.selectionStart = null;
 		this.selectionEnd = null;
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
-		
+
 		this.playButton = new TopButton({
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: btn => {
 				if (!scene || !scene.level)
 					return;
-				
+
 				setChangeOrigin(this);
 
 				this.makeSureSceneHasEditorLayer();
 
 				this.clearState();
 				
+				if (scene.isInInitialState())
+					scene.cameraZoom = 1;
+
 				if (scene.playing) {
 					scene.editorLayer.visible = true;
 					scene.pause();
@@ -159,16 +193,16 @@ class SceneModule extends Module {
 			this.playingModeChanged();
 			this.draw();
 		});
-		
+
 		events.listen('setLevel', lvl => {
 			if (lvl)
 				lvl.createScene(false);
 			else if (scene) {
 				scene.delete();
 			}
-			
+
 			this.playingModeChanged();
-			
+
 			this.clearState();
 			this.draw();
 		});
@@ -179,36 +213,39 @@ class SceneModule extends Module {
 				return;
 
 			performance.start('Editor: Scene');
-			
+
 			this.clearState();
-			
-			let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
-			entityPrototype.position = new Vector(this.canvas.width/2, this.canvas.height/2);
-			let newEntity = entityPrototype.createEntity(this);
-			this.newEntities.push(newEntity);
+
+			/*
+			 let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+			 entityPrototype.position = new Vector(this.canvas.width/2, this.canvas.height/2);
+			 let newEntity = entityPrototype.createEntity(this);
+			 this.newEntities.push(newEntity);
+			 */
+
 			this.draw();
 
 			performance.stop('Editor: Scene');
 		});
-		
+
 		events.listen('change', change => {
 			performance.start('Editor: Scene');
-			
+
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
-				
+
 				// Make sure the scene has the layers for EditorWidget
 				this.makeSureSceneHasEditorLayer();
-				
+
 				change.reference.addComponents([
 					Component.create('EditorWidget')
 				]);
 			} else if (change.type === 'editorSelection') {
 				this.updatePropertyChangeCreationFilter();
 			}
-			
+
 			if (scene && scene.resetting)
 				return performance.stop('Editor: Scene');
-			
+
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
@@ -217,13 +254,13 @@ class SceneModule extends Module {
 			}
 			performance.stop('Editor: Scene');
 		});
-		
+
 		this.zoomInButtonPressed = false;
-		
+
 		listenKeyDown(k => {
 			if (!scene)
 				return;
-			
+
 			setChangeOrigin(this);
 			if (k === key.esc) {
 				this.clearState();
@@ -248,16 +285,23 @@ class SceneModule extends Module {
 				// Scene controls
 				if (k === key['0']) {
 					scene.cameraZoom = 1;
+					this.cameraPositionOrZoomUpdated();
 					this.draw();
 				} else if (MOVEMENT_KEYS.includes(k)) {
 					if (k === key.plus || k === key.questionMark || k === key.e)
 						this.zoomInButtonPressed = true;
-					
+
 					this.startListeningMovementInput();
+				} else if (!scene.playing) {
+					if (k === key.g) {
+						$(this.globeButton).click();
+					} else if (k === key.h) {
+						$(this.homeButton).click();
+					}
 				}
 			}
 		});
-		
+
 		listenKeyUp(k => {
 			if (k === key.plus || k === key.questionMark || k === key.e)
 				this.zoomInButtonPressed = false;
@@ -271,8 +315,9 @@ class SceneModule extends Module {
 			this.makeSureSceneHasEditorLayer();
 
 			mousePos = scene.mouseToWorld(mousePos);
-			
+
 			setChangeOrigin(this);
+			
 			if (this.newEntities.length > 0)
 				sceneEdit.copyEntitiesToScene(this.newEntities);
 			else if (this.widgetUnderMouse) {
@@ -291,14 +336,14 @@ class SceneModule extends Module {
 				this.selectionArea = new PIXI.Graphics();
 				scene.selectionLayer.addChild(this.selectionArea);
 			}
-			
+
 			this.draw();
 		});
 		listenMouseUp(this.el, (/*mousePos*/) => {
 			if (!scene)
 				return;
 			// mousePos = scene.mouseToWorld(mousePos);
-			
+
 			this.selectionStart = null;
 			this.selectionEnd = null;
 			if (this.selectionArea) {
@@ -306,7 +351,7 @@ class SceneModule extends Module {
 				this.selectionArea = null;
 			}
 			this.entitiesToEdit.length = 0;
-			
+
 			if (this.entitiesInSelection.length > 0) {
 				this.selectedEntities.push(...this.entitiesInSelection);
 				this.entitiesInSelection.forEach(entity => {
@@ -316,31 +361,46 @@ class SceneModule extends Module {
 				this.entitiesInSelection.length = 0;
 				this.selectSelectedEntitiesInEditor();
 			}
-			
+
 			this.draw();
 		});
 		
-		let ticking = false;
-		this.canvas.addEventListener('scroll', function(e) {
-			last_known_scroll_position = window.scrollY;
-			if (!ticking) {
-				window.requestAnimationFrame(function() {
-					console.log('moi');
-					ticking = false;
-				});
-			}
-			ticking = true;
+		events.listen('dragPrototypeStarted', prototypes => {
+			let entityPrototypes = prototypes.map(prototype => {
+				let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+				// entityPrototype.position = this.previousMousePosInWorldCoordinates;
+				return entityPrototype;
+			});
+
+			// editor.selectedLevel.addChildren(entityPrototypes);
+			this.newEntities = entityPrototypes.map(epr => epr.createEntity());
+		});
+		events.listen('dragPrototypeToCanvas', prototypes => {
+			let entitiesInSelection = sceneEdit.copyEntitiesToScene(this.newEntities) || [];
+			this.clearState();
+			entitiesInSelection.forEach(entity => {
+				entity.getComponent('EditorWidget').select();
+			});
+			this.selectedEntities = entitiesInSelection;
+			this.selectSelectedEntitiesInEditor();
+			
+			this.draw();
+		});
+		events.listen('dragPrototypeToNonCanvas', () => {
+			this.clearState();
+			// this.draw();
 		});
 	}
+
 	// mousePos is optional
 	onMouseMove(mouseCoordinatePosition) {
 		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
 			return;
-		
+
 		performance.start('Editor: Scene');
-		
+
 		let mousePos = scene.mouseToWorld(mouseCoordinatePosition || this.previousMousePosInMouseCoordinates);
-		
+
 		if (mouseCoordinatePosition)
 			this.previousMousePosInMouseCoordinates = mouseCoordinatePosition;
 
@@ -404,6 +464,7 @@ class SceneModule extends Module {
 
 		performance.stop('Editor: Scene');
 	}
+
 	startListeningMovementInput() {
 		const clear = () => {
 			if (this.movementInputListener) {
@@ -412,75 +473,85 @@ class SceneModule extends Module {
 			}
 		};
 		clear();
-		
+
 		const cameraPositionSpeed = 8;
 		const cameraZoomSpeed = 0.02;
-		
+
 		const update = () => {
 			if (!scene)
 				return clear();
-			
+
 			let dx = 0,
 				dy = 0,
 				dz = 0;
-			
+
 			if (keyPressed(key.up) || keyPressed(key.w)) dy -= 1;
 			if (keyPressed(key.down) || keyPressed(key.s)) dy += 1;
 			if (keyPressed(key.left) || keyPressed(key.a)) dx -= 1;
 			if (keyPressed(key.right) || keyPressed(key.d)) dx += 1;
 			if (this.zoomInButtonPressed) dz += 1;
 			if (keyPressed(key.minus) || keyPressed(key.q)) dz -= 1;
-			
+
 			if (dx === 0 && dy === 0 && dz === 0) {
-				if (!MOVEMENT_KEYS.find(keyPressed)) 
+				if (!MOVEMENT_KEYS.find(keyPressed))
 					clear();
 			} else {
 				let speed = 1;
 				if (keyPressed(key.shift))
 					speed *= 3;
-				
+
 				let cameraMovementSpeed = speed * cameraPositionSpeed / scene.cameraZoom;
 				scene.cameraPosition.x = absLimit(scene.cameraPosition.x + dx * cameraMovementSpeed, 5000);
 				scene.cameraPosition.y = absLimit(scene.cameraPosition.y + dy * cameraMovementSpeed, 5000);
-				
-				
+
+
 				if (dz !== 0) {
 					let zoomMultiplier = 1 + speed * cameraZoomSpeed;
 					if (dz > 0)
 						scene.cameraZoom = Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier);
 					else if (dz < 0)
 						scene.cameraZoom = Math.max(MIN_ZOOM, scene.cameraZoom / zoomMultiplier);
-					
+
 					scene.dispatch('zoomChange', scene.cameraZoom);
 				}
-				
+
+				this.cameraPositionOrZoomUpdated();
 				scene.updateCamera();
-				
+
 				this.onMouseMove();
-				
+
 				this.draw();
 			}
 		};
-		
+
 		if (scene && !scene.playing) {
 			this.movementInputListener = setInterval(update, 25);
 			update();
 		}
 	}
+	
+	cameraPositionOrZoomUpdated() {
+		if (scene && scene.isInInitialState()) {
+			this.editorCameraPosition = scene.cameraPosition.clone();
+			this.editorCameraZoom = scene.cameraZoom;
+		}
+	}
+
 	update() {
 		this.draw();
 	}
+
 	playingModeChanged() {
 		if (!scene) {
 			this.el.classList.add('noScene');
 			this.el.classList.remove('playing', 'hideScenePauseInformation');
 			return;
 		}
-		
+
 		let isInitialState = scene.isInInitialState();
-		
+
 		this.el.classList.toggle('isInitialState', isInitialState);
-		
+
 		if (scene.playing) {
 			this.el.classList.remove('noScene');
 			this.el.classList.add('hideScenePauseInformation', 'playing');
@@ -493,16 +564,16 @@ class SceneModule extends Module {
 			this.playButton.text.innerHTML = '<u>P</u>lay';
 		}
 	}
-	
+
 	makeSureSceneHasEditorLayer() {
 		if (!scene.editorLayer) {
 			scene.editorLayer = new PIXI.Container();
 			scene.stage.addChild(scene.editorLayer);
-			
+
 			scene.widgetLayer = new PIXI.Container();
 			scene.positionHelperLayer = new PIXI.Container();
 			scene.selectionLayer = new PIXI.Container();
-			
+
 			scene.editorLayer.addChild(
 				scene.widgetLayer,
 				scene.positionHelperLayer,
@@ -510,7 +581,7 @@ class SceneModule extends Module {
 			);
 		}
 	}
-	
+
 	fixAspectRatio() {
 		if (scene && this.canvas) {
 			let change = false;
@@ -524,24 +595,24 @@ class SceneModule extends Module {
 			}
 
 			// scene.renderer.resize(this.canvas.width, this.canvas.height);
-			
+
 			if (change) {
 				this.draw();
 			}
 		}
 	}
-	
+
 	draw() {
 		if (scene) {
 			if (!scene.playing) {
 				this.filterDeadSelection();
-				
+
 				scene.draw();
 
 				return; // PIXI refactor
-				
+
 				scene.context.strokeStyle = 'white';
-				
+
 				if (scene.level && scene.level.isEmpty()) {
 					this.drawEmptyLevel();
 				}
@@ -555,25 +626,26 @@ class SceneModule extends Module {
 			}, 700)
 		}
 	}
-	
+
 	drawNoLevel() {
 		/*
-		this.canvas.width = this.canvas.width;
-		let context = this.canvas.getContext('2d');
-		context.font = '20px arial';
-		context.fillStyle = 'white';
-		context.fillText('No level selected', 20, 35);
-		*/
+		 this.canvas.width = this.canvas.width;
+		 let context = this.canvas.getContext('2d');
+		 context.font = '20px arial';
+		 context.fillStyle = 'white';
+		 context.fillText('No level selected', 20, 35);
+		 */
 	}
+
 	drawEmptyLevel() {
 		/*
-		let context = this.canvas.getContext('2d');
-		context.font = '20px arial';
-		context.fillStyle = 'white';
-		context.fillText('Empty level. Click a type and place it here.', 20, 35);
-		*/
+		 let context = this.canvas.getContext('2d');
+		 context.font = '20px arial';
+		 context.fillStyle = 'white';
+		 context.fillText('Empty level. Click a type and place it here.', 20, 35);
+		 */
 	}
-	
+
 	clearSelectedEntities() {
 		this.selectedEntities.forEach(entity => {
 			if (entity._alive)
@@ -581,10 +653,10 @@ class SceneModule extends Module {
 		});
 		this.selectedEntities.length = 0;
 	}
-	
+
 	clearState() {
 		this.deleteNewEntities();
-		
+
 		if (this.widgetUnderMouse)
 			this.widgetUnderMouse.unhover();
 		this.widgetUnderMouse = null;
@@ -594,15 +666,15 @@ class SceneModule extends Module {
 		this.selectionStart = null;
 		this.selectionEnd = null;
 	}
-	
-	deleteNewEntities() {
+
+	deleteNewEntities() {
 		this.newEntities.forEach(e => {
 			e.prototype.delete();
 			e.delete();
 		});
 		this.newEntities.length = 0;
 	}
-	
+
 	selectSelectedEntitiesInEditor() {
 		editor.select(this.selectedEntities, this);
 		if (sceneEdit.shouldSyncLevelAndScene())
@@ -610,21 +682,25 @@ class SceneModule extends Module {
 		else
 			Module.activateOneOfModules(['instance'], false);
 	}
-	
+
 	stopAndReset() {
 		this.clearState();
 		if (editor.selection.type === 'ent') {
 			editor.select(editor.selection.items.map(ent => ent.prototype.prototype), this);
 		}
-		if (scene)
+		if (scene) {
 			scene.reset();
+			scene.cameraZoom = this.editorCameraZoom;
+			scene.cameraPosition = this.editorCameraPosition.clone();
+			scene.updateCamera();
+		}
 		this.playButton.icon.className = 'fa fa-play';
 		this.playingModeChanged();
 		this.draw();
-		
+
 		this.updatePropertyChangeCreationFilter();
 	}
-	
+
 	filterDeadSelection() {
 		removeTheDeadFromArray(this.selectedEntities);
 		removeTheDeadFromArray(this.entitiesToEdit);
@@ -637,11 +713,11 @@ class SceneModule extends Module {
 			}
 		}
 	}
-	
+
 	updatePropertyChangeCreationFilter() {
 		if (!scene)
 			return;
-		
+
 		if (scene.isInInitialState()) {
 			enableAllChanges();
 		} else if (editor.selection.type === 'ent') {

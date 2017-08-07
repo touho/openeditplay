@@ -92,8 +92,10 @@ export default class Scene extends Serializable {
 		let pos = new Vector(0, 0);
 		let count = 0;
 		this.getComponents('CharacterController').forEach(characterController => {
-			pos.add(characterController.Transform.position);
-			count++;
+			if (characterController._rootType) {
+				pos.add(characterController.Transform.position);
+				count++;
+			}
 		});
 		if (count > 0) {
 			this.cameraPosition.set(pos.divideScalar(count));

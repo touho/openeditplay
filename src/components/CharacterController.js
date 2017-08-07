@@ -6,6 +6,8 @@ import { getWorld, default as p2 } from '../feature/physics';
 import {PHYSICS_SCALE} from './Physics'
 import { absLimit } from '../util/algorithm';
 
+const JUMP_SAFE_DELAY = 0.1; // seconds
+
 Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the instance.',
@@ -23,6 +25,8 @@ Component.register({
 	prototype: {
 		init() {
 			this.Physics = this.entity.getComponent('Physics');
+
+			this.lastJumpTime = 0;
 
 			this.keyListener = listenKeyDown(keyCode => {
 				if (this.controlType !== 'jumper' || !this.scene.playing)
@@ -123,7 +127,9 @@ Component.register({
 			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump() {
-			if (this.checkIfCanJump()) {
+			if (this.scene.time > this.lastJumpTime + JUMP_SAFE_DELAY && this.checkIfCanJump()) {
+				this.lastJumpTime = this.scene.time;
+				
 				let bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
@@ -140,6 +146,9 @@ Component.register({
 			
 			let contactEquations = getWorld(this.scene).narrowphase.contactEquations;
 			let body = this.Physics.body;
+			
+			if (!body)
+				return false;
 			
 			if (body.sleepState === p2.Body.SLEEPING)
 				return true;

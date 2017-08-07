@@ -2003,7 +2003,7 @@ function createMaterial(owner, options) {
 		var o2 = m.options;
 		var contactMaterial = new p2.ContactMaterial(material, m, {
 			friction:				Math.min(o1.friction, o2.friction),
-			restitution:			o1.restitution * o2.restitution,
+			restitution:			Math.max(o1.restitution, o2.restitution), // If one is bouncy and other is not, collision is bouncy.
 			stiffness:				Math.min(o1.stiffness, o2.stiffness),
 			relaxation:				(o1.relaxation + o2.relaxation) / 2,
 			frictionStiffness:		Math.min(o1.frictionStiffness, o2.frictionStiffness),
@@ -2110,7 +2110,8 @@ function listenMouseDown(element, handler) {
 }
 // Requires listenMouseMove on the same element to get the mouse position
 function listenMouseUp(element, handler) {
-	element.addEventListener('mouseup', function (event) {
+	// listen document body because many times mouse is accidentally dragged outside of element
+	document.body.addEventListener('mouseup', function (event) {
 		if (typeof element._mx === 'number')
 			{ handler(new Vector(element._mx, element._my)); }
 		else
@@ -2324,17 +2325,23 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
 	
-	Scene.prototype.updateCamera = function updateCamera () {
-		if (this.playing) {
-			var pos = new Vector(0, 0);
-			var count = 0;
-			this.getComponents('CharacterController').forEach(function (characterController) {
+	Scene.prototype.setCameraPositionToPlayer = function setCameraPositionToPlayer () {
+		var pos = new Vector(0, 0);
+		var count = 0;
+		this.getComponents('CharacterController').forEach(function (characterController) {
+			if (characterController._rootType) {
 				pos.add(characterController.Transform.position);
 				count++;
-			});
-			if (count > 0) {
-				this.cameraPosition.set(pos.divideScalar(count));
 			}
+		});
+		if (count > 0) {
+			this.cameraPosition.set(pos.divideScalar(count));
+		}
+	};
+	
+	Scene.prototype.updateCamera = function updateCamera () {
+		if (this.playing) {
+			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
 		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
@@ -2520,6 +2527,12 @@ var Scene = (function (Serializable$$1) {
 			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
 			this.stage.pivot.y + mousePosition.y / this.cameraZoom
 		);
+	};
+	
+	Scene.prototype.setZoom = function setZoom (zoomLevel) {
+		if (zoomLevel)
+			{ this.cameraZoom = zoomLevel; }
+		this.dispatch('zoomChange', this.cameraZoom);
 	};
 
 	return Scene;
@@ -3016,7 +3029,6 @@ Serializable.registerSerializable(Level, 'lvl');
 
 Component.register({
 	name: 'Transform',
-	category: 'Core',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3028,7 +3040,7 @@ Component.register({
 
 Component.register({
 	name: 'TransformVariance',
-	category: 'Core',
+	description: 'Adds random factor to instance transform/orientation.',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3052,8 +3064,10 @@ Component.register({
 
 Component.register({
 	name: 'Shape',
+	category: 'Common',
 	icon: 'fa-stop',
 	allowMultiple: true,
+	description: 'Draws shape on the screen.',
 	properties: [
 		createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
 		createPropertyType('radius', 20, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
@@ -3232,6 +3246,7 @@ Component.register({
 
 Component.register({
 	name: 'Spawner',
+	description: 'Spawns types to world.',
 	properties: [
 		createPropertyType('typeName', '', createPropertyType.string),
 		createPropertyType('trigger', 'start', createPropertyType.enum, createPropertyType.enum.values('start', 'interval')),
@@ -3285,6 +3300,8 @@ Component.register({
 
 Component.register({
 	name: 'Trigger',
+	description: 'When _ then _.',
+	category: 'Logic',
 	allowMultiple: true,
 	properties: [
 		createPropertyType('trigger', 'playerComesNear', createPropertyType.enum, createPropertyType.enum.values('playerComesNear')),
@@ -3345,6 +3362,8 @@ var STATIC = p2$1.Body.STATIC;
 
 Component.register({
 	name: 'Physics',
+	category: 'Common',
+	description: 'Forms physical rules for <span style="color: #84ce84;">Shapes</span>.',
 	icon: 'fa-stop',
 	allowMultiple: false,
 	properties: [
@@ -3545,6 +3564,8 @@ Component.register({
 
 Component.register({
 	name: 'Particles',
+	category: 'Graphics',
+	description: 'Particle engine gives eye candy.',
 	allowMultiple: true,
 	properties: [
 		createPropertyType('startColor', new Color('#68c07f'), createPropertyType.color),
@@ -3882,9 +3903,12 @@ function absLimit(value, absMax) {
 		{ return value; }
 }
 
+var JUMP_SAFE_DELAY = 0.1; // seconds
+
 Component.register({
 	name: 'CharacterController',
-	category: 'Core',
+	description: 'Lets user control the instance.',
+	category: 'Common',
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
@@ -3900,6 +3924,8 @@ Component.register({
 			var this$1 = this;
 
 			this.Physics = this.entity.getComponent('Physics');
+
+			this.lastJumpTime = 0;
 
 			this.keyListener = listenKeyDown(function (keyCode) {
 				if (this$1.controlType !== 'jumper' || !this$1.scene.playing)
@@ -3992,8 +4018,8 @@ Component.register({
 
 			var bodyVelocity = this.Physics.body.velocity;
 
-			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed * PHYSICS_SCALE);
-			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed * PHYSICS_SCALE);
+			bodyVelocity[0] = absLimit(this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt), this.speed) * PHYSICS_SCALE;
+			bodyVelocity[1] = absLimit(this.calculateNewVelocity(bodyVelocity[1] / PHYSICS_SCALE, dy, dt), this.speed) * PHYSICS_SCALE;
 		},
 		moveJumper: function moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
@@ -4004,7 +4030,9 @@ Component.register({
 			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump: function jump() {
-			if (this.checkIfCanJump()) {
+			if (this.scene.time > this.lastJumpTime + JUMP_SAFE_DELAY && this.checkIfCanJump()) {
+				this.lastJumpTime = this.scene.time;
+				
 				var bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
@@ -4021,6 +4049,9 @@ Component.register({
 			
 			var contactEquations = getWorld(this.scene).narrowphase.contactEquations;
 			var body = this.Physics.body;
+			
+			if (!body)
+				{ return false; }
 			
 			if (body.sleepState === p2$1.Body.SLEEPING)
 				{ return true; }
@@ -4067,7 +4098,6 @@ Component.register({
 						{ velocity = -absVel; }
 				}
 			}
-			
 			return velocity;
 		}
 	}

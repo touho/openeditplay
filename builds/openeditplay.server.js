@@ -2106,7 +2106,7 @@ function createMaterial(owner, options) {
 		var o2 = m.options;
 		var contactMaterial = new p2.ContactMaterial(material, m, {
 			friction:				Math.min(o1.friction, o2.friction),
-			restitution:			o1.restitution * o2.restitution,
+			restitution:			Math.max(o1.restitution, o2.restitution), // If one is bouncy and other is not, collision is bouncy.
 			stiffness:				Math.min(o1.stiffness, o2.stiffness),
 			relaxation:				(o1.relaxation + o2.relaxation) / 2,
 			frictionStiffness:		Math.min(o1.frictionStiffness, o2.frictionStiffness),
@@ -2213,7 +2213,8 @@ function listenMouseDown(element, handler) {
 }
 // Requires listenMouseMove on the same element to get the mouse position
 function listenMouseUp(element, handler) {
-	element.addEventListener('mouseup', function (event) {
+	// listen document body because many times mouse is accidentally dragged outside of element
+	document.body.addEventListener('mouseup', function (event) {
 		if (typeof element._mx === 'number')
 			{ handler(new Vector(element._mx, element._my)); }
 		else
@@ -2431,8 +2432,10 @@ var Scene = (function (Serializable$$1) {
 		var pos = new Vector(0, 0);
 		var count = 0;
 		this.getComponents('CharacterController').forEach(function (characterController) {
-			pos.add(characterController.Transform.position);
-			count++;
+			if (characterController._rootType) {
+				pos.add(characterController.Transform.position);
+				count++;
+			}
 		});
 		if (count > 0) {
 			this.cameraPosition.set(pos.divideScalar(count));
@@ -4003,6 +4006,8 @@ function absLimit(value, absMax) {
 		{ return value; }
 }
 
+var JUMP_SAFE_DELAY = 0.1; // seconds
+
 Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the instance.',
@@ -4022,6 +4027,8 @@ Component.register({
 			var this$1 = this;
 
 			this.Physics = this.entity.getComponent('Physics');
+
+			this.lastJumpTime = 0;
 
 			this.keyListener = listenKeyDown(function (keyCode) {
 				if (this$1.controlType !== 'jumper' || !this$1.scene.playing)
@@ -4126,7 +4133,9 @@ Component.register({
 			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
 		},
 		jump: function jump() {
-			if (this.checkIfCanJump()) {
+			if (this.scene.time > this.lastJumpTime + JUMP_SAFE_DELAY && this.checkIfCanJump()) {
+				this.lastJumpTime = this.scene.time;
+				
 				var bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
@@ -4143,6 +4152,9 @@ Component.register({
 			
 			var contactEquations = getWorld(this.scene).narrowphase.contactEquations;
 			var body = this.Physics.body;
+			
+			if (!body)
+				{ return false; }
 			
 			if (body.sleepState === p2$1.Body.SLEEPING)
 				{ return true; }

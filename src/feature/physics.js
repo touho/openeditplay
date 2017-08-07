@@ -85,7 +85,7 @@ export function createMaterial(owner, options) {
 		let o2 = m.options;
 		let contactMaterial = new p2.ContactMaterial(material, m, {
 			friction:				Math.min(o1.friction, o2.friction),
-			restitution:			o1.restitution * o2.restitution,
+			restitution:			Math.max(o1.restitution, o2.restitution), // If one is bouncy and other is not, collision is bouncy.
 			stiffness:				Math.min(o1.stiffness, o2.stiffness),
 			relaxation:				(o1.relaxation + o2.relaxation) / 2,
 			frictionStiffness:		Math.min(o1.frictionStiffness, o2.frictionStiffness),

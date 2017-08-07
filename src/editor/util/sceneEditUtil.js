@@ -218,11 +218,16 @@ export function copyEntitiesToScene(entities) {
 				return epr;
 			});
 			editor.selectedLevel.addChildren(entityPrototypes);
-			scene.addChildren(entityPrototypes.map(epr => epr.createEntity()));
+			let newEntities = entityPrototypes.map(epr => epr.createEntity());
+			scene.addChildren(newEntities);
+			return newEntities;
 		} else {
-			scene.addChildren(entities.map(e => e.clone()));
+			let newEntities = entities.map(e => e.clone());
+			scene.addChildren(newEntities);
+			return newEntities;
 		}
 	}
+	return null;
 }
 
 export function getWidgetUnderMouse(mousePos) {

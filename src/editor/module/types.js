@@ -177,30 +177,57 @@ class Types extends Module {
 	}
 }
 
+$(document).on('dnd_start.vakata', function (e, data) {
+	let nodeObjects = data.data.nodes.map(getSerializable);
+	events.dispatch('dragPrototypeStarted', nodeObjects);
+});
+
+$(document).on('dnd_move.vakata', function (e, data) {
+	if (data.event.target.nodeName === 'CANVAS') {
+		data.helper.find('.jstree-icon').css({
+			visibility: 'hidden'
+		});
+	} else {
+		data.helper.find('.jstree-icon').css({
+			visibility: 'visible'
+		});
+	}
+});
+
 $(document).on('dnd_stop.vakata', function (e, data) {
 	let jstree = $('#types-jstree').jstree(true);
-	let typesModule = $('#types-jstree').data('typesModule');
+	// let typesModule = $('#types-jstree').data('typesModule');
 	
 	setTimeout(function () {
 		// Now the nodes have moved in the DOM.
 
-		let node = jstree.get_node(data.data.obj);
-		let nodes = data.data.nodes; // these prototypes will move
-		let newParent;
-		if (node.parent === '#')
-			newParent = editor.game;
-		else
-			newParent = getSerializable(node.parent);
-		
-		let nodeObjects = nodes.map(getSerializable);
-		nodeObjects.forEach(assert);
-		nodeObjects.forEach(prototype => {
-			setChangeOrigin(jstree);
-			prototype.move(newParent);
-		});
-		
-		// console.log('dnd stopped from', nodes, 'to', newParent);
-	});
+		if (data.event.target.nodeName === 'CANVAS') {
+			// Drag entity to scene
+			let nodeObjects = data.data.nodes.map(getSerializable);
+			events.dispatch('dragPrototypeToCanvas', nodeObjects);
+		} else {
+			// Drag prototype in types view
+			
+			let node = jstree.get_node(data.data.obj);
+			let nodes = data.data.nodes; // these prototypes will move
+			let newParent;
+			if (node.parent === '#')
+				newParent = editor.game;
+			else
+				newParent = getSerializable(node.parent);
+
+			let nodeObjects = nodes.map(getSerializable);
+			nodeObjects.forEach(assert);
+			nodeObjects.forEach(prototype => {
+				setChangeOrigin(jstree);
+				prototype.move(newParent);
+			});
+
+			events.dispatch('dragPrototypeToNonCanvas', nodeObjects);
+
+			// console.log('dnd stopped from', nodes, 'to', newParent);
+		}
+	}, 0);
 });
 
 Module.register(Types, 'left');

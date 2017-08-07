@@ -97,7 +97,8 @@ export function listenMouseDown(element, handler) {
 }
 // Requires listenMouseMove on the same element to get the mouse position
 export function listenMouseUp(element, handler) {
-	element.addEventListener('mouseup', event => {
+	// listen document body because many times mouse is accidentally dragged outside of element
+	document.body.addEventListener('mouseup', event => {
 		if (typeof element._mx === 'number')
 			handler(new Vector(element._mx, element._my));
 		else
