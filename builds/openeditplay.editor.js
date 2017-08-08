@@ -6548,7 +6548,12 @@ var Types = (function (Module$$1) {
 			this, this.addButton = el('span.addTypeButton.button.fa.fa-plus'),
 			this.search = el('input'),
 			this.searchIcon = el('i.fa.fa-search.searchIcon'),
-			this.jstree = el('div')
+			this.jstree = el('div'),
+			this.helperText = el('div.typesDragHelper',
+				el('i.fa.fa-long-arrow-right'),
+				'Drag',
+				el('i.fa.fa-long-arrow-right')
+			)
 		);
 		this.id = 'types';
 		this.name = 'Types';
@@ -6657,10 +6662,13 @@ var Types = (function (Module$$1) {
 		}, true);
 
 		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
+		this.helperText.classList.toggle('hidden', data.length === 0);
 		
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', function (e, data) {
-				this$1.addButton.classList.toggle('clickMeEffect', editor.game.getChildren('prt').length === 0);
+				var noPrototypes = editor.game.getChildren('prt').length === 0;
+				this$1.addButton.classList.toggle('clickMeEffect', noPrototypes);
+				this$1.helperText.classList.toggle('hidden', noPrototypes);
 				
 				if (this$1.externalChange || data.selected.length === 0)
 					{ return; }

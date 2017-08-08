@@ -13,7 +13,12 @@ class Types extends Module {
 			this.addButton = el('span.addTypeButton.button.fa.fa-plus'),
 			this.search = el('input'),
 			this.searchIcon = el('i.fa.fa-search.searchIcon'),
-			this.jstree = el('div')
+			this.jstree = el('div'),
+			this.helperText = el('div.typesDragHelper',
+				el('i.fa.fa-long-arrow-right'),
+				'Drag',
+				el('i.fa.fa-long-arrow-right')
+			)
 		);
 		this.id = 'types';
 		this.name = 'Types';
@@ -116,10 +121,13 @@ class Types extends Module {
 		}, true);
 
 		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
+		this.helperText.classList.toggle('hidden', data.length === 0);
 		
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
-				this.addButton.classList.toggle('clickMeEffect', editor.game.getChildren('prt').length === 0);
+				let noPrototypes = editor.game.getChildren('prt').length === 0;
+				this.addButton.classList.toggle('clickMeEffect', noPrototypes);
+				this.helperText.classList.toggle('hidden', noPrototypes);
 				
 				if (this.externalChange || data.selected.length === 0)
 					return;
