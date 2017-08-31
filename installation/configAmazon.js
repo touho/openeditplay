@@ -1,0 +1,5 @@
+global.config = {
+	db: {
+		hostname: ...
+	}
+};
