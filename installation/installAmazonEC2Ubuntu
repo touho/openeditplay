@@ -6,29 +6,36 @@ cd "$(dirname "$0")"
 # to root directory
 cd ..
 
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | bash;
+echo "Installing nvm"
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | bash >/dev/null;
 . ~/.nvm/nvm.sh
 
-nvm install 8
-
-node -e "console.log('Running Node.js ' + process.version)"
+echo "Installing Node.js"
+nvm install 8 >/dev/null
 
 mkdir gameData
 
-npm install --production
+echo "Installing Open Edit Play"
+npm install --production >/dev/null
 
+echo "Updating apt-get"
+sudo apt-get update >/dev/null
 
-sudo apt-get update
-yes Y | sudo apt-get install nginx
+echo "Installing nginx"
+yes Y | sudo apt-get install nginx >/dev/null
 
-sudo cp installation/nginxConfig /etc/nginx/sites-available/openeditplay
-sudo ln -s /etc/nginx/sites-available/openeditplay /etc/nginx/sites-enabled/openeditplay
-sudo rm /etc/nginx/sites-enabled/default
-sudo service nginx restart
+echo "Setupping nginx"
+sudo cp installation/nginxConfig /etc/nginx/sites-available/openeditplay >/dev/null
+sudo ln -s /etc/nginx/sites-available/openeditplay /etc/nginx/sites-enabled/openeditplay >/dev/null
+sudo rm /etc/nginx/sites-enabled/default >/dev/null
+sudo service nginx restart >/dev/null
 
-sudo npm i -g pm2
-sudo pm2 startup
-sudo pm2 start server.js --name openeditplay
-sudo pm2 save
+echo "Installing pm2"
+npm i -g pm2 >/dev/null
+#sudo pm2 startup # doesn't work with sudo. would require 
 
-echo "Open Edit Play server installed. To run it type 'node server.js'"
+echo "Starting Open Edit Play server"
+pm2 start server.js --name openeditplay
+pm2 save >/dev/null
+
+#echo "Open Edit Play server installed. To run it type 'node server.js'"
