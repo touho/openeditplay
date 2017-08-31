@@ -3,6 +3,6 @@
 # If nvm not installed, install it.
 hash nvm 2>/dev/null || {
     echo "Installing nvm";
-    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | bash
-    source ~/.bashrc
+    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | bash;
+    source ~/.bashrc;
 }
