@@ -21,7 +21,7 @@ npm install --production
 sudo apt-get update
 yes Y | sudo apt-get install nginx
 
-sudo cp nginxConfig /etc/nginx/sites-available/openeditplay
+sudo cp installation/nginxConfig /etc/nginx/sites-available/openeditplay
 sudo ln -s /etc/nginx/sites-available/openeditplay /etc/nginx/sites-enabled/openeditplay
 sudo rm /etc/nginx/sites-enabled/default
 sudo service nginx restart
