@@ -35,7 +35,12 @@ npm i -g pm2 >/dev/null
 #sudo pm2 startup # doesn't work with sudo. would require 
 
 echo "Starting Open Edit Play server"
-pm2 start server.js --name openeditplay
+pm2 start server.js --name openeditplay >/dev/null
 pm2 save >/dev/null
 
-#echo "Open Edit Play server installed. To run it type 'node server.js'"
+pm2 startup | grep sudo | bash >/dev/null
+
+echo ""
+echo "[ Open Edit Play ]"
+echo ""
+echo "Server is up and running. It will also start on reboot."
