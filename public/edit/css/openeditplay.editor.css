@@ -389,6 +389,9 @@ img.logo:hover {
   float: right;
   clear: both;
 }
+.sceneEditorSideBarButtons .movement {
+  opacity: 0.5;
+}
 .sceneContextButtons {
   float: right;
   clear: both;
