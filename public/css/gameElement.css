@@ -1,0 +1,111 @@
+
+.gameElement {
+    width: 400px;
+    height: 200px;
+    display: inline-block;
+    text-align: left;
+
+    margin: 10px;
+    
+    background: white;
+    box-shadow: rgba(0, 0, 0, 0.13) 0 0 9px 3px;
+    /*border: 1px solid rgba(1, 212, 29, 0.31);*/
+
+    border-radius: 4px;
+}
+.moreGamesGame {
+    width: 400px;
+    height: 200px;
+    display: inline-block;
+    margin: 10px;
+    vertical-align: bottom;
+    position: relative;
+}
+.moreGamesGame .linkButton {
+    margin-top: 80px;
+}
+
+.gameElementName {
+    /*border: 1px solid black;*/
+    
+    /*background: #d1d2ca;*/
+    /*font-size: 20px;*/
+    background: #99a797;
+    background: linear-gradient(to bottom, #b6d1b7, #94a997);
+    
+    /*background: #7cd273;*/
+    
+    padding: 10px;
+    color: white;
+    text-shadow: rgba(0, 0, 0, 0.4) 0 1px 3px;
+    
+    font-size: 18px;
+
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.gameElementContent {
+    /*text-align: left;*/
+    display: flex;
+    flex-direction: row;
+    flex-
+}
+
+.gameElementStats {
+    width: 250px;
+    display: inline-block;
+    padding: 10px;
+}
+
+.gameStat {
+    display: flex;
+    flex-direction: row;
+}
+
+.gameStat .key {
+    display: inline-block;
+    width: 70px;
+    color: #00c700;
+    text-shadow: rgba(2, 169, 0, 0.1) 0 1px 1px;
+}
+.gameStat .value {
+    display: inline-block;
+}
+
+.gameElementButtons {
+    display: inline-block;
+    text-align: center;
+    flex: 1;
+    padding: 25px;
+    /*padding-top: 20px;*/
+}
+
+.linkButton {
+    max-width: 200px;
+    display: block;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+    padding: 9px 18px;
+    border-radius: 5px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+    text-shadow: #2d4f2a 0px 1px 4px;
+    border: 1px solid #5ebf5e;
+    background-color: #42cc42;
+    background: linear-gradient(to bottom, #9bff82, #4fb157);
+    box-shadow: rgba(45, 103, 47, 0.77) 1px 2px 6px 1px;
+}
+.linkButton:hover {
+    opacity: 1;
+}
+.playButton {
+    margin-bottom: 10px;
+}
+.editButton {
+    filter: grayscale(80%);
+    font-size: 16px;
+    padding: 7px 15px;
+}

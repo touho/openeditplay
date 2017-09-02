@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="/img/logo_graphics.png" />
+    <link rel="stylesheet" href="css/front.css">
+    <link rel="stylesheet" href="css/gameElement.css">
+    <script src="/js/redom.min.js"></script>
+    <script src="/js/util.js"></script>
+    <script src="/js/gameElement.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Open Edit Play</title>
+</head>
+<body>
+
+<div id="topBar"></div>
+
+<div id="topArea">
+    <div id="topAreaBackground"></div>
+    <div id="title">Open Edit Play</div>
+    <a id="createGameButton" href="/edit/?gameId=?">Create Game</a>
+</div>
+
+<div id="gameList">
+    <div class="sectionTitle">GAMES</div>
+    
+    <div id="gameListContent">
+        
+    </div>
+</div>
+
+<script>
+    window.onload = function() {
+    	var gameListContent = document.getElementById('gameListContent');
+		getAjax('/api/gameListSample').then(function(gameListData) {
+			
+			var gameList = new GameList();
+			gameList.update(gameListData);
+			
+			redom.mount(gameListContent, gameList);
+        });
+    }
+</script>
+
+</body>
+</html>

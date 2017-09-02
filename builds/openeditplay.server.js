@@ -3867,7 +3867,6 @@ Component.register({
 			// Fast color interpolation
 			var startColor = this.startColor;
 			var endColor = this.endColor;
-			var rMultiplier = 256 * 256;
 			function colorLerp(lerp) {
 				var startMultiplier = 1 - lerp;
 				var r = (startColor.r * startMultiplier + endColor.r * lerp) | 0; // to int
@@ -4510,15 +4509,6 @@ function getConnectionsForGameServer(gameId) {
 }
 
 var _ = require('lodash');
-function readFileSync(filename) {
-	return fs.readFileSync((DIR_TEMPLATE + "/" + filename));
-}
-
-
-function createTemplateSync(filename) {
-	var fileData = readFileSync(filename);
-	return _.template(fileData);
-}
 
 var express = require('express');
 var app = express();
@@ -4533,20 +4523,8 @@ app.use(compression({
 }));
 app.use(express.static('public'));
 
-var frontPageTemplate = createTemplateSync('frontPage.html');
-app.get('/', function (req, res) {
-	res.send(frontPageTemplate({
-		gameInfo: cachedGameInfo
-	}));
-	/*
-	getGameIdList().then(gameIds => {
-		res.send(frontPageTemplate({
-			gameIds
-		}));
-	}).catch(err => {
-		res.status(500).send('Error');
-	});
-	*/
+app.get('/api/gameListSample', function (req, res) {
+	res.send(cachedGameInfo);
 });
 
 http.listen(3000, function(){

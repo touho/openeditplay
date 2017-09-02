@@ -198,7 +198,6 @@ Component.register({
 			// Fast color interpolation
 			const startColor = this.startColor;
 			const endColor = this.endColor;
-			const rMultiplier = 256 * 256;
 			function colorLerp(lerp) {
 				let startMultiplier = 1 - lerp;
 				let r = (startColor.r * startMultiplier + endColor.r * lerp) | 0; // to int

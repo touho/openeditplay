@@ -18,20 +18,8 @@ app.use(compression({
 }));
 app.use(express.static('public'));
 
-let frontPageTemplate = createTemplateSync('frontPage.html');
-app.get('/', (req, res) => {
-	res.send(frontPageTemplate({
-		gameInfo: cachedGameInfo
-	}));
-	/*
-	getGameIdList().then(gameIds => {
-		res.send(frontPageTemplate({
-			gameIds
-		}));
-	}).catch(err => {
-		res.status(500).send('Error');
-	});
-	*/
+app.get('/api/gameListSample', (req, res) => {
+	res.send(cachedGameInfo);
 });
 
 http.listen(3000, function(){

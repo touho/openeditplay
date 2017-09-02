@@ -1,19 +1,14 @@
-let db = global.db = module.exports;
+let db = module.exports;
 
-async function createConnection() {
+async function createConnection(config) {
 	const mysql = require('mysql2/promise');
-	return await mysql.createConnection({
-		host: 'localhost',
-		user: 'openeditplay',
-		database: 'openeditplay',
-		password: 'openeditplay'
-	});
+	return await mysql.createConnection(config || global.config.db);
 }
-let getConnection = Promise.resolve().then(createConnection);
-global.getConnection = getConnection; //temp. remove me.
+let connectionPromise = Promise.resolve().then(createConnection);
+db.connectionPromise = connectionPromise;
 
 db.query = async function() {
-	let connection = await getConnection;
+	let connection = await connectionPromise;
 	let rows = (await connection.execute(...arguments))[0];
 	return rows;
 };

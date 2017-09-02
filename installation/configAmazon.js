@@ -1,5 +1,10 @@
 global.config = {
 	db: {
-		hostname: ...
+		host: 'localhost',
+		user: 'openeditplay',
+		database: 'openeditplay',
+		password: 'openeditplay',
+		port: 3306
 	}
+
 };

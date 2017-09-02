@@ -1,0 +1,89 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: Arial;
+    text-align: center;
+    /*background: #f1f7f0;*/
+    background: #eee;
+}
+
+#topArea {
+    height: 400px;
+    position: relative;
+    background: black;
+    text-align: center;
+    user-select: none;
+}
+#topAreaBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("../img/header-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.5;
+    z-index: 1;
+}
+
+#title {
+    display: inline-block;
+    width: 100%;
+    z-index: 2;
+    color: white;
+    font-size: 9vw;
+    font-weight: bold;
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    transform: translateX(-50%);
+    opacity: 0.4;
+    text-shadow: rgba(255, 255, 255, 0.63) 1px 4px 12px;
+    cursor: default;
+}
+@media (min-width: 1111px) {
+    #title {
+        font-size: 100px;
+    }
+}
+
+#createGameButton {
+    display: inline-block;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    text-shadow: #2d4f2a 0px 1px 4px;
+    border: 1px solid #5ebf5e;
+    background-color: #42cc42;
+    background: linear-gradient(to bottom, #9bff82, #4fb157);
+    box-shadow: rgba(125, 255, 129, 0.77) 0px 0px 23px 1px;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    position: absolute;
+    left: 50%;
+    top: 70%;
+    transform: translateX(-50%);
+    z-index: 2;
+    opacity: 0.9;
+}
+#createGameButton:hover {
+    opacity: 1;
+}
+
+.sectionTitle {
+    font-size: 40px;
+    font-weight: bold;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+#gameList {
+    padding: 20px;
+    padding-top: 70px;
+}
