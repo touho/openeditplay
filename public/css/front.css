@@ -29,7 +29,7 @@ html, body {
     background: linear-gradient(to bottom, #3e3e3e, #1d1d1d);
     box-shadow: black 0 2px 14px -2px;
     opacity: 0;
-    transition: opacity 0.7s;
+    /*transition: opacity 0.7s;*/
 }
 #topBar a {
     color: #dddddd;

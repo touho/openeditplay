@@ -20,9 +20,15 @@
 <div id="fullscreenInfo">Click for fullscreen</div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-	document.addEventListener("touchmove", function(event){
+    function preventDefault(event) {
 		event.preventDefault();
-	});
+    }
+	document.addEventListener("touchmove", preventDefault);
+	document.addEventListener("touchstart", preventDefault);
+	document.addEventListener("touchend", preventDefault);
+	
+	if (window.navigator.standalone)
+		document.body.classList.add('nativeFullscreen');
 </script>
 </body>
 </html>

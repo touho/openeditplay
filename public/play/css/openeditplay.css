@@ -1,3 +1,10 @@
+* {
+  user-select: none !important;
+  -moz-user-select: none !important;
+  -webkit-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
 html, body {
   position: relative;
   width: 100%;
@@ -43,12 +50,11 @@ canvas {
   left: 0;
   width: 50px;
   height: 30px;
-  color: white;
+  color: #bdbdbd;
   font-weight: bold;
   z-index: 10;
+  visibility: hidden;
 }
-@media (min-width: 800px) {
-  #backButton {
-    display: none;
-  }
+body.nativeFullscreen #backButton {
+  visibility: visible;
 }

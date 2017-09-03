@@ -98,9 +98,12 @@
 		});
 
 		var topBarBackground = document.getElementById('topBarBackground');
-		if (IS_SMALL_DEVICE) {
+		
+		if (IS_SMALL_DEVICE)
 			document.body.classList.add('isSmallDevice');
-			// In small devices, just show the top bar always. In iOS, scolling events can't be trusted.
+		
+		if (window.navigator.standalone) {
+			// In standalone mode, just show the top bar always. In iOS, scolling events can't be trusted.
 			topBarBackground.style.opacity = 1;
 		} else {
 			// In large devices, do mooth scrolling experience

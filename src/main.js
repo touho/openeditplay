@@ -28,6 +28,7 @@ function resizeCanvas() {
 
 
 // Fullscreen
+/*
 if (fullscreen.fullscreenSupport()) {
 	window.addEventListener('click', () => fullscreen.toggleFullscreen(window.document.body));
 }
@@ -37,3 +38,4 @@ setTimeout(() => {
 setTimeout(() => {
 	document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 }, 3000);
+*/

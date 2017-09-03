@@ -4286,46 +4286,6 @@ function tryToLoad() {
 if (isClient)
 	{ tryToLoad(); }
 
-function fullscreenSupport() {
-	return isClient && (
-		window.document.fullscreenEnabled ||
-		window.document.webkitFullscreenEnabled ||
-		window.document.mozFullScreenEnabled ||
-		window.document.msFullscreenEnabled
-	);
-}
-
-function requestFullscreen(element) {
-	if (element.requestFullscreen) { element.requestFullscreen(); }
-	else if (element.webkitRequestFullscreen) { element.webkitRequestFullscreen(); }
-	else if (element.mozRequestFullScreen) { element.mozRequestFullScreen(); }
-	else if (element.msRequestFullscreen) { element.msRequestFullscreen(); }
-}
-
-function exitFullscreen() {
-	if (document.exitFullscreen) { document.exitFullscreen(); }
-	else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
-	else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); }
-	else if (document.msExitFullscreen) { document.msExitFullscreen(); }
-}
-
-function isFullscreen() {
-	return !!(
-		document.fullscreenElement ||
-		document.webkitFullscreenElement ||
-		document.mozFullScreenElement ||
-		document.msFullscreenElement
-	);
-}
-
-function toggleFullscreen(element) {
-	if (isFullscreen()) {
-		exitFullscreen();
-	} else {
-		requestFullscreen(element);
-	}
-}
-
 disableAllChanges();
 
 startSceneWhenGameLoaded();
@@ -4349,15 +4309,17 @@ function resizeCanvas() {
 
 
 // Fullscreen
-if (fullscreenSupport()) {
-	window.addEventListener('click', function () { return toggleFullscreen(window.document.body); });
+/*
+if (fullscreen.fullscreenSupport()) {
+	window.addEventListener('click', () => fullscreen.toggleFullscreen(window.document.body));
 }
-setTimeout(function () {
+setTimeout(() => {
 	document.getElementById('fullscreenInfo').classList.add('showSlowly');
 }, 1000);
-setTimeout(function () {
+setTimeout(() => {
 	document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 }, 3000);
+*/
 
 })));
 //# sourceMappingURL=openeditplay.js.map
