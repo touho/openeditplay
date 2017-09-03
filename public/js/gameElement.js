@@ -6,7 +6,7 @@ function GameList() {
 		/*
 		,
 		el('div.moreGamesGame',
-			el('a.linkButton.playButton', { href: '/games' }, 'More Games...')
+			el('a.linkButton.gameElement.playButton', { href: '/games' }, 'More Games...')
 		)
 		*/
 	);

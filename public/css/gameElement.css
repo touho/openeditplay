@@ -13,6 +13,7 @@
 
     border-radius: 4px;
 }
+/*
 .moreGamesGame {
     width: 400px;
     height: 200px;
@@ -21,6 +22,7 @@
     vertical-align: bottom;
     position: relative;
 }
+*/
 .moreGamesGame .linkButton {
     margin-top: 80px;
 }
@@ -108,4 +110,15 @@
     filter: grayscale(80%);
     font-size: 16px;
     padding: 7px 15px;
+}
+
+@media (max-width: 900px) {
+    .gameElement {
+        width: 45%;
+    }
+}
+@media (max-width: 650px) {
+    .gameElement {
+        width: 95%;
+    }
 }
