@@ -9,6 +9,44 @@ html, body {
     text-align: center;
     /*background: #f1f7f0;*/
     background: #eee;
+    background-image: url("/img/bg_pattern.png");
+}
+
+#topBar {
+    width: 100vw;
+    position: fixed;
+    z-index: 1000;
+    height: 40px;
+    text-align: center;
+}
+#topBarBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    background: linear-gradient(to bottom, #3e3e3e, #1d1d1d);
+    box-shadow: black 0 2px 14px -2px;
+    opacity: 0;
+}
+#topBar a {
+    color: #dddddd;
+    text-decoration: none;
+    font-size: 18px;
+    position: relative;
+    top: 9px;
+    margin: 0px 10px;
+    font-weight: bold;
+}
+#topBar a:hover {
+    /*color: #52bb52;*/
+    /*text-shadow: #52bb52 0 0 1px;*/
+    text-shadow: #bcffc2 1px 1px 3px;
+}
+
+#createGameTopBarButton {
+    color: #8ec983 !important;
 }
 
 #topArea {
@@ -81,9 +119,66 @@ html, body {
     font-weight: bold;
     margin-bottom: 30px;
     color: #333;
+    z-index: 4;
+}
+
+.section {
+    padding: 70px 20px;
 }
 
 #gameList {
-    padding: 20px;
-    padding-top: 70px;
+    background-image: url("/img/bg_pattern.png");
+}
+
+#about {
+    
+    background: #fafffb;
+    margin: 0px auto;
+    width: 90%;
+    max-width: 900px;
+    padding: 60px 5vw;
+}
+
+#about p {
+    text-align: left;
+}
+
+#aboutListTitle {
+    font-size: 20px;
+    color: gray;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+#aboutList {
+    display: inline-block;
+    text-align: left;
+    max-width: 400px;
+    color: #404040;
+    margin-top: 50px;
+}
+
+.normalLink {
+    text-decoration: none;
+    color: #64d662;
+}
+
+li {
+    margin-bottom: 10px;
+}
+
+#openEditPlayExplanation {
+    text-align: left;
+    margin-top: 50px;
+}
+
+#footer {
+    padding: 30px;
+    background: #484a48;
+    color: gray;
+    font-size: 12px;
+}
+#footer a {
+    text-decoration: none;
+    color: gray;
 }
