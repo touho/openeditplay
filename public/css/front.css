@@ -115,6 +115,29 @@ html, body {
     opacity: 1;
 }
 
+#tooSmallScreen {
+    visibility: hidden;
+    display: inline-block;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    text-shadow: #2d4f2a 0px 1px 4px;
+    border: 1px solid #5ebf5e;
+    background-color: #42cc42;
+    background: linear-gradient(to bottom, #9bff82, #4fb157);
+    box-shadow: rgba(136, 164, 134, 0.77) 0px 0px 23px 1px;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    position: absolute;
+    left: 50%;
+    top: 70%;
+    transform: translateX(-50%);
+    z-index: 2;
+    filter: grayscale(100%);  
+    width: 250px;
+}
+
 .sectionTitle {
     font-size: 40px;
     font-weight: bold;
@@ -182,4 +205,13 @@ li {
 #footer a {
     text-decoration: none;
     color: gray;
+}
+
+body.isSmallDevice #createGameButton,
+body.isSmallDevice #createGameTopBarButton,
+body.isSmallDevice .editButton {
+    display: none;
+}
+body.isSmallDevice #tooSmallScreen {
+    visibility: visible;
 }

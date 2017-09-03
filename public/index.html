@@ -29,6 +29,7 @@
     <div id="topAreaBackground"></div>
     <div id="title">Open Edit Play</div>
     <a id="createGameButton" href="/edit/?gameId=?">Create Game</a>
+    <div id="tooSmallScreen">Use desktop browser to create games</div>
 </div>
 
 <div id="gameList" class="section">
@@ -84,6 +85,8 @@
 </div>
 
 <script>
+    window.IS_SMALL_DEVICE = window.screen.width < 800;
+    
 	window.onload = function () {
 		var gameListContent = document.getElementById('gameListContent');
 		getAjax('/api/gameListSample').then(function (gameListData) {
@@ -95,7 +98,11 @@
 		});
 
 		var topBarBackground = document.getElementById('topBarBackground');
-		if (window.screen.width > 800) {
+		if (IS_SMALL_DEVICE) {
+			document.body.classList.add('isSmallDevice');
+			// In small devices, just show the top bar always. In iOS, scolling events can't be trusted.
+			topBarBackground.style.opacity = 1;
+		} else {
 			// In large devices, do mooth scrolling experience
             
 			window.onscroll = function () {
@@ -115,10 +122,7 @@
 				}
 			};
 			window.onscroll();
-		} else {
-			// In small devices, just show the top bar always. In iOS, scolling events can't be trusted.
-			topBarBackground.style.opacity = 1;
-        }
+		}
 	}
 </script>
 

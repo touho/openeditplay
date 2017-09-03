@@ -24,7 +24,13 @@ function Game() {
 		el('div.gameElementContent',
 			this.gameStats = redom.list('div.gameElementStats', GameStat),
 			el('div.gameElementButtons',
-				this.playButton = el('a.linkButton.playButton', 'Play'),
+				this.playButton = el('a.linkButton.playButton', 'Play', {
+					onclick: function(e) {
+						e.preventDefault();
+						var url = e.target.getAttribute('href');
+						window.location.href = url;
+					}
+				}),
 				this.editButton = el('a.linkButton.editButton', 'Edit')
 			)
 		)

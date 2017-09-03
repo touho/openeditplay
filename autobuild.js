@@ -83,11 +83,13 @@ if (!global.TARGET_NONE) {
 			optimize: true
 		});
 
+		/*
 		if (target === 'all') {
 			buildCss('src/main.scss', 'builds/openeditplay.css', () => {
 				copy('builds/openeditplay.cs*', 'public/play/css/');
 			});
 		}
+		*/
 	}
 
 	// Editor JS

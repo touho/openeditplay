@@ -15,8 +15,14 @@
     <script src="openeditplay.js"></script>
 </head>
 <body>
+<a id="backButton" href="/"> Back </a>
 <canvas id="canvas" class="openEditPlayCanvas"></canvas>
 <div id="fullscreenInfo">Click for fullscreen</div>
 <script src="/socket.io/socket.io.js"></script>
+<script>
+	document.addEventListener("touchmove", function(event){
+		event.preventDefault();
+	});
+</script>
 </body>
 </html>
