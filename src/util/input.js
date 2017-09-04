@@ -136,3 +136,15 @@ if (typeof window !== 'undefined') {
 		keyUpListeners.forEach(l => l(key));
 	};
 }
+
+export function simulateKeyEvent(eventName, keyCode) {
+	if (eventName === 'keydown') {
+		window.onkeydown({
+			keyCode
+		});
+	} else if (eventName === 'keyup') {
+		window.onkeyup({
+			keyCode
+		});
+	}
+}

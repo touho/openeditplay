@@ -18,17 +18,18 @@
 <a id="backButton" href="/"> Back </a>
 <canvas id="canvas" class="openEditPlayCanvas"></canvas>
 <div id="fullscreenInfo">Click for fullscreen</div>
+<div id="touchUI">
+    <div id="touchArrows">
+        <div id="touchUp"><span>Up</span></div>
+        <div id="touchDown"><span>Down</span></div>
+        <div id="touchLeft"><span>Left</span></div>
+        <div id="touchRight"><span>Right</span></div>
+    </div>
+    <div id="touchButtons">
+        <div id="touchA"><span>A</span></div>
+        <div id="touchB"><span>B</span></div>
+    </div>
+</div>
 <script src="/socket.io/socket.io.js"></script>
-<script>
-    function preventDefault(event) {
-		event.preventDefault();
-    }
-	document.addEventListener("touchmove", preventDefault);
-	document.addEventListener("touchstart", preventDefault);
-	document.addEventListener("touchend", preventDefault);
-	
-	if (window.navigator.standalone)
-		document.body.classList.add('nativeFullscreen');
-</script>
 </body>
 </html>

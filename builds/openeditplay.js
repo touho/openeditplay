@@ -716,10 +716,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
-// info about type, validator, validatorParameters, initialValue
-
-
-
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -2175,6 +2171,18 @@ if (typeof window !== 'undefined') {
 	};
 }
 
+function simulateKeyEvent(eventName, keyCode) {
+	if (eventName === 'keydown') {
+		window.onkeydown({
+			keyCode: keyCode
+		});
+	} else if (eventName === 'keyup') {
+		window.onkeyup({
+			keyCode: keyCode
+		});
+	}
+}
+
 var PIXI;
 
 if (isClient) {
@@ -2768,8 +2776,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4307,6 +4313,42 @@ function resizeCanvas() {
 	scene.renderer.resize(parentElement.offsetWidth, parentElement.offsetHeight);
 }
 
+window.onload = function () {
+	var preventDefault = function (event) { return event.preventDefault(); };
+	document.addEventListener("touchmove", preventDefault);
+	document.addEventListener("touchstart", preventDefault);
+	document.addEventListener("touchend", preventDefault);
+	document.addEventListener("scroll", preventDefault);
+
+	window.IS_TOUCH_DEVICE = 'ontouchstart' in window || navigator.maxTouchPoints;
+	if (window.IS_TOUCH_DEVICE) {
+		document.body.classList.add('touch');
+
+		var keyBindings = {
+			touchUp: key.up,
+			touchDown: key.down,
+			touchLeft: key.left,
+			touchRight: key.right,
+			touchA: key.space,
+			touchB: key.b
+		};
+
+		Object.keys(keyBindings).forEach(function (elementId) {
+			var element = document.getElementById(elementId);
+
+			element.addEventListener('touchstart', function (event) {
+				simulateKeyEvent('keydown', keyBindings[elementId]);
+			});
+			element.addEventListener('touchend', function (event) {
+				simulateKeyEvent('keyup', keyBindings[elementId]);
+			});
+		});
+	}
+
+	if (window.navigator.standalone)
+		{ document.body.classList.add('nativeFullscreen'); }	
+};
+
 
 // Fullscreen
 /*
@@ -4320,6 +4362,23 @@ setTimeout(() => {
 	document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 }, 3000);
 */
+
+function sendKeyEvent(eventName, keyCode) {
+	if ( eventName === void 0 ) eventName = 'keydown';
+	if ( keyCode === void 0 ) keyCode = key.up;
+
+	var keyboardEvent = new KeyboardEvent(eventName, {
+		keyCode: keyCode
+		
+	});
+	document.dispatchEvent(keyboardEvent);
+}
+window.test = sendKeyEvent;
+
+/*
+
+ t = new KeyboardEvent('keydown', { keyCode: 38 });
+ */
 
 })));
 //# sourceMappingURL=openeditplay.js.map
