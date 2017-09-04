@@ -657,6 +657,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -776,6 +778,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2359,6 +2365,7 @@ var Scene = (function (Serializable$$1) {
 				}
 			}
 			scene = this;
+			window.scene = this;
 
 			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
@@ -2513,6 +2520,7 @@ var Scene = (function (Serializable$$1) {
 	};
 
 	Scene.prototype.reset = function reset () {
+		console.log('reset?', this);
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
 		this.resetting = true;
@@ -2528,12 +2536,14 @@ var Scene = (function (Serializable$$1) {
 		// this.cameraZoom = 1;
 		// this.cameraPosition.setScalars(0, 0);
 
-		if (this.level)
-			{ this.level.createScene(this); }
+		if (this.level) {
+			this.level.createScene(this);
+		}
 		
 		this.draw();
 		delete this.resetting;
 		
+		console.log('reset');
 		this.dispatch('reset');
 	};
 
@@ -2857,6 +2867,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;

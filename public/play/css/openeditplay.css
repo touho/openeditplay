@@ -63,72 +63,29 @@ body.touch div#touchUI {
   position: fixed;
   z-index: 100;
   color: white;
-  bottom: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 0;
+  height: 0;
 }
-body.touch div#touchArrows {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 50%;
-}
-body.touch div#touchArrows > div,
-body.touch div#touchButtons > div {
+body.touch div#touchUI > div {
+  position: fixed;
+  display: none;
   width: 60px;
   height: 60px;
   border-radius: 50%;
   border: 2px solid;
   text-align: center;
-  position: absolute;
 }
-body.touch div#touchArrows > div:active,
-body.touch div#touchButtons > div:active {
+body.touch div#touchUI > div:active {
   background: white;
 }
 
-body.touch div#touchArrows > div > span {
+body.touch div#touchUI > div > span.text {
   position: relative;
-  top: 20px;
+  top: 19px;
+  font-size: 16px;
 }
-
-body.touch div#touchButtons {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 50%;
-}
-body.touch div#touchButtons > div {
-  font-size: 30px;
-}
-body.touch div#touchButtons > div > span {
+body.touch div#touchUI > div > span.letter {
   position: relative;
   top: 10px;
-}
-
-#touchUp {
-  left: 70px;
-  bottom: 120px;
-}
-#touchDown {
-  left: 70px;
-  bottom: 20px;
-}
-#touchLeft {
-  left: 20px;
-  bottom: 70px;
-}
-#touchRight {
-  left: 120px;
-  bottom: 70px;
-}
-
-#touchA {
-  right: 40px;
-  bottom: 20px;
-}
-#touchB {
-  right: 20px;
-  bottom: 90px;
+  font-size: 30px;
 }

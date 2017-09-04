@@ -716,6 +716,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
+// info about type, validator, validatorParameters, initialValue
+
+
+
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -2278,6 +2282,7 @@ var Scene = (function (Serializable$$1) {
 				}
 			}
 			scene = this;
+			window.scene = this;
 
 			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 			this.renderer = getRenderer(this.canvas);
@@ -2432,6 +2437,7 @@ var Scene = (function (Serializable$$1) {
 	};
 
 	Scene.prototype.reset = function reset () {
+		console.log('reset?', this);
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
 		this.resetting = true;
@@ -2447,12 +2453,14 @@ var Scene = (function (Serializable$$1) {
 		// this.cameraZoom = 1;
 		// this.cameraPosition.setScalars(0, 0);
 
-		if (this.level)
-			{ this.level.createScene(this); }
+		if (this.level) {
+			this.level.createScene(this);
+		}
 		
 		this.draw();
 		delete this.resetting;
 		
+		console.log('reset');
 		this.dispatch('reset');
 	};
 
@@ -2776,6 +2784,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4292,19 +4302,6 @@ function tryToLoad() {
 if (isClient)
 	{ tryToLoad(); }
 
-disableAllChanges();
-
-startSceneWhenGameLoaded();
-setNetworkEnabled(true);
-
-window.addEventListener('resize', resizeCanvas);
-listenSceneCreation(resizeCanvas);
-
-listenKeyDown(function (keyValue) {
-	if (keyValue === key.space && scene)
-		{ scene.win(); }
-});
-
 function resizeCanvas() {
 	if (!scene)
 		{ return; }
@@ -4313,7 +4310,21 @@ function resizeCanvas() {
 	scene.renderer.resize(parentElement.offsetWidth, parentElement.offsetHeight);
 }
 
-window.onload = function () {
+window.addEventListener('resize', resizeCanvas);
+listenSceneCreation(resizeCanvas);
+
+// elementId -> keyCode
+var keyBindings = {
+	touchUp: key.up,
+	touchDown: key.down,
+	touchLeft: key.left,
+	touchRight: key.right,
+	touchJump: key.up,
+	touchA: key.space,
+	touchB: key.b
+};
+
+window.addEventListener('load', function () {
 	var preventDefault = function (event) { return event.preventDefault(); };
 	document.addEventListener("touchmove", preventDefault);
 	document.addEventListener("touchstart", preventDefault);
@@ -4324,14 +4335,7 @@ window.onload = function () {
 	if (window.IS_TOUCH_DEVICE) {
 		document.body.classList.add('touch');
 
-		var keyBindings = {
-			touchUp: key.up,
-			touchDown: key.down,
-			touchLeft: key.left,
-			touchRight: key.right,
-			touchA: key.space,
-			touchB: key.b
-		};
+
 
 		Object.keys(keyBindings).forEach(function (elementId) {
 			var element = document.getElementById(elementId);
@@ -4346,8 +4350,100 @@ window.onload = function () {
 	}
 
 	if (window.navigator.standalone)
-		{ document.body.classList.add('nativeFullscreen'); }	
-};
+		{ document.body.classList.add('nativeFullscreen'); }
+});
+
+listenSceneCreation(function () {
+	scene.listen('onStart', function () { return positionControls(); });
+});
+
+function positionControls() {
+	if (scene) {
+		var
+			playerFound = false,
+			jumperFound = false,
+			jumpSpeedFound = false,
+			topDownFound = false,
+			nextLevelButton = true;
+		
+		var characterControllers = scene.getComponents('CharacterController');
+		characterControllers.forEach(function (characterController) {
+			console.log('controller', characterController);
+			if (characterController.type === 'player') {
+				playerFound = true;
+				
+				if (characterController.controlType === 'jumper') {
+					jumperFound = true;
+					if (characterController.jumpSpeed !== 0) {
+						jumpSpeedFound = true;
+					}
+				} else if (characterController.controlType === 'top down') {
+					topDownFound = true;
+				}
+			}
+		});
+
+		var requiredControls = {
+			touchUp: topDownFound,
+			touchLeft: playerFound,
+			touchRight: playerFound,
+			touchDown: topDownFound,
+			
+			touchJump: jumpSpeedFound,
+			touchA: nextLevelButton, // Temp solution.
+			touchB: false
+		};
+		
+		var elements = {};
+		Object.keys(keyBindings).forEach(function (elementId) {
+			var element = document.getElementById(elementId);
+			if (requiredControls[elementId])
+				{ element.style.display = 'inline-block'; }
+			else
+				{ element.style.display = 'none'; }
+			
+			elements[elementId] = element;
+		});
+		
+		function setElementPosition(elementId, leftX, rightX, bottomY) {
+			var e = elements[elementId];
+			if (leftX) {
+				e.style.left = leftX + 'px';
+			} else if (rightX) {
+				e.style.right = rightX + 'px';
+			}
+			e.style.bottom = bottomY + 'px';
+		}
+		
+		if (requiredControls.touchDown) {
+			setElementPosition('touchLeft', 10, null, 60);
+			setElementPosition('touchRight', 110, null, 60);
+			setElementPosition('touchUp', 60, null, 110);
+			setElementPosition('touchDown', 60, null, 10);
+		} else {
+			setElementPosition('touchLeft', 10, null, 20);
+			setElementPosition('touchRight', 90, null, 20);
+			setElementPosition('touchUp', 50, null, 90);
+		}
+		
+		var rightHandButtons = ['touchJump', 'touchA', 'touchB'].filter(function (id) { return requiredControls[id]; });
+		rightHandButtons.forEach(function (elementId, idx) {
+			var idxFromRightWall = rightHandButtons.length - 1 - idx;
+			setElementPosition(elementId, null, 10 + idxFromRightWall * 20, 20 + idx * 70);
+		});
+	}
+}
+
+disableAllChanges();
+
+startSceneWhenGameLoaded();
+setNetworkEnabled(true);
+
+listenKeyDown(function (keyValue) {
+	if (keyValue === key.space && scene)
+		{ scene.win(); }
+});
+
 
 
 // Fullscreen
@@ -4362,23 +4458,6 @@ setTimeout(() => {
 	document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 }, 3000);
 */
-
-function sendKeyEvent(eventName, keyCode) {
-	if ( eventName === void 0 ) eventName = 'keydown';
-	if ( keyCode === void 0 ) keyCode = key.up;
-
-	var keyboardEvent = new KeyboardEvent(eventName, {
-		keyCode: keyCode
-		
-	});
-	document.dispatchEvent(keyboardEvent);
-}
-window.test = sendKeyEvent;
-
-/*
-
- t = new KeyboardEvent('keydown', { keyCode: 38 });
- */
 
 })));
 //# sourceMappingURL=openeditplay.js.map
