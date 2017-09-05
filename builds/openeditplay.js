@@ -4307,126 +4307,173 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 listenSceneCreation(resizeCanvas);
 
-// elementId -> keyCode
-var keyBindings = {
-	touchUp: key.up,
-	touchDown: key.down,
-	touchLeft: key.left,
-	touchRight: key.right,
-	touchJump: key.up,
-	touchA: key.space,
-	touchB: key.b
+var CONTROL_SIZE = 60; // pixels
+
+var TouchControl = function TouchControl(elementId, keyBinding) {
+	this.elementId = elementId;
+	this.element = null; // document not loaded yet.
+	this.keyBinding = keyBinding;
+	this.state = false; // is pressed?
+	this.visible = false;
+};
+TouchControl.prototype.initElement = function initElement () {
+	if (!this.element)
+		{ this.element = document.getElementById(this.elementId); }
+};
+TouchControl.prototype.setPosition = function setPosition (left, right, bottom) {
+	if (left)
+		{ this.element.style.left = left + 'px'; }
+	else
+		{ this.element.style.right = right + 'px'; }
+	this.element.style.bottom = bottom + 'px';
+};
+TouchControl.prototype.getPosition = function getPosition () {
+	var left = parseInt(this.element.style.left);
+	var right = parseInt(this.element.style.right);
+	var bottom = parseInt(this.element.style.bottom);
+
+	var bodyWidth = document.body.offsetWidth;
+	var bodyHeight = document.body.offsetHeight;
+
+	var x = !isNaN(left) ? (left + CONTROL_SIZE / 2) : (bodyWidth - right - CONTROL_SIZE / 2);
+	var y = bodyHeight - bottom - CONTROL_SIZE / 2;
+
+	return new Vector(x, y);
+};
+TouchControl.prototype.contains = function contains (point) {
+	if (!this.visible)
+		{ return false; }
+
+	var position = this.getPosition();
+	return position.distance(point) <= CONTROL_SIZE / 2;
+};
+TouchControl.prototype.setVisible = function setVisible (visible) {
+	if (this.visible === visible)
+		{ return; }
+
+	this.visible = visible;
+	if (visible)
+		{ this.element.style.display = 'inline-block'; }
+	else
+		{ this.element.style.display = 'none'; }
+};
+TouchControl.prototype.setState = function setState (state) {
+	if (this.state === state)
+		{ return; }
+
+	this.state = state;
+	if (state) {
+		this.element.classList.add('pressed');
+		simulateKeyEvent('keydown', this.keyBinding);
+	} else {
+		this.element.classList.remove('pressed');
+		simulateKeyEvent('keyup', this.keyBinding);
+	}
 };
 
+var controls = {
+	touchUp:	new TouchControl('touchUp',		key.up),
+	touchDown:	new TouchControl('touchDown',	key.down),
+	touchLeft:	new TouchControl('touchLeft',	key.left),
+	touchRight:	new TouchControl('touchRight',	key.right),
+	touchJump:	new TouchControl('touchJump',	key.up),
+	touchA:		new TouchControl('touchA',		key.space),
+	touchB:		new TouchControl('touchB',		key.b)
+};
+var rightHandControlArray = [controls.touchJump, controls.touchA, controls.touchB];
+var controlArray = Object.keys(controls).map(function (key$$1) { return controls[key$$1]; });
+
 window.addEventListener('load', function () {
-	var preventDefault = function (event) { return event.preventDefault(); };
-	
-	document.addEventListener("touchmove", preventDefault);
-	document.addEventListener("touchstart", preventDefault);
-	document.addEventListener("touchend", preventDefault);
-	document.addEventListener("scroll", preventDefault);
+	document.addEventListener("touchmove", touchChange, {passive: false});
+	document.addEventListener("touchstart", touchChange, {passive: false});
+	document.addEventListener("touchend", touchChange, {passive: false});
+	document.addEventListener("scroll", function (event) { return event.preventDefault(); }, {passive: false});
 
 	window.IS_TOUCH_DEVICE = 'ontouchstart' in window || navigator.maxTouchPoints;
-	if (window.IS_TOUCH_DEVICE) {
-		document.body.classList.add('touch');
-
-
-
-		Object.keys(keyBindings).forEach(function (elementId) {
-			var element = document.getElementById(elementId);
-
-			element.addEventListener('touchstart', function (event) {
-				simulateKeyEvent('keydown', keyBindings[elementId]);
-			});
-			element.addEventListener('touchend', function (event) {
-				simulateKeyEvent('keyup', keyBindings[elementId]);
-			});
-		});
-	}
+	if (window.IS_TOUCH_DEVICE)
+		{ document.body.classList.add('touch'); }
 
 	if (window.navigator.standalone)
 		{ document.body.classList.add('nativeFullscreen'); }
+
+	controlArray.forEach(function (control) { return control.initElement(); });
 });
+
+function touchChange(event) {
+	event.preventDefault();
+	
+	var touchCoordinates = getTouchCoordinates(event);
+
+	controlArray.forEach(function (control) {
+		var isPressed = touchCoordinates.find(function (coord) { return control.contains(coord); });
+		control.setState(isPressed);
+	});
+}
+
+function getTouchCoordinates(touchEvent) {
+	var touchCoordinates = [];
+	for (var i = 0; i < touchEvent.targetTouches.length; ++i) {
+		var touch = touchEvent.targetTouches[i];
+		touchCoordinates.push(new Vector(touch.clientX,touch.clientY));
+	}
+	return touchCoordinates;
+}
 
 listenSceneCreation(function () {
 	scene.listen('onStart', function () { return positionControls(); });
 });
 
 function positionControls() {
-	if (scene) {
-		var
-			playerFound = false,
-			jumperFound = false,
-			jumpSpeedFound = false,
-			topDownFound = false,
-			nextLevelButton = true;
-		
-		var characterControllers = scene.getComponents('CharacterController');
-		characterControllers.forEach(function (characterController) {
-			console.log('controller', characterController);
-			if (characterController.type === 'player') {
-				playerFound = true;
-				
-				if (characterController.controlType === 'jumper') {
-					jumperFound = true;
-					if (characterController.jumpSpeed !== 0) {
-						jumpSpeedFound = true;
-					}
-				} else if (characterController.controlType === 'top down') {
-					topDownFound = true;
-				}
-			}
-		});
+	if (!scene)
+		{ return; }
+	
+	var
+		playerFound = false,
+		jumperFound = false,
+		jumpSpeedFound = false,
+		topDownFound = false,
+		nextLevelButton = true;
 
-		var requiredControls = {
-			touchUp: topDownFound,
-			touchLeft: playerFound,
-			touchRight: playerFound,
-			touchDown: topDownFound,
-			
-			touchJump: jumpSpeedFound,
-			touchA: nextLevelButton, // Temp solution.
-			touchB: false
-		};
-		
-		var elements = {};
-		Object.keys(keyBindings).forEach(function (elementId) {
-			var element = document.getElementById(elementId);
-			if (requiredControls[elementId])
-				{ element.style.display = 'inline-block'; }
-			else
-				{ element.style.display = 'none'; }
-			
-			elements[elementId] = element;
-		});
-		
-		function setElementPosition(elementId, leftX, rightX, bottomY) {
-			var e = elements[elementId];
-			if (leftX) {
-				e.style.left = leftX + 'px';
-			} else if (rightX) {
-				e.style.right = rightX + 'px';
+	var characterControllers = scene.getComponents('CharacterController');
+	characterControllers.forEach(function (characterController) {
+		if (characterController.type === 'player') {
+			playerFound = true;
+
+			if (characterController.controlType === 'jumper') {
+				jumperFound = true;
+				if (characterController.jumpSpeed !== 0) {
+					jumpSpeedFound = true;
+				}
+			} else if (characterController.controlType === 'top down') {
+				topDownFound = true;
 			}
-			e.style.bottom = bottomY + 'px';
 		}
-		
-		if (requiredControls.touchDown) {
-			setElementPosition('touchLeft', 10, null, 60);
-			setElementPosition('touchRight', 110, null, 60);
-			setElementPosition('touchUp', 60, null, 110);
-			setElementPosition('touchDown', 60, null, 10);
-		} else {
-			setElementPosition('touchLeft', 10, null, 20);
-			setElementPosition('touchRight', 90, null, 20);
-			setElementPosition('touchUp', 50, null, 90);
-		}
-		
-		var rightHandButtons = ['touchJump', 'touchA', 'touchB'].filter(function (id) { return requiredControls[id]; });
-		rightHandButtons.forEach(function (elementId, idx) {
-			var idxFromRightWall = rightHandButtons.length - 1 - idx;
-			setElementPosition(elementId, null, 10 + idxFromRightWall * 20, 20 + idx * 70);
-		});
+	});
+
+	controls.touchUp.setVisible(topDownFound);
+	controls.touchLeft.setVisible(playerFound);
+	controls.touchRight.setVisible(playerFound);
+	controls.touchDown.setVisible(topDownFound);
+	controls.touchJump.setVisible(jumpSpeedFound);
+	controls.touchA.setVisible(nextLevelButton); // Temp solution.
+	controls.touchB.setVisible(false);
+
+	if (controls.touchDown.visible) {
+		controls.touchLeft.setPosition(10, null, 60);
+		controls.touchRight.setPosition(110, null, 60);
+		controls.touchUp.setPosition(60, null, 110);
+		controls.touchDown.setPosition(60, null, 10);
+	} else {
+		controls.touchLeft.setPosition(10, null, 20);
+		controls.touchRight.setPosition(90, null, 20);
+		controls.touchUp.setPosition(50, null, 90);
 	}
+	
+	var visibleRightHandControls = rightHandControlArray.filter(function (control) { return control.visible; });
+	visibleRightHandControls.forEach(function (control, idx) {
+		var idxFromRightWall = visibleRightHandControls.length - 1 - idx;
+		control.setPosition(null, 10 + idxFromRightWall * 20, 20 + idx * 70);
+	});
 }
 
 disableAllChanges();

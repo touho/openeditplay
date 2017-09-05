@@ -6,7 +6,7 @@ import { startSceneWhenGameLoaded, setNetworkEnabled } from './util/net'
 import { disableAllChanges } from './core/property';
 
 import './playView/canvasResize'
-import './playView/controls'
+import './playView/touchControlManager'
 
 
 import * as fullscreen from './util/fullscreen';
