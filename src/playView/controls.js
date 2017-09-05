@@ -14,6 +14,7 @@ const keyBindings = {
 
 window.addEventListener('load', () => {
 	let preventDefault = event => event.preventDefault();
+	
 	document.addEventListener("touchmove", preventDefault);
 	document.addEventListener("touchstart", preventDefault);
 	document.addEventListener("touchend", preventDefault);

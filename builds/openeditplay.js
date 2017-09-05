@@ -716,10 +716,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
-// info about type, validator, validatorParameters, initialValue
-
-
-
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -2784,8 +2780,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4326,6 +4320,7 @@ var keyBindings = {
 
 window.addEventListener('load', function () {
 	var preventDefault = function (event) { return event.preventDefault(); };
+	
 	document.addEventListener("touchmove", preventDefault);
 	document.addEventListener("touchstart", preventDefault);
 	document.addEventListener("touchend", preventDefault);
