@@ -178,7 +178,6 @@ export default class Scene extends Serializable {
 	}
 
 	reset() {
-		console.log('reset?', this)
 		if (!this._alive)
 			return; // scene has been replaced by another one
 		this.resetting = true;
@@ -201,7 +200,6 @@ export default class Scene extends Serializable {
 		this.draw();
 		delete this.resetting;
 		
-		console.log('reset')
 		this.dispatch('reset');
 	}
 

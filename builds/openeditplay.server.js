@@ -2520,7 +2520,6 @@ var Scene = (function (Serializable$$1) {
 	};
 
 	Scene.prototype.reset = function reset () {
-		console.log('reset?', this);
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
 		this.resetting = true;
@@ -2543,7 +2542,6 @@ var Scene = (function (Serializable$$1) {
 		this.draw();
 		delete this.resetting;
 		
-		console.log('reset');
 		this.dispatch('reset');
 	};
 

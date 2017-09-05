@@ -2433,7 +2433,6 @@ var Scene = (function (Serializable$$1) {
 	};
 
 	Scene.prototype.reset = function reset () {
-		console.log('reset?', this);
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
 		this.resetting = true;
@@ -2456,7 +2455,6 @@ var Scene = (function (Serializable$$1) {
 		this.draw();
 		delete this.resetting;
 		
-		console.log('reset');
 		this.dispatch('reset');
 	};
 
@@ -4307,19 +4305,23 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 listenSceneCreation(resizeCanvas);
 
-var CONTROL_SIZE = 60; // pixels
+var CONTROL_SIZE = 70; // pixels
 
-var TouchControl = function TouchControl(elementId, keyBinding) {
+var TouchControl = function TouchControl(elementId, keyBinding, requireTouchStart) {
 	this.elementId = elementId;
 	this.element = null; // document not loaded yet.
 	this.keyBinding = keyBinding;
-	this.state = false; // is pressed?
+	this.state = false; // is key binding simulated?
 	this.visible = false;
+	this.requireTouchStart = requireTouchStart;
+	this.containsFunc = null;
 };
+
 TouchControl.prototype.initElement = function initElement () {
 	if (!this.element)
 		{ this.element = document.getElementById(this.elementId); }
 };
+
 TouchControl.prototype.setPosition = function setPosition (left, right, bottom) {
 	if (left)
 		{ this.element.style.left = left + 'px'; }
@@ -4327,6 +4329,7 @@ TouchControl.prototype.setPosition = function setPosition (left, right, bottom) 
 		{ this.element.style.right = right + 'px'; }
 	this.element.style.bottom = bottom + 'px';
 };
+
 TouchControl.prototype.getPosition = function getPosition () {
 	var left = parseInt(this.element.style.left);
 	var right = parseInt(this.element.style.right);
@@ -4335,18 +4338,27 @@ TouchControl.prototype.getPosition = function getPosition () {
 	var bodyWidth = document.body.offsetWidth;
 	var bodyHeight = document.body.offsetHeight;
 
-	var x = !isNaN(left) ? (left + CONTROL_SIZE / 2) : (bodyWidth - right - CONTROL_SIZE / 2);
-	var y = bodyHeight - bottom - CONTROL_SIZE / 2;
+	var x = !isNaN(left) ? (left + this.element.offsetWidth / 2) : (bodyWidth - right - this.element.offsetWidth / 2);
+	var y = bodyHeight - bottom - this.element.offsetHeight / 2;
 
 	return new Vector(x, y);
 };
+
 TouchControl.prototype.contains = function contains (point) {
 	if (!this.visible)
 		{ return false; }
+		
+	if (this.containsFunc)
+		{ return this.containsFunc.call(this, point); }
 
 	var position = this.getPosition();
 	return position.distance(point) <= CONTROL_SIZE / 2;
 };
+// function(point) {...}
+TouchControl.prototype.setContainsFunction = function setContainsFunction (func) {
+	this.containsFunc = func;
+};
+
 TouchControl.prototype.setVisible = function setVisible (visible) {
 	if (this.visible === visible)
 		{ return; }
@@ -4357,12 +4369,19 @@ TouchControl.prototype.setVisible = function setVisible (visible) {
 	else
 		{ this.element.style.display = 'none'; }
 };
-TouchControl.prototype.setState = function setState (state) {
-	if (this.state === state)
-		{ return; }
 
-	this.state = state;
-	if (state) {
+TouchControl.prototype.setState = function setState (controlContainsATouch, isTouchStartEvent) {
+	var oldState = this.state;
+		
+	if (this.requireTouchStart && !this.state && !isTouchStartEvent)
+		{ this.state = false; }
+	else
+		{ this.state = !!controlContainsATouch; }
+		
+	if (this.state === oldState)
+		{ return; }
+		
+	if (this.state) {
 		this.element.classList.add('pressed');
 		simulateKeyEvent('keydown', this.keyBinding);
 	} else {
@@ -4371,14 +4390,16 @@ TouchControl.prototype.setState = function setState (state) {
 	}
 };
 
+var ARROW_HITBOX_RADIUS = 110;
+
 var controls = {
 	touchUp:	new TouchControl('touchUp',		key.up),
 	touchDown:	new TouchControl('touchDown',	key.down),
 	touchLeft:	new TouchControl('touchLeft',	key.left),
 	touchRight:	new TouchControl('touchRight',	key.right),
-	touchJump:	new TouchControl('touchJump',	key.up),
-	touchA:		new TouchControl('touchA',		key.space),
-	touchB:		new TouchControl('touchB',		key.b)
+	touchJump:	new TouchControl('touchJump',	key.up, true),
+	touchA:		new TouchControl('touchA',		key.space, true),
+	touchB:		new TouchControl('touchB',		key.b, true)
 };
 var rightHandControlArray = [controls.touchJump, controls.touchA, controls.touchB];
 var controlArray = Object.keys(controls).map(function (key$$1) { return controls[key$$1]; });
@@ -4403,10 +4424,9 @@ function touchChange(event) {
 	event.preventDefault();
 	
 	var touchCoordinates = getTouchCoordinates(event);
-
 	controlArray.forEach(function (control) {
-		var isPressed = touchCoordinates.find(function (coord) { return control.contains(coord); });
-		control.setState(isPressed);
+		var isPressed = !!touchCoordinates.find(function (coord) { return control.contains(coord); });
+		control.setState(isPressed, event.type === 'touchstart');
 	});
 }
 
@@ -4457,23 +4477,76 @@ function positionControls() {
 	controls.touchJump.setVisible(jumpSpeedFound);
 	controls.touchA.setVisible(nextLevelButton); // Temp solution.
 	controls.touchB.setVisible(false);
-
-	if (controls.touchDown.visible) {
+	
+	if (controls.touchUp.visible && controls.touchDown.visible) {
 		controls.touchLeft.setPosition(10, null, 60);
 		controls.touchRight.setPosition(110, null, 60);
 		controls.touchUp.setPosition(60, null, 110);
 		controls.touchDown.setPosition(60, null, 10);
+		
+		controls.touchLeft.setContainsFunction(function (point) {
+			var rel = getRelativePositionToArrowCenter(point);
+			return rel.x < 0 && Math.abs(rel.x) > Math.abs(rel.y) && rel.length() <= ARROW_HITBOX_RADIUS;
+		});
+
+		controls.touchUp.setContainsFunction(function (point) {
+			var rel = getRelativePositionToArrowCenter(point);
+			return rel.y < 0 && Math.abs(rel.y) > Math.abs(rel.x) && rel.length() <= ARROW_HITBOX_RADIUS;
+		});
+
+		controls.touchRight.setContainsFunction(function (point) {
+			var rel = getRelativePositionToArrowCenter(point);
+			return rel.x > 0 && Math.abs(rel.x) > Math.abs(rel.y) && rel.length() <= ARROW_HITBOX_RADIUS;
+		});
+
+		controls.touchDown.setContainsFunction(function (point) {
+			var rel = getRelativePositionToArrowCenter(point);
+			return rel.y > 0 && Math.abs(rel.y) > Math.abs(rel.x) && rel.length() <= ARROW_HITBOX_RADIUS;
+		});
 	} else {
 		controls.touchLeft.setPosition(10, null, 20);
 		controls.touchRight.setPosition(90, null, 20);
-		controls.touchUp.setPosition(50, null, 90);
+
+		controls.touchLeft.setContainsFunction(function (point) {
+			var rel = getRelativePositionToArrowCenter(point);
+			return rel.x <= 0 && rel.y > -ARROW_HITBOX_RADIUS;
+		});
+		controls.touchRight.setContainsFunction(function (point) {
+			var rel = getRelativePositionToArrowCenter(point);
+			return rel.x > 0 && rel.y > -ARROW_HITBOX_RADIUS && rel.x < ARROW_HITBOX_RADIUS;
+		});
 	}
-	
+
+	var SIDE_BUTTON_EXTRA_LEFT_HITBOX = 15; // pixels
 	var visibleRightHandControls = rightHandControlArray.filter(function (control) { return control.visible; });
 	visibleRightHandControls.forEach(function (control, idx) {
 		var idxFromRightWall = visibleRightHandControls.length - 1 - idx;
 		control.setPosition(null, 10 + idxFromRightWall * 20, 20 + idx * 70);
+		
+		if (idx === 0) {
+			// Bottom right corner control
+			control.setContainsFunction(function (point) {
+				var pos = control.getPosition();
+				return point.x >= pos.x - CONTROL_SIZE / 2 - SIDE_BUTTON_EXTRA_LEFT_HITBOX && point.y >= pos.y - CONTROL_SIZE / 2;
+			});
+		} else {
+			control.setContainsFunction(function (point) {
+				var pos = control.getPosition();
+				return point.y >= pos.y - CONTROL_SIZE / 2 && point.y <= pos.y + CONTROL_SIZE / 2 && point.x >= pos.x - CONTROL_SIZE / 2 - SIDE_BUTTON_EXTRA_LEFT_HITBOX;
+			});
+		}
 	});
+}
+
+function getArrowCenter() {
+	var leftPos = controls.touchLeft.getPosition();
+	var rightPos = controls.touchRight.getPosition();
+	var center = leftPos.add(rightPos).divideScalar(2);
+	return center;
+}
+function getRelativePositionToArrowCenter(point) {
+	var center = getArrowCenter();
+	return point.clone().subtract(center);
 }
 
 disableAllChanges();

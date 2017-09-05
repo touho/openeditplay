@@ -90,3 +90,16 @@ body.touch div#touchUI > div > span.letter {
   top: 10px;
   font-size: 30px;
 }
+
+#debug {
+  position: fixed;
+  display: inline-block;
+  pointer-events: none;
+  width: 50vw;
+  text-align: right;
+  top: 0;
+  right: 0;
+  color: white;
+  padding-right: 2px;
+  font-size: 10px;
+}
