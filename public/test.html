@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable = no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Title</title>
+    <style>
+        html, body {
+            padding: 0;
+            margin: 0;
+            font-size: 12px;
+        }
+        
+        #container {
+            position: absolute;
+        }
+
+        div.line {
+            border: 1px solid black;
+            position: absolute;
+        }
+
+        .hori {
+            width: 100%;
+            height: 1px;
+            top: 10px;
+        }
+
+        .vert {
+            height: 100%;
+            width: 1px;
+            left: 10px;
+        }
+
+        #hori1 {
+            top: 25%;
+        }
+
+        #hori2 {
+            top: 50%;
+            border-color: red;
+        }
+
+        #hori3 {
+            top: 75%;
+        }
+
+        #vert1 {
+            left: 25%;
+        }
+
+        #vert2 {
+            left: 50%;
+            border-color: red;
+        }
+
+        #vert3 {
+            left: 75%;
+        }
+
+        #div100 {
+            position: absolute;
+            top: 100px;
+            left: 100px;
+            width: 2px;
+            height: 2px;
+            background: green;
+        }
+
+        body.version2 {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+        }
+
+        body.version3 {
+            width: 150px;
+            height: 150px;
+            position: absolute;
+        }
+        
+    </style>
+</head>
+<body id="body" class="version1">
+<div id="container">
+    <div class="line hori" id="hori1"></div>
+    <div class="line hori" id="hori2"></div>
+    <div class="line hori" id="hori3"></div>
+    <div class="line vert" id="vert1"></div>
+    <div class="line vert" id="vert2"></div>
+    <div class="line vert" id="vert3"></div>
+    <div id="div100"></div>
+</div>
+<script type="text/javascript">
+	function append(text) {
+		let div = document.createElement("div")
+        div.classList.add('debug');
+		div.textContent = text;
+		document.body.appendChild(div);
+	}
+	window.onload = function () {
+		append('window.innerHeight = ' + window.innerHeight);
+		append('body.offsetHeight = ' + body.offsetHeight);
+		var v;
+		let magic;
+		magic = typeof window.innerWidth ?
+			v = window.innerHeight :
+			document.documentElement && (document.documentElement.clientWidth || document.documentElement.clientHeight) ? v = document.documentElement.clientHeight : document.body && (document.body.clientWidth || document.body.clientHeight) && (v = document.body.clientHeight), v
+		;
+		append('magic = ' + magic);
+		
+		container.style.width = window.innerWidth + 'px';
+		container.style.height = window.innerHeight + 'px';
+	}
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ export default function debug(key, value) {
 	
 	let msg = '';
 	Object.keys(data).sort().forEach(key => {
-		msg += key + ': ' + data[key] + '';
+		msg += key + ': ' + data[key] + '<br>';
 	});
 	
 	element.innerHTML = msg;

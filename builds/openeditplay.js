@@ -716,6 +716,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
+// info about type, validator, validatorParameters, initialValue
+
+
+
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -2156,7 +2160,7 @@ if (typeof window !== 'undefined') {
 
 		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
 			{ return; }
-
+		
 		if (!keys[keyCode]) {
 			keys[keyCode] = true;
 			keyDownListeners.forEach(function (l) { return l(keyCode); });
@@ -2778,6 +2782,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4294,12 +4300,39 @@ function tryToLoad() {
 if (isClient)
 	{ tryToLoad(); }
 
+var previousWidth = null;
+var previousHeight = null;
 function resizeCanvas() {
 	if (!scene)
 		{ return; }
 
-	var parentElement = scene.canvas.parentElement;
-	scene.renderer.resize(parentElement.offsetWidth, parentElement.offsetHeight);
+	var screen = document.getElementById('screen');
+	
+	function setSize(force) {
+		if (!screen)
+			{ return; }
+		
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+		
+		if (!force && width === previousWidth && height === previousHeight)
+			{ return; }
+
+		screen.style.width = width + 'px';
+		screen.style.height = height + 'px';
+		scene.renderer.resize(width, height);
+
+		window.scrollTo(0, 0);
+		
+		previousWidth = width;
+		previousHeight = height;
+	}
+	
+	setSize(true);
+	
+	setTimeout(setSize, 50);
+	setTimeout(setSize, 400);
+	setTimeout(setSize, 1000);
 }
 
 window.addEventListener('resize', resizeCanvas);
@@ -4331,15 +4364,16 @@ TouchControl.prototype.setPosition = function setPosition (left, right, bottom) 
 };
 
 TouchControl.prototype.getPosition = function getPosition () {
+	var screen = document.getElementById('screen');
+	var screenWidth = parseInt(screen.style.width);
+	var screenHeight = parseInt(screen.style.height);
+		
 	var left = parseInt(this.element.style.left);
 	var right = parseInt(this.element.style.right);
 	var bottom = parseInt(this.element.style.bottom);
-
-	var bodyWidth = document.body.offsetWidth;
-	var bodyHeight = document.body.offsetHeight;
-
-	var x = !isNaN(left) ? (left + this.element.offsetWidth / 2) : (bodyWidth - right - this.element.offsetWidth / 2);
-	var y = bodyHeight - bottom - this.element.offsetHeight / 2;
+		
+	var x = !isNaN(left) ? (left + this.element.offsetWidth / 2) : (screenWidth - right - this.element.offsetWidth / 2);
+	var y = screenHeight - bottom - this.element.offsetHeight / 2;
 
 	return new Vector(x, y);
 };

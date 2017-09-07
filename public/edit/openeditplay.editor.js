@@ -2248,7 +2248,7 @@ if (typeof window !== 'undefined') {
 
 		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
 			{ return; }
-
+		
 		if (!keys[keyCode]) {
 			keys[keyCode] = true;
 			keyDownListeners.forEach(function (l) { return l(keyCode); });

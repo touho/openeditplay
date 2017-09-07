@@ -29,15 +29,16 @@ export default class TouchControl {
 	}
 
 	getPosition() {
+		let screen = document.getElementById('screen');
+		let screenWidth = parseInt(screen.style.width);
+		let screenHeight = parseInt(screen.style.height);
+		
 		let left = parseInt(this.element.style.left);
 		let right = parseInt(this.element.style.right);
 		let bottom = parseInt(this.element.style.bottom);
-
-		let bodyWidth = document.body.offsetWidth;
-		let bodyHeight = document.body.offsetHeight;
-
-		let x = !isNaN(left) ? (left + this.element.offsetWidth / 2) : (bodyWidth - right - this.element.offsetWidth / 2);
-		let y = bodyHeight - bottom - this.element.offsetHeight / 2;
+		
+		let x = !isNaN(left) ? (left + this.element.offsetWidth / 2) : (screenWidth - right - this.element.offsetWidth / 2);
+		let y = screenHeight - bottom - this.element.offsetHeight / 2;
 
 		return new Vector(x, y);
 	}

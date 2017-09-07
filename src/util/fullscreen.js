@@ -9,7 +9,7 @@ export function fullscreenSupport() {
 	);
 }
 
-export function requestFullscreen(element) {
+export function requestFullscreen(element = document.documentElement) {
 	if (element.requestFullscreen) element.requestFullscreen();
 	else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
 	else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
