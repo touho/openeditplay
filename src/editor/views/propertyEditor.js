@@ -12,8 +12,9 @@ import { scene } from '../../core/scene';
 import * as sceneEdit from '../util/sceneEditUtil';
 import PropertyOwner from '../../core/propertyOwner';
 import * as performance from '../../util/performance'
-import InstanceMoreButtonContextMenu from './popup/instanceMoreButtonContextMenu'
+import ObjectMoreButtonContextMenu from './popup/objectMoreButtonContextMenu'
 import Confirmation from "./popup/Confirmation";
+import { listenKeyDown, key } from '../../util/input';
 
 /*
 Reference: Unbounce
@@ -68,6 +69,14 @@ export default class PropertyEditor {
 		
 		listen(this, 'propertyEditorSelect', items => {
 			editor.select(items, this);
+		});
+
+		listenKeyDown(keyCode => {
+			if (keyCode === key.esc) {
+				if ('activeElement' in document && document.activeElement.tagName === 'INPUT') {
+					document.activeElement.blur();
+				}
+			}
 		});
 	}
 	update(items, threeLetterType) {
@@ -198,7 +207,7 @@ class Container {
 			dispatch(this, 'makingChanges');
 			let entityPrototypeCount = this.item.countEntityPrototypes(true);
 			if (entityPrototypeCount) {
-				if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} instances that are using it?`))
+				if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} objects that are using it?`))
 					this.item.delete();
 			} else {
 				this.item.delete();
@@ -487,7 +496,7 @@ class Property {
 
 					mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
 						onclick: () => {
-							new InstanceMoreButtonContextMenu(this.property);
+							new ObjectMoreButtonContextMenu(this.property);
 						}
 					}));
 				}

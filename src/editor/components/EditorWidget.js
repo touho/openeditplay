@@ -184,6 +184,9 @@ export default Component.register({
 				this.zoomListener();
 				this.zoomListener = null;
 			}
+
+			this.positionHelper.destroy();
+			this.positionHelper = null;
 		},
 		delete() {
 			this.widgets.forEach(widget => {
@@ -195,9 +198,6 @@ export default Component.register({
 			this.scale = null;
 			this.angle = null;
 			this.position = null;
-			
-			this.positionHelper.destroy();
-			this.positionHelper = null;
 		}
 	}
 });

@@ -6,10 +6,10 @@ import assert from '../../../util/assert';
 import { setChangeOrigin } from '../../../core/serializableManager';
 import { game } from '../../../core/game'
 
-export default class InstanceMoreButtonContextMenu extends Popup {
+export default class ObjectMoreButtonContextMenu extends Popup {
 	constructor(property) {
 		super({
-			title: 'Instance Property: ' + property.name,
+			title: 'Object Property: ' + property.name,
 			width: '500px',
 			content: this.buttons = list('div', Button)
 		});
@@ -36,7 +36,7 @@ export default class InstanceMoreButtonContextMenu extends Popup {
 				}
 			},
 			{
-				text: 'Save value for this instance',
+				text: 'Save value for this object',
 				callback: () => {
 					setChangeOrigin(this);
 

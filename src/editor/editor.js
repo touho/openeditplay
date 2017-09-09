@@ -1,16 +1,20 @@
 import events from './events';
 import Layout from './layout/layout';
+
 import './module/topBar';
-import './module/type';
-import './module/instance';
-import './module/types';
 import './module/scene';
+
+import './module/types';
+import './module/objects';
+import './module/levels';
+
+import './module/type';
+import './module/object';
 import './module/level';
 import './module/game';
-import './module/instances';
-import './module/levels';
+
 import './module/performance';
-import './module/test3';
+
 import { el, list, mount } from 'redom';
 import { game } from '../core/game';
 import Serializable from '../core/serializable';
@@ -124,7 +128,10 @@ function loadOptions() {
 		try {
 			options = JSON.parse(localStorage.openEditPlayOptions);
 		} catch(e) {
-			options = {};
+			// default options
+			options = {
+				moduleContainerPacked_bottom: true
+			};
 		}
 	}
 }

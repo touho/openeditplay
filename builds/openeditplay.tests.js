@@ -576,7 +576,7 @@ var scenePropertyFilter = null;
 
 
 
-// Instance of a property
+// Object of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -2552,7 +2552,7 @@ var eventListeners = [
 	,'onStart'
 ];
 
-// Instance of a component, see _componentExample.js
+// Object of a component, see _componentExample.js
 var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3042,7 +3042,7 @@ Component.register({
 
 Component.register({
 	name: 'TransformVariance',
-	description: 'Adds random factor to instance transform/orientation.',
+	description: "Adds random factor to object's transform/orientation.",
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3587,7 +3587,7 @@ Component.register({
 		createPropertyType('speedRandom', 0, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
 		createPropertyType('acceleration', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('globalCoordinates', true, createPropertyType.bool),
-		createPropertyType('followInstance', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
+		createPropertyType('followObject', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
 	],
 	prototype: {
 		init: function init() {
@@ -3748,8 +3748,8 @@ Component.register({
 				
 				if (this.Physics && this.Physics.body) {
 					var vel = this.Physics.body.velocity;
-					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
-					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;
+					p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
+					p.vy = p.vy + this.followObject * vel[1] / PHYSICS_SCALE;
 				}
 			}
 		},
@@ -3908,8 +3908,9 @@ var JUMP_SAFE_DELAY = 0.1; // seconds
 
 Component.register({
 	name: 'CharacterController',
-	description: 'Lets user control the instance.',
+	description: 'Lets user control the object.',
 	category: 'Common',
+	allowMultiple: false,
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),

@@ -5,6 +5,7 @@ import { editor } from '../editor';
 import Level from '../../core/level';
 import { Button } from '../views/popup/popup';
 import { dispatch, listen } from '../events';
+import events from "../events";
 
 export function createNewLevel() {
 	let lvl = new Level();
@@ -27,6 +28,8 @@ export function createNewLevel() {
 	
 	return lvl;
 }
+
+events.listen('createBlankLevel', createNewLevel);
 
 class Levels extends Module {
 	constructor() {

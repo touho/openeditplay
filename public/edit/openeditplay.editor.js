@@ -684,7 +684,7 @@ function enableAllChanges() {
 	changesEnabled = true;
 }
 
-// Instance of a property
+// Object of a property
 var Property = (function (Serializable$$1) {
 	function Property(ref) {
 		var value = ref.value;
@@ -2703,7 +2703,7 @@ var eventListeners = [
 	,'onStart'
 ];
 
-// Instance of a component, see _componentExample.js
+// Object of a component, see _componentExample.js
 var Component$1 = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3191,7 +3191,7 @@ Component$1.register({
 
 Component$1.register({
 	name: 'TransformVariance',
-	description: 'Adds random factor to instance transform/orientation.',
+	description: "Adds random factor to object's transform/orientation.",
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [
@@ -3736,7 +3736,7 @@ Component$1.register({
 		createPropertyType('speedRandom', 0, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
 		createPropertyType('acceleration', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('globalCoordinates', true, createPropertyType.bool),
-		createPropertyType('followInstance', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
+		createPropertyType('followObject', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
 	],
 	prototype: {
 		init: function init() {
@@ -3897,8 +3897,8 @@ Component$1.register({
 				
 				if (this.Physics && this.Physics.body) {
 					var vel = this.Physics.body.velocity;
-					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
-					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;
+					p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
+					p.vy = p.vy + this.followObject * vel[1] / PHYSICS_SCALE;
 				}
 			}
 		},
@@ -4064,7 +4064,7 @@ var JUMP_SAFE_DELAY = 0.1; // seconds
 
 Component$1.register({
 	name: 'CharacterController',
-	description: 'Lets user control the instance.',
+	description: 'Lets user control the object.',
 	category: 'Common',
 	allowMultiple: false,
 	properties: [
@@ -5199,363 +5199,6 @@ TopButton.prototype.click = function click () {
 	}
 };
 
-var popupDepth = 0;
-
-var Popup = function Popup(ref) {
-	var this$1 = this;
-	var title = ref.title; if ( title === void 0 ) title = 'Undefined popup';
-	var cancelCallback = ref.cancelCallback; if ( cancelCallback === void 0 ) cancelCallback = null;
-	var width = ref.width; if ( width === void 0 ) width = null;
-	var content = ref.content; if ( content === void 0 ) content = el('div', 'Undefined content');
-
-	this.el = el('div.popup', {
-			style: { 'z-index': 1000 + popupDepth++ }
-		},
-		new Layer(this),
-		el('div.popupContent',
-			this.text = el('div.popupTitle'),
-			this.content = content
-		)
-	);
-	this.depth = popupDepth;
-	this.text.innerHTML = title;
-	this.cancelCallback = cancelCallback;
-		
-		
-	this.keyListener = listenKeyDown(function (keyChar) {
-		if (keyChar === key.esc && this$1.depth === popupDepth) {
-			this$1.remove();
-		}
-	});
-		
-	mount(document.body, this.el);
-};
-Popup.prototype.remove = function remove () {
-	popupDepth--;
-	this.el.parentNode.removeChild(this.el);
-	this.keyListener();
-	this.keyListener = null;
-};
-
-var Button = function Button() {
-	var this$1 = this;
-
-	this.el = el('button.button', {onclick: function () {
-		this$1.callback();
-	}});
-};
-Button.prototype.update = function update (button) {
-	var newClassName = button.class ? ("button " + (button.class)) : 'button';
-		
-	if (
-		this.el.textContent === button.text
-		&& this._prevIcon === button.icon
-		&& this.el.className === newClassName
-		&& (!button.color || this.el.style['border-color'] === button.color)
-	) {
-		return; // optimize
-	}
-		
-	this.el.textContent = button.text;
-		
-	this._prevIcon = button.icon;
-	if (button.icon) {
-		var icon = el('i.fa.' + button.icon);
-		if (button.color)
-			{ icon.style.color = button.color; }
-		mount(this.el, icon, this.el.firstChild);
-	}
-	this.el.className = newClassName;
-	this.callback = button.callback;
-	if (button.color)
-		{ this.el.style['border-color'] = button.color; }
-};
-
-var Layer = function Layer(popup) {
-	this.el = el('div.popupLayer', { onclick: function () {
-		popup.remove();
-		popup.cancelCallback && popup.cancelCallback();
-	} });
-};
-
-var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
-
-// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
-var editors = {};
-editors.default = editors.string = function (container, oninput, onchange, options) {
-	var input = el('input', {
-		placeholder: options.placeholder || '',
-		oninput: function () { return oninput(input.value); },
-		onchange: function () { return onchange(input.value); }
-	});
-	mount(container, input);
-
-	return function (val) { return input.value = val; };
-};
-
-editors.float = editors.int = function (container, oninput, onchange) {
-	var input = el('input', {
-		type: 'number',
-		oninput: function () { return oninput(+input.value); },
-		onchange: function () { return onchange(+input.value); }
-	});
-	mount(container, input);
-	return function (val) { return input.value = Math.round(val*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION; };
-};
-
-editors.bool = function (container, oninput, onchange) {
-	var input = el('input', {
-		type: 'checkbox',
-		onchange: function () {
-			onchange(input.checked);
-			label.textContent = input.checked ? 'Yes' : 'No';
-		}
-	});
-	var label = el('span');
-	mount(container, el('label', input, label));
-	return function (val) {
-		input.checked = val;
-		label.textContent = val ? 'Yes' : 'No';
-	}
-};
-
-editors.vector = function (container, oninput, onchange) {
-	function getValue() {
-		return new Vector(+xInput.value, +yInput.value);
-	}
-	var xInput = el('input.xInput', {
-		type: 'number',
-		oninput: function () { return oninput(getValue()); },
-		onchange: function () { return onchange(getValue()); }
-	});
-	var yInput = el('input', {
-		type: 'number',
-		oninput: function () { return oninput(getValue()); },
-		onchange: function () { return onchange(getValue()); }
-	});
-	mount(container, el('div', el('span', 'x:'), xInput, el('span', 'y:'), yInput));
-	return function (val) {
-		xInput.value = Math.round(val.x*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
-		yInput.value = Math.round(val.y*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
-	};
-};
-
-editors.enum = function (container, oninput, onchange, options) {
-	var select = el.apply(void 0, [ 'select' ].concat( options.propertyType.validator.parameters.map(function (p) { return el('option', p); }) ));
-	select.onchange = function () {
-		onchange(select.value);
-	};
-	mount(container, select);
-	return function (val) {
-		select.value = val;
-	}
-};
-
-editors.color = function (container, oninput, onchange) {
-	var input = el('input', {
-		type: 'color',
-		oninput: function () { return oninput(input.value); },
-		onchange: function () { return onchange(input.value); }
-	});
-	mount(container, input);
-	return function (val) { return input.value = val.toHexString(); };
-};
-
-var Confirmation = (function (Popup$$1) {
-	function Confirmation(question, buttonOptions, callback) {
-		var this$1 = this;
-
-		Popup$$1.call(this, {
-			title: question,
-			width: '500px',
-			content: list('div.confirmationButtons', Button)
-		});
-		
-		this.content.update([{
-			text: 'Cancel',
-			callback: function () { return this$1.remove(); }
-		}, Object.assign({
-			text: 'Confirm'
-		}, buttonOptions, {
-			callback: function () {
-				callback();
-				this$1.remove();
-			}
-		})]);
-		
-		var confirmButton = this.content.views[1];
-		confirmButton.el.focus();
-	}
-
-	if ( Popup$$1 ) Confirmation.__proto__ = Popup$$1;
-	Confirmation.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
-	Confirmation.prototype.constructor = Confirmation;
-
-	Confirmation.prototype.remove = function remove () {
-		Popup$$1.prototype.remove.call(this);
-	};
-
-	return Confirmation;
-}(Popup));
-
-var CATEGORY_ORDER = [
-	'Common',
-	'Logic',
-	'Graphics'
-];
-
-var HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
-
-var ComponentAdder = (function (Popup$$1) {
-	function ComponentAdder(parent) {
-		var this$1 = this;
-
-		Popup$$1.call(this, {
-			title: 'Add Component',
-			width: '500px',
-			content: list('div.componentAdderContent', Category, undefined, parent)
-		});
-
-
-		var componentClassArray = Array.from(componentClasses.values())
-		.filter(function (cl) { return !HIDDEN_COMPONENTS.includes(cl.componentName); })
-		.sort(function (a, b) { return a.componentName.localeCompare(b.componentName); });
-
-		console.log('before set', componentClassArray.map(function (c) { return c.category; }));
-		console.log('set', new Set(componentClassArray.map(function (c) { return c.category; })));
-		console.log('set array', [].concat( new Set(componentClassArray.map(function (c) { return c.category; })) ));
-
-		var categories = Array.from(new Set(componentClassArray.map(function (c) { return c.category; }))).map(function (categoryName) { return ({
-			categoryName: categoryName,
-			components: componentClassArray.filter(function (c) { return c.category === categoryName; })
-		}); });
-
-		categories.sort(function (a, b) {
-			var aIdx = CATEGORY_ORDER.indexOf(a.categoryName);
-			var bIdx = CATEGORY_ORDER.indexOf(b.categoryName);
-
-			if (aIdx < 0) { aIdx = 999; }
-			if (bIdx < 0) { bIdx = 999; }
-
-			if (aIdx < bIdx) { return -1; }
-			else { return 1; }
-		});
-
-		this.update(categories);
-		
-		listen(this, 'refresh', function () {
-			this$1.update(categories);
-		});
-	}
-
-	if ( Popup$$1 ) ComponentAdder.__proto__ = Popup$$1;
-	ComponentAdder.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
-	ComponentAdder.prototype.constructor = ComponentAdder;
-
-	ComponentAdder.prototype.update = function update (categories) {
-		this.content.update(categories);
-	};
-
-	return ComponentAdder;
-}(Popup));
-
-var Category = function Category(parent) {
-	this.el = el('div.categoryItem',
-		this.name = el('div.categoryName'),
-		this.list = list('div.categoryButtons', ButtonWithDescription)
-	);
-	this.parent = parent;
-};
-
-Category.prototype.addComponentToParent = function addComponentToParent (componentClass) {
-		var this$1 = this;
-
-	setChangeOrigin$1(this);
-
-	function addComponentDatas(parent, componentNames) {
-		return parent.addChildren(componentNames.map(function (name) { return new ComponentData(name); }));
-	}
-
-	if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
-		var missingRequirements = getMissingRequirements(this.parent, componentClass.requirements);
-
-		if (missingRequirements.length === 0) {
-			addComponentDatas(this.parent, [componentClass.componentName]);
-			dispatch(this, 'refresh');
-		} else {
-			new Confirmation(("<b>" + (componentClass.componentName) + "</b> needs these components in order to work: <b>" + (missingRequirements.join(', ')) + "</b>"), {
-				text: ("Add all (" + (missingRequirements.length + 1) + ") components"),
-				color: '#4ba137',
-				icon: 'fa-plus'
-			}, function () {
-				addComponentDatas(this$1.parent, missingRequirements.concat(componentClass.componentName));
-				dispatch(this$1, 'refresh');
-			});
-		}
-		return;
-	}
-	assert(false);
-};
-
-Category.prototype.update = function update (category) {
-		var this$1 = this;
-
-	this.name.textContent = category.categoryName;
-		
-	var componentCounts = {};
-	this.parent.forEachChild('cda', function (cda) {
-		if (!componentCounts[cda.name])
-			{ componentCounts[cda.name] = 0; }
-		componentCounts[cda.name]++;
-	});
-
-	var componentButtonData = category.components.map(function (comp) {
-		var disabledReason;
-		if (!comp.allowMultiple && this$1.parent.findChild('cda', function (cda) { return cda.name === comp.componentName; }) !== null) {
-			disabledReason = "Only one " + (comp.componentName) + " component is allowed at the time";
-		}
-		var count = componentCounts[comp.componentName];
-		return {
-			text: comp.componentName + (count ? (" (" + count + ")") : ''),
-			description: comp.description,
-			color: comp.color,
-			icon: comp.icon,
-			disabledReason: disabledReason,
-			callback: function () {
-				if ('activeElement' in document)
-					{ document.activeElement.blur(); }
-					
-				this$1.addComponentToParent(comp);
-			}
-		};
-	});
-
-	this.list.update(componentButtonData);
-};
-
-var ButtonWithDescription = function ButtonWithDescription() {
-	this.el = el('div.buttonWithDescription',
-		this.button = new Button(),
-		this.description = el('span.description')
-	);
-};
-
-ButtonWithDescription.prototype.update = function update (buttonData) {
-	this.description.innerHTML = buttonData.description;
-	this.button.el.disabled = buttonData.disabledReason ? 'disabled' : '';
-	this.button.el.setAttribute('title', buttonData.disabledReason || '');
-	this.button.update(buttonData);
-};
-
-function getMissingRequirements(parent, requirements) {
-	function isMissing(componentName) {
-		var componentData = parent.findChild('cda', function (componentData) { return componentData.name === componentName; });
-		return !componentData;
-	}
-
-	return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
-}
-
 var defaultWidgetRadius = 5;
 var centerWidgetRadius = 10;
 var defaultWidgetDistance = 30;
@@ -6017,920 +5660,6 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	});
 }
 
-var InstanceMoreButtonContextMenu = (function (Popup$$1) {
-	function InstanceMoreButtonContextMenu(property) {
-		var this$1 = this;
-
-		Popup$$1.call(this, {
-			title: 'Instance Property: ' + property.name,
-			width: '500px',
-			content: this.buttons = list('div', Button)
-		});
-
-		var value = property.value;
-		var component = property.getParent();
-		var componentId = component._componentId;
-		var entityPrototype = component.entity.prototype;
-		var prototype = entityPrototype.prototype;
-		
-		var actions = [
-			{
-				text: 'Copy value to type ' + prototype.name,
-				callback: function () {
-					setChangeOrigin$1(this$1);
-					var componentData = prototype.getOwnComponentDataOrInherit(componentId);
-					if (componentData) {
-						var newProperty = componentData.getPropertyOrCreate(property.name);
-						newProperty.value = property.value;
-					} else {
-						alert('Error: Component data not found');
-					}
-					this$1.remove();
-				}
-			},
-			{
-				text: 'Save value for this instance',
-				callback: function () {
-					setChangeOrigin$1(this$1);
-
-					var componentData = entityPrototype.getOwnComponentDataOrInherit(componentId);
-					if (componentData) {
-						var newProperty = componentData.getPropertyOrCreate(property.name);
-						newProperty.value = property.value;
-					} else {
-						alert('Error: Component data not found');
-					}
-					this$1.remove();
-				}
-			}
-		];
-		
-		this.update(actions);
-	}
-
-	if ( Popup$$1 ) InstanceMoreButtonContextMenu.__proto__ = Popup$$1;
-	InstanceMoreButtonContextMenu.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
-	InstanceMoreButtonContextMenu.prototype.constructor = InstanceMoreButtonContextMenu;
-	InstanceMoreButtonContextMenu.prototype.update = function update (data) {
-		this.buttons.update(data);
-	};
-
-	return InstanceMoreButtonContextMenu;
-}(Popup));
-
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
-var PropertyEditor = function PropertyEditor() {
-	var this$1 = this;
-
-	this.el = el('div.propertyEditor',
-		this.list = list('div.propertyEditorList', Container)
-	);
-	this.dirty = true;
-	this.editingProperty = false;
-		
-	// Change in serializable tree
-	events.listen('change', function (change) {
-		if (change.type === 'editorSelection') {
-			this$1.dirty = true;
-		} else if (change.type === changeType.setPropertyValue) {
-			if (this$1.item && this$1.item.hasDescendant(change.reference)) {
-				if (change.origin === this$1) {
-					if (this$1.item.threeLetterType === 'ent') {
-						this$1.item.dispatch('changedInEditor');
-						entityModifiedInEditor(this$1.item, change);
-					}
-				} else {
-					this$1.dirty = true;
-				}
-			}
-		} else if (change.type === changeType.addSerializableToTree) {
-			if (change.parent === this$1.item || this$1.item && this$1.item.hasDescendant(change.parent))
-				{ this$1.dirty = true; }
-		} else if (change.type === changeType.deleteSerializable) {
-			if (this$1.item && this$1.item.hasDescendant(change.reference)) {
-				this$1.dirty = true;
-			}
-		} else if (change.type === changeType.deleteAllChildren) {
-			if (this$1.item && this$1.item.hasDescendant(change.reference)) {
-				this$1.dirty = true;
-			}
-		}
-	});
-		
-	listen(this, 'makingChanges', function () {
-		setChangeOrigin$1(this$1);
-	});
-		
-	// Change in this editor
-	listen(this, 'markPropertyEditorDirty', function () {
-		this$1.dirty = true;
-	});
-		
-	listen(this, 'propertyEditorSelect', function (items) {
-		editor.select(items, this$1);
-	});
-};
-PropertyEditor.prototype.update = function update (items, threeLetterType) {
-	if (!this.dirty) { return; }
-	if (!items) { return; }
-		
-	if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
-	|| items.length === 1 && items[0] instanceof PropertyOwner) {
-		this.item = items[0];
-		this.list.update([this.item]);
-	} else {
-		this.list.update([]);
-	}
-		
-	this.dirty = false;
-};
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
-
-var Container = function Container() {
-	var this$1 = this;
-
-	this.el = el('div.container',
-		this.title = el('div.containerTitle',
-			this.titleText = el('span.containerTitleText'),
-			this.titleIcon = el('i.icon.fa')
-		),
-		this.content = el('div.containerContent',
-			this.properties = list('table', Property$2, null, this.propertyEditor),
-			this.containers = list('div', Container, null, this.propertyEditor),
-			this.controls = el('div'),
-			el('i.button.logButton.fa.fa-eye', {
-				onclick: function () {
-					console.log(this$1.item);
-					window.item = this$1.item;
-					console.log("you can use variable 'item'");
-					var element = el('span', ' logged to console');
-					mount(this$1.title, element);
-					setTimeout(function () {
-						this$1.title.removeChild(element);
-					}, 500);
-				}
-			})
-		)
-	);
-	this.titleClickedCallback = null;
-	this.title.onclick = function () {
-		this$1.titleClickedCallback && this$1.titleClickedCallback();
-	};
-		
-	listen(this, 'propertyInherited', function (property, view) {
-		if (this$1.item.threeLetterType !== 'icd') { return; }
-		// this.item is inheritedComponentData
-		var proto = this$1.item.generatedForPrototype;
-		var newProperty = proto.createAndAddPropertyForComponentData(this$1.item, property.name, property.value);
-		view.update(newProperty);
-		// dispatch(this, 'markPropertyEditorDirty');
-	});
-};
-Container.prototype.update = function update (state) {
-		var this$1 = this;
-
-	var itemChanged = this.item !== state;
-		
-	if (itemChanged) {
-		this.item = state;
-		this.el.setAttribute('type', this.item.threeLetterType);
-
-		// Skip transitions when changing item
-		this.el.classList.add('skipPropertyEditorTransitions');
-		setTimeout(function () {
-			this$1.el.classList.remove('skipPropertyEditorTransitions');
-		}, 10);
-	}
-		
-	if (this.controls.innerHTML !== '')
-		{ this.controls.innerHTML = ''; }
-		
-	this.titleClickedCallback = null;
-
-	if (this.item.threeLetterType === 'icd') { this.updateInheritedComponentData(); }
-	else if (this.item.threeLetterType === 'ent') { this.updateEntity(); }
-	else if (this.item.threeLetterType === 'com') { this.updateComponent(); }
-	else if (this.item.threeLetterType === 'prt') { this.updatePrototype(); }
-	else if (this.item.threeLetterType === 'epr') { this.updateEntityPrototype(); }
-	else if (this.item instanceof PropertyOwner) { this.updatePropertyOwner(); }
-};
-Container.prototype.updatePrototype = function updatePrototype () {
-		var this$1 = this;
-
-	var inheritedComponentDatas = this.item.getInheritedComponentDatas();
-	this.containers.update(inheritedComponentDatas);
-	this.properties.update(this.item.getChildren('prp'));
-		
-	var addButton;
-	mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
-		onclick: function () {
-			new ComponentAdder(this$1.item);
-		}
-	}));
-	if (inheritedComponentDatas.length === 0)
-		{ addButton.classList.add('clickMeEffect'); }
-		
-	mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: function () {
-		dispatch(this$1, 'makingChanges');
-			
-		var clone = this$1.item.clone();
-
-		var endingNumberMatch = clone.name.match(/\d+$/); // ending number
-		var num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
-		var nameWithoutNumber = endingNumberMatch ? clone.name.substring(0, clone.name.length - endingNumberMatch[0].length) : clone.name;
-		var nameSuggestion = nameWithoutNumber + num++;
-		while (this$1.item.getParent().findChild('prt', function (prt) { return prt.name === nameSuggestion; })) {
-			nameSuggestion = nameWithoutNumber + num++;
-		}
-		clone.name = nameSuggestion;
-		this$1.item.getParent().addChild(clone);
-		dispatch(this$1, 'propertyEditorSelect', clone);
-	} }));
-	mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', { onclick: function () {
-		dispatch(this$1, 'makingChanges');
-		var entityPrototypeCount = this$1.item.countEntityPrototypes(true);
-		if (entityPrototypeCount) {
-			if (confirm(("Type " + (this$1.item.name) + " is used in levels " + entityPrototypeCount + " times. Are you sure you want to delete this type and all " + entityPrototypeCount + " instances that are using it?")))
-				{ this$1.item.delete(); }
-		} else {
-			this$1.item.delete();
-		}
-		editor.select();
-	} }));
-};
-Container.prototype.updateEntityPrototype = function updateEntityPrototype () {
-		var this$1 = this;
-
-	var inheritedComponentDatas = this.item.getInheritedComponentDatas();
-	this.containers.update(inheritedComponentDatas);
-	var properties = this.item.getChildren('prp');
-	properties.forEach(function (prop) {
-		prop._editorPlaceholder = this$1.item.prototype.findChild('prp', function (prp) { return prp.name === prop.name; }).value;
-	});
-	this.properties.update(properties);
-	mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add Component', {
-		onclick: function () {
-			new ComponentAdder(this$1.item);
-		}
-	}));
-};
-Container.prototype.updateInheritedComponentData = function updateInheritedComponentData () {
-		var this$1 = this;
-
-	this.updateComponentKindOfThing(this.item.componentClass);
-		
-	var packId = 'pack' + this.item.generatedForPrototype.id + this.item.componentId;
-	var packedStatus = getOption(packId);
-	if (packedStatus === 'true') {
-		this.el.classList.add('packed');
-	} else if (packedStatus === 'false') {
-		this.el.classList.remove('packed');
-	} else {
-		this.el.classList.toggle('packed', !this.item.ownComponentData);
-	}
-		
-	this.titleClickedCallback = function () {
-		this$1.el.classList.toggle('packed');
-		setOption(packId, this$1.el.classList.contains('packed') ? 'true' : 'false');
-	};
-		
-	var parentComponentData = this.item.ownComponentData && this.item.ownComponentData.getParentComponentData();
-	var hasOwnProperties = false;
-	this.item.properties.forEach(function (prop) {
-		if (prop.id)
-			{ hasOwnProperties = true; }
-		if (prop.propertyType.visibleIf) {
-			prop._editorVisibleIfTarget = this$1.item.properties.find(function (p) { return p.name === prop.propertyType.visibleIf.propertyName; });
-		}
-	});
-	this.properties.update(this.item.properties);
-		
-	if (!this.item.ownComponentData || parentComponentData) {
-		mount(this.controls, el('button.button', 'Show Parent', {
-			onclick: function () {
-				var componentData = this$1.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(this$1.item.componentId, true);
-				dispatch(this$1, 'propertyEditorSelect', componentData.getParent());
-				dispatch(this$1, 'markPropertyEditorDirty');
-			}
-		}));
-	}
-
-	if (this.item.componentClass.componentName === 'Transform'
-		&& this.item.generatedForPrototype.threeLetterType === 'epr')
-		{ return; }
-		
-	if (this.item.componentClass.allowMultiple) {
-		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
-			onclick: function () {
-				dispatch(this$1, 'makingChanges');
-				if (this$1.item.ownComponentData) {
-					var clone = this$1.item.ownComponentData.clone();
-					this$1.item.generatedForPrototype.addChild(clone);
-				} else {
-					// Is empty component data
-					var componentData = new ComponentData(this$1.item.componentClass.componentName);
-					componentData.initWithChildren();
-					this$1.item.generatedForPrototype.addChild(componentData);
-				}
-				dispatch(this$1, 'markPropertyEditorDirty');
-			}
-		}));
-	}
-	if (hasOwnProperties) {
-		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
-			onclick: function () {
-				dispatch(this$1, 'makingChanges');
-				dispatch(this$1, 'markPropertyEditorDirty', 'fromReset');
-				if (this$1.item.ownComponentData.getParentComponentData()) {
-					this$1.item.ownComponentData.delete();
-				} else {
-					this$1.item.ownComponentData.deleteChildren();
-				}
-			}
-		}));
-	}
-	if (this.item.ownComponentData && !parentComponentData) {
-		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
-			onclick: function () {
-				var deleteOperation = function () {
-					dispatch(this$1, 'makingChanges');
-					dispatch(this$1, 'markPropertyEditorDirty');
-					this$1.item.ownComponentData.delete();
-				};
-					
-				var componentName = this$1.item.componentClass.componentName;
-				var parent = this$1.item.ownComponentData.getParent();
-				var similarComponent = parent.findChild('cda', function (cda) { return cda.name === componentName && cda !== this$1.item.ownComponentData; });
-				if (!similarComponent) {
-					var componentsThatRequire = parent.getChildren('cda').filter(function (componentData) { return componentData.componentClass.requirements.includes(componentName); });
-					if (componentsThatRequire.length > 0) {
-						new Confirmation(("<b>" + componentName + "</b> is needed by: <b>" + (componentsThatRequire.map(function (cda) { return cda.name; }).join(', ')) + "</b>"), {
-							text: ("Delete all (" + (componentsThatRequire.length + 1) + ") components"),
-							color: '#cd4148'
-						}, function () {
-							dispatch(this$1, 'makingChanges');
-							dispatch(this$1, 'markPropertyEditorDirty');
-							componentsThatRequire.forEach(function (cda) {
-								cda.delete();
-							});
-							this$1.item.ownComponentData.delete();
-						});
-						return;
-					}
-				}
-				dispatch(this$1, 'makingChanges');
-				dispatch(this$1, 'markPropertyEditorDirty');
-				this$1.item.ownComponentData.delete();
-			}
-		}));
-	}
-};
-Container.prototype.updateEntity = function updateEntity () {
-	if (this.titleText.textContent !== this.item.prototype.name)
-		{ this.titleText.textContent = this.item.prototype.name; }
-	this.containers.update(this.item.getListOfAllComponents());
-	// this.properties.update(this.item.getChildren('prp'));
-};
-Container.prototype.updateComponent = function updateComponent () {
-	if (this.el.classList.contains('packed'))
-		{ this.el.classList.remove('packed'); }
-
-	this.updateComponentKindOfThing(this.item.constructor);
-
-	var getChildren = this.item.getChildren('prp');
-
-	this.properties.update(getChildren);
-};
-Container.prototype.updateComponentKindOfThing = function updateComponentKindOfThing (componentClass) {
-	if (this.titleText.textContent !== componentClass.componentName)
-		{ this.titleText.textContent = componentClass.componentName; }
-
-	var className = 'icon fa ' + componentClass.icon;
-	if (this.titleIcon.className !== className)
-		{ this.titleIcon.className = className; }
-		
-	if (this.componentClassColorCache !== componentClass.color) {
-		this.componentClassColorCache = componentClass.color;
-			
-		this.title.style.color = componentClass.color;
-		this.el.style['border-color'] = componentClass.color;
-	}
-		
-	if (this.title.getAttribute('title') !== componentClass.description)
-		{ this.title.setAttribute('title', componentClass.description); }
-};
-Container.prototype.updatePropertyOwner = function updatePropertyOwner () {
-	this.properties.update(this.item.getChildren('prp'));
-};
-
-var Property$2 = function Property() {
-	this.el = el('tr.property', { name: '' },
-		this.name = el('td.nameCell'),
-		this.content = el('td.propertyContent')
-	);
-};
-Property$2.prototype.reset = function reset () {
-	var componentData = this.property.getParent();
-	this.property.delete();
-	if (componentData._children.size === 0) {
-		if (componentData.getParentComponentData())
-			{ componentData.delete(); }
-	}
-		
-	dispatch(this, 'markPropertyEditorDirty');
-};
-Property$2.prototype.focus = function focus () {
-	$(this.el).find('input').focus();
-};
-Property$2.prototype.oninput = function oninput (val) {
-	try {
-		this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
-		this.el.removeAttribute('error');
-	} catch(e) {
-		this.el.setAttribute('error', 'true');
-	}
-};
-Property$2.prototype.onchange = function onchange (val) {
-	var originalValue = this.property.value;
-	try {
-		dispatch(this, 'makingChanges');
-		this.property.value = this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
-		if (!this.property.id) {
-			dispatch(this, 'propertyInherited', this.property);
-		}
-	} catch(e) {
-		// console.log('Error while changing property value', this.property, this.input.value);
-		this.property.value = originalValue;
-	}
-	this.setValueFromProperty();
-	this.el.removeAttribute('error');
-};
-Property$2.prototype.setValueFromProperty = function setValueFromProperty () {
-	var val = this.property.value;
-	if (this.property.propertyType.getFlag(createPropertyType.flagDegreesInEditor))
-		{ val = Math.round(val * 180 / Math.PI * 10) / 10; }
-	this.setValue(val);
-};
-Property$2.prototype.convertFromInputToPropertyValue = function convertFromInputToPropertyValue (val) {
-	if (this.property.propertyType.getFlag(createPropertyType.flagDegreesInEditor))
-		{ return val * Math.PI / 180; }
-	else
-		{ return val; }
-};
-Property$2.prototype.updateVisibleIf = function updateVisibleIf () {
-	if (!this.property._editorVisibleIfTarget)
-		{ return; }
-	$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
-};
-Property$2.prototype.update = function update (property) {
-		var this$1 = this;
-
-	// Optimization
-	if (this.property === property && this._previousValue === property.value)
-		{ return; }
-		
-	var propertyChanged = this.property !== property;
-	var keepOldInput = false;
-	if (this.property && this.property.propertyType === property.propertyType && !this.property.id && property.id) {
-		// Special case.
-		keepOldInput = true;
-	}
-		
-	this._previousValue = property.value;
-		
-	if (this.visibleIfListener) {
-		this.visibleIfListener(); // unlisten
-		this.visibleIfListener = null;
-	}
-	this.property = property;
-	if (propertyChanged) {
-		this.el.setAttribute('name', property.name);
-		this.el.setAttribute('type', property.propertyType.type.name);
-		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
-		this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
-		if (property.propertyType.description) {
-			mount(this.name, el('span.infoI', 'i'));
-		}
-			
-		if (!keepOldInput) {
-			this.content.innerHTML = '';
-			this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
-			this.setValue = this.propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
-				propertyType: property.propertyType,
-				placeholder: property._editorPlaceholder
-			});
-		}
-			
-		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
-		this.el.classList.toggle('ownProperty', !!this.property.id);
-
-		if (this.property.id) {
-			var parent = this.property.getParent();
-			if (parent.threeLetterType === 'cda'
-				&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
-			// Can not delete anything from entity prototype transform 
-			{
-				this.name.style.color = parent.componentClass.color;
-
-				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
-					onclick: function () {
-						dispatch(this$1, 'makingChanges');
-						this$1.reset();
-					}
-				}));
-			} else if (parent.threeLetterType === 'com') {
-				this.name.style.color = parent.constructor.color;
-
-				mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
-					onclick: function () {
-						new InstanceMoreButtonContextMenu(this$1.property);
-					}
-				}));
-			}
-		} else
-			{ this.name.style.color = 'inherit'; }
-	}
-	this.setValueFromProperty();
-	if (property._editorVisibleIfTarget) {
-		this.updateVisibleIf();
-		this.visibleIfListener = property._editorVisibleIfTarget.listen('change', function (_) {
-			if (!isInDom(this$1.el)) {
-				this$1.visibleIfListener();
-				this$1.visibleIfListener = null;
-				return;
-			}
-			return this$1.updateVisibleIf()
-		});
-	}
-};
-
-function isInDom(element) {
-	return $.contains(document.documentElement, element);
-}
-
-function variableNameToPresentableName(propertyName) {
-	var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
-	return name[0].toUpperCase() + name.substring(1);
-}
-
-var Type = (function (Module$$1) {
-	function Type() {
-		var this$1 = this;
-
-		Module$$1.call(
-			this, this.propertyEditor = new PropertyEditor()
-		);
-		this.id = 'type';
-		this.name = '<u>T</u>ype';
-
-		listenKeyDown(function (k) {
-			if (k === key.t && this$1._enabled) {
-				Module$$1.activateModule('type', true);
-			}
-		});
-	}
-
-	if ( Module$$1 ) Type.__proto__ = Module$$1;
-	Type.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	Type.prototype.constructor = Type;
-	Type.prototype.update = function update () {
-		if (editor.selection.items.length != 1)
-			{ return false; }
-
-		// if the tab is not visible, do not waste CPU
-		var skipUpdate = !this._selected || this.moduleContainer.isPacked();
-		
-		if (editor.selection.type === 'prt') {
-			if (skipUpdate)
-				{ return; }
-			this.propertyEditor.update(editor.selection.items, editor.selection.type);
-		} else if (editor.selection.type === 'ent') {
-			if (skipUpdate)
-				{ return; }
-			this.propertyEditor.update(editor.selection.items.map(function (e) { return e.prototype.prototype; }), editor.selection.type);
-		} else {
-			return false; // hide
-		}
-	};
-	Type.prototype.activate = function activate (command, parameter) {
-		if (command === 'focusOnProperty') {
-			
-			this.propertyEditor.el.querySelector((".property[name='" + parameter + "'] input")).select();
-			// console.log(nameProp);
-		}
-	};
-
-	return Type;
-}(Module));
-
-Module.register(Type, 'right');
-
-var Instance = (function (Module$$1) {
-	function Instance() {
-		var this$1 = this;
-
-		var propertyEditor = new PropertyEditor();
-		Module$$1.call(this, propertyEditor);
-		this.propertyEditor = propertyEditor;
-		this.id = 'instance';
-		this.name = '<u>I</u>nstance';
-
-		listenKeyDown(function (k) {
-			if (k === key.i && this$1._enabled) {
-				Module$$1.activateModule('instance', true);
-			}
-		});
-	}
-
-	if ( Module$$1 ) Instance.__proto__ = Module$$1;
-	Instance.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	Instance.prototype.constructor = Instance;
-	Instance.prototype.update = function update () {
-		if (editor.selection.items.length != 1)
-			{ return false; } // multiedit not supported yet
-		
-		if (editor.selection.type === 'ent') {
-			if (!this._selected || this.moduleContainer.isPacked()) {
-				return; // if the tab is not visible, do not waste CPU
-			}
-			
-			if (scene.isInInitialState()) {
-				this.propertyEditor.update(editor.selection.items.map(function (entity) { return entity.prototype; }), 'epr');
-			} else {
-				this.propertyEditor.update(editor.selection.items, editor.selection.type);
-			}
-		} else {
-			// console.log('hide', this.id);
-			return false; // hide module
-		}
-	};
-	Instance.prototype.activate = function activate (command, parameter) {
-	};
-
-	return Instance;
-}(Module));
-
-Module.register(Instance, 'right');
-
-var Types = (function (Module$$1) {
-	function Types() {
-		var this$1 = this;
-
-		Module$$1.call(
-			this, this.addButton = el('span.addTypeButton.button.fa.fa-plus'),
-			this.search = el('input'),
-			this.searchIcon = el('i.fa.fa-search.searchIcon'),
-			this.jstree = el('div'),
-			this.helperText = el('div.typesDragHelper',
-				el('i.fa.fa-long-arrow-right'),
-				'Drag',
-				el('i.fa.fa-long-arrow-right')
-			)
-		);
-		this.id = 'types';
-		this.name = 'Types';
-
-		this.addButton.onclick = function () {
-			setChangeOrigin$1(this$1);
-			var prototype = Prototype.create(' New type');
-			editor.game.addChild(prototype);
-			editor.select(prototype);
-			setTimeout(function () {
-				Module$$1.activateModule('type', true, 'focusOnProperty', 'name');
-			}, 100);
-		};
-		
-		var searchTimeout = false;
-		this.search.addEventListener('keyup', function () {
-			if (searchTimeout)
-				{ clearTimeout(searchTimeout); }
-
-			searchTimeout = setTimeout(function () {
-				$(this$1.jstree).jstree().search(this$1.search.value.trim());
-			}, 200);
-		});
-		
-		this.externalChange = false;
-
-		events.listen('change', function (change) {
-			if (change.reference._rootType === 'sce')
-				{ return; }
-			
-			var jstree = $(this$1.jstree).jstree(true);
-			if (!jstree)
-				{ return; }
-
-			start('Editor: Types');
-			
-			this$1.externalChange = true;
-			
-			if (change.reference.threeLetterType === 'prt') {
-				if (change.type === changeType.addSerializableToTree) {
-					var parent = change.parent;
-					var parentNode;
-					if (parent.threeLetterType === 'gam')
-						{ parentNode = '#'; }
-					else
-						{ parentNode = jstree.get_node(parent.id); }
-
-					jstree.create_node(parentNode, {
-						text: change.reference.getChildren('prp')[0].value,
-						id: change.reference.id
-					});
-				} else
-					{ this$1.dirty = true; } // prototypes added, removed, moved or something
-			} else if (change.type === changeType.setPropertyValue) {
-				var propParent = change.reference._parent;
-				if (propParent && propParent.threeLetterType === 'prt') {
-					var node = jstree.get_node(propParent.id);
-					jstree.rename_node(node, change.value);
-				}
-			} else if (change.type === 'editorSelection') {
-				if (change.origin != this$1) {
-					if (change.reference.type === 'prt') {
-						var node$1 = jstree.get_node(change.reference.items[0].id);
-						jstree.deselect_all();
-						jstree.select_node(node$1);
-					} else if (change.reference.type === 'epr') {
-						var jstree$1 = $(this$1.jstree).jstree(true);
-						var node$2 = jstree$1.get_node(change.reference.items[0].getParentPrototype().id);
-						jstree$1.deselect_all();
-						jstree$1.select_node(node$2);
-					} else if (change.reference.type === 'ent') {
-						var node$3 = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
-						jstree.deselect_all();
-						jstree.select_node(node$3);
-					}
-				}
-			}
-
-			this$1.externalChange = false;
-
-			stop('Editor: Types');
-		});
-	}
-
-	if ( Module$$1 ) Types.__proto__ = Module$$1;
-	Types.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	Types.prototype.constructor = Types;
-	Types.prototype.update = function update () {
-		var this$1 = this;
-
-		if (this.skipUpdate) { return; }
-		if (!this.jstreeInited)
-			{ this.dirty = true; }
-
-		if (!this.dirty) { return; }
-		
-		
-		var data = [];
-		editor.game.forEachChild('prt', function (prototype) {
-			var parent = prototype.getParent();
-			data.push({
-				text: prototype.name,
-				id: prototype.id,
-				parent: parent.threeLetterType === 'prt' ? parent.id : '#'
-			});
-		}, true);
-
-		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
-		this.helperText.classList.toggle('hidden', data.length === 0);
-		
-		if (!this.jstreeInited) {
-			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', function (e, data) {
-				var noPrototypes = editor.game.getChildren('prt').length === 0;
-				this$1.addButton.classList.toggle('clickMeEffect', noPrototypes);
-				this$1.helperText.classList.toggle('hidden', noPrototypes);
-				
-				if (this$1.externalChange || data.selected.length === 0)
-					{ return; }
-				
-				// selection changed
-				var prototypes = data.selected.map(getSerializable$1);
-				editor.select(prototypes, this$1);
-				Module$$1.activateModule('type', false);
-				if (prototypes.length === 1)
-					{ events.dispatch('prototypeClicked', prototypes[0]); }
-				
-			}).on('loaded.jstree refresh.jstree', function () {
-				var jstree = $(this$1.jstree).jstree(true);
-				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
-				// console.log(jstree, selNode);
-				if (editor.selection.type === 'none') {
-					//jstree.select_node();
-				}
-				if (editor.selection.type === 'prt') {
-					// jstree.select_node(editor.selection.items.map(i => i.id));
-				}
-			}).jstree({
-				core: {
-					check_callback: true,
-					data: data,
-					force_text: true
-				},
-				plugins: ['types', 'dnd', 'sort', 'search' ],
-				types: {
-					default: {
-						icon: 'fa fa-book'
-					}
-				},
-				sort: function (a, b) {
-					return this.get_text(a).toLowerCase() > this.get_text(b).toLowerCase() ? 1 : -1;
-				},
-				dnd: {
-					copy: false // jstree makes it way too hard to copy multiple prototypes
-				},
-				search: {
-					fuzzy: true,
-					show_only_matches: true,
-					show_only_matches_children: true,
-					close_opened_onclear: false
-				}
-			});
-			this.jstreeInited = true;
-		} else {
-			$(this.jstree).jstree(true).settings.core.data = data;
-			$(this.jstree).jstree('refresh');
-		}
-		$(this.jstree).data('typesModule', this);
-
-		this.dirty = false;
-	};
-
-	return Types;
-}(Module));
-
-$(document).on('dnd_start.vakata', function (e, data) {
-	var nodeObjects = data.data.nodes.map(getSerializable$1);
-	events.dispatch('dragPrototypeStarted', nodeObjects);
-});
-
-$(document).on('dnd_move.vakata', function (e, data) {
-	if (data.event.target.nodeName === 'CANVAS') {
-		data.helper.find('.jstree-icon').css({
-			visibility: 'hidden'
-		});
-	} else {
-		data.helper.find('.jstree-icon').css({
-			visibility: 'visible'
-		});
-	}
-});
-
-$(document).on('dnd_stop.vakata', function (e, data) {
-	var jstree = $('#types-jstree').jstree(true);
-	// let typesModule = $('#types-jstree').data('typesModule');
-	
-	setTimeout(function () {
-		// Now the nodes have moved in the DOM.
-
-		if (data.event.target.nodeName === 'CANVAS') {
-			// Drag entity to scene
-			var nodeObjects = data.data.nodes.map(getSerializable$1);
-			events.dispatch('dragPrototypeToCanvas', nodeObjects);
-		} else {
-			// Drag prototype in types view
-			
-			var node = jstree.get_node(data.data.obj);
-			var nodes = data.data.nodes; // these prototypes will move
-			var newParent;
-			if (node.parent === '#')
-				{ newParent = editor.game; }
-			else
-				{ newParent = getSerializable$1(node.parent); }
-
-			var nodeObjects$1 = nodes.map(getSerializable$1);
-			nodeObjects$1.forEach(assert);
-			nodeObjects$1.forEach(function (prototype) {
-				setChangeOrigin$1(jstree);
-				prototype.move(newParent);
-			});
-
-			events.dispatch('dragPrototypeToNonCanvas', nodeObjects$1);
-
-			// console.log('dnd stopped from', nodes, 'to', newParent);
-		}
-	}, 0);
-});
-
-Module.register(Types, 'left');
-
 var Help = function Help () {};
 
 var prototypeAccessors = { game: {},editor: {},level: {},scene: {},entities: {},world: {},Vector: {},serializables: {},serializablesArray: {},selectedEntity: {} };
@@ -6971,117 +5700,6 @@ Object.defineProperties( Help.prototype, prototypeAccessors );
 
 var help = new Help;
 window.help = help;
-
-function createNewLevel() {
-	var lvl = new Level();
-	
-	var levelNumber = 1;
-	var newLevelName;
-	while (true) {
-		newLevelName = 'Level ' + levelNumber;
-		if (!editor.game.findChild('lvl', function (lvl) { return lvl.name === newLevelName; }, false)) {
-			break;
-		}
-		levelNumber++;
-	}
-	
-	lvl.initWithPropertyValues({
-		name: newLevelName
-	});
-	editor.game.addChild(lvl);
-	editor.setLevel(lvl);
-	
-	return lvl;
-}
-
-var Levels = (function (Module$$1) {
-	function Levels() {
-		var this$1 = this;
-
-		Module$$1.call(
-			this, this.content = el('div',
-				this.buttons = list('div.levelSelectorButtons', LevelItem),
-				'Create: ',
-				this.createButton = new Button
-			)
-		);
-		this.name = 'Levels';
-		this.id = 'levels';
-
-		this.createButton.update({
-			text: 'New level',
-			icon: 'fa-area-chart',
-			callback: function () {
-				setChangeOrigin(this$1);
-				var lvl = createNewLevel();
-				editor.select(lvl, this$1);
-
-				setTimeout(function () {
-					Module$$1.activateModule('level', true, 'focusOnProperty', 'name');
-				}, 100);
-			}
-		});
-
-		listen(this.el, 'selectLevel', function (level) {
-			editor.setLevel(level);
-			editor.select(level, this$1);
-		});
-/*
-		listen(this.el, 'deleteLevel', level => {
-			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
-				setChangeOrigin(this);
-				level.delete();
-			}
-		});
-		*/
-	}
-
-	if ( Module$$1 ) Levels.__proto__ = Module$$1;
-	Levels.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	Levels.prototype.constructor = Levels;
-	Levels.prototype.update = function update () {
-		this.buttons.update(game.getChildren('lvl'));
-	};
-
-	return Levels;
-}(Module));
-
-Module.register(Levels, 'left');
-
-var LevelItem = function LevelItem() {
-	this.el = el('div.levelItem',
-		this.number = el('span'),
-		this.selectButton = new Button
-		//,this.deleteButton = new Button
-	);
-};
-LevelItem.prototype.selectClicked = function selectClicked () {
-	dispatch(this, 'selectLevel', this.level);
-};
-/*
-deleteClicked() {
-	dispatch(this, 'deleteLevel', this.level);
-}
-*/
-LevelItem.prototype.update = function update (level, idx) {
-		var this$1 = this;
-
-	this.level = level;
-	this.number.textContent = (idx+1) + '.';
-	this.selectButton.update({
-		text: level.name,
-		icon: 'fa-area-chart',
-		callback: function () { return this$1.selectClicked(); }
-	});
-	/*
-	this.deleteButton.update({
-		text: 'Delete',
-		class: 'dangerButton',
-		icon: 'fa-cross',
-		callback: () => this.deleteClicked()
-	});
-	*/
-};
 
 var SHIFT_STEPS = 16;
 
@@ -7439,6 +6057,9 @@ Component$1.register({
 				this.zoomListener();
 				this.zoomListener = null;
 			}
+
+			this.positionHelper.destroy();
+			this.positionHelper = null;
 		},
 		delete: function delete$1() {
 			this.widgets.forEach(function (widget) {
@@ -7450,9 +6071,6 @@ Component$1.register({
 			this.scale = null;
 			this.angle = null;
 			this.position = null;
-			
-			this.positionHelper.destroy();
-			this.positionHelper = null;
 		}
 	}
 });
@@ -7485,7 +6103,7 @@ var SceneModule = (function (Module$$1) {
 				width: 0,
 				height: 0
 			}),
-			el('div.pauseInfo', "Paused. Editing instances will not affect the level."),
+			el('div.pauseInfo', "Paused. Editing objects will not affect the level."),
 			el('i.fa.fa-pause.pauseInfo.topLeft'),
 			el('i.fa.fa-pause.pauseInfo.topRight'),
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
@@ -7552,6 +6170,7 @@ var SceneModule = (function (Module$$1) {
 							if (this$1.selectedEntities.length > 0) {
 								this$1.deleteNewEntities();
 								(ref = this$1.newEntities).push.apply(ref, this$1.selectedEntities.map(function (e) { return e.clone(); }));
+								this$1.copyEntities(this$1.newEntities);
 								this$1.clearSelectedEntities();
 								setEntityPositions(this$1.newEntities, this$1.previousMousePosInWorldCoordinates);
 								this$1.draw();
@@ -7559,7 +6178,7 @@ var SceneModule = (function (Module$$1) {
 							var ref;
 						},
 						onmousedown: disableMouseDown,
-						title: 'Copy selected instances (C)'
+						title: 'Copy selected objects (C)'
 					}),
 					deleteButton = el('i.fa.fa-trash.iconButton.button', {
 						onclick: function () {
@@ -7568,7 +6187,7 @@ var SceneModule = (function (Module$$1) {
 							this$1.draw();
 						},
 						onmousedown: disableMouseDown,
-						title: 'Delete selected instances (Backspace)'
+						title: 'Delete selected objects (Backspace)'
 					})
 				)
 			)
@@ -7605,6 +6224,7 @@ var SceneModule = (function (Module$$1) {
 		 });
 		 */
 
+		this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
 		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
@@ -7741,6 +6361,8 @@ var SceneModule = (function (Module$$1) {
 				this$1.deleteButton.click();
 			} else if (k === key.c) {
 				this$1.copyButton.click();
+			} else if (k === key.v) {
+				this$1.pasteEntities();
 			} else if (k === key.p) {
 				this$1.playButton.click();
 			} else if (k === key.r) {
@@ -8099,7 +6721,7 @@ var SceneModule = (function (Module$$1) {
 			setTimeout(function () {
 				if (game.getChildren('lvl').length === 0) {
 					setChangeOrigin$1(this$1);
-					createNewLevel();
+					events.dispatch('createBlankLevel');
 				}
 			}, 700);
 		}
@@ -8158,9 +6780,9 @@ var SceneModule = (function (Module$$1) {
 	SceneModule.prototype.selectSelectedEntitiesInEditor = function selectSelectedEntitiesInEditor () {
 		editor.select(this.selectedEntities, this);
 		if (shouldSyncLevelAndScene())
-			{ Module$$1.activateOneOfModules(['type', 'instance'], false); }
+			{ Module$$1.activateOneOfModules(['type', 'object'], false); }
 		else
-			{ Module$$1.activateOneOfModules(['instance'], false); }
+			{ Module$$1.activateOneOfModules(['object'], false); }
 	};
 
 	SceneModule.prototype.stopAndReset = function stopAndReset () {
@@ -8218,11 +6840,1420 @@ var SceneModule = (function (Module$$1) {
 		else
 			{ this.sceneContextButtons.classList.add('hidden'); }
 	};
+	
+	SceneModule.prototype.copyEntities = function copyEntities (entities) {
+		this.copiedEntities.forEach(function (entity) { return entity.delete(); });
+		this.copiedEntities.length = [];
+		(ref = this.copiedEntities).push.apply(ref, entities.map(function (entity) { return entity.clone(); }));
+		this.copiedEntities.forEach(function (entity) { return entity.sleep(); });
+		var ref;
+	};
+	SceneModule.prototype.pasteEntities = function pasteEntities () {
+		this.deleteNewEntities();
+		(ref = this.newEntities).push.apply(ref, this.copiedEntities.map(function (entity) { return entity.clone(); }));
+		this.newEntities.forEach(function (entity) { return entity.wakeUp(); });
+		var ref;
+	};
 
 	return SceneModule;
 }(Module));
 
 Module.register(SceneModule, 'center');
+
+var Types = (function (Module$$1) {
+	function Types() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.addButton = el('span.addTypeButton.button.fa.fa-plus'),
+			this.search = el('input'),
+			this.searchIcon = el('i.fa.fa-search.searchIcon'),
+			this.jstree = el('div'),
+			this.helperText = el('div.typesDragHelper',
+				el('i.fa.fa-long-arrow-right'),
+				'Drag',
+				el('i.fa.fa-long-arrow-right')
+			)
+		);
+		this.id = 'types';
+		this.name = 'Types';
+
+		this.addButton.onclick = function () {
+			setChangeOrigin$1(this$1);
+			var prototype = Prototype.create(' New type');
+			editor.game.addChild(prototype);
+			editor.select(prototype);
+			setTimeout(function () {
+				Module$$1.activateModule('type', true, 'focusOnProperty', 'name');
+			}, 100);
+		};
+		
+		var searchTimeout = false;
+		this.search.addEventListener('keyup', function () {
+			if (searchTimeout)
+				{ clearTimeout(searchTimeout); }
+
+			searchTimeout = setTimeout(function () {
+				$(this$1.jstree).jstree().search(this$1.search.value.trim());
+			}, 200);
+		});
+		
+		this.externalChange = false;
+
+		events.listen('change', function (change) {
+			if (change.reference._rootType === 'sce')
+				{ return; }
+			
+			var jstree = $(this$1.jstree).jstree(true);
+			if (!jstree)
+				{ return; }
+
+			start('Editor: Types');
+			
+			this$1.externalChange = true;
+			
+			if (change.reference.threeLetterType === 'prt') {
+				if (change.type === changeType.addSerializableToTree) {
+					var parent = change.parent;
+					var parentNode;
+					if (parent.threeLetterType === 'gam')
+						{ parentNode = '#'; }
+					else
+						{ parentNode = jstree.get_node(parent.id); }
+
+					jstree.create_node(parentNode, {
+						text: change.reference.getChildren('prp')[0].value,
+						id: change.reference.id
+					});
+				} else
+					{ this$1.dirty = true; } // prototypes added, removed, moved or something
+			} else if (change.type === changeType.setPropertyValue) {
+				var propParent = change.reference._parent;
+				if (propParent && propParent.threeLetterType === 'prt') {
+					var node = jstree.get_node(propParent.id);
+					jstree.rename_node(node, change.value);
+				}
+			} else if (change.type === 'editorSelection') {
+				if (change.origin != this$1) {
+					if (change.reference.type === 'prt') {
+						var node$1 = jstree.get_node(change.reference.items[0].id);
+						jstree.deselect_all();
+						jstree.select_node(node$1);
+					} else if (change.reference.type === 'epr') {
+						var jstree$1 = $(this$1.jstree).jstree(true);
+						var node$2 = jstree$1.get_node(change.reference.items[0].getParentPrototype().id);
+						jstree$1.deselect_all();
+						jstree$1.select_node(node$2);
+					} else if (change.reference.type === 'ent') {
+						var node$3 = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
+						jstree.deselect_all();
+						jstree.select_node(node$3);
+					}
+				}
+			}
+
+			this$1.externalChange = false;
+
+			stop('Editor: Types');
+		});
+	}
+
+	if ( Module$$1 ) Types.__proto__ = Module$$1;
+	Types.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Types.prototype.constructor = Types;
+	Types.prototype.update = function update () {
+		var this$1 = this;
+
+		if (this.skipUpdate) { return; }
+		if (!this.jstreeInited)
+			{ this.dirty = true; }
+
+		if (!this.dirty) { return; }
+		
+		
+		var data = [];
+		editor.game.forEachChild('prt', function (prototype) {
+			var parent = prototype.getParent();
+			data.push({
+				text: prototype.name,
+				id: prototype.id,
+				parent: parent.threeLetterType === 'prt' ? parent.id : '#'
+			});
+		}, true);
+
+		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
+		this.helperText.classList.toggle('hidden', data.length === 0);
+		
+		if (!this.jstreeInited) {
+			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', function (e, data) {
+				var noPrototypes = editor.game.getChildren('prt').length === 0;
+				this$1.addButton.classList.toggle('clickMeEffect', noPrototypes);
+				this$1.helperText.classList.toggle('hidden', noPrototypes);
+				
+				if (this$1.externalChange || data.selected.length === 0)
+					{ return; }
+				
+				// selection changed
+				var prototypes = data.selected.map(getSerializable$1);
+				editor.select(prototypes, this$1);
+				Module$$1.activateModule('type', false);
+				if (prototypes.length === 1)
+					{ events.dispatch('prototypeClicked', prototypes[0]); }
+				
+			}).on('loaded.jstree refresh.jstree', function () {
+				var jstree = $(this$1.jstree).jstree(true);
+				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
+				// console.log(jstree, selNode);
+				if (editor.selection.type === 'none') {
+					//jstree.select_node();
+				}
+				if (editor.selection.type === 'prt') {
+					// jstree.select_node(editor.selection.items.map(i => i.id));
+				}
+			}).jstree({
+				core: {
+					check_callback: true,
+					data: data,
+					force_text: true
+				},
+				plugins: ['types', 'dnd', 'sort', 'search' ],
+				types: {
+					default: {
+						icon: 'fa fa-book'
+					}
+				},
+				sort: function (a, b) {
+					return this.get_text(a).toLowerCase() > this.get_text(b).toLowerCase() ? 1 : -1;
+				},
+				dnd: {
+					copy: false // jstree makes it way too hard to copy multiple prototypes
+				},
+				search: {
+					fuzzy: true,
+					show_only_matches: true,
+					show_only_matches_children: true,
+					close_opened_onclear: false
+				}
+			});
+			this.jstreeInited = true;
+		} else {
+			$(this.jstree).jstree(true).settings.core.data = data;
+			$(this.jstree).jstree('refresh');
+		}
+		$(this.jstree).data('typesModule', this);
+
+		this.dirty = false;
+	};
+
+	return Types;
+}(Module));
+
+$(document).on('dnd_start.vakata', function (e, data) {
+	var nodeObjects = data.data.nodes.map(getSerializable$1);
+	events.dispatch('dragPrototypeStarted', nodeObjects);
+});
+
+$(document).on('dnd_move.vakata', function (e, data) {
+	if (data.event.target.nodeName === 'CANVAS') {
+		data.helper.find('.jstree-icon').css({
+			visibility: 'hidden'
+		});
+	} else {
+		data.helper.find('.jstree-icon').css({
+			visibility: 'visible'
+		});
+	}
+});
+
+$(document).on('dnd_stop.vakata', function (e, data) {
+	var jstree = $('#types-jstree').jstree(true);
+	// let typesModule = $('#types-jstree').data('typesModule');
+	
+	setTimeout(function () {
+		// Now the nodes have moved in the DOM.
+
+		if (data.event.target.nodeName === 'CANVAS') {
+			// Drag entity to scene
+			var nodeObjects = data.data.nodes.map(getSerializable$1);
+			events.dispatch('dragPrototypeToCanvas', nodeObjects);
+		} else {
+			// Drag prototype in types view
+			
+			var node = jstree.get_node(data.data.obj);
+			var nodes = data.data.nodes; // these prototypes will move
+			var newParent;
+			if (node.parent === '#')
+				{ newParent = editor.game; }
+			else
+				{ newParent = getSerializable$1(node.parent); }
+
+			var nodeObjects$1 = nodes.map(getSerializable$1);
+			nodeObjects$1.forEach(assert);
+			nodeObjects$1.forEach(function (prototype) {
+				setChangeOrigin$1(jstree);
+				prototype.move(newParent);
+			});
+
+			events.dispatch('dragPrototypeToNonCanvas', nodeObjects$1);
+
+			// console.log('dnd stopped from', nodes, 'to', newParent);
+		}
+	}, 0);
+});
+
+Module.register(Types, 'left');
+
+var Objects = (function (Module$$1) {
+	function Objects() {
+		Module$$1.call(
+			this, this.content = el('span', 'List of objects on the level')
+		);
+		this.name = 'Objects';
+		this.id = 'objects';
+	}
+
+	if ( Module$$1 ) Objects.__proto__ = Module$$1;
+	Objects.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Objects.prototype.constructor = Objects;
+	Objects.prototype.update = function update () {
+		return false;
+	};
+
+	return Objects;
+}(Module));
+
+Module.register(Objects, 'left');
+
+var popupDepth = 0;
+
+var Popup = function Popup(ref) {
+	var this$1 = this;
+	var title = ref.title; if ( title === void 0 ) title = 'Undefined popup';
+	var cancelCallback = ref.cancelCallback; if ( cancelCallback === void 0 ) cancelCallback = null;
+	var width = ref.width; if ( width === void 0 ) width = null;
+	var content = ref.content; if ( content === void 0 ) content = el('div', 'Undefined content');
+
+	this.el = el('div.popup', {
+			style: { 'z-index': 1000 + popupDepth++ }
+		},
+		new Layer(this),
+		el('div.popupContent',
+			this.text = el('div.popupTitle'),
+			this.content = content
+		)
+	);
+	this.depth = popupDepth;
+	this.text.innerHTML = title;
+	this.cancelCallback = cancelCallback;
+		
+		
+	this.keyListener = listenKeyDown(function (keyChar) {
+		if (keyChar === key.esc && this$1.depth === popupDepth) {
+			this$1.remove();
+		}
+	});
+		
+	mount(document.body, this.el);
+};
+Popup.prototype.remove = function remove () {
+	popupDepth--;
+	this.el.parentNode.removeChild(this.el);
+	this.keyListener();
+	this.keyListener = null;
+};
+
+var Button = function Button() {
+	var this$1 = this;
+
+	this.el = el('button.button', {onclick: function () {
+		this$1.callback();
+	}});
+};
+Button.prototype.update = function update (button) {
+	var newClassName = button.class ? ("button " + (button.class)) : 'button';
+		
+	if (
+		this.el.textContent === button.text
+		&& this._prevIcon === button.icon
+		&& this.el.className === newClassName
+		&& (!button.color || this.el.style['border-color'] === button.color)
+	) {
+		return; // optimize
+	}
+		
+	this.el.textContent = button.text;
+		
+	this._prevIcon = button.icon;
+	if (button.icon) {
+		var icon = el('i.fa.' + button.icon);
+		if (button.color)
+			{ icon.style.color = button.color; }
+		mount(this.el, icon, this.el.firstChild);
+	}
+	this.el.className = newClassName;
+	this.callback = button.callback;
+	if (button.color)
+		{ this.el.style['border-color'] = button.color; }
+};
+
+var Layer = function Layer(popup) {
+	this.el = el('div.popupLayer', { onclick: function () {
+		popup.remove();
+		popup.cancelCallback && popup.cancelCallback();
+	} });
+};
+
+function createNewLevel() {
+	var lvl = new Level();
+	
+	var levelNumber = 1;
+	var newLevelName;
+	while (true) {
+		newLevelName = 'Level ' + levelNumber;
+		if (!editor.game.findChild('lvl', function (lvl) { return lvl.name === newLevelName; }, false)) {
+			break;
+		}
+		levelNumber++;
+	}
+	
+	lvl.initWithPropertyValues({
+		name: newLevelName
+	});
+	editor.game.addChild(lvl);
+	editor.setLevel(lvl);
+	
+	return lvl;
+}
+
+events.listen('createBlankLevel', createNewLevel);
+
+var Levels = (function (Module$$1) {
+	function Levels() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.content = el('div',
+				this.buttons = list('div.levelSelectorButtons', LevelItem),
+				'Create: ',
+				this.createButton = new Button
+			)
+		);
+		this.name = 'Levels';
+		this.id = 'levels';
+
+		this.createButton.update({
+			text: 'New level',
+			icon: 'fa-area-chart',
+			callback: function () {
+				setChangeOrigin(this$1);
+				var lvl = createNewLevel();
+				editor.select(lvl, this$1);
+
+				setTimeout(function () {
+					Module$$1.activateModule('level', true, 'focusOnProperty', 'name');
+				}, 100);
+			}
+		});
+
+		listen(this.el, 'selectLevel', function (level) {
+			editor.setLevel(level);
+			editor.select(level, this$1);
+		});
+/*
+		listen(this.el, 'deleteLevel', level => {
+			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
+				setChangeOrigin(this);
+				level.delete();
+			}
+		});
+		*/
+	}
+
+	if ( Module$$1 ) Levels.__proto__ = Module$$1;
+	Levels.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Levels.prototype.constructor = Levels;
+	Levels.prototype.update = function update () {
+		this.buttons.update(game.getChildren('lvl'));
+	};
+
+	return Levels;
+}(Module));
+
+Module.register(Levels, 'left');
+
+var LevelItem = function LevelItem() {
+	this.el = el('div.levelItem',
+		this.number = el('span'),
+		this.selectButton = new Button
+		//,this.deleteButton = new Button
+	);
+};
+LevelItem.prototype.selectClicked = function selectClicked () {
+	dispatch(this, 'selectLevel', this.level);
+};
+/*
+deleteClicked() {
+	dispatch(this, 'deleteLevel', this.level);
+}
+*/
+LevelItem.prototype.update = function update (level, idx) {
+		var this$1 = this;
+
+	this.level = level;
+	this.number.textContent = (idx+1) + '.';
+	this.selectButton.update({
+		text: level.name,
+		icon: 'fa-area-chart',
+		callback: function () { return this$1.selectClicked(); }
+	});
+	/*
+	this.deleteButton.update({
+		text: 'Delete',
+		class: 'dangerButton',
+		icon: 'fa-cross',
+		callback: () => this.deleteClicked()
+	});
+	*/
+};
+
+var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
+
+// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
+var editors = {};
+editors.default = editors.string = function (container, oninput, onchange, options) {
+	var input = el('input', {
+		placeholder: options.placeholder || '',
+		oninput: function () { return oninput(input.value); },
+		onchange: function () { return onchange(input.value); }
+	});
+	mount(container, input);
+
+	return function (val) { return input.value = val; };
+};
+
+editors.float = editors.int = function (container, oninput, onchange) {
+	var input = el('input', {
+		type: 'number',
+		oninput: function () { return oninput(+input.value); },
+		onchange: function () { return onchange(+input.value); }
+	});
+	mount(container, input);
+	return function (val) { return input.value = Math.round(val*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION; };
+};
+
+editors.bool = function (container, oninput, onchange) {
+	var input = el('input', {
+		type: 'checkbox',
+		onchange: function () {
+			onchange(input.checked);
+			label.textContent = input.checked ? 'Yes' : 'No';
+		}
+	});
+	var label = el('span');
+	mount(container, el('label', input, label));
+	return function (val) {
+		input.checked = val;
+		label.textContent = val ? 'Yes' : 'No';
+	}
+};
+
+editors.vector = function (container, oninput, onchange) {
+	function getValue() {
+		return new Vector(+xInput.value, +yInput.value);
+	}
+	var xInput = el('input.xInput', {
+		type: 'number',
+		oninput: function () { return oninput(getValue()); },
+		onchange: function () { return onchange(getValue()); }
+	});
+	var yInput = el('input', {
+		type: 'number',
+		oninput: function () { return oninput(getValue()); },
+		onchange: function () { return onchange(getValue()); }
+	});
+	mount(container, el('div', el('span', 'x:'), xInput, el('span', 'y:'), yInput));
+	return function (val) {
+		xInput.value = Math.round(val.x*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
+		yInput.value = Math.round(val.y*EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
+	};
+};
+
+editors.enum = function (container, oninput, onchange, options) {
+	var select = el.apply(void 0, [ 'select' ].concat( options.propertyType.validator.parameters.map(function (p) { return el('option', p); }) ));
+	select.onchange = function () {
+		onchange(select.value);
+	};
+	mount(container, select);
+	return function (val) {
+		select.value = val;
+	}
+};
+
+editors.color = function (container, oninput, onchange) {
+	var input = el('input', {
+		type: 'color',
+		oninput: function () { return oninput(input.value); },
+		onchange: function () { return onchange(input.value); }
+	});
+	mount(container, input);
+	return function (val) { return input.value = val.toHexString(); };
+};
+
+var Confirmation = (function (Popup$$1) {
+	function Confirmation(question, buttonOptions, callback) {
+		var this$1 = this;
+
+		Popup$$1.call(this, {
+			title: question,
+			width: '500px',
+			content: list('div.confirmationButtons', Button)
+		});
+		
+		this.content.update([{
+			text: 'Cancel',
+			callback: function () { return this$1.remove(); }
+		}, Object.assign({
+			text: 'Confirm'
+		}, buttonOptions, {
+			callback: function () {
+				callback();
+				this$1.remove();
+			}
+		})]);
+		
+		var confirmButton = this.content.views[1];
+		confirmButton.el.focus();
+	}
+
+	if ( Popup$$1 ) Confirmation.__proto__ = Popup$$1;
+	Confirmation.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
+	Confirmation.prototype.constructor = Confirmation;
+
+	Confirmation.prototype.remove = function remove () {
+		Popup$$1.prototype.remove.call(this);
+	};
+
+	return Confirmation;
+}(Popup));
+
+var CATEGORY_ORDER = [
+	'Common',
+	'Logic',
+	'Graphics'
+];
+
+var HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
+
+var ComponentAdder = (function (Popup$$1) {
+	function ComponentAdder(parent) {
+		var this$1 = this;
+
+		Popup$$1.call(this, {
+			title: 'Add Component',
+			width: '500px',
+			content: list('div.componentAdderContent', Category, undefined, parent)
+		});
+
+
+		var componentClassArray = Array.from(componentClasses.values())
+		.filter(function (cl) { return !HIDDEN_COMPONENTS.includes(cl.componentName); })
+		.sort(function (a, b) { return a.componentName.localeCompare(b.componentName); });
+
+		console.log('before set', componentClassArray.map(function (c) { return c.category; }));
+		console.log('set', new Set(componentClassArray.map(function (c) { return c.category; })));
+		console.log('set array', [].concat( new Set(componentClassArray.map(function (c) { return c.category; })) ));
+
+		var categories = Array.from(new Set(componentClassArray.map(function (c) { return c.category; }))).map(function (categoryName) { return ({
+			categoryName: categoryName,
+			components: componentClassArray.filter(function (c) { return c.category === categoryName; })
+		}); });
+
+		categories.sort(function (a, b) {
+			var aIdx = CATEGORY_ORDER.indexOf(a.categoryName);
+			var bIdx = CATEGORY_ORDER.indexOf(b.categoryName);
+
+			if (aIdx < 0) { aIdx = 999; }
+			if (bIdx < 0) { bIdx = 999; }
+
+			if (aIdx < bIdx) { return -1; }
+			else { return 1; }
+		});
+
+		this.update(categories);
+		
+		listen(this, 'refresh', function () {
+			this$1.update(categories);
+		});
+	}
+
+	if ( Popup$$1 ) ComponentAdder.__proto__ = Popup$$1;
+	ComponentAdder.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
+	ComponentAdder.prototype.constructor = ComponentAdder;
+
+	ComponentAdder.prototype.update = function update (categories) {
+		this.content.update(categories);
+	};
+
+	return ComponentAdder;
+}(Popup));
+
+var Category = function Category(parent) {
+	this.el = el('div.categoryItem',
+		this.name = el('div.categoryName'),
+		this.list = list('div.categoryButtons', ButtonWithDescription)
+	);
+	this.parent = parent;
+};
+
+Category.prototype.addComponentToParent = function addComponentToParent (componentClass) {
+		var this$1 = this;
+
+	setChangeOrigin$1(this);
+
+	function addComponentDatas(parent, componentNames) {
+		return parent.addChildren(componentNames.map(function (name) { return new ComponentData(name); }));
+	}
+
+	if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
+		var missingRequirements = getMissingRequirements(this.parent, componentClass.requirements);
+
+		if (missingRequirements.length === 0) {
+			addComponentDatas(this.parent, [componentClass.componentName]);
+			dispatch(this, 'refresh');
+		} else {
+			new Confirmation(("<b>" + (componentClass.componentName) + "</b> needs these components in order to work: <b>" + (missingRequirements.join(', ')) + "</b>"), {
+				text: ("Add all (" + (missingRequirements.length + 1) + ") components"),
+				color: '#4ba137',
+				icon: 'fa-plus'
+			}, function () {
+				addComponentDatas(this$1.parent, missingRequirements.concat(componentClass.componentName));
+				dispatch(this$1, 'refresh');
+			});
+		}
+		return;
+	}
+	assert(false);
+};
+
+Category.prototype.update = function update (category) {
+		var this$1 = this;
+
+	this.name.textContent = category.categoryName;
+		
+	var componentCounts = {};
+	this.parent.forEachChild('cda', function (cda) {
+		if (!componentCounts[cda.name])
+			{ componentCounts[cda.name] = 0; }
+		componentCounts[cda.name]++;
+	});
+
+	var componentButtonData = category.components.map(function (comp) {
+		var disabledReason;
+		if (!comp.allowMultiple && this$1.parent.findChild('cda', function (cda) { return cda.name === comp.componentName; }) !== null) {
+			disabledReason = "Only one " + (comp.componentName) + " component is allowed at the time";
+		}
+		var count = componentCounts[comp.componentName];
+		return {
+			text: comp.componentName + (count ? (" (" + count + ")") : ''),
+			description: comp.description,
+			color: comp.color,
+			icon: comp.icon,
+			disabledReason: disabledReason,
+			callback: function () {
+				if ('activeElement' in document)
+					{ document.activeElement.blur(); }
+					
+				this$1.addComponentToParent(comp);
+			}
+		};
+	});
+
+	this.list.update(componentButtonData);
+};
+
+var ButtonWithDescription = function ButtonWithDescription() {
+	this.el = el('div.buttonWithDescription',
+		this.button = new Button(),
+		this.description = el('span.description')
+	);
+};
+
+ButtonWithDescription.prototype.update = function update (buttonData) {
+	this.description.innerHTML = buttonData.description;
+	this.button.el.disabled = buttonData.disabledReason ? 'disabled' : '';
+	this.button.el.setAttribute('title', buttonData.disabledReason || '');
+	this.button.update(buttonData);
+};
+
+function getMissingRequirements(parent, requirements) {
+	function isMissing(componentName) {
+		var componentData = parent.findChild('cda', function (componentData) { return componentData.name === componentName; });
+		return !componentData;
+	}
+
+	return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
+}
+
+var ObjectMoreButtonContextMenu = (function (Popup$$1) {
+	function ObjectMoreButtonContextMenu(property) {
+		var this$1 = this;
+
+		Popup$$1.call(this, {
+			title: 'Object Property: ' + property.name,
+			width: '500px',
+			content: this.buttons = list('div', Button)
+		});
+
+		var value = property.value;
+		var component = property.getParent();
+		var componentId = component._componentId;
+		var entityPrototype = component.entity.prototype;
+		var prototype = entityPrototype.prototype;
+		
+		var actions = [
+			{
+				text: 'Copy value to type ' + prototype.name,
+				callback: function () {
+					setChangeOrigin$1(this$1);
+					var componentData = prototype.getOwnComponentDataOrInherit(componentId);
+					if (componentData) {
+						var newProperty = componentData.getPropertyOrCreate(property.name);
+						newProperty.value = property.value;
+					} else {
+						alert('Error: Component data not found');
+					}
+					this$1.remove();
+				}
+			},
+			{
+				text: 'Save value for this object',
+				callback: function () {
+					setChangeOrigin$1(this$1);
+
+					var componentData = entityPrototype.getOwnComponentDataOrInherit(componentId);
+					if (componentData) {
+						var newProperty = componentData.getPropertyOrCreate(property.name);
+						newProperty.value = property.value;
+					} else {
+						alert('Error: Component data not found');
+					}
+					this$1.remove();
+				}
+			}
+		];
+		
+		this.update(actions);
+	}
+
+	if ( Popup$$1 ) ObjectMoreButtonContextMenu.__proto__ = Popup$$1;
+	ObjectMoreButtonContextMenu.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
+	ObjectMoreButtonContextMenu.prototype.constructor = ObjectMoreButtonContextMenu;
+	ObjectMoreButtonContextMenu.prototype.update = function update (data) {
+		this.buttons.update(data);
+	};
+
+	return ObjectMoreButtonContextMenu;
+}(Popup));
+
+var PropertyEditor = function PropertyEditor() {
+	var this$1 = this;
+
+	this.el = el('div.propertyEditor',
+		this.list = list('div.propertyEditorList', Container)
+	);
+	this.dirty = true;
+	this.editingProperty = false;
+		
+	// Change in serializable tree
+	events.listen('change', function (change) {
+		if (change.type === 'editorSelection') {
+			this$1.dirty = true;
+		} else if (change.type === changeType.setPropertyValue) {
+			if (this$1.item && this$1.item.hasDescendant(change.reference)) {
+				if (change.origin === this$1) {
+					if (this$1.item.threeLetterType === 'ent') {
+						this$1.item.dispatch('changedInEditor');
+						entityModifiedInEditor(this$1.item, change);
+					}
+				} else {
+					this$1.dirty = true;
+				}
+			}
+		} else if (change.type === changeType.addSerializableToTree) {
+			if (change.parent === this$1.item || this$1.item && this$1.item.hasDescendant(change.parent))
+				{ this$1.dirty = true; }
+		} else if (change.type === changeType.deleteSerializable) {
+			if (this$1.item && this$1.item.hasDescendant(change.reference)) {
+				this$1.dirty = true;
+			}
+		} else if (change.type === changeType.deleteAllChildren) {
+			if (this$1.item && this$1.item.hasDescendant(change.reference)) {
+				this$1.dirty = true;
+			}
+		}
+	});
+		
+	listen(this, 'makingChanges', function () {
+		setChangeOrigin$1(this$1);
+	});
+		
+	// Change in this editor
+	listen(this, 'markPropertyEditorDirty', function () {
+		this$1.dirty = true;
+	});
+		
+	listen(this, 'propertyEditorSelect', function (items) {
+		editor.select(items, this$1);
+	});
+
+	listenKeyDown(function (keyCode) {
+		if (keyCode === key.esc) {
+			if ('activeElement' in document && document.activeElement.tagName === 'INPUT') {
+				document.activeElement.blur();
+			}
+		}
+	});
+};
+PropertyEditor.prototype.update = function update (items, threeLetterType) {
+	if (!this.dirty) { return; }
+	if (!items) { return; }
+		
+	if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
+	|| items.length === 1 && items[0] instanceof PropertyOwner) {
+		this.item = items[0];
+		this.list.update([this.item]);
+	} else {
+		this.list.update([]);
+	}
+		
+	this.dirty = false;
+};
+
+var Container = function Container() {
+	var this$1 = this;
+
+	this.el = el('div.container',
+		this.title = el('div.containerTitle',
+			this.titleText = el('span.containerTitleText'),
+			this.titleIcon = el('i.icon.fa')
+		),
+		this.content = el('div.containerContent',
+			this.properties = list('table', Property$2, null, this.propertyEditor),
+			this.containers = list('div', Container, null, this.propertyEditor),
+			this.controls = el('div'),
+			el('i.button.logButton.fa.fa-eye', {
+				onclick: function () {
+					console.log(this$1.item);
+					window.item = this$1.item;
+					console.log("you can use variable 'item'");
+					var element = el('span', ' logged to console');
+					mount(this$1.title, element);
+					setTimeout(function () {
+						this$1.title.removeChild(element);
+					}, 500);
+				}
+			})
+		)
+	);
+	this.titleClickedCallback = null;
+	this.title.onclick = function () {
+		this$1.titleClickedCallback && this$1.titleClickedCallback();
+	};
+		
+	listen(this, 'propertyInherited', function (property, view) {
+		if (this$1.item.threeLetterType !== 'icd') { return; }
+		// this.item is inheritedComponentData
+		var proto = this$1.item.generatedForPrototype;
+		var newProperty = proto.createAndAddPropertyForComponentData(this$1.item, property.name, property.value);
+		view.update(newProperty);
+		// dispatch(this, 'markPropertyEditorDirty');
+	});
+};
+Container.prototype.update = function update (state) {
+		var this$1 = this;
+
+	var itemChanged = this.item !== state;
+		
+	if (itemChanged) {
+		this.item = state;
+		this.el.setAttribute('type', this.item.threeLetterType);
+
+		// Skip transitions when changing item
+		this.el.classList.add('skipPropertyEditorTransitions');
+		setTimeout(function () {
+			this$1.el.classList.remove('skipPropertyEditorTransitions');
+		}, 10);
+	}
+		
+	if (this.controls.innerHTML !== '')
+		{ this.controls.innerHTML = ''; }
+		
+	this.titleClickedCallback = null;
+
+	if (this.item.threeLetterType === 'icd') { this.updateInheritedComponentData(); }
+	else if (this.item.threeLetterType === 'ent') { this.updateEntity(); }
+	else if (this.item.threeLetterType === 'com') { this.updateComponent(); }
+	else if (this.item.threeLetterType === 'prt') { this.updatePrototype(); }
+	else if (this.item.threeLetterType === 'epr') { this.updateEntityPrototype(); }
+	else if (this.item instanceof PropertyOwner) { this.updatePropertyOwner(); }
+};
+Container.prototype.updatePrototype = function updatePrototype () {
+		var this$1 = this;
+
+	var inheritedComponentDatas = this.item.getInheritedComponentDatas();
+	this.containers.update(inheritedComponentDatas);
+	this.properties.update(this.item.getChildren('prp'));
+		
+	var addButton;
+	mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
+		onclick: function () {
+			new ComponentAdder(this$1.item);
+		}
+	}));
+	if (inheritedComponentDatas.length === 0)
+		{ addButton.classList.add('clickMeEffect'); }
+		
+	mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: function () {
+		dispatch(this$1, 'makingChanges');
+			
+		var clone = this$1.item.clone();
+
+		var endingNumberMatch = clone.name.match(/\d+$/); // ending number
+		var num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
+		var nameWithoutNumber = endingNumberMatch ? clone.name.substring(0, clone.name.length - endingNumberMatch[0].length) : clone.name;
+		var nameSuggestion = nameWithoutNumber + num++;
+		while (this$1.item.getParent().findChild('prt', function (prt) { return prt.name === nameSuggestion; })) {
+			nameSuggestion = nameWithoutNumber + num++;
+		}
+		clone.name = nameSuggestion;
+		this$1.item.getParent().addChild(clone);
+		dispatch(this$1, 'propertyEditorSelect', clone);
+	} }));
+	mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', { onclick: function () {
+		dispatch(this$1, 'makingChanges');
+		var entityPrototypeCount = this$1.item.countEntityPrototypes(true);
+		if (entityPrototypeCount) {
+			if (confirm(("Type " + (this$1.item.name) + " is used in levels " + entityPrototypeCount + " times. Are you sure you want to delete this type and all " + entityPrototypeCount + " objects that are using it?")))
+				{ this$1.item.delete(); }
+		} else {
+			this$1.item.delete();
+		}
+		editor.select();
+	} }));
+};
+Container.prototype.updateEntityPrototype = function updateEntityPrototype () {
+		var this$1 = this;
+
+	var inheritedComponentDatas = this.item.getInheritedComponentDatas();
+	this.containers.update(inheritedComponentDatas);
+	var properties = this.item.getChildren('prp');
+	properties.forEach(function (prop) {
+		prop._editorPlaceholder = this$1.item.prototype.findChild('prp', function (prp) { return prp.name === prop.name; }).value;
+	});
+	this.properties.update(properties);
+	mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add Component', {
+		onclick: function () {
+			new ComponentAdder(this$1.item);
+		}
+	}));
+};
+Container.prototype.updateInheritedComponentData = function updateInheritedComponentData () {
+		var this$1 = this;
+
+	this.updateComponentKindOfThing(this.item.componentClass);
+		
+	var packId = 'pack' + this.item.generatedForPrototype.id + this.item.componentId;
+	var packedStatus = getOption(packId);
+	if (packedStatus === 'true') {
+		this.el.classList.add('packed');
+	} else if (packedStatus === 'false') {
+		this.el.classList.remove('packed');
+	} else {
+		this.el.classList.toggle('packed', !this.item.ownComponentData);
+	}
+		
+	this.titleClickedCallback = function () {
+		this$1.el.classList.toggle('packed');
+		setOption(packId, this$1.el.classList.contains('packed') ? 'true' : 'false');
+	};
+		
+	var parentComponentData = this.item.ownComponentData && this.item.ownComponentData.getParentComponentData();
+	var hasOwnProperties = false;
+	this.item.properties.forEach(function (prop) {
+		if (prop.id)
+			{ hasOwnProperties = true; }
+		if (prop.propertyType.visibleIf) {
+			prop._editorVisibleIfTarget = this$1.item.properties.find(function (p) { return p.name === prop.propertyType.visibleIf.propertyName; });
+		}
+	});
+	this.properties.update(this.item.properties);
+		
+	if (!this.item.ownComponentData || parentComponentData) {
+		mount(this.controls, el('button.button', 'Show Parent', {
+			onclick: function () {
+				var componentData = this$1.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(this$1.item.componentId, true);
+				dispatch(this$1, 'propertyEditorSelect', componentData.getParent());
+				dispatch(this$1, 'markPropertyEditorDirty');
+			}
+		}));
+	}
+
+	if (this.item.componentClass.componentName === 'Transform'
+		&& this.item.generatedForPrototype.threeLetterType === 'epr')
+		{ return; }
+		
+	if (this.item.componentClass.allowMultiple) {
+		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
+			onclick: function () {
+				dispatch(this$1, 'makingChanges');
+				if (this$1.item.ownComponentData) {
+					var clone = this$1.item.ownComponentData.clone();
+					this$1.item.generatedForPrototype.addChild(clone);
+				} else {
+					// Is empty component data
+					var componentData = new ComponentData(this$1.item.componentClass.componentName);
+					componentData.initWithChildren();
+					this$1.item.generatedForPrototype.addChild(componentData);
+				}
+				dispatch(this$1, 'markPropertyEditorDirty');
+			}
+		}));
+	}
+	if (hasOwnProperties) {
+		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
+			onclick: function () {
+				dispatch(this$1, 'makingChanges');
+				dispatch(this$1, 'markPropertyEditorDirty', 'fromReset');
+				if (this$1.item.ownComponentData.getParentComponentData()) {
+					this$1.item.ownComponentData.delete();
+				} else {
+					this$1.item.ownComponentData.deleteChildren();
+				}
+			}
+		}));
+	}
+	if (this.item.ownComponentData && !parentComponentData) {
+		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
+			onclick: function () {
+				var deleteOperation = function () {
+					dispatch(this$1, 'makingChanges');
+					dispatch(this$1, 'markPropertyEditorDirty');
+					this$1.item.ownComponentData.delete();
+				};
+					
+				var componentName = this$1.item.componentClass.componentName;
+				var parent = this$1.item.ownComponentData.getParent();
+				var similarComponent = parent.findChild('cda', function (cda) { return cda.name === componentName && cda !== this$1.item.ownComponentData; });
+				if (!similarComponent) {
+					var componentsThatRequire = parent.getChildren('cda').filter(function (componentData) { return componentData.componentClass.requirements.includes(componentName); });
+					if (componentsThatRequire.length > 0) {
+						new Confirmation(("<b>" + componentName + "</b> is needed by: <b>" + (componentsThatRequire.map(function (cda) { return cda.name; }).join(', ')) + "</b>"), {
+							text: ("Delete all (" + (componentsThatRequire.length + 1) + ") components"),
+							color: '#cd4148'
+						}, function () {
+							dispatch(this$1, 'makingChanges');
+							dispatch(this$1, 'markPropertyEditorDirty');
+							componentsThatRequire.forEach(function (cda) {
+								cda.delete();
+							});
+							this$1.item.ownComponentData.delete();
+						});
+						return;
+					}
+				}
+				dispatch(this$1, 'makingChanges');
+				dispatch(this$1, 'markPropertyEditorDirty');
+				this$1.item.ownComponentData.delete();
+			}
+		}));
+	}
+};
+Container.prototype.updateEntity = function updateEntity () {
+	if (this.titleText.textContent !== this.item.prototype.name)
+		{ this.titleText.textContent = this.item.prototype.name; }
+	this.containers.update(this.item.getListOfAllComponents());
+	// this.properties.update(this.item.getChildren('prp'));
+};
+Container.prototype.updateComponent = function updateComponent () {
+	if (this.el.classList.contains('packed'))
+		{ this.el.classList.remove('packed'); }
+
+	this.updateComponentKindOfThing(this.item.constructor);
+
+	var getChildren = this.item.getChildren('prp');
+
+	this.properties.update(getChildren);
+};
+Container.prototype.updateComponentKindOfThing = function updateComponentKindOfThing (componentClass) {
+	if (this.titleText.textContent !== componentClass.componentName)
+		{ this.titleText.textContent = componentClass.componentName; }
+
+	var className = 'icon fa ' + componentClass.icon;
+	if (this.titleIcon.className !== className)
+		{ this.titleIcon.className = className; }
+		
+	if (this.componentClassColorCache !== componentClass.color) {
+		this.componentClassColorCache = componentClass.color;
+			
+		this.title.style.color = componentClass.color;
+		this.el.style['border-color'] = componentClass.color;
+	}
+		
+	if (this.title.getAttribute('title') !== componentClass.description)
+		{ this.title.setAttribute('title', componentClass.description); }
+};
+Container.prototype.updatePropertyOwner = function updatePropertyOwner () {
+	this.properties.update(this.item.getChildren('prp'));
+};
+
+var Property$2 = function Property() {
+	this.el = el('tr.property', { name: '' },
+		this.name = el('td.nameCell'),
+		this.content = el('td.propertyContent')
+	);
+};
+Property$2.prototype.reset = function reset () {
+	var componentData = this.property.getParent();
+	this.property.delete();
+	if (componentData._children.size === 0) {
+		if (componentData.getParentComponentData())
+			{ componentData.delete(); }
+	}
+		
+	dispatch(this, 'markPropertyEditorDirty');
+};
+Property$2.prototype.focus = function focus () {
+	$(this.el).find('input').focus();
+};
+Property$2.prototype.oninput = function oninput (val) {
+	try {
+		this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
+		this.el.removeAttribute('error');
+	} catch(e) {
+		this.el.setAttribute('error', 'true');
+	}
+};
+Property$2.prototype.onchange = function onchange (val) {
+	var originalValue = this.property.value;
+	try {
+		dispatch(this, 'makingChanges');
+		this.property.value = this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
+		if (!this.property.id) {
+			dispatch(this, 'propertyInherited', this.property);
+		}
+	} catch(e) {
+		// console.log('Error while changing property value', this.property, this.input.value);
+		this.property.value = originalValue;
+	}
+	this.setValueFromProperty();
+	this.el.removeAttribute('error');
+};
+Property$2.prototype.setValueFromProperty = function setValueFromProperty () {
+	var val = this.property.value;
+	if (this.property.propertyType.getFlag(createPropertyType.flagDegreesInEditor))
+		{ val = Math.round(val * 180 / Math.PI * 10) / 10; }
+	this.setValue(val);
+};
+Property$2.prototype.convertFromInputToPropertyValue = function convertFromInputToPropertyValue (val) {
+	if (this.property.propertyType.getFlag(createPropertyType.flagDegreesInEditor))
+		{ return val * Math.PI / 180; }
+	else
+		{ return val; }
+};
+Property$2.prototype.updateVisibleIf = function updateVisibleIf () {
+	if (!this.property._editorVisibleIfTarget)
+		{ return; }
+	$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
+};
+Property$2.prototype.update = function update (property) {
+		var this$1 = this;
+
+	// Optimization
+	if (this.property === property && this._previousValue === property.value)
+		{ return; }
+		
+	var propertyChanged = this.property !== property;
+	var keepOldInput = false;
+	if (this.property && this.property.propertyType === property.propertyType && !this.property.id && property.id) {
+		// Special case.
+		keepOldInput = true;
+	}
+		
+	this._previousValue = property.value;
+		
+	if (this.visibleIfListener) {
+		this.visibleIfListener(); // unlisten
+		this.visibleIfListener = null;
+	}
+	this.property = property;
+	if (propertyChanged) {
+		this.el.setAttribute('name', property.name);
+		this.el.setAttribute('type', property.propertyType.type.name);
+		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
+		this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
+		if (property.propertyType.description) {
+			mount(this.name, el('span.infoI', 'i'));
+		}
+			
+		if (!keepOldInput) {
+			this.content.innerHTML = '';
+			this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
+			this.setValue = this.propertyEditorInstance(this.content, function (val) { return this$1.oninput(val); }, function (val) { return this$1.onchange(val); }, {
+				propertyType: property.propertyType,
+				placeholder: property._editorPlaceholder
+			});
+		}
+			
+		this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
+		this.el.classList.toggle('ownProperty', !!this.property.id);
+
+		if (this.property.id) {
+			var parent = this.property.getParent();
+			if (parent.threeLetterType === 'cda'
+				&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
+			// Can not delete anything from entity prototype transform 
+			{
+				this.name.style.color = parent.componentClass.color;
+
+				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
+					onclick: function () {
+						dispatch(this$1, 'makingChanges');
+						this$1.reset();
+					}
+				}));
+			} else if (parent.threeLetterType === 'com') {
+				this.name.style.color = parent.constructor.color;
+
+				mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
+					onclick: function () {
+						new ObjectMoreButtonContextMenu(this$1.property);
+					}
+				}));
+			}
+		} else
+			{ this.name.style.color = 'inherit'; }
+	}
+	this.setValueFromProperty();
+	if (property._editorVisibleIfTarget) {
+		this.updateVisibleIf();
+		this.visibleIfListener = property._editorVisibleIfTarget.listen('change', function (_) {
+			if (!isInDom(this$1.el)) {
+				this$1.visibleIfListener();
+				this$1.visibleIfListener = null;
+				return;
+			}
+			return this$1.updateVisibleIf()
+		});
+	}
+};
+
+function isInDom(element) {
+	return $.contains(document.documentElement, element);
+}
+
+function variableNameToPresentableName(propertyName) {
+	var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
+	return name[0].toUpperCase() + name.substring(1);
+}
+
+var Type = (function (Module$$1) {
+	function Type() {
+		var this$1 = this;
+
+		Module$$1.call(
+			this, this.propertyEditor = new PropertyEditor()
+		);
+		this.id = 'type';
+		this.name = '<u>T</u>ype';
+
+		listenKeyDown(function (k) {
+			if (k === key.t && this$1._enabled) {
+				Module$$1.activateModule('type', true);
+			}
+		});
+	}
+
+	if ( Module$$1 ) Type.__proto__ = Module$$1;
+	Type.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	Type.prototype.constructor = Type;
+	Type.prototype.update = function update () {
+		if (editor.selection.items.length != 1)
+			{ return false; }
+
+		// if the tab is not visible, do not waste CPU
+		var skipUpdate = !this._selected || this.moduleContainer.isPacked();
+		
+		if (editor.selection.type === 'prt') {
+			if (skipUpdate)
+				{ return; }
+			this.propertyEditor.update(editor.selection.items, editor.selection.type);
+		} else if (editor.selection.type === 'ent') {
+			if (skipUpdate)
+				{ return; }
+			this.propertyEditor.update(editor.selection.items.map(function (e) { return e.prototype.prototype; }), editor.selection.type);
+		} else {
+			return false; // hide
+		}
+	};
+	Type.prototype.activate = function activate (command, parameter) {
+		if (command === 'focusOnProperty') {
+			
+			this.propertyEditor.el.querySelector((".property[name='" + parameter + "'] input")).select();
+			// console.log(nameProp);
+		}
+	};
+
+	return Type;
+}(Module));
+
+Module.register(Type, 'right');
+
+var ObjectModule = (function (Module$$1) {
+	function ObjectModule() {
+		var this$1 = this;
+
+		var propertyEditor = new PropertyEditor();
+		Module$$1.call(this, propertyEditor);
+		this.propertyEditor = propertyEditor;
+		this.id = 'object';
+		this.name = '<u>O</u>bject';
+
+		listenKeyDown(function (k) {
+			if (k === key.o && this$1._enabled) {
+				Module$$1.activateModule('object', true);
+			}
+		});
+	}
+
+	if ( Module$$1 ) ObjectModule.__proto__ = Module$$1;
+	ObjectModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	ObjectModule.prototype.constructor = ObjectModule;
+	ObjectModule.prototype.update = function update () {
+		if (editor.selection.items.length != 1)
+			{ return false; } // multiedit not supported yet
+		
+		if (editor.selection.type === 'ent') {
+			if (!this._selected || this.moduleContainer.isPacked()) {
+				return; // if the tab is not visible, do not waste CPU
+			}
+			
+			if (scene.isInInitialState()) {
+				this.propertyEditor.update(editor.selection.items.map(function (entity) { return entity.prototype; }), 'epr');
+			} else {
+				this.propertyEditor.update(editor.selection.items, editor.selection.type);
+			}
+		} else {
+			// console.log('hide', this.id);
+			return false; // hide module
+		}
+	};
+	ObjectModule.prototype.activate = function activate (command, parameter) {
+	};
+
+	return ObjectModule;
+}(Module));
+
+Module.register(ObjectModule, 'right');
 
 var Level$2 = (function (Module$$1) {
 	function Level() {
@@ -8301,27 +8332,6 @@ var Game$2 = (function (Module$$1) {
 }(Module));
 
 Module.register(Game$2, 'right');
-
-var TestModule = (function (Module$$1) {
-	function TestModule() {
-		Module$$1.call(
-			this, this.content = el('span', 'List of instances on the scene')
-		);
-		this.name = 'Instances';
-		this.id = 'instances';
-	}
-
-	if ( Module$$1 ) TestModule.__proto__ = Module$$1;
-	TestModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	TestModule.prototype.constructor = TestModule;
-	TestModule.prototype.update = function update () {
-		return false;
-	};
-
-	return TestModule;
-}(Module));
-
-Module.register(TestModule, 'left');
 
 var PerformanceModule = (function (Module$$1) {
 	function PerformanceModule() {
@@ -8453,27 +8463,6 @@ FPSMeter.prototype.update = function update (fpsData) {
 	c.stroke();
 };
 
-var TestModule$1 = (function (Module$$1) {
-	function TestModule() {
-		Module$$1.call(
-			this, this.content = el('span', 'This is test 3')
-		);
-		this.id = 'test';
-		this.name = 'Test3';
-	}
-
-	if ( Module$$1 ) TestModule.__proto__ = Module$$1;
-	TestModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	TestModule.prototype.constructor = TestModule;
-	TestModule.prototype.update = function update () {
-		return false;
-	};
-
-	return TestModule;
-}(Module));
-
-Module.register(TestModule$1, 'bottom');
-
 window.test = function() {
 };
 
@@ -8577,7 +8566,10 @@ function loadOptions() {
 		try {
 			options = JSON.parse(localStorage.openEditPlayOptions);
 		} catch(e) {
-			options = {};
+			// default options
+			options = {
+				moduleContainerPacked_bottom: true
+			};
 		}
 	}
 }

@@ -3,7 +3,7 @@ import Vector from '../util/vector';
 
 Component.register({
 	name: 'TransformVariance',
-	description: 'Adds random factor to instance transform/orientation.',
+	description: `Adds random factor to object's transform/orientation.`,
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
 	properties: [

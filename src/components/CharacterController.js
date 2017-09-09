@@ -10,7 +10,7 @@ const JUMP_SAFE_DELAY = 0.1; // seconds
 
 Component.register({
 	name: 'CharacterController',
-	description: 'Lets user control the instance.',
+	description: 'Lets user control the object.',
 	category: 'Common',
 	allowMultiple: false,
 	properties: [

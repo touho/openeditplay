@@ -16095,7 +16095,7 @@ var CanvasRenderer = function (_SystemRenderer) {
         _this.refresh = true;
 
         /**
-         * Instance of a CanvasMaskManager, handles masking when using the canvas renderer.
+         * Object of a CanvasMaskManager, handles masking when using the canvas renderer.
          *
          * @member {PIXI.CanvasMaskManager}
          */
@@ -24167,7 +24167,7 @@ var BaseTexture = function (_EventEmitter) {
          *
          * @protected
          * @event PIXI.BaseTexture#update
-         * @param {PIXI.BaseTexture} baseTexture - Instance of texture being updated.
+         * @param {PIXI.BaseTexture} baseTexture - Object of texture being updated.
          */
 
         /**
@@ -24175,7 +24175,7 @@ var BaseTexture = function (_EventEmitter) {
          *
          * @protected
          * @event PIXI.BaseTexture#dispose
-         * @param {PIXI.BaseTexture} baseTexture - Instance of texture being destroyed.
+         * @param {PIXI.BaseTexture} baseTexture - Object of texture being destroyed.
          */
         return _this;
     }
@@ -25328,7 +25328,7 @@ var Texture = function (_EventEmitter) {
          *
          * @event PIXI.Texture#update
          * @protected
-         * @param {PIXI.Texture} texture - Instance of texture being updated.
+         * @param {PIXI.Texture} texture - Object of texture being updated.
          */
 
         _this._updateID = 0;
@@ -28739,7 +28739,7 @@ function deprecation(core) {
          *        function must return `true` if it was able to add item to the queue.
          * @param {Function} [uploadHook] - Function call that takes two parameters: `prepare:CanvasPrepare, item:*` and
          *        function must return `true` if it was able to handle upload of item.
-         * @return {PIXI.BasePrepare} Instance of plugin for chaining.
+         * @return {PIXI.BasePrepare} Object of plugin for chaining.
          */
         prepare.BasePrepare.prototype.register = function register(addHook, uploadHook) {
             warn('renderer.plugins.prepare.register is now deprecated, ' + 'please use renderer.plugins.prepare.registerFindHook & renderer.plugins.prepare.registerUploadHook');
@@ -39205,7 +39205,7 @@ var BasePrepare = function () {
      *
      * @param {Function} addHook - Function call that takes two parameters: `item:*, queue:Array`
      *          function must return `true` if it was able to add item to the queue.
-     * @return {PIXI.BasePrepare} Instance of plugin for chaining.
+     * @return {PIXI.BasePrepare} Object of plugin for chaining.
      */
 
 
@@ -39222,7 +39222,7 @@ var BasePrepare = function () {
      *
      * @param {Function} uploadHook - Function call that takes two parameters: `prepare:CanvasPrepare, item:*` and
      *          function must return `true` if it was able to handle upload of item.
-     * @return {PIXI.BasePrepare} Instance of plugin for chaining.
+     * @return {PIXI.BasePrepare} Object of plugin for chaining.
      */
 
 
@@ -39239,7 +39239,7 @@ var BasePrepare = function () {
      *
      * @param {PIXI.DisplayObject|PIXI.Container|PIXI.BaseTexture|PIXI.Texture|PIXI.Graphics|PIXI.Text|*} item - Object to
      *        add to the queue
-     * @return {PIXI.CanvasPrepare} Instance of plugin for chaining.
+     * @return {PIXI.CanvasPrepare} Object of plugin for chaining.
      */
 
 
@@ -39540,7 +39540,7 @@ var CanvasPrepare = function (_BasePrepare) {
  * Built-in hook to upload PIXI.Texture objects to the GPU.
  *
  * @private
- * @param {*} prepare - Instance of CanvasPrepare
+ * @param {*} prepare - Object of CanvasPrepare
  * @param {*} item - Item to check
  * @return {boolean} If item was uploaded.
  */

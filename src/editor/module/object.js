@@ -5,17 +5,17 @@ import { editor } from '../editor';
 import { scene } from '../../core/scene';
 import { listenKeyDown, key } from '../../util/input';
 
-class Instance extends Module {
+class ObjectModule extends Module {
 	constructor() {
 		let propertyEditor = new PropertyEditor();
 		super(propertyEditor);
 		this.propertyEditor = propertyEditor;
-		this.id = 'instance';
-		this.name = '<u>I</u>nstance';
+		this.id = 'object';
+		this.name = '<u>O</u>bject';
 
 		listenKeyDown(k => {
-			if (k === key.i && this._enabled) {
-				Module.activateModule('instance', true);
+			if (k === key.o && this._enabled) {
+				Module.activateModule('object', true);
 			}
 		});
 	}
@@ -42,4 +42,4 @@ class Instance extends Module {
 	}
 }
 
-Module.register(Instance, 'right');
+Module.register(ObjectModule, 'right');

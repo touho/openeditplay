@@ -14,7 +14,7 @@ const eventListeners = [
 	,'onStart'
 ];
 
-// Instance of a component, see _componentExample.js
+// Object of a component, see _componentExample.js
 export class Component extends PropertyOwner {
 	constructor(predefinedId = false) {
 		super(predefinedId);

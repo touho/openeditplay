@@ -29,7 +29,7 @@ Component.register({
 		Prop('speedRandom', 0, Prop.float, Prop.float.range(0, 1000), 'Max random velocity to random direction'),
 		Prop('acceleration', new Vector(0, 0), Prop.vector),
 		Prop('globalCoordinates', true, Prop.bool),
-		Prop('followInstance', 0.4, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('globalCoordinates', true))
+		Prop('followObject', 0.4, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('globalCoordinates', true))
 	],
 	prototype: {
 		init() {
@@ -182,8 +182,8 @@ Component.register({
 				
 				if (this.Physics && this.Physics.body) {
 					let vel = this.Physics.body.velocity;
-					p.vx = p.vx + this.followInstance * vel[0] / PHYSICS_SCALE;
-					p.vy = p.vy + this.followInstance * vel[1] / PHYSICS_SCALE;
+					p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
+					p.vy = p.vy + this.followObject * vel[1] / PHYSICS_SCALE;
 				}
 			}
 		},

@@ -5,7 +5,7 @@ RUNS IN GAME SCENE
         - Runs everything
         - Has Entities in it
 
-    Entity (Called "Instance" is editor):
+    Entity (Called "Object" is editor):
         - exists in the game scene
         - contains things called "Component"
     

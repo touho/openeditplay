@@ -25,7 +25,6 @@ import * as sceneDraw from '../util/sceneDrawUtil';
 import Vector from '../../util/vector';
 import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
 import {help} from '../help';
-import {createNewLevel} from './levels';
 import PIXI from '../../feature/graphics';
 import * as performance from '../../util/performance';
 import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
@@ -58,7 +57,7 @@ class SceneModule extends Module {
 				width: 0,
 				height: 0
 			}),
-			el('div.pauseInfo', `Paused. Editing instances will not affect the level.`),
+			el('div.pauseInfo', `Paused. Editing objects will not affect the level.`),
 			el('i.fa.fa-pause.pauseInfo.topLeft'),
 			el('i.fa.fa-pause.pauseInfo.topRight'),
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
@@ -125,13 +124,14 @@ class SceneModule extends Module {
 							if (this.selectedEntities.length > 0) {
 								this.deleteNewEntities();
 								this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
+								this.copyEntities(this.newEntities);
 								this.clearSelectedEntities();
 								sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
 								this.draw();
 							}
 						},
 						onmousedown: disableMouseDown,
-						title: 'Copy selected instances (C)'
+						title: 'Copy selected objects (C)'
 					}),
 					deleteButton = el('i.fa.fa-trash.iconButton.button', {
 						onclick: () => {
@@ -140,7 +140,7 @@ class SceneModule extends Module {
 							this.draw();
 						},
 						onmousedown: disableMouseDown,
-						title: 'Delete selected instances (Backspace)'
+						title: 'Delete selected objects (Backspace)'
 					})
 				)
 			)
@@ -177,6 +177,7 @@ class SceneModule extends Module {
 		 });
 		 */
 
+		this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
 		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
@@ -313,6 +314,8 @@ class SceneModule extends Module {
 				this.deleteButton.click();
 			} else if (k === key.c) {
 				this.copyButton.click();
+			} else if (k === key.v) {
+				this.pasteEntities();
 			} else if (k === key.p) {
 				this.playButton.click();
 			} else if (k === key.r) {
@@ -661,7 +664,7 @@ class SceneModule extends Module {
 			setTimeout(() => {
 				if (game.getChildren('lvl').length === 0) {
 					setChangeOrigin(this);
-					createNewLevel();
+					events.dispatch('createBlankLevel');
 				}
 			}, 700)
 		}
@@ -720,9 +723,9 @@ class SceneModule extends Module {
 	selectSelectedEntitiesInEditor() {
 		editor.select(this.selectedEntities, this);
 		if (sceneEdit.shouldSyncLevelAndScene())
-			Module.activateOneOfModules(['type', 'instance'], false);
+			Module.activateOneOfModules(['type', 'object'], false);
 		else
-			Module.activateOneOfModules(['instance'], false);
+			Module.activateOneOfModules(['object'], false);
 	}
 
 	stopAndReset() {
@@ -777,6 +780,18 @@ class SceneModule extends Module {
 			this.sceneContextButtons.classList.remove('hidden');
 		else
 			this.sceneContextButtons.classList.add('hidden');
+	}
+	
+	copyEntities(entities) {
+		this.copiedEntities.forEach(entity => entity.delete());
+		this.copiedEntities.length = [];
+		this.copiedEntities.push(...entities.map(entity => entity.clone()));
+		this.copiedEntities.forEach(entity => entity.sleep());
+	}
+	pasteEntities() {
+		this.deleteNewEntities();
+		this.newEntities.push(...this.copiedEntities.map(entity => entity.clone()));
+		this.newEntities.forEach(entity => entity.wakeUp());
 	}
 }
 

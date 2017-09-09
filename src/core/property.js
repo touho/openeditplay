@@ -19,7 +19,7 @@ export function enableAllChanges() {
 	changesEnabled = true;
 }
 
-// Instance of a property
+// Object of a property
 export default class Property extends Serializable {
 	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
 	// if you give propertyType, value in real value form
