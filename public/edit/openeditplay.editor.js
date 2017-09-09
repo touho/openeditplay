@@ -657,8 +657,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -785,10 +783,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2919,8 +2913,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4489,8 +4481,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5109,7 +5099,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5223,19 +5212,28 @@ var Popup = function Popup(ref) {
 		},
 		new Layer(this),
 		el('div.popupContent',
-			this.text = el('div.popupTitle', title),
+			this.text = el('div.popupTitle'),
 			this.content = content
 		)
 	);
+	this.depth = popupDepth;
+	this.text.innerHTML = title;
 	this.cancelCallback = cancelCallback;
 		
-	this.el.onkeydown = function () { return this$1.remove(); };
+		
+	this.keyListener = listenKeyDown(function (keyChar) {
+		if (keyChar === key.esc && this$1.depth === popupDepth) {
+			this$1.remove();
+		}
+	});
 		
 	mount(document.body, this.el);
 };
 Popup.prototype.remove = function remove () {
 	popupDepth--;
 	this.el.parentNode.removeChild(this.el);
+	this.keyListener();
+	this.keyListener = null;
 };
 
 var Button = function Button() {
@@ -5362,6 +5360,36 @@ editors.color = function (container, oninput, onchange) {
 	return function (val) { return input.value = val.toHexString(); };
 };
 
+var Confirmation = (function (Popup$$1) {
+	function Confirmation(question, buttonOptions, callback) {
+		var this$1 = this;
+
+		Popup$$1.call(this, {
+			title: question,
+			width: '500px',
+			content: list('div.confirmationButtons', Button)
+		});
+		
+		this.content.update([{
+			text: 'Cancel',
+			callback: function () { return this$1.remove(); }
+		}, Object.assign({
+			text: 'Confirm'
+		}, buttonOptions, {
+			callback: function () {
+				callback();
+				this$1.remove();
+			}
+		})]);
+	}
+
+	if ( Popup$$1 ) Confirmation.__proto__ = Popup$$1;
+	Confirmation.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
+	Confirmation.prototype.constructor = Confirmation;
+
+	return Confirmation;
+}(Popup));
+
 var CATEGORY_ORDER = [
 	'Common',
 	'Logic',
@@ -5377,32 +5405,32 @@ var ComponentAdder = (function (Popup$$1) {
 			width: '500px',
 			content: list('div.componentAdderContent', Category, undefined, parent)
 		});
-		
+
 
 		var componentClassArray = Array.from(componentClasses.values())
 		.filter(function (cl) { return !HIDDEN_COMPONENTS.includes(cl.componentName); })
 		.sort(function (a, b) { return a.componentName.localeCompare(b.componentName); });
-		
+
 		console.log('before set', componentClassArray.map(function (c) { return c.category; }));
 		console.log('set', new Set(componentClassArray.map(function (c) { return c.category; })));
 		console.log('set array', [].concat( new Set(componentClassArray.map(function (c) { return c.category; })) ));
-		
+
 		var categories = Array.from(new Set(componentClassArray.map(function (c) { return c.category; }))).map(function (categoryName) { return ({
 			categoryName: categoryName,
 			components: componentClassArray.filter(function (c) { return c.category === categoryName; })
 		}); });
-		
+
 		categories.sort(function (a, b) {
 			var aIdx = CATEGORY_ORDER.indexOf(a.categoryName);
 			var bIdx = CATEGORY_ORDER.indexOf(b.categoryName);
-			
+
 			if (aIdx < 0) { aIdx = 999; }
 			if (bIdx < 0) { bIdx = 999; }
-			
+
 			if (aIdx < bIdx) { return -1; }
 			else { return 1; }
 		});
-		
+
 		console.log('categories', categories);
 		this.update(categories);
 	}
@@ -5410,6 +5438,7 @@ var ComponentAdder = (function (Popup$$1) {
 	if ( Popup$$1 ) ComponentAdder.__proto__ = Popup$$1;
 	ComponentAdder.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
 	ComponentAdder.prototype.constructor = ComponentAdder;
+
 	ComponentAdder.prototype.update = function update (categories) {
 		this.content.update(categories);
 	};
@@ -5418,26 +5447,46 @@ var ComponentAdder = (function (Popup$$1) {
 }(Popup));
 
 var Category = function Category(parent) {
-        this.el = el('div.categoryItem',
-            this.name = el('div.categoryName'),
-            this.list = list('div.categoryButtons', ButtonWithDescription)
-        );
-        this.parent = parent;
-    };
-Category.prototype.addComponentToParent = function addComponentToParent (componentName) {
+	this.el = el('div.categoryItem',
+		this.name = el('div.categoryName'),
+		this.list = list('div.categoryButtons', ButtonWithDescription)
+	);
+	this.parent = parent;
+};
+
+Category.prototype.addComponentToParent = function addComponentToParent (componentClass) {
+		var this$1 = this;
+
 	setChangeOrigin$1(this);
+
+	function addComponentDatas(parent, componentNames) {
+		return parent.addChildren(componentNames.map(function (name) { return new ComponentData(name); }));
+	}
+
 	if (['epr', 'prt'].indexOf(this.parent.threeLetterType) >= 0) {
-		var component = new ComponentData(componentName);
-		this.parent.addChild(component);
-		return component;
+		var missingRequirements = getMissingRequirements(this.parent, componentClass.requirements);
+
+		if (missingRequirements.length === 0) {
+			addComponentDatas(this.parent, [componentClass.componentName]);
+		} else {
+			new Confirmation(("<b>" + (componentClass.componentName) + "</b> needs these components in order to work: <b>" + (missingRequirements.join(', ')) + "</b>"), {
+				text: ("Add all (" + (missingRequirements.length + 1) + ") components"),
+				color: '#4ba137',
+				icon: 'fa-plus'
+			}, function () {
+				addComponentDatas(this$1.parent, missingRequirements.concat(componentClass.componentName));
+			});
+		}
+		return;
 	}
 	assert(false);
 };
-    Category.prototype.update = function update (category) {
-    	var this$1 = this;
 
-    this.name.textContent = category.categoryName;
-    	
+Category.prototype.update = function update (category) {
+		var this$1 = this;
+
+	this.name.textContent = category.categoryName;
+
 	var componentButtonData = category.components.map(function (comp) {
 		return {
 			text: ("" + (comp.componentName)),
@@ -5445,24 +5494,34 @@ Category.prototype.addComponentToParent = function addComponentToParent (compone
 			color: comp.color,
 			icon: comp.icon,
 			callback: function () {
-				this$1.addComponentToParent(comp.componentName);
+				this$1.addComponentToParent(comp);
 			}
 		};
 	});
-		
+
 	this.list.update(componentButtonData);
-    };
+};
 
 var ButtonWithDescription = function ButtonWithDescription() {
-        this.el = el('div.buttonWithDescription',
-            this.button = new Button(),
-            this.description = el('span.description')
-        );
-    };
-    ButtonWithDescription.prototype.update = function update (buttonData) {
-        this.description.innerHTML = buttonData.description;
-        this.button.update(buttonData);
-    };
+	this.el = el('div.buttonWithDescription',
+		this.button = new Button(),
+		this.description = el('span.description')
+	);
+};
+
+ButtonWithDescription.prototype.update = function update (buttonData) {
+	this.description.innerHTML = buttonData.description;
+	this.button.update(buttonData);
+};
+
+function getMissingRequirements(parent, requirements) {
+	function isMissing(componentName) {
+		var componentData = parent.findChild('cda', function (componentData) { return componentData.name === componentName; });
+		return !componentData;
+	}
+
+	return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
+}
 
 var defaultWidgetRadius = 5;
 var centerWidgetRadius = 10;
@@ -5986,11 +6045,6 @@ var InstanceMoreButtonContextMenu = (function (Popup$$1) {
 	return InstanceMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -6056,19 +6110,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -7174,22 +7215,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.

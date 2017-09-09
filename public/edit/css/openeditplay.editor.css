@@ -660,6 +660,9 @@ td.propertyContent {
   float: left;
   clear: both;
 }
+.confirmationButtons {
+  text-align: center;
+}
 div.popup {
   position: fixed;
   width: 100%;

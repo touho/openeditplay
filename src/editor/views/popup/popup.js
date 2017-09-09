@@ -1,4 +1,5 @@
 import { el, mount, list } from 'redom';
+import { listenKeyDown, key } from '../../../util/input';
 
 let popupDepth = 0;
 
@@ -14,19 +15,28 @@ export default class Popup {
 			},
 			new Layer(this),
 			el('div.popupContent',
-				this.text = el('div.popupTitle', title),
+				this.text = el('div.popupTitle'),
 				this.content = content
 			)
 		);
+		this.depth = popupDepth;
+		this.text.innerHTML = title;
 		this.cancelCallback = cancelCallback;
 		
-		this.el.onkeydown = () => this.remove();
+		
+		this.keyListener = listenKeyDown(keyChar => {
+			if (keyChar === key.esc && this.depth === popupDepth) {
+				this.remove();
+			}
+		});
 		
 		mount(document.body, this.el);
 	}
 	remove() {
 		popupDepth--;
 		this.el.parentNode.removeChild(this.el);
+		this.keyListener();
+		this.keyListener = null;
 	}
 }
 
