@@ -1,7 +1,7 @@
 import { el, mount, list } from 'redom';
 import { listenKeyDown, key } from '../../../util/input';
 
-let popupDepth = 0;
+export let popupDepth = 0;
 
 export default class Popup {
 	constructor({

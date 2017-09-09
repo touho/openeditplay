@@ -12,6 +12,7 @@ Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the instance.',
 	category: 'Common',
+	allowMultiple: false,
 	properties: [
 		Prop('type', 'player', Prop.enum, Prop.enum.values('player', 'AI')),
 		Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),

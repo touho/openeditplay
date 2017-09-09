@@ -4005,6 +4005,7 @@ Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the instance.',
 	category: 'Common',
+	allowMultiple: false,
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),

@@ -5,6 +5,7 @@ import {list, el} from 'redom';
 import assert from '../../../util/assert';
 import {setChangeOrigin} from '../../../core/serializableManager';
 import Confirmation from './Confirmation';
+import { dispatch, listen } from '../../events';
 
 const CATEGORY_ORDER = [
 	'Common',
@@ -47,8 +48,11 @@ export default class ComponentAdder extends Popup {
 			else return 1;
 		});
 
-		console.log('categories', categories)
 		this.update(categories);
+		
+		listen(this, 'refresh', () => {
+			this.update(categories);
+		})
 	}
 
 	update(categories) {
@@ -77,6 +81,7 @@ class Category {
 
 			if (missingRequirements.length === 0) {
 				addComponentDatas(this.parent, [componentClass.componentName]);
+				dispatch(this, 'refresh');
 			} else {
 				new Confirmation(`<b>${componentClass.componentName}</b> needs these components in order to work: <b>${missingRequirements.join(', ')}</b>`, {
 					text: `Add all (${missingRequirements.length + 1}) components`,
@@ -84,6 +89,7 @@ class Category {
 					icon: 'fa-plus'
 				}, () => {
 					addComponentDatas(this.parent, missingRequirements.concat(componentClass.componentName));
+					dispatch(this, 'refresh');
 				});
 			}
 			return;
@@ -93,14 +99,30 @@ class Category {
 
 	update(category) {
 		this.name.textContent = category.categoryName;
+		
+		let componentCounts = {};
+		this.parent.forEachChild('cda', cda => {
+			if (!componentCounts[cda.name])
+				componentCounts[cda.name] = 0;
+			componentCounts[cda.name]++;
+		});
 
 		let componentButtonData = category.components.map(comp => {
+			let disabledReason;
+			if (!comp.allowMultiple && this.parent.findChild('cda', cda => cda.name === comp.componentName) !== null) {
+				disabledReason = `Only one ${comp.componentName} component is allowed at the time`;
+			}
+			let count = componentCounts[comp.componentName];
 			return {
-				text: `${comp.componentName}`,
+				text: comp.componentName + (count ? ` (${count})` : ''),
 				description: comp.description,
 				color: comp.color,
 				icon: comp.icon,
+				disabledReason,
 				callback: () => {
+					if ('activeElement' in document)
+						document.activeElement.blur();
+					
 					this.addComponentToParent(comp);
 				}
 			};
@@ -120,6 +142,8 @@ class ButtonWithDescription {
 
 	update(buttonData) {
 		this.description.innerHTML = buttonData.description;
+		this.button.el.disabled = buttonData.disabledReason ? 'disabled' : '';
+		this.button.el.setAttribute('title', buttonData.disabledReason || '');
 		this.button.update(buttonData);
 	}
 }

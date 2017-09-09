@@ -13,6 +13,7 @@ import * as sceneEdit from '../util/sceneEditUtil';
 import PropertyOwner from '../../core/propertyOwner';
 import * as performance from '../../util/performance'
 import InstanceMoreButtonContextMenu from './popup/instanceMoreButtonContextMenu'
+import Confirmation from "./popup/Confirmation";
 
 /*
 Reference: Unbounce
@@ -295,6 +296,32 @@ class Container {
 		if (this.item.ownComponentData && !parentComponentData) {
 			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
 				onclick: () => {
+					let deleteOperation = () => {
+						dispatch(this, 'makingChanges');
+						dispatch(this, 'markPropertyEditorDirty');
+						this.item.ownComponentData.delete();
+					}
+					
+					let componentName = this.item.componentClass.componentName;
+					let parent = this.item.ownComponentData.getParent();
+					let similarComponent = parent.findChild('cda', cda => cda.name === componentName && cda !== this.item.ownComponentData);
+					if (!similarComponent) {
+						let componentsThatRequire = parent.getChildren('cda').filter(componentData => componentData.componentClass.requirements.includes(componentName));
+						if (componentsThatRequire.length > 0) {
+							new Confirmation(`<b>${componentName}</b> is needed by: <b>${componentsThatRequire.map(cda => cda.name).join(', ')}</b>`, {
+								text: `Delete all (${componentsThatRequire.length + 1}) components`,
+								color: '#cd4148'
+							}, () => {
+								dispatch(this, 'makingChanges');
+								dispatch(this, 'markPropertyEditorDirty');
+								componentsThatRequire.forEach(cda => {
+									cda.delete();
+								});
+								this.item.ownComponentData.delete();
+							});
+							return;
+						}
+					}
 					dispatch(this, 'makingChanges');
 					dispatch(this, 'markPropertyEditorDirty');
 					this.item.ownComponentData.delete();

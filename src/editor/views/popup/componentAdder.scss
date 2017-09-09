@@ -32,3 +32,9 @@
   float: left;
   clear: both;
 }
+
+button.button:disabled {
+  filter: grayscale(100%);
+  cursor: default;
+  opacity: 0.5;
+}

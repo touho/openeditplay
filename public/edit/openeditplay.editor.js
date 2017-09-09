@@ -4066,6 +4066,7 @@ Component$1.register({
 	name: 'CharacterController',
 	description: 'Lets user control the instance.',
 	category: 'Common',
+	allowMultiple: false,
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
@@ -5381,11 +5382,18 @@ var Confirmation = (function (Popup$$1) {
 				this$1.remove();
 			}
 		})]);
+		
+		var confirmButton = this.content.views[1];
+		confirmButton.el.focus();
 	}
 
 	if ( Popup$$1 ) Confirmation.__proto__ = Popup$$1;
 	Confirmation.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
 	Confirmation.prototype.constructor = Confirmation;
+
+	Confirmation.prototype.remove = function remove () {
+		Popup$$1.prototype.remove.call(this);
+	};
 
 	return Confirmation;
 }(Popup));
@@ -5400,6 +5408,8 @@ var HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
 
 var ComponentAdder = (function (Popup$$1) {
 	function ComponentAdder(parent) {
+		var this$1 = this;
+
 		Popup$$1.call(this, {
 			title: 'Add Component',
 			width: '500px',
@@ -5431,8 +5441,11 @@ var ComponentAdder = (function (Popup$$1) {
 			else { return 1; }
 		});
 
-		console.log('categories', categories);
 		this.update(categories);
+		
+		listen(this, 'refresh', function () {
+			this$1.update(categories);
+		});
 	}
 
 	if ( Popup$$1 ) ComponentAdder.__proto__ = Popup$$1;
@@ -5468,6 +5481,7 @@ Category.prototype.addComponentToParent = function addComponentToParent (compone
 
 		if (missingRequirements.length === 0) {
 			addComponentDatas(this.parent, [componentClass.componentName]);
+			dispatch(this, 'refresh');
 		} else {
 			new Confirmation(("<b>" + (componentClass.componentName) + "</b> needs these components in order to work: <b>" + (missingRequirements.join(', ')) + "</b>"), {
 				text: ("Add all (" + (missingRequirements.length + 1) + ") components"),
@@ -5475,6 +5489,7 @@ Category.prototype.addComponentToParent = function addComponentToParent (compone
 				icon: 'fa-plus'
 			}, function () {
 				addComponentDatas(this$1.parent, missingRequirements.concat(componentClass.componentName));
+				dispatch(this$1, 'refresh');
 			});
 		}
 		return;
@@ -5486,14 +5501,30 @@ Category.prototype.update = function update (category) {
 		var this$1 = this;
 
 	this.name.textContent = category.categoryName;
+		
+	var componentCounts = {};
+	this.parent.forEachChild('cda', function (cda) {
+		if (!componentCounts[cda.name])
+			{ componentCounts[cda.name] = 0; }
+		componentCounts[cda.name]++;
+	});
 
 	var componentButtonData = category.components.map(function (comp) {
+		var disabledReason;
+		if (!comp.allowMultiple && this$1.parent.findChild('cda', function (cda) { return cda.name === comp.componentName; }) !== null) {
+			disabledReason = "Only one " + (comp.componentName) + " component is allowed at the time";
+		}
+		var count = componentCounts[comp.componentName];
 		return {
-			text: ("" + (comp.componentName)),
+			text: comp.componentName + (count ? (" (" + count + ")") : ''),
 			description: comp.description,
 			color: comp.color,
 			icon: comp.icon,
+			disabledReason: disabledReason,
 			callback: function () {
+				if ('activeElement' in document)
+					{ document.activeElement.blur(); }
+					
 				this$1.addComponentToParent(comp);
 			}
 		};
@@ -5511,6 +5542,8 @@ var ButtonWithDescription = function ButtonWithDescription() {
 
 ButtonWithDescription.prototype.update = function update (buttonData) {
 	this.description.innerHTML = buttonData.description;
+	this.button.el.disabled = buttonData.disabledReason ? 'disabled' : '';
+	this.button.el.setAttribute('title', buttonData.disabledReason || '');
 	this.button.update(buttonData);
 };
 
@@ -6045,6 +6078,11 @@ var InstanceMoreButtonContextMenu = (function (Popup$$1) {
 	return InstanceMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -6110,6 +6148,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -6317,6 +6368,32 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 	if (this.item.ownComponentData && !parentComponentData) {
 		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
 			onclick: function () {
+				var deleteOperation = function () {
+					dispatch(this$1, 'makingChanges');
+					dispatch(this$1, 'markPropertyEditorDirty');
+					this$1.item.ownComponentData.delete();
+				};
+					
+				var componentName = this$1.item.componentClass.componentName;
+				var parent = this$1.item.ownComponentData.getParent();
+				var similarComponent = parent.findChild('cda', function (cda) { return cda.name === componentName && cda !== this$1.item.ownComponentData; });
+				if (!similarComponent) {
+					var componentsThatRequire = parent.getChildren('cda').filter(function (componentData) { return componentData.componentClass.requirements.includes(componentName); });
+					if (componentsThatRequire.length > 0) {
+						new Confirmation(("<b>" + componentName + "</b> is needed by: <b>" + (componentsThatRequire.map(function (cda) { return cda.name; }).join(', ')) + "</b>"), {
+							text: ("Delete all (" + (componentsThatRequire.length + 1) + ") components"),
+							color: '#cd4148'
+						}, function () {
+							dispatch(this$1, 'makingChanges');
+							dispatch(this$1, 'markPropertyEditorDirty');
+							componentsThatRequire.forEach(function (cda) {
+								cda.delete();
+							});
+							this$1.item.ownComponentData.delete();
+						});
+						return;
+					}
+				}
 				dispatch(this$1, 'makingChanges');
 				dispatch(this$1, 'markPropertyEditorDirty');
 				this$1.item.ownComponentData.delete();

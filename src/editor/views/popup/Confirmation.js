@@ -1,5 +1,6 @@
-import Popup, { Button } from './popup';
+import Popup, { Button, popupDepth } from './popup';
 import { el, mount, list } from 'redom';
+import {listenKeyDown, key} from "../../../util/input";
 
 export default class Confirmation extends Popup {
 	/*
@@ -26,5 +27,12 @@ export default class Confirmation extends Popup {
 				this.remove();
 			}
 		})]);
+		
+		let confirmButton = this.content.views[1];
+		confirmButton.el.focus();
+	}
+
+	remove() {
+		super.remove();
 	}
 }
