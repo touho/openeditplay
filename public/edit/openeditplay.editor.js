@@ -6363,6 +6363,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.copyButton.click();
 			} else if (k === key.v) {
 				this$1.pasteEntities();
+				this$1.draw();
 			} else if (k === key.p) {
 				this$1.playButton.click();
 			} else if (k === key.r) {
@@ -6419,6 +6420,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.clearSelectedEntities();
 				this$1.selectionStart = mousePos;
 				this$1.selectionEnd = mousePos.clone();
+				this$1.destroySelectionArea();
 				this$1.selectionArea = new PIXI$2.Graphics();
 				scene.selectionLayer.addChild(this$1.selectionArea);
 			}
@@ -6435,10 +6437,7 @@ var SceneModule = (function (Module$$1) {
 
 			this$1.selectionStart = null;
 			this$1.selectionEnd = null;
-			if (this$1.selectionArea) {
-				this$1.selectionArea.destroy();
-				this$1.selectionArea = null;
-			}
+			this$1.destroySelectionArea();
 			this$1.entitiesToEdit.length = 0;
 
 			if (this$1.entitiesInSelection.length > 0) {
@@ -6852,7 +6851,16 @@ var SceneModule = (function (Module$$1) {
 		this.deleteNewEntities();
 		(ref = this.newEntities).push.apply(ref, this.copiedEntities.map(function (entity) { return entity.clone(); }));
 		this.newEntities.forEach(function (entity) { return entity.wakeUp(); });
-		var ref;
+		
+		if (this.previousMousePosInWorldCoordinates)
+			{ setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
+		var ref; }
+	};
+	SceneModule.prototype.destroySelectionArea = function destroySelectionArea () {
+		if (!this.selectionArea)
+			{ return; }
+		this.selectionArea.destroy();
+		this.selectionArea = null;
 	};
 
 	return SceneModule;

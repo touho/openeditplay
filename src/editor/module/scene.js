@@ -316,6 +316,7 @@ class SceneModule extends Module {
 				this.copyButton.click();
 			} else if (k === key.v) {
 				this.pasteEntities();
+				this.draw();
 			} else if (k === key.p) {
 				this.playButton.click();
 			} else if (k === key.r) {
@@ -372,6 +373,7 @@ class SceneModule extends Module {
 				this.clearSelectedEntities();
 				this.selectionStart = mousePos;
 				this.selectionEnd = mousePos.clone();
+				this.destroySelectionArea();
 				this.selectionArea = new PIXI.Graphics();
 				scene.selectionLayer.addChild(this.selectionArea);
 			}
@@ -387,10 +389,7 @@ class SceneModule extends Module {
 
 			this.selectionStart = null;
 			this.selectionEnd = null;
-			if (this.selectionArea) {
-				this.selectionArea.destroy();
-				this.selectionArea = null;
-			}
+			this.destroySelectionArea();
 			this.entitiesToEdit.length = 0;
 
 			if (this.entitiesInSelection.length > 0) {
@@ -792,6 +791,15 @@ class SceneModule extends Module {
 		this.deleteNewEntities();
 		this.newEntities.push(...this.copiedEntities.map(entity => entity.clone()));
 		this.newEntities.forEach(entity => entity.wakeUp());
+		
+		if (this.previousMousePosInWorldCoordinates)
+			sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
+	}
+	destroySelectionArea() {
+		if (!this.selectionArea)
+			return;
+		this.selectionArea.destroy();
+		this.selectionArea = null;
 	}
 }
 

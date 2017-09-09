@@ -726,6 +726,7 @@ body, html {
   letter-spacing: 1px;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   text-shadow: 1px 1px 1px #060606;
+  overflow: hidden;
 }
 .select-none {
   -webkit-user-select: none;  /* Chrome all / Safari all */
