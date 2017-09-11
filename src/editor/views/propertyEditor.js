@@ -395,7 +395,7 @@ class Property {
 		dispatch(this, 'markPropertyEditorDirty');
 	}
 	focus() {
-		$(this.el).find('input').focus();
+		this.el.querySelector('input').focus();
 	}
 	oninput(val) {
 		try {
@@ -435,7 +435,7 @@ class Property {
 	updateVisibleIf() {
 		if (!this.property._editorVisibleIfTarget)
 			return;
-		$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
+		this.el.classList.toggle('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
 	}
 	update(property) {
 		// Optimization

@@ -1,3 +1,4 @@
+require('../../config');
 let db = module.exports;
 
 async function createConnection(config) {

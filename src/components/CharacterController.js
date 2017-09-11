@@ -14,7 +14,7 @@ Component.register({
 	category: 'Common',
 	allowMultiple: false,
 	properties: [
-		Prop('type', 'player', Prop.enum, Prop.enum.values('player', 'AI')),
+		Prop('type', 'play', Prop.enum, Prop.enum.values('play', 'AI')),
 		Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		Prop('controlType', 'jumper', Prop.enum, Prop.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		Prop('jumpSpeed', 300, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('controlType', 'jumper')),

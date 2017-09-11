@@ -40,11 +40,12 @@ Game.prototype.update = function(gameData) {
 	this.name.textContent = gameData.name;
 	this.playButton.setAttribute('href', '/play/?gameId=' + gameData.id);
 	this.editButton.setAttribute('href', '/edit/?gameId=' + gameData.id);
-	
+	/*
 	this.gameStats.update([
 		{ key: 'Levels', value: gameData.levels },
 		{ key: 'Size', value: gameData.size / 1000 + 'kb' }
 	]);
+	*/
 };
 
 function GameStat() {

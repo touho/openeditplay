@@ -64,7 +64,7 @@ export default class EntityPrototype extends Prototype {
 
 				let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 					value: child.findChild('prp', prp => prp.name === 'angle').value,
-					predefinedId: id + '_r'
+					predefinedId: id + '_a'
 				});
 				transform.addChild(angle);
 				
@@ -87,7 +87,7 @@ export default class EntityPrototype extends Prototype {
 		let Transform = this.getTransform();
 		let json = {
 			id: this.id,
-			p: this.prototype.id
+			t: this.prototype.id // t as in protoType
 		};
 		
 		let childArrays = [];
@@ -106,12 +106,10 @@ export default class EntityPrototype extends Prototype {
 				if (prp.value)
 					json.n = prp.value;
 			} else if (prp.name === 'position') {
-				json.x = floatToJSON(prp.value.x);
-				json.y = floatToJSON(prp.value.y);
+				json.p = prp.type.toJSON(prp.value);
 			} else if (prp.name === 'scale') {
 				if (!prp.value.isEqualTo(new Vector(1, 1))) {
-					json.w = floatToJSON(prp.value.x);
-					json.h = floatToJSON(prp.value.y);
+					json.s = prp.type.toJSON(prp.value);
 				}
 			} else if (prp.name === 'angle') {
 				if (prp.value !== 0)
@@ -170,7 +168,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
 
 	let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 		value: 0,
-		predefinedId: id + '_r'
+		predefinedId: id + '_a'
 	});
 	transform.addChild(angle);
 
@@ -186,14 +184,14 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas = []) {
 
 Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let entityPrototype = new EntityPrototype(json.id);
-	entityPrototype.prototype = getSerializable(json.p);
-	assert(entityPrototype.prototype, `Prototype ${json.p} not found`);
+	entityPrototype.prototype = getSerializable(json.t || json.p);
+	assert(entityPrototype.prototype, `Prototype ${json.t || json.p} not found`);
 	
 	let nameId = json.id + '_n';
 	let transformId = json.id + '_t';
 	let positionId = json.id + '_p';
 	let scaleId = json.id + '_s';
-	let angleId = json.id + '_r';
+	let angleId = json.id + '_a';
 	
 	let name = Prototype._propertyTypesByName.name.createProperty({ 
 		value: json.n === undefined ? '' : json.n,
@@ -204,13 +202,13 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let transformClass = componentClasses.get('Transform');
 	
 	let position = transformClass._propertyTypesByName.position.createProperty({
-		value: new Vector(json.x, json.y),
+		value: json.x !== undefined ? new Vector(json.x, json.y) : Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
 	});
 	transformData.addChild(position);
 
 	let scale = transformClass._propertyTypesByName.scale.createProperty({
-		value: new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
+		value: json.s && Vector.fromObject(json.s) || new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h) || new Vector(1, 1), // future is .s
 		predefinedId: scaleId
 	});
 	transformData.addChild(scale);

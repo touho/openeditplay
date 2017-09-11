@@ -403,6 +403,9 @@ img.logo:hover {
 .sceneContextButtons .fa-trash:hover {
   color: #ff745f;
 }
+.module-scene.noScene .pauseInfo, .module-scene.noScene .sceneEditorSideBarButtons {
+  display: none;
+}
 .module.module-performance {
   padding: 5px 10px;
   display: flex;
@@ -726,7 +729,7 @@ body, html {
   letter-spacing: 1px;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   text-shadow: 1px 1px 1px #060606;
-  overflow: hidden;
+  overflow: hidden; /* disables osX scrolling effect*/
 }
 .select-none {
   -webkit-user-select: none;  /* Chrome all / Safari all */

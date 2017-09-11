@@ -657,6 +657,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -783,6 +785,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1676,7 +1682,7 @@ var Entity = (function (Serializable$$1) {
 		});
 		
 		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
-			comp: components,
+			c: components, // overwrite children. earlier this was named 'comp'
 			proto: this.prototype.id
 		});
 	};
@@ -1699,7 +1705,7 @@ Serializable.registerSerializable(Entity, 'ent', function (json) {
 	entity.prototype = getSerializable(json.proto);
 	console.log('created entity from json', entity);
 	if (json.comp) {
-		entity.addComponents(json.comp.map(Serializable.fromJSON));
+		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
 	}
 	return entity;
 });
@@ -2019,7 +2025,19 @@ PropertyOwner.defineProperties(Game, propertyTypes);
 
 Game.prototype.isRoot = true;
 
-Serializable.registerSerializable(Game, 'gam');
+Serializable.registerSerializable(Game, 'gam', function (json) {
+	if (json.c) {
+		console.log('json.c', json.c);
+		json.c.sort(function (a, b) {
+			if (a.id.startsWith('prt'))
+				{ return -1; }
+			else
+				{ return 1; }
+		});
+		console.log('json.c after', json.c);
+	}
+	return new Game(json.id);
+});
 
 var gameCreateListeners = [];
 
@@ -2913,6 +2931,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -2975,7 +2995,7 @@ var EntityPrototype = (function (Prototype$$1) {
 
 				var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 					value: child.findChild('prp', function (prp) { return prp.name === 'angle'; }).value,
-					predefinedId: id + '_r'
+					predefinedId: id + '_a'
 				});
 				transform.addChild(angle);
 				
@@ -3000,7 +3020,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		var Transform = this.getTransform();
 		var json = {
 			id: this.id,
-			p: this.prototype.id
+			t: this.prototype.id // t as in protoType
 		};
 		
 		var childArrays = [];
@@ -3019,12 +3039,10 @@ var EntityPrototype = (function (Prototype$$1) {
 				if (prp.value)
 					{ json.n = prp.value; }
 			} else if (prp.name === 'position') {
-				json.x = floatToJSON(prp.value.x);
-				json.y = floatToJSON(prp.value.y);
+				json.p = prp.type.toJSON(prp.value);
 			} else if (prp.name === 'scale') {
 				if (!prp.value.isEqualTo(new Vector(1, 1))) {
-					json.w = floatToJSON(prp.value.x);
-					json.h = floatToJSON(prp.value.y);
+					json.s = prp.type.toJSON(prp.value);
 				}
 			} else if (prp.name === 'angle') {
 				if (prp.value !== 0)
@@ -3089,7 +3107,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 
 	var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 		value: 0,
-		predefinedId: id + '_r'
+		predefinedId: id + '_a'
 	});
 	transform.addChild(angle);
 
@@ -3105,14 +3123,14 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 
 Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var entityPrototype = new EntityPrototype(json.id);
-	entityPrototype.prototype = getSerializable$1(json.p);
-	assert(entityPrototype.prototype, ("Prototype " + (json.p) + " not found"));
+	entityPrototype.prototype = getSerializable$1(json.t || json.p);
+	assert(entityPrototype.prototype, ("Prototype " + (json.t || json.p) + " not found"));
 	
 	var nameId = json.id + '_n';
 	var transformId = json.id + '_t';
 	var positionId = json.id + '_p';
 	var scaleId = json.id + '_s';
-	var angleId = json.id + '_r';
+	var angleId = json.id + '_a';
 	
 	var name = Prototype._propertyTypesByName.name.createProperty({ 
 		value: json.n === undefined ? '' : json.n,
@@ -3123,13 +3141,13 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var transformClass = componentClasses.get('Transform');
 	
 	var position = transformClass._propertyTypesByName.position.createProperty({
-		value: new Vector(json.x, json.y),
+		value: json.x !== undefined ? new Vector(json.x, json.y) : Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
 	});
 	transformData.addChild(position);
 
 	var scale = transformClass._propertyTypesByName.scale.createProperty({
-		value: new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
+		value: json.s && Vector.fromObject(json.s) || new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h) || new Vector(1, 1), // future is .s
 		predefinedId: scaleId
 	});
 	transformData.addChild(scale);
@@ -4068,7 +4086,7 @@ Component$1.register({
 	category: 'Common',
 	allowMultiple: false,
 	properties: [
-		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
+		createPropertyType('type', 'play', createPropertyType.enum, createPropertyType.enum.values('play', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
@@ -4364,7 +4382,7 @@ function tryToLoad() {
 		sendChanges();
 	});
 	
-	var sendChanges = limit(100, 'soon', function () {
+	var sendChanges = limit(200, 'soon', function () {
 		var packedChanges = changes.map(packChange);
 		changes.length = 0;
 		valueChanges = {};
@@ -4373,11 +4391,9 @@ function tryToLoad() {
 	});
 
 	socket.on('c', function (packedChanges) {
-		console.log('RECEIVE,', networkEnabled);
 		if (!networkEnabled)
 			{ return; }
 		
-		console.log('received', packedChanges);
 		packedChanges.forEach(function (change) {
 			change = unpackChange(change);
 			if (change) {
@@ -4398,6 +4414,9 @@ function tryToLoad() {
 	});
 	
 	socket.on('gameData', function (gameData) {
+		console.log('receive gameData', gameData);
+		if (!gameData)
+			{ return; }
 		// console.log('gameData', gameData);
 		executeExternal(function () {
 			Serializable.fromJSON(gameData);
@@ -4482,6 +4501,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5100,6 +5121,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5910,6 +5932,22 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -6381,9 +6419,9 @@ var SceneModule = (function (Module$$1) {
 					this$1.startListeningMovementInput();
 				} else if (!scene.playing) {
 					if (k === key.g) {
-						$(this$1.globeButton).click();
+						this$1.globeButton.click();
 					} else if (k === key.h) {
-						$(this$1.homeButton).click();
+						this$1.homeButton.click();
 					}
 				}
 			}
@@ -6722,7 +6760,7 @@ var SceneModule = (function (Module$$1) {
 					setChangeOrigin$1(this$1);
 					events.dispatch('createBlankLevel');
 				}
-			}, 700);
+			}, 500);
 		}
 	};
 
@@ -7663,6 +7701,11 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7736,6 +7779,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8031,7 +8087,7 @@ Property$2.prototype.reset = function reset () {
 	dispatch(this, 'markPropertyEditorDirty');
 };
 Property$2.prototype.focus = function focus () {
-	$(this.el).find('input').focus();
+	this.el.querySelector('input').focus();
 };
 Property$2.prototype.oninput = function oninput (val) {
 	try {
@@ -8071,7 +8127,7 @@ Property$2.prototype.convertFromInputToPropertyValue = function convertFromInput
 Property$2.prototype.updateVisibleIf = function updateVisibleIf () {
 	if (!this.property._editorVisibleIfTarget)
 		{ return; }
-	$(this.el).toggleClass('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
+	this.el.classList.toggle('hidden', !this.property.propertyType.visibleIf.values.includes(this.property._editorVisibleIfTarget.value));
 };
 Property$2.prototype.update = function update (property) {
 		var this$1 = this;

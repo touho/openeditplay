@@ -100,3 +100,8 @@
 .sceneContextButtons .fa-trash:hover {
   color: #ff745f;
 }
+
+.module-scene.noScene .pauseInfo,
+.module-scene.noScene .sceneEditorSideBarButtons {
+  display: none;
+}

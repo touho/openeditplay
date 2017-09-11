@@ -62,7 +62,7 @@ function tryToLoad() {
 		sendChanges();
 	});
 	
-	let sendChanges = limit(100, 'soon', () => {
+	let sendChanges = limit(200, 'soon', () => {
 		let packedChanges = changes.map(packChange);
 		changes.length = 0;
 		valueChanges = {};
@@ -71,11 +71,9 @@ function tryToLoad() {
 	});
 
 	socket.on('c', packedChanges => {
-		console.log('RECEIVE,', networkEnabled);
 		if (!networkEnabled)
 			return;
 		
-		console.log('received', packedChanges);
 		packedChanges.forEach(change => {
 			change = unpackChange(change);
 			if (change) {
@@ -96,6 +94,9 @@ function tryToLoad() {
 	});
 	
 	socket.on('gameData', gameData => {
+		console.log('receive gameData', gameData);
+		if (!gameData)
+			return;
 		// console.log('gameData', gameData);
 		executeExternal(() => {
 			Serializable.fromJSON(gameData);

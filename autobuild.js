@@ -19,7 +19,7 @@ const preprocess = require('rollup-plugin-preprocess').default;
 const ROOT = path.join(__dirname, './');
 module.exports.ROOT = ROOT;
 
-let targets = ['dev', 'all']; // TODO: add 'devOnce' and 'allOnce'
+let targets = ['dev', 'all']; // TODO: add 'devOnce' and 'allOnce' ... or just 'build' or 'once'
 let target = process.argv[2];
 if (targets.indexOf(target) < 0)
 	target = targets[0];
@@ -105,40 +105,33 @@ if (!global.TARGET_NONE) {
 		if (serverProcess && serverProcess.connected)
 			serverProcess.send({refreshOldBrowsers: true});
 	});
-
-	// Server JS
-	autobuildJs('src/serverMain.js', 'builds/openeditplay.server.js', {
-		format: 'cjs',
-		allowForOf: true, // node supports for-of
-		externalDependencies: ['fs']
-	});
-
+	
 	if (target === 'all') {
 		autobuildJs('src/testMain.js', 'builds/openeditplay.tests.js');
 	}
 
 	// Server restarter
+	function launchServer() {
+		// Timeout so that js and css files would have time to build before server force restarts clients
+		serverProcess = 'wait';
+		setTimeout(() => {
+			console.log('Launching server.');
+			serverProcess = cp.fork(ROOT + 'src/server/main.js');
+		}, 100);
+	}
 	let serverProcess = null;
-	watch(['builds/openeditplay.server.js', 'template/*'], args => {
+	watch(['src/server/*'], args => {
 		if (serverProcess === 'wait')
 			return;
 
-		function launch() {
-			// Timeout so that js and css files would have time to build before server force restarts clients
-			serverProcess = 'wait';
-			setTimeout(() => {
-				console.log('Launching server.');
-				serverProcess = cp.fork(ROOT + 'server.js');
-			}, 1000);
-		}
-
 		if (serverProcess) {
-			serverProcess.on('close', launch);
+			serverProcess.on('close', launchServer);
 			serverProcess.kill('SIGHUP');
 		} else {
-			launch();
+			launchServer();
 		}
 	});
+	launchServer();
 }
 
 function exec(cmd) {

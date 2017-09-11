@@ -90,7 +90,7 @@
 	window.onload = function () {
 		var gameListContent = document.getElementById('gameListContent');
 		getAjax('/api/gameListSample').then(function (gameListData) {
-
+console.log('gameListData', gameListData)
 			var gameList = new GameList();
 			gameList.update(gameListData);
 

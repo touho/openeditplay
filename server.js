@@ -1,4 +1,2 @@
-global.DIR_ROOT = __dirname;
-global.DIR_GAMEDATA = DIR_ROOT + '/gameData';
-global.DIR_TEMPLATE = DIR_ROOT + '/template';
-require('./builds/openeditplay.server');
+require('./config');
+require('./src/server/main');

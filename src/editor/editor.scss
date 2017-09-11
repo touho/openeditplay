@@ -30,7 +30,7 @@ body, html {
   letter-spacing: 1px;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   text-shadow: 1px 1px 1px #060606;
-  overflow: hidden;
+  overflow: hidden; // disables osX scrolling effect
 }
 
 .select-none {

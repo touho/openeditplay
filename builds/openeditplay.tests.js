@@ -1572,7 +1572,7 @@ var Entity = (function (Serializable$$1) {
 		});
 		
 		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
-			comp: components,
+			c: components, // overwrite children. earlier this was named 'comp'
 			proto: this.prototype.id
 		});
 	};
@@ -1595,7 +1595,7 @@ Serializable.registerSerializable(Entity, 'ent', function (json) {
 	entity.prototype = getSerializable(json.proto);
 	console.log('created entity from json', entity);
 	if (json.comp) {
-		entity.addComponents(json.comp.map(Serializable.fromJSON));
+		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
 	}
 	return entity;
 });
@@ -1915,7 +1915,19 @@ PropertyOwner.defineProperties(Game, propertyTypes);
 
 Game.prototype.isRoot = true;
 
-Serializable.registerSerializable(Game, 'gam');
+Serializable.registerSerializable(Game, 'gam', function (json) {
+	if (json.c) {
+		console.log('json.c', json.c);
+		json.c.sort(function (a, b) {
+			if (a.id.startsWith('prt'))
+				{ return -1; }
+			else
+				{ return 1; }
+		});
+		console.log('json.c after', json.c);
+	}
+	return new Game(json.id);
+});
 
 var gameCreateListeners = [];
 
@@ -2826,7 +2838,7 @@ var EntityPrototype = (function (Prototype$$1) {
 
 				var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 					value: child.findChild('prp', function (prp) { return prp.name === 'angle'; }).value,
-					predefinedId: id + '_r'
+					predefinedId: id + '_a'
 				});
 				transform.addChild(angle);
 				
@@ -2851,7 +2863,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		var Transform = this.getTransform();
 		var json = {
 			id: this.id,
-			p: this.prototype.id
+			t: this.prototype.id // t as in protoType
 		};
 		
 		var childArrays = [];
@@ -2870,12 +2882,10 @@ var EntityPrototype = (function (Prototype$$1) {
 				if (prp.value)
 					{ json.n = prp.value; }
 			} else if (prp.name === 'position') {
-				json.x = floatToJSON(prp.value.x);
-				json.y = floatToJSON(prp.value.y);
+				json.p = prp.type.toJSON(prp.value);
 			} else if (prp.name === 'scale') {
 				if (!prp.value.isEqualTo(new Vector(1, 1))) {
-					json.w = floatToJSON(prp.value.x);
-					json.h = floatToJSON(prp.value.y);
+					json.s = prp.type.toJSON(prp.value);
 				}
 			} else if (prp.name === 'angle') {
 				if (prp.value !== 0)
@@ -2940,7 +2950,7 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 
 	var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 		value: 0,
-		predefinedId: id + '_r'
+		predefinedId: id + '_a'
 	});
 	transform.addChild(angle);
 
@@ -2956,14 +2966,14 @@ EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
 
 Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var entityPrototype = new EntityPrototype(json.id);
-	entityPrototype.prototype = getSerializable$1(json.p);
-	assert(entityPrototype.prototype, ("Prototype " + (json.p) + " not found"));
+	entityPrototype.prototype = getSerializable$1(json.t || json.p);
+	assert(entityPrototype.prototype, ("Prototype " + (json.t || json.p) + " not found"));
 	
 	var nameId = json.id + '_n';
 	var transformId = json.id + '_t';
 	var positionId = json.id + '_p';
 	var scaleId = json.id + '_s';
-	var angleId = json.id + '_r';
+	var angleId = json.id + '_a';
 	
 	var name = Prototype._propertyTypesByName.name.createProperty({ 
 		value: json.n === undefined ? '' : json.n,
@@ -2974,13 +2984,13 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var transformClass = componentClasses.get('Transform');
 	
 	var position = transformClass._propertyTypesByName.position.createProperty({
-		value: new Vector(json.x, json.y),
+		value: json.x !== undefined ? new Vector(json.x, json.y) : Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
 	});
 	transformData.addChild(position);
 
 	var scale = transformClass._propertyTypesByName.scale.createProperty({
-		value: new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h),
+		value: json.s && Vector.fromObject(json.s) || new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h) || new Vector(1, 1), // future is .s
 		predefinedId: scaleId
 	});
 	transformData.addChild(scale);
@@ -3912,7 +3922,7 @@ Component.register({
 	category: 'Common',
 	allowMultiple: false,
 	properties: [
-		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
+		createPropertyType('type', 'play', createPropertyType.enum, createPropertyType.enum.values('play', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),

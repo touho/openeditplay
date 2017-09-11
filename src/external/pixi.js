@@ -18766,7 +18766,7 @@ var FilterManager = function (_WebGLManager) {
         destinationFrame.width = sourceFrame.width;
         destinationFrame.height = sourceFrame.height;
 
-        // lets play the padding after we fit the element to the screen.
+        // lets player the padding after we fit the element to the screen.
         // this should stop the strange side effects that can occur when cropping to the edges
 
         var renderTarget = this.getPotRenderTarget(renderer.gl, sourceFrame.width, sourceFrame.height, resolution);
@@ -26014,7 +26014,7 @@ var VideoBaseTexture = function (_BaseTexture) {
         _this._isAutoUpdating = false;
 
         /**
-         * When set to true will automatically play videos used by this texture once
+         * When set to true will automatically player videos used by this texture once
          * they are loaded. If false, it will not modify the playing state.
          *
          * @member {boolean}
@@ -26066,14 +26066,14 @@ var VideoBaseTexture = function (_BaseTexture) {
     };
 
     /**
-     * Runs the update loop when the video is ready to play
+     * Runs the update loop when the video is ready to player
      *
      * @private
      */
 
 
     VideoBaseTexture.prototype._onPlayStart = function _onPlayStart() {
-        // Just in case the video has not received its can play even yet..
+        // Just in case the video has not received its can player even yet..
         if (!this.hasLoaded) {
             this._onCanPlay();
         }
@@ -26099,7 +26099,7 @@ var VideoBaseTexture = function (_BaseTexture) {
     };
 
     /**
-     * Fired when the video is loaded and ready to play
+     * Fired when the video is loaded and ready to player
      *
      * @private
      */
@@ -29434,7 +29434,7 @@ var AnimatedSprite = function (_core$Sprite) {
         _this._autoUpdate = autoUpdate !== false;
 
         /**
-         * The speed that the AnimatedSprite will play at. Higher is faster, lower is slower
+         * The speed that the AnimatedSprite will player at. Higher is faster, lower is slower
          *
          * @member {number}
          * @default 1
@@ -32653,7 +32653,7 @@ var ColorMatrixFilter = function (_core$Filter) {
     };
 
     /**
-     * We don't know exactly what it does, kind of gradient map, but funny to play with!
+     * We don't know exactly what it does, kind of gradient map, but funny to player with!
      *
      * @param {number} desaturation - Tone values.
      * @param {number} toned - Tone values.

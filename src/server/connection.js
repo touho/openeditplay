@@ -1,79 +1,72 @@
-import { addChangeListener, packChange, unpackChange, executeChange, executeExternal, changeType, setChangeOrigin } from '../core/serializableManager'
-import { getOrCreateGameServer, idToGameServer } from './gameServer';
+const dbSync = require('./dbSync');
+let connection = module.exports;
 
-let connections = new Set();
-export { connections };
+connection.addSocket = function(socket) {
+	new Connection(socket);
+};
+
+// gameId => array of Connections
+let connections = new Map();
 
 let requiredClientTime = Date.now();
 
-
 process.on('message', msg => {
-	console.log(msg);
 	requiredClientTime = Date.now();
-	for (let connection of connections)
-		connection.refreshIfOld();
+	connections.forEach(connectionList => {
+		connectionList.forEach(connection => {
+			connection.refreshIfOld();
+		});
+	});
 });
 
-export class Connection {
+class Connection {
 	constructor(socket) {
 		this.socket = socket;
 		this.gameId = null;
 
 		socket.on('disconnect', () => {
-			if (idToGameServer[this.gameId])
-				idToGameServer[this.gameId].removeConnection(this);
 			connections.delete(this);
-			console.log('socket count', connections.size);
+			if (connections.has(this.gameId)) {
+				let gameConnections = connections.get(this.gameId);
+				gameConnections.delete(this);
+				if (gameConnections.size === 0)
+					connections.delete(this.gameId);
+			}
 		});
 
 		// change event
 		socket.on('c', changes => {
-			getOrCreateGameServer(this.gameId).then(gameServer => {
-				setChangeOrigin(this);
-				// console.log('changes', changes);
-				changes.map(unpackChange).forEach(change => {
-					if (change.type === changeType.addSerializableToTree && change.value.id.startsWith('gam')) {
-						console.log('ERROR, Client should not create a game.');
-						return; // Should not happen. Server creates all the games
-					} else if (gameServer) {
-						gameServer.applyChange(change, this);
-					} else {
-						console.log('ERROR, No gameServer for', this.gameId);
-					}
-				})
-			});
+			console.log('c gameId', this.gameId);
+			changes.forEach(change => dbSync.writeChangeToDatabase(change, this.gameId));
+			
+			let gameConnections = connections.get(this.gameId);
+			for (let connection of gameConnections) {
+				if (connection !== this)
+					connection.socket.emit('c', changes);
+			}
 		});
 		
 		socket.on('gameId', gameId => {
-			this.setGameServer(gameId);
+			this.setGameId(gameId);
 		});
 		
-		socket.on('requestGameData', gameId => {
-			getOrCreateGameServer(gameId).then(gameServer => {
-				gameServer.addConnection(this);
-				this.setGameServer(gameServer.id);
-				socket.emit('gameData', gameServer.game.toJSON());
-			});
+		socket.on('requestGameData', async gameId => {
+			let gameData = await dbSync.getGame(gameId);
+			this.setGameId(gameData.id);
+			socket.emit('gameData', gameData);
 		});
-		
-		connections.add(this);
-		console.log('socket count', connections.size);
 		
 		this.requestGameId();
 		this.refreshIfOld();
 	}
-	sendChangeToOwner(change) {
-		console.log('SENDING', change.type);
-		change = packChange(change);
-		this.socket.emit('c', [change]);
-	}
-	setGameServer(gameId) {
-		
-		if (gameId !== this.gameId) {
-			if (idToGameServer[this.gameId])
-				idToGameServer[this.gameId].removeConnection(this);
-			this.gameId = gameId;
-		}
+	setGameId(gameId) {
+		if (this.gameId && this.gameId.length > 5)
+			return;
+
+		this.gameId = gameId;
+		if (!connections.has(gameId))
+			connections.set(gameId, new Set());
+		connections.get(gameId).add(this);
 	}
 	requestGameId() {
 		this.socket.emit('requestGameId');
@@ -81,21 +74,4 @@ export class Connection {
 	refreshIfOld() {
 		this.socket.emit('refreshIfOlderThan', requiredClientTime);
 	}
-}
-
-setInterval(() => {
-	console.log('connections', Array.from(connections).map(conn => conn.gameId));
-}, 5000);
-
-export function addSocket(socket) {
-	new Connection(socket);
-}
-
-export function getConnectionsForGameServer(gameId) {
-	let set = new Set();
-	for (let connection of connections) {
-		if (connection.gameId === gameId)
-			set.add(connection);
-	}
-	return set;
 }

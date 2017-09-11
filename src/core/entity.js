@@ -153,7 +153,7 @@ export default class Entity extends Serializable {
 		});
 		
 		return Object.assign(super.toJSON(), {
-			comp: components,
+			c: components, // overwrite children. earlier this was named 'comp'
 			proto: this.prototype.id
 		});
 	}
@@ -173,7 +173,7 @@ Serializable.registerSerializable(Entity, 'ent', json => {
 	entity.prototype = getSerializable(json.proto);
 	console.log('created entity from json', entity);
 	if (json.comp) {
-		entity.addComponents(json.comp.map(Serializable.fromJSON));
+		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
 	}
 	return entity;
 });

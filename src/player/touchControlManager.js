@@ -71,7 +71,7 @@ function positionControls() {
 
 	let characterControllers = scene.getComponents('CharacterController');
 	characterControllers.forEach(characterController => {
-		if (characterController.type === 'player') {
+		if (characterController.type === 'play') {
 			playerFound = true;
 
 			if (characterController.controlType === 'jumper') {

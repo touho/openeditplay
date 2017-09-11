@@ -334,9 +334,9 @@ class SceneModule extends Module {
 					this.startListeningMovementInput();
 				} else if (!scene.playing) {
 					if (k === key.g) {
-						$(this.globeButton).click();
+						this.globeButton.click();
 					} else if (k === key.h) {
-						$(this.homeButton).click();
+						this.homeButton.click();
 					}
 				}
 			}
@@ -665,7 +665,7 @@ class SceneModule extends Module {
 					setChangeOrigin(this);
 					events.dispatch('createBlankLevel');
 				}
-			}, 700)
+			}, 500)
 		}
 	}
 
