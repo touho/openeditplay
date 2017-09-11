@@ -36,7 +36,6 @@ class Connection {
 
 		// change event
 		socket.on('c', changes => {
-			console.log('c gameId', this.gameId);
 			changes.forEach(change => dbSync.writeChangeToDatabase(change, this.gameId));
 			
 			let gameConnections = connections.get(this.gameId);

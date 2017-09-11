@@ -91,8 +91,6 @@ WHERE gameId = ? and id = ?
 		let value = change[keyToShortKey.value];
 		let parentId = change[keyToShortKey.parentId];
 		
-		console.log('add parent', parentId, gameId)
-		
 		let serializables = ServerSerializable.getSerializables(value, parentId);
 		
 		let valuesSQL = serializables.map(s => '(?,?,?,?,?,?)').join(',');
