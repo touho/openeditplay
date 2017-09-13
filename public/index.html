@@ -110,7 +110,7 @@ console.log('gameListData', gameListData)
             
 			window.onscroll = function () {
 				"use strict";
-				var scroll = document.documentElement.scrollTop;
+				var scroll = document.documentElement.scrollTop || document.body.scrollTop;
 
 				var point1 = 100;
 				var point2 = 350;
