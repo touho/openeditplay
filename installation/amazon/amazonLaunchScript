@@ -1,0 +1,4 @@
+#!/bin/bash
+USERNAME='ubuntu'
+git clone https://github.com/touho/openeditplay /home/${USERNAME}/openeditplay
+/home/${USERNAME}/openeditplay/installation/installAmazonEC2Ubuntu

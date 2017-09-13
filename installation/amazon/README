@@ -1,0 +1,5 @@
+Launch AWS EC2 instance:
+- Choose AMI: Select Ubuntu Server
+- Configure Instance: Click "Advanced Details" and copy ./amazonLaunchScript content to "User data" field.
+- Configure Security Group: Click "Add Rule" and "HTTP"
+
