@@ -15,6 +15,7 @@ app.get('/api/gameListSample', (req, res) => {
 	dbSync.getGames().then(games => {
 		res.send(games);
 	}).catch(e => {
+		console.error('gameListSample', e);
 		res.send({
 			error: e
 		});

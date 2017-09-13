@@ -9,8 +9,14 @@ let connectionPromise = Promise.resolve().then(createConnection);
 db.connectionPromise = connectionPromise;
 
 db.query = async function() {
-	let connection = await connectionPromise;
-	let rows = (await connection.execute(...arguments))[0];
+	let rows;
+	try {
+		let connection = await connectionPromise;
+		rows = (await connection.execute(...arguments))[0];
+	} catch(e) {
+		console.error('db.query', e);
+		throw e;
+	}
 	return rows;
 };
 db.queryOne = async function() {

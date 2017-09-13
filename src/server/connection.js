@@ -36,12 +36,22 @@ class Connection {
 
 		// change event
 		socket.on('c', changes => {
-			changes.forEach(change => dbSync.writeChangeToDatabase(change, this.gameId));
-			
-			let gameConnections = connections.get(this.gameId);
-			for (let connection of gameConnections) {
-				if (connection !== this)
-					connection.socket.emit('c', changes);
+			try {
+				changes.forEach(async change => {
+					try {
+						await dbSync.writeChangeToDatabase(change, this.gameId);
+					} catch(e) {
+						console.error('socket.c writeChangeToDatabase', e);
+					}
+				});
+
+				let gameConnections = connections.get(this.gameId);
+				for (let connection of gameConnections) {
+					if (connection !== this)
+						connection.socket.emit('c', changes);
+				}
+			} catch(e) {
+				console.error('socket.c', e);
 			}
 		});
 		
@@ -50,9 +60,13 @@ class Connection {
 		});
 		
 		socket.on('requestGameData', async gameId => {
-			let gameData = await dbSync.getGame(gameId);
-			this.setGameId(gameData.id);
-			socket.emit('gameData', gameData);
+			try {
+				let gameData = await dbSync.getGame(gameId);
+				this.setGameId(gameData.id);
+				socket.emit('gameData', gameData);
+			} catch(e) {
+				console.error('socket.requestGameData', e);
+			}
 		});
 		
 		this.requestGameId();
