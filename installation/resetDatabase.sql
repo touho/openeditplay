@@ -7,7 +7,7 @@
 #
 # Host: 127.0.0.1 (MySQL 5.7.17)
 # Database: openeditplay
-# Generation Time: 2017-08-30 05:32:29 +0000
+# Generation Time: 2017-09-13 07:16:41 +0000
 # ************************************************************
 
 
@@ -45,8 +45,9 @@ CREATE TABLE `serializable` (
   `gameId` varchar(30) NOT NULL,
   `id` varchar(30) NOT NULL DEFAULT '',
   `type` char(3) NOT NULL DEFAULT '',
-  `parentId` varchar(30) NOT NULL DEFAULT '',
-  `value` varchar(50) DEFAULT NULL COMMENT 'NULL if type != prp',
+  `parentId` varchar(30) DEFAULT '',
+  `value` varchar(130) DEFAULT NULL COMMENT 'if type=prp then value contains json presentation of the property value. else value contains json presentation of additional values like prototypeId ''p''',
+  `name` varchar(30) DEFAULT NULL COMMENT 'If serializable has generated name, it is stored here',
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`gameId`,`id`),
