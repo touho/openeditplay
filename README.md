@@ -8,20 +8,21 @@ You can not host this software for any audience.
 
 ## Installation ##
 
-* Locally *
+#### Locally ####
 1. install mysql
 2. setup mysql credentials
-
-    CREATE DATABASE openeditplay CHARACTER SET utf8;
-    CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY 'openeditplay';
-    GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
-    
+```
+CREATE DATABASE openeditplay CHARACTER SET utf8;
+CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY 'openeditplay';
+GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
+```
 3. `npm install`
 4. `node server`
 
 
-* Amazon AWS EC2 instance configuration: *
-- Choose AMI: Select Ubuntu Server
-- Configure Instance: Click "Advanced Details" and copy ./amazonLaunchScript content to "User data" field.
-- Configure Security Group: Click "Add Rule" and "HTTP"
-- Start instance and enjoy Open Edit Play by using Public DNS address given by AWS.
+#### Amazon ####
+1. Start AWS EC2 instance wizard
+2. Choose AMI: Select Ubuntu Server
+3. Configure Instance: Click "Advanced Details" and copy /installation/amazon/amazonLaunchScript content to "User data" field.
+4. Configure Security Group: Click "Add Rule" and "HTTP"
+5. Start instance and enjoy Open Edit Play by using Public DNS address given by AWS.
