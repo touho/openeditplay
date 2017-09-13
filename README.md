@@ -21,7 +21,7 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 
 
 ### Amazon ###
-1. Start AWS EC2 instance wizard
+1. Start AWS EC2 instance launching wizard
 2. Choose AMI: Select Ubuntu Server
 3. Configure Instance: Click "Advanced Details" and copy /installation/amazon/amazonLaunchScript content to "User data" field.
 4. Configure Security Group: Click "Add Rule" and "HTTP"
