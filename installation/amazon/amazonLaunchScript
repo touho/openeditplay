@@ -1,4 +1,5 @@
 #!/bin/bash
-USERNAME='ubuntu'
-runuser -l $USERNAME -c 'git clone https://github.com/touho/openeditplay /home/${USERNAME}/openeditplay'
-runuser -l $USERNAME -c '/home/${USERNAME}/openeditplay/installation/amazon/installAmazonEC2Ubuntu'
+# This script is run by root user. Environment varibles can not be used.
+
+runuser -l ubuntu -c 'git clone https://github.com/touho/openeditplay /home/ubuntu/openeditplay'
+runuser -l ubuntu -c '/home/ubuntu/openeditplay/installation/amazon/installAmazonEC2Ubuntu'
