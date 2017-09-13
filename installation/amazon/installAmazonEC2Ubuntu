@@ -56,7 +56,7 @@ sudo mysql --password="${PASSWORD}" -e "
     CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY '${PASSWORD}';
     GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 "
-mysql -u openeditplay --password="${PASSWORD}" --database=openeditplay < resetDatabase.sql
+mysql -u openeditplay --password="${PASSWORD}" --database=openeditplay < installation/resetDatabase.sql
 
 echo "Starting Open Edit Play server"
 pm2 start server.js --name openeditplay >/dev/null
