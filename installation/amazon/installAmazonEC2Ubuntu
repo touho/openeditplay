@@ -44,14 +44,16 @@ echo $PASSWORD > ~/.pw
 
 # Install MySQL Server in a Non-Interactive mode.
 echo "Installing MySQL database"
-sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/data-dir select ''"
-sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $PASSWORD"
-sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $PASSWORD"
-sudo apt-get install -y mysql-server
+installation/amazon/mySQLNonInteractiveInstall $PASSWORD
 
-sudo mysql --password="${PW}" -e "
+# sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/data-dir select ''"
+# sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $PASSWORD"
+# sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $PASSWORD"
+# sudo apt-get install -y mysql-server
+
+sudo mysql --password="${PASSWORD}" -e "
     CREATE DATABASE openeditplay CHARACTER SET utf8;
-    CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY '${PW}';
+    CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY '${PASSWORD}';
     GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 "
 
