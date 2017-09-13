@@ -34,12 +34,6 @@ echo "Installing pm2"
 npm i -g pm2 >/dev/null
 #sudo pm2 startup # doesn't work with sudo. would require 
 
-echo "Starting Open Edit Play server"
-pm2 start server.js --name openeditplay >/dev/null
-pm2 save >/dev/null
-
-pm2 startup | grep sudo | bash >/dev/null
-
 # Create easy update script
 echo "cd ~/openeditplay;git pull;pm2 restart server;echo 'Open Edit Play has been updated!'" > ~/updateFromGit
 chmod +x ~/updateFromGit
@@ -48,15 +42,24 @@ chmod +x ~/updateFromGit
 PASSWORD=`openssl rand -base64 32`
 echo $PASSWORD > ~/.pw
 
-# Install MySQL Server in a Non-Interactive mode. Default root password will be "root"
-echo "mysql-server-5.6 mysql-server/root_password password $PASSWORD" | sudo debconf-set-selections
-echo "mysql-server-5.6 mysql-server/root_password_again password $PASSWORD" | sudo debconf-set-selections
+# Install MySQL Server in a Non-Interactive mode.
+echo "Installing MySQL database"
+sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/data-dir select ''"
+sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $PASSWORD"
+sudo debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $PASSWORD"
+sudo apt-get install -y mysql-server
 
-#sudo apt-get -y install mysql-server-5.6
+sudo mysql --password="${PW}" -e "
+    CREATE DATABASE openeditplay CHARACTER SET utf8;
+    CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY '${PW}';
+    GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
+"
 
-#yes Y | sudo apt-get install mysql-server >/dev/null
+echo "Starting Open Edit Play server"
+pm2 start server.js --name openeditplay >/dev/null
+pm2 save >/dev/null
 
-
+pm2 startup | grep sudo | bash >/dev/null
 
 echo ""
 echo "[ Open Edit Play ]"
