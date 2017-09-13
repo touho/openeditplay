@@ -19,7 +19,7 @@ cp installation/amazon/configAmazon.js config.js
 
 echo "Updating apt-get"
 sudo apt-get update >/dev/null
-DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade
+# DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade # This takes very long and is human-interactive
 
 echo "Installing nginx"
 yes Y | sudo apt-get install nginx >/dev/null

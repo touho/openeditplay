@@ -1,4 +1,4 @@
 #!/bin/bash
 USERNAME='ubuntu'
-git clone https://github.com/touho/openeditplay /home/${USERNAME}/openeditplay
-/home/${USERNAME}/openeditplay/installation/installAmazonEC2Ubuntu
+runuser -l $USERNAME -c 'git clone https://github.com/touho/openeditplay /home/${USERNAME}/openeditplay'
+runuser -l $USERNAME -c '/home/${USERNAME}/openeditplay/installation/amazon/installAmazonEC2Ubuntu'
