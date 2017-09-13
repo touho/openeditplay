@@ -13,13 +13,12 @@ curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | b
 echo "Installing Node.js"
 nvm install 8 >/dev/null
 
-mkdir gameData
-
 echo "Installing Open Edit Play"
 npm install --production >/dev/null
 
 echo "Updating apt-get"
 sudo apt-get update >/dev/null
+DEBIAN_FRONTEND=noninteractive sudo apt-get -y upgrade
 
 echo "Installing nginx"
 yes Y | sudo apt-get install nginx >/dev/null
@@ -39,6 +38,24 @@ pm2 start server.js --name openeditplay >/dev/null
 pm2 save >/dev/null
 
 pm2 startup | grep sudo | bash >/dev/null
+
+# Create easy update script
+echo "cd ~/openeditplay;git pull;pm2 restart server;echo 'Open Edit Play has been updated!'" > ~/updateFromGit
+chmod +x ~/updateFromGit
+
+# MySQL
+PASSWORD=`openssl rand -base64 32`
+echo $PASSWORD > ~/.pw
+
+# Install MySQL Server in a Non-Interactive mode. Default root password will be "root"
+echo "mysql-server-5.6 mysql-server/root_password password $PASSWORD" | sudo debconf-set-selections
+echo "mysql-server-5.6 mysql-server/root_password_again password $PASSWORD" | sudo debconf-set-selections
+
+#sudo apt-get -y install mysql-server-5.6
+
+#yes Y | sudo apt-get install mysql-server >/dev/null
+
+
 
 echo ""
 echo "[ Open Edit Play ]"
