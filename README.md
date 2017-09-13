@@ -1,4 +1,4 @@
-## License ##
+# License #
 
 I currently do not allow using or redistributing of this code publicly. Contact for more information.
 
@@ -6,9 +6,9 @@ You can run this software on your computer for your own testing purposes.
 You can not host this software for any audience.
 
 
-## Installation ##
+# Installation #
 
-#### Locally ####
+### Locally ###
 1. install mysql
 2. setup mysql credentials
 ```
@@ -20,7 +20,7 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 4. `node server`
 
 
-#### Amazon ####
+### Amazon ###
 1. Start AWS EC2 instance wizard
 2. Choose AMI: Select Ubuntu Server
 3. Configure Instance: Click "Advanced Details" and copy /installation/amazon/amazonLaunchScript content to "User data" field.
