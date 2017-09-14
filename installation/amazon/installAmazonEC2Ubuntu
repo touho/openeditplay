@@ -35,7 +35,7 @@ npm i -g pm2 >/dev/null
 #sudo pm2 startup # doesn't work with sudo. would require 
 
 # Create easy update script
-echo "cd ~/openeditplay;git pull;pm2 restart server;echo 'Open Edit Play has been updated!'" > ~/updateFromGit
+echo "cd ~/openeditplay;git pull;npm install;pm2 restart server;echo 'Open Edit Play has been updated!'" > ~/updateFromGit
 chmod +x ~/updateFromGit
 
 # MySQL password
