@@ -4184,6 +4184,7 @@ function limit(milliseconds, callbackLimitMode, callback) {
 // Decompress an LZW-encoded string
 
 var networkEnabled = false;
+
 function setNetworkEnabled(enabled) {
 	if ( enabled === void 0 ) enabled = true;
 
@@ -4191,11 +4192,14 @@ function setNetworkEnabled(enabled) {
 }
 
 var shouldStartSceneWhenGameLoaded = false;
+
 function startSceneWhenGameLoaded() {
 	shouldStartSceneWhenGameLoaded = true;
 }
 
-var socket;
+var changes = [];
+var valueChanges = {}; // id => change
+var clientStartTime = Date.now();
 
 function isInSceneTree(change) {
 	return change.reference._rootType === 'sce';
@@ -4213,104 +4217,161 @@ function getQueryVariable(variable) {
 	console.log('Query variable %s not found', variable);
 }
 
-function tryToLoad() {
-	if (!window.io) { return setTimeout(tryToLoad, 10); }
-	
-	socket = io();
-	
-	var changes = [];
-	var valueChanges = {}; // id => change
+function changeReceivedOverNet(packedChanges) {
+	if (!networkEnabled)
+		{ return; }
 
-	addChangeListener(function (change) {
-		if (change.external || !networkEnabled)
-			{ return; } // Don't send a change that you have received.
-		
-		if (isInSceneTree(change)) // Don't sync scene
-			{ return; }
-		
-		if (change.type === changeType.setPropertyValue) {
-			var duplicateChange = valueChanges[change.id];
-			if (duplicateChange) {
-				changes.splice(changes.indexOf(duplicateChange), 1);
-			}
-			valueChanges[change.id] = change;
+	packedChanges.forEach(function (change) {
+		change = unpackChange(change);
+		if (change) {
+			executeChange(change);
 		}
-		changes.push(change);
+	});
+}
+function gameReceivedOverNet(gameData) {
+	console.log('receive gameData', gameData);
+	if (!gameData)
+		{ return; }
+	// console.log('gameData', gameData);
+	executeExternal(function () {
+		Serializable.fromJSON(gameData);
+	});
+	localStorage.openEditPlayGameId = gameData.id;
+	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
+	history.replaceState({}, null, ("?gameId=" + (gameData.id)));
 
-		sendChanges();
-	});
-	
-	var sendChanges = limit(200, 'soon', function () {
-		var packedChanges = changes.map(packChange);
-		changes.length = 0;
-		valueChanges = {};
-		console.log('sending', packedChanges);
-		socket.emit('c', packedChanges);
-	});
+	if (shouldStartSceneWhenGameLoaded) {
+		var levelIndex = 0;
 
-	socket.on('c', function (packedChanges) {
-		if (!networkEnabled)
-			{ return; }
-		
-		packedChanges.forEach(function (change) {
-			change = unpackChange(change);
-			if (change) {
-				executeChange(change);
-			}
-		});
-	});
-	
-	socket.on('requestGameId', function (serverStartTime) {
-		if (game)
-			{ socket.emit('gameId', game.id); }
-	});
+		function play() {
+			var levels = game.getChildren('lvl');
+			if (levelIndex >= levels.length)
+				{ levelIndex = 0; }
+			levels[levelIndex].createScene().play();
+		}
 
-	var clientStartTime = Date.now();
-	socket.on('refreshIfOlderThan', function (requiredClientTime) {
-		if (clientStartTime < requiredClientTime)
-			{ location.reload(); }
-	});
-	
-	socket.on('gameData', function (gameData) {
-		console.log('receive gameData', gameData);
-		if (!gameData)
-			{ return; }
-		// console.log('gameData', gameData);
-		executeExternal(function () {
-			Serializable.fromJSON(gameData);
-		});
-		localStorage.openEditPlayGameId = gameData.id;
-		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
-		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
-		
-		if (shouldStartSceneWhenGameLoaded) {
-			var levelIndex = 0;
-			
-			function play() {
-				var levels = game.getChildren('lvl');
-				if (levelIndex >= levels.length)
-					{ levelIndex = 0; }
-				levels[levelIndex].createScene().play();
-			}
-			
+		play();
+
+		game.listen('levelCompleted', function () {
+			levelIndex++;
 			play();
-			
-			game.listen('levelCompleted', function () {
-				levelIndex++;
-				play();
-			});
-		}
-	});
-	
-	setTimeout(function () {
-		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		// console.log('requestGameData', gameId);
-		socket.emit('requestGameData', gameId);
-	}, 100);
+		});
+	}
 }
 
-if (isClient)
-	{ tryToLoad(); }
+addChangeListener(function (change) {
+	if (change.external || !networkEnabled)
+		{ return; } // Don't send a change that you have received.
+
+	if (isInSceneTree(change)) // Don't sync scene
+		{ return; }
+
+	if (change.type === changeType.setPropertyValue) {
+		var duplicateChange = valueChanges[change.id];
+		if (duplicateChange) {
+			changes.splice(changes.indexOf(duplicateChange), 1);
+		}
+		valueChanges[change.id] = change;
+	}
+	changes.push(change);
+
+	if (sendChanges)
+		{ sendChanges(); }
+});
+
+function parseSocketMessage(message) {
+	var type = message.split(' ')[0];
+	var body = message.substring(type.length + 1);
+	if (body.length > 0)
+		{ body = JSON.parse(body); }
+
+	console.log('parseSocketMessage', type, body);
+	
+	return {
+		type: type,
+		body: body
+	};
+}
+
+function sendSocketMessage(eventName, data) {
+	if (!sock)
+		{ return console.log('Could not send', eventName); }
+
+	console.log('sendSocketMessage', eventName, data);
+	
+	if (data)
+		{ data = JSON.stringify(data); }
+	else
+		{ data = ''; }
+	sock.send(eventName + ' ' + data);
+}
+
+var listeners$1 = {
+	'': changeReceivedOverNet,
+	gameData: gameReceivedOverNet,
+	requestGameId: function requestGameId() {
+		if (game)
+			{ sendSocketMessage('gameId', game.id); }
+	},
+	refreshIfOlderThan: function refreshIfOlderThan(requiredClientTime) {
+		if (clientStartTime < requiredClientTime)
+			{ location.reload(); }
+	}
+};
+
+var sendChanges = limit(200, 'soon', function () {
+	if (!connected)
+		{ return; }
+	
+	var packedChanges = changes.map(packChange);
+	changes.length = 0;
+	valueChanges = {};
+	console.log('sending', packedChanges);
+	sendSocketMessage('', packedChanges);
+});
+
+var sock;
+var connected = false;
+var reconnectInterval = null;
+function connect() {
+	if (connected)
+		{ return; }
+	clearInterval(reconnectInterval);
+	reconnectInterval = setInterval(createSocket, 2000);
+	createSocket();
+}
+function createSocket() {
+	if (!window.SockJS)
+		{ return; }
+	
+	sock = new SockJS('/socket');
+	sock.onopen = function () {
+		clearInterval(reconnectInterval);
+		connected = true;
+		console.log('socket opened');
+		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
+		sendSocketMessage('requestGameData', gameId);
+	};
+	sock.onmessage = function (e) {
+		var ref = parseSocketMessage(e.data);
+		var type = ref.type;
+		var body = ref.body;
+		var listener = listeners$1[type];
+
+		if (listener)
+			{ listener(body); }
+		else
+			{ console.error('Invalid socket message', e); }
+	};
+	sock.onclose = function () {
+		connected = false;
+		console.log('socket closed');
+		
+		setTimeout(connect, 1000);
+	};
+}
+
+window.addEventListener('load', connect);
 
 var previousWidth = null;
 var previousHeight = null;

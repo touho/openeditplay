@@ -1,9 +1,22 @@
 const dbSync = require('./dbSync');
+const sockjs = require('sockjs');
 let connection = module.exports;
 
+/*
 connection.addSocket = function(socket) {
 	new Connection(socket);
 };
+*/
+
+let socketServer;
+connection.init = function(httpServer) {	
+	socketServer = sockjs.createServer({ sockjs_url: 'http://cdn.jsdelivr.net/sockjs/1.0.1/sockjs.min.js' });
+	socketServer.on('connection', socket => {
+		new Connection(socket);
+	});
+	socketServer.installHandlers(httpServer, { prefix: '/socket' });
+};
+
 
 // gameId => array of Connections
 let connections = new Map();
@@ -19,12 +32,24 @@ process.on('message', msg => {
 	});
 });
 
+function parseSocketMessage(message) {
+	let type = message.split(' ')[0];
+	let body = message.substring(type.length + 1);
+	if (body.length > 0)
+		body = JSON.parse(body);
+	return {
+		type,
+		body
+	};
+}
+
 class Connection {
 	constructor(socket) {
 		this.socket = socket;
 		this.gameId = null;
 
-		socket.on('disconnect', () => {
+		socket.on('close', () => {
+			console.log('closed');
 			connections.delete(this);
 			if (connections.has(this.gameId)) {
 				let gameConnections = connections.get(this.gameId);
@@ -33,9 +58,8 @@ class Connection {
 					connections.delete(this.gameId);
 			}
 		});
-
-		// change event
-		socket.on('c', changes => {
+		
+		let changeReceived = changes => {
 			try {
 				changes.forEach(async change => {
 					try {
@@ -48,27 +72,39 @@ class Connection {
 				let gameConnections = connections.get(this.gameId);
 				for (let connection of gameConnections) {
 					if (connection !== this)
-						connection.socket.emit('c', changes);
+						connection.send('', changes);
 				}
 			} catch(e) {
 				console.error('socket.c', e);
 			}
-		});
+		};
 		
-		socket.on('gameId', gameId => {
-			this.setGameId(gameId);
-		});
-		
-		socket.on('requestGameData', async gameId => {
-			try {
-				let gameData = await dbSync.getGame(gameId);
-				this.setGameId(gameData.id);
-				socket.emit('gameData', gameData);
-			} catch(e) {
-				console.error('socket.requestGameData', e);
+		let listeners = {
+			'': changeReceived,
+			gameId: gameId => {
+				this.setGameId(gameId);
+			},
+			requestGameData: async gameId => {
+				try {
+					let gameData = await dbSync.getGame(gameId);
+					this.setGameId(gameData.id);
+					this.send('gameData', gameData);
+				} catch(e) {
+					console.error('socket.requestGameData', e);
+				}
 			}
-		});
+		};
 		
+		socket.on('data', message => {
+			let { type, body } = parseSocketMessage(message);
+			let listener = listeners[type];
+			
+			if (listener)
+				listener(body);
+			
+			console.log('data message', message);
+		});
+
 		this.requestGameId();
 		this.refreshIfOld();
 	}
@@ -82,9 +118,16 @@ class Connection {
 		connections.get(gameId).add(this);
 	}
 	requestGameId() {
-		this.socket.emit('requestGameId');
+		this.send('requestGameId');
 	}
 	refreshIfOld() {
-		this.socket.emit('refreshIfOlderThan', requiredClientTime);
+		this.send('refreshIfOlderThan', requiredClientTime);
+	}
+	send(eventName, data) {
+		if (data)
+			data = JSON.stringify(data);
+		else
+			data = '';
+		this.socket.write(eventName + ' ' + data);
 	}
 }

@@ -1,25 +1,24 @@
 require('../../config');
 let db = module.exports;
 
-async function createConnection(config) {
-	const mysql = require('mysql2/promise');
-	return await mysql.createConnection(config || global.config.db);
-}
-let connectionPromise = Promise.resolve().then(createConnection);
-db.connectionPromise = connectionPromise;
+var connectionPool = require('mysql2').createPool(global.config.db);
 
-db.query = async function() {
-	let rows;
-	try {
-		let connection = await connectionPromise;
-		rows = (await connection.execute(...arguments))[0];
-	} catch(e) {
-		console.error('db.query', e);
-		throw e;
-	}
-	return rows;
+db.query = async function (sql, params) {
+	return new Promise((resolve, reject) => {
+		connectionPool.getConnection(function (err, connection) {
+			connection.query(sql, params, function (err, rows, fields) {
+				connection.release();
+				if (err) {
+					console.error('db.query', err);
+					return reject(err);
+				}
+				resolve(rows);
+			});
+		});
+	});
 };
-db.queryOne = async function() {
+
+db.queryOne = async function () {
 	let rows = await db.query(...arguments);
 	if (rows.length !== 1)
 		throw new Error('queryOne gave non-1 results');

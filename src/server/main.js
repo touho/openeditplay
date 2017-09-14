@@ -1,9 +1,8 @@
 const express = require('express');
 const app = express();
 const http = require('http').Server(app);
-const io = require('socket.io')(http);
 const compression = require('compression');
-const { addSocket } = require('./connection');
+const connection = require('./connection');
 const dbSync = require('./dbSync');
 
 app.use(compression({
@@ -26,13 +25,7 @@ http.listen(3000, function(){
 	console.log('listening on *:3000');
 });
 
-io.on('connection', function(socket) {
-	try {
-		addSocket(socket);
-	} catch(e) {
-		console.log('Error', e);
-	}
-});
+connection.init(http);
 
 process.on('uncaughtException', function (err) {
 	console.error("Node.js Exception. " + err + " - " + err.stack);
