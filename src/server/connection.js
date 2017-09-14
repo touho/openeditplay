@@ -10,7 +10,7 @@ connection.addSocket = function(socket) {
 
 let socketServer;
 connection.init = function(httpServer) {	
-	socketServer = sockjs.createServer({ sockjs_url: 'http://cdn.jsdelivr.net/sockjs/1.0.1/sockjs.min.js' });
+	socketServer = sockjs.createServer({ sockjs_url: 'http://cdn.jsdelivr.net/sockjs/1.1.4/sockjs.min.js' });
 	socketServer.on('connection', socket => {
 		new Connection(socket);
 	});
