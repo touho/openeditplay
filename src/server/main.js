@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const http = require('http').Server(app);
+const server = require('http').Server(app);
 const compression = require('compression');
 const connection = require('./connection');
 const dbSync = require('./dbSync');
@@ -21,11 +21,11 @@ app.get('/api/gameListSample', (req, res) => {
 	});
 });
 
-http.listen(3000, function(){
+server.listen(3000, function(){
 	console.log('listening on *:3000');
 });
 
-connection.init(http);
+connection.init(server);
 
 process.on('uncaughtException', function (err) {
 	console.error("Node.js Exception. " + err + " - " + err.stack);

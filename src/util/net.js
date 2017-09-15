@@ -103,7 +103,7 @@ addChangeListener(change => {
 		valueChanges[change.id] = change;
 	}
 	changes.push(change);
-
+	
 	if (sendChanges)
 		sendChanges();
 });
@@ -123,20 +123,16 @@ function parseSocketMessage(message) {
 }
 
 function sendSocketMessage(eventName, data) {
-	if (!sock)
+	if (!socket)
 		return console.log('Could not send', eventName);
-
-	console.log('sendSocketMessage', eventName, data);
 	
-	if (data)
-		data = JSON.stringify(data);
+	if (eventName)
+		socket.emit(eventName, data);
 	else
-		data = '';
-	sock.send(eventName + ' ' + data);
+		socket.emit(data);
 }
 
 let listeners = {
-	'': changeReceivedOverNet,
 	gameData: gameReceivedOverNet,
 	requestGameId() {
 		if (game)
@@ -149,39 +145,58 @@ let listeners = {
 };
 
 let sendChanges = limit(200, 'soon', () => {
-	if (!connected)
+	if (!socket || changes.length === 0)
 		return;
 	
 	let packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
-	console.log('sending', packedChanges);
 	sendSocketMessage('', packedChanges);
 });
 
-let sock;
-let connected = false;
-let reconnectInterval = null;
+let socket;
 function connect() {
-	if (connected)
-		return;
-	clearInterval(reconnectInterval);
-	reconnectInterval = setInterval(createSocket, 2000);
-	createSocket();
+	if (!window.io) {
+		return console.error('socket.io not defined after window load.');
+	}
+	
+	socket = new io();
+	window.s = socket;
+	socket.on('connect', () => {
+		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
+		sendSocketMessage('requestGameData', gameId);
+		
+		socket.onevent = packet => {
+			let param1 = packet.data[0];
+			if (typeof param1 === 'string') {
+				listeners[param1](packet.data[1]);
+			} else {
+				// Optimized change-event
+				changeReceivedOverNet(param1);
+			}
+		};
+		
+		
+		socket.on('gameData', data => {
+			console.log('dataaaa', data);
+		})
+	});
 }
+window.addEventListener('load', connect);
+/*
 function createSocket() {
 	if (!window.SockJS)
 		return;
 	
-	sock = new SockJS('/socket');
-	sock.onopen = () => {
+	socket = new SockJS('/socket');
+	socket.onopen = () => {
 		clearInterval(reconnectInterval);
 		connected = true;
 		console.log('socket opened');
 		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
 		sendSocketMessage('requestGameData', gameId);
 	};
-	sock.onmessage = function (e) {
+	socket.onmessage = function (e) {
 		let { type, body } = parseSocketMessage(e.data);
 		let listener = listeners[type];
 
@@ -190,12 +205,11 @@ function createSocket() {
 		else
 			console.error('Invalid socket message', e);
 	};
-	sock.onclose = function () {
+	socket.onclose = function () {
 		connected = false;
 		console.log('socket closed');
 		
-		setTimeout(connect, 1000);
+		setTimeout(tryToConnect, 1000);
 	};
 }
-
-window.addEventListener('load', connect);
+*/
