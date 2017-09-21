@@ -14,10 +14,16 @@ app.get('/api/gameListSample', (req, res) => {
 	dbSync.getGames().then(games => {
 		res.send(games);
 	}).catch(e => {
-		console.error('gameListSample', e);
-		res.send({
+		console.error('gameListSample error:', e);
+		res.status(500).send({
 			error: e
 		});
+	});
+});
+app.get('/api/profile', (req, res) => {
+	res.send({
+		exists: false,
+		games: 666
 	});
 });
 
@@ -28,7 +34,7 @@ server.listen(3000, function(){
 connection.init(server);
 
 process.on('uncaughtException', function (err) {
-	console.error("Node.js Exception. " + err + " - " + err.stack);
+	console.error('uncaughtException', err, err.stack);
 });
 
-process.on('unhandledRejection', r => console.log(r));
+process.on('unhandledRejection', r => console.log('unhandledRejection', r));

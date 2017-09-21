@@ -7,7 +7,7 @@
 #
 # Host: 127.0.0.1 (MySQL 5.7.17)
 # Database: openeditplay
-# Generation Time: 2017-09-13 07:16:41 +0000
+# Generation Time: 2017-09-15 17:26:08 +0000
 # ************************************************************
 
 
@@ -18,22 +18,6 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
-
-# Dump of table game
-# ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `game`;
-
-CREATE TABLE `game` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `creatorIP` varchar(15) NOT NULL DEFAULT '' COMMENT 'IP where the game is created',
-  `creatorUserId` varchar(30) NOT NULL DEFAULT '',
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
 
 
 # Dump of table serializable
@@ -53,45 +37,8 @@ CREATE TABLE `serializable` (
   PRIMARY KEY (`gameId`,`id`),
   KEY `type` (`type`),
   KEY `parentId` (`parentId`),
-  KEY `gameId` (`gameId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-
-# Dump of table user
-# ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `user`;
-
-CREATE TABLE `user` (
-  `id` varchar(30) NOT NULL DEFAULT '',
-  `firstIP` varchar(50) NOT NULL DEFAULT '',
-  `lastIP` varchar(50) NOT NULL DEFAULT '',
-  `blockedAt` datetime DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-
-# Dump of table userActivity
-# ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `userActivity`;
-
-CREATE TABLE `userActivity` (
-  `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
-  `userId` varchar(30) NOT NULL DEFAULT '',
-  `ip` varchar(15) NOT NULL DEFAULT '',
-  `type` enum('PLAY','EDIT','EDITACCESS') NOT NULL DEFAULT 'PLAY',
-  `gameId` varchar(30) NOT NULL DEFAULT '',
-  `data` varchar(200) DEFAULT NULL,
-  `count` int(11) NOT NULL DEFAULT '1',
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `user-type-game` (`userId`,`type`,`data`)
+  KEY `gameId` (`gameId`),
+  KEY `updatedAt` (`updatedAt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 

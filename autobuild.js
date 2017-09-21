@@ -35,10 +35,12 @@ if (!global.TARGET_NONE) {
 		'src/external/jstree.min.js',
 		'src/external/p2.js',
 		'src/external/pixi.js'
+		// 'src/external/pixi.stripped.min.js'
 	];
-	const jsDependencies = [
+	const jsDependencies = [ // 519kb (155kb gzipped)
 		'src/external/p2.min.js',
-		'src/external/pixi.min.js'
+		// 'src/external/pixi.min.js'
+		'src/external/pixi.stripped.min.js'
 	];
 
 	// Editor CSS

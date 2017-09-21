@@ -27,7 +27,8 @@ export function getRenderer(canvas) {
 		});
 
 		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
-		renderer.plugins.interaction.destroy();
+		if (renderer.plugins.interaction) // if interaction is left out from pixi build, interaction is no defined
+			renderer.plugins.interaction.destroy();
 	}
 	
 	return renderer;

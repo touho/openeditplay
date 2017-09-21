@@ -4,16 +4,18 @@
 
     <link rel="icon" type="image/png" href="/img/logo_graphics.png"/>
     <link rel="stylesheet" href="css/front.css">
+    <link rel="stylesheet" href="/common/profile.css">
     <link rel="stylesheet" href="css/gameElement.css">
     <script src="/js/redom.min.js"></script>
     <script src="/js/util.js"></script>
     <script src="/js/gameElement.js"></script>
+    <script src="/common/profile.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable = no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/img/logo_graphics.png">
-    
+
     <title>Open Edit Play</title>
 </head>
 <body>
@@ -23,6 +25,7 @@
     <a id="createGameTopBarButton" href="/edit/?gameId=?">Create Game</a>
     <a href="#gameList">Games</a>
     <a href="#about">About</a>
+    <div id="profileButtonContainer"></div>
 </div>
 
 <div id="topArea">
@@ -75,46 +78,47 @@
         <b>Edit</b> your game in the editor.<br>
         <b>Play</b> your game instantly with your friends. Just share the link.<br>
     </div>
-    
+
 </div>
 
 <div id="footer">
     <a href="mailto:marko.rintamaki@gmail.com">Marko Rintamäki</a><br>
-    <br>    
+    <br>
     2017
 </div>
 
 <script>
-    window.IS_SMALL_DEVICE = window.screen.width < 800;
-    
-	window.onload = function () {
-		var gameListContent = document.getElementById('gameListContent');
-		getAjax('/api/gameListSample').then(function (gameListData) {
-console.log('gameListData', gameListData)
-			var gameList = new GameList();
+	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
+	
+	window.addEventListener('load', () => {
+		let gameListContent = document.getElementById('gameListContent');
+		getAjax('/api/gameListSample').then(gameListData => {
+			let gameList = new GameList();
 			gameList.update(gameListData);
 
 			redom.mount(gameListContent, gameList);
-		});
+		}).catch(() => {
+			redom.mount(gameListContent, redom.text('Could not load'));
+        });
 
-		var topBarBackground = document.getElementById('topBarBackground');
-		
-		if (IS_SMALL_DEVICE)
+		let topBarBackground = document.getElementById('topBarBackground');
+
+		if (window.screen.width < 800)
 			document.body.classList.add('isSmallDevice');
-		
+
 		if (window.navigator.standalone) {
 			// In standalone mode, just show the top bar always. In iOS, scolling events can't be trusted.
 			topBarBackground.style.opacity = 1;
 		} else {
 			// In large devices, do mooth scrolling experience
-            
+
 			window.onscroll = function () {
 				"use strict";
-				var scroll = document.documentElement.scrollTop || document.body.scrollTop;
+				let scroll = document.documentElement.scrollTop || document.body.scrollTop;
 
-				var point1 = 100;
-				var point2 = 350;
-				var fullOpacity = 1;
+				let point1 = 100;
+				let point2 = 350;
+				let fullOpacity = 1;
 
 				if (scroll < point1) {
 					topBarBackground.style.opacity = 0;
@@ -126,7 +130,7 @@ console.log('gameListData', gameListData)
 			};
 			window.onscroll();
 		}
-	}
+	});
 </script>
 
 </body>
