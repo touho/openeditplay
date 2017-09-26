@@ -4,6 +4,7 @@ const server = require('http').Server(app);
 const compression = require('compression');
 const connection = require('./connection');
 const dbSync = require('./dbSync');
+const user = require('./user');
 
 app.use(compression({
 	level: 1
@@ -14,17 +15,14 @@ app.get('/api/gameListSample', (req, res) => {
 	dbSync.getGames().then(games => {
 		res.send(games);
 	}).catch(e => {
-		console.error('gameListSample error:', e);
+		console.error('gameListSample sendError:', e);
 		res.status(500).send({
 			error: e
 		});
 	});
 });
 app.get('/api/profile', (req, res) => {
-	res.send({
-		exists: false,
-		games: 666
-	});
+	res.send(user.getProfile(req.query.userId, req.query.userToken));
 });
 
 server.listen(3000, function(){

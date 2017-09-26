@@ -28,8 +28,8 @@ let events = {
 				try {
 					listeners[event][i].apply(null, args);
 				} catch (e) {
-					if (console && console.error) {
-						console.error(e);
+					if (console && console.sendError) {
+						console.sendError(e);
 					}
 				}
 				*/

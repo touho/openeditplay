@@ -8,27 +8,20 @@ import {
 } from '../core/serializableManager'
 import Serializable from '../core/serializable';
 import {game} from '../core/game';
-import {isClient} from './environment';
 
 import {limit} from './callLimiter';
 
-import {lzw_decode, lzw_encode} from './compression';
+let options = {
+	context: null, // 'play' or 'edit'
+	networkEnabled: false
+};
 
-let networkEnabled = false;
-
-export function setNetworkEnabled(enabled = true) {
-	networkEnabled = enabled;
-}
-
-let shouldStartSceneWhenGameLoaded = false;
-
-export function startSceneWhenGameLoaded() {
-	shouldStartSceneWhenGameLoaded = true;
+export function configureNetSync(_options) {
+	options = Object.assign(options, _options);
 }
 
 let changes = [];
 let valueChanges = {}; // id => change
-let clientStartTime = Date.now();
 
 function isInSceneTree(change) {
 	return change.reference._rootType === 'sce';
@@ -47,7 +40,7 @@ function getQueryVariable(variable) {
 }
 
 function changeReceivedOverNet(packedChanges) {
-	if (!networkEnabled)
+	if (!options.networkEnabled)
 		return;
 
 	packedChanges.forEach(change => {
@@ -60,36 +53,18 @@ function changeReceivedOverNet(packedChanges) {
 function gameReceivedOverNet(gameData) {
 	console.log('receive gameData', gameData);
 	if (!gameData)
-		return;
-	// console.log('gameData', gameData);
+		return console.error('Game data was not received');
+	
 	executeExternal(() => {
 		Serializable.fromJSON(gameData);
 	});
 	localStorage.openEditPlayGameId = gameData.id;
 	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 	history.replaceState({}, null, `?gameId=${gameData.id}`);
-
-	if (shouldStartSceneWhenGameLoaded) {
-		let levelIndex = 0;
-
-		function play() {
-			let levels = game.getChildren('lvl');
-			if (levelIndex >= levels.length)
-				levelIndex = 0;
-			levels[levelIndex].createScene().play();
-		}
-
-		play();
-
-		game.listen('levelCompleted', () => {
-			levelIndex++;
-			play();
-		});
-	}
 }
 
 addChangeListener(change => {
-	if (change.external || !networkEnabled)
+	if (change.external || !options.networkEnabled)
 		return; // Don't send a change that you have received.
 
 	if (isInSceneTree(change)) // Don't sync scene
@@ -133,14 +108,28 @@ function sendSocketMessage(eventName, data) {
 }
 
 let listeners = {
-	gameData: gameReceivedOverNet,
-	requestGameId() {
-		if (game)
-			sendSocketMessage('gameId', game.id);
+	data(result) {
+		let {profile, gameData} = result;
+		localStorage.openEditPlayUserId = profile.userId;
+		localStorage.openEditPlayUserToken = profile.userToken;
+		gameReceivedOverNet(gameData);
 	},
-	refreshIfOlderThan(requiredClientTime) {
-		if (clientStartTime < requiredClientTime)
-			location.reload();
+	identifyYourself() {
+		if (game) 
+			return location.reload();
+
+		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
+		let userId = localStorage.openEditPlayUserId; // if doesn't exist, server will create one
+		let userToken = localStorage.openEditPlayUserToken; // if doesn't exist, server will create one
+		let context = options.context;
+		sendSocketMessage('identify', {userId, userToken, gameId, context});
+	},
+	errorMessage(result) {
+		let {message, isFatal, data} = result;
+		console.error(`Server sent ${isFatal ? 'FATAL ERROR' : 'error'}:`, message, data);
+		if (isFatal) {
+			document.body.textContent = message;
+		}
 	}
 };
 
@@ -163,9 +152,6 @@ function connect() {
 	socket = new io();
 	window.s = socket;
 	socket.on('connect', () => {
-		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		sendSocketMessage('requestGameData', gameId);
-		
 		socket.onevent = packet => {
 			let param1 = packet.data[0];
 			if (typeof param1 === 'string') {
@@ -175,41 +161,6 @@ function connect() {
 				changeReceivedOverNet(param1);
 			}
 		};
-		
-		
-		socket.on('gameData', data => {
-			console.log('dataaaa', data);
-		})
 	});
 }
 window.addEventListener('load', connect);
-/*
-function createSocket() {
-	if (!window.SockJS)
-		return;
-	
-	socket = new SockJS('/socket');
-	socket.onopen = () => {
-		clearInterval(reconnectInterval);
-		connected = true;
-		console.log('socket opened');
-		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		sendSocketMessage('requestGameData', gameId);
-	};
-	socket.onmessage = function (e) {
-		let { type, body } = parseSocketMessage(e.data);
-		let listener = listeners[type];
-
-		if (listener)
-			listener(body);
-		else
-			console.error('Invalid socket message', e);
-	};
-	socket.onclose = function () {
-		connected = false;
-		console.log('socket closed');
-		
-		setTimeout(tryToConnect, 1000);
-	};
-}
-*/

@@ -657,8 +657,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -785,10 +783,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1982,7 +1976,11 @@ var isClient$1 = typeof window !== 'undefined';
 
 var Game = (function (PropertyOwner$$1) {
 	function Game(predefinedId) {
-		if (isClient$1) {
+		if (game)
+			{ console.error('Only one game allowed.'); }
+		
+		/*
+		if (isClient) {
 			if (game) {
 				try {
 					game.delete();
@@ -1991,6 +1989,7 @@ var Game = (function (PropertyOwner$$1) {
 				}
 			}
 		}
+		*/
 		
 		PropertyOwner$$1.apply(this, arguments);
 		
@@ -1998,7 +1997,9 @@ var Game = (function (PropertyOwner$$1) {
 			game = this;
 		}
 
-		gameCreateListeners.forEach(function (listener) { return listener(); });
+		setTimeout(function () {
+			gameCreateListeners.forEach(function (listener) { return listener(game); });
+		}, 1);
 	}
 
 	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;
@@ -2932,8 +2933,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4323,26 +4322,17 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
-// LZW-compress a string
+var options = {
+	context: null, // 'play' or 'edit'
+	networkEnabled: false
+};
 
-
-// Decompress an LZW-encoded string
-
-var networkEnabled = false;
-
-function setNetworkEnabled(enabled) {
-	if ( enabled === void 0 ) enabled = true;
-
-	networkEnabled = enabled;
+function configureNetSync(_options) {
+	options = Object.assign(options, _options);
 }
-
-var shouldStartSceneWhenGameLoaded = false;
-
-
 
 var changes = [];
 var valueChanges = {}; // id => change
-var clientStartTime = Date.now();
 
 function isInSceneTree(change) {
 	return change.reference._rootType === 'sce';
@@ -4361,7 +4351,7 @@ function getQueryVariable(variable) {
 }
 
 function changeReceivedOverNet(packedChanges) {
-	if (!networkEnabled)
+	if (!options.networkEnabled)
 		{ return; }
 
 	packedChanges.forEach(function (change) {
@@ -4374,36 +4364,18 @@ function changeReceivedOverNet(packedChanges) {
 function gameReceivedOverNet(gameData) {
 	console.log('receive gameData', gameData);
 	if (!gameData)
-		{ return; }
-	// console.log('gameData', gameData);
+		{ return console.error('Game data was not received'); }
+	
 	executeExternal(function () {
 		Serializable.fromJSON(gameData);
 	});
 	localStorage.openEditPlayGameId = gameData.id;
 	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 	history.replaceState({}, null, ("?gameId=" + (gameData.id)));
-
-	if (shouldStartSceneWhenGameLoaded) {
-		var levelIndex = 0;
-
-		function play() {
-			var levels = game.getChildren('lvl');
-			if (levelIndex >= levels.length)
-				{ levelIndex = 0; }
-			levels[levelIndex].createScene().play();
-		}
-
-		play();
-
-		game.listen('levelCompleted', function () {
-			levelIndex++;
-			play();
-		});
-	}
 }
 
 addChangeListener(function (change) {
-	if (change.external || !networkEnabled)
+	if (change.external || !options.networkEnabled)
 		{ return; } // Don't send a change that you have received.
 
 	if (isInSceneTree(change)) // Don't sync scene
@@ -4433,14 +4405,31 @@ function sendSocketMessage(eventName, data) {
 }
 
 var listeners$1 = {
-	gameData: gameReceivedOverNet,
-	requestGameId: function requestGameId() {
-		if (game)
-			{ sendSocketMessage('gameId', game.id); }
+	data: function data(result) {
+		var profile = result.profile;
+		var gameData = result.gameData;
+		localStorage.openEditPlayUserId = profile.userId;
+		localStorage.openEditPlayUserToken = profile.userToken;
+		gameReceivedOverNet(gameData);
 	},
-	refreshIfOlderThan: function refreshIfOlderThan(requiredClientTime) {
-		if (clientStartTime < requiredClientTime)
-			{ location.reload(); }
+	identifyYourself: function identifyYourself() {
+		if (game) 
+			{ return location.reload(); }
+
+		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
+		var userId = localStorage.openEditPlayUserId; // if doesn't exist, server will create one
+		var userToken = localStorage.openEditPlayUserToken; // if doesn't exist, server will create one
+		var context = options.context;
+		sendSocketMessage('identify', {userId: userId, userToken: userToken, gameId: gameId, context: context});
+	},
+	errorMessage: function errorMessage(result) {
+		var message = result.message;
+		var isFatal = result.isFatal;
+		var data = result.data;
+		console.error(("Server sent " + (isFatal ? 'FATAL ERROR' : 'error') + ":"), message, data);
+		if (isFatal) {
+			document.body.textContent = message;
+		}
 	}
 };
 
@@ -4463,9 +4452,6 @@ function connect() {
 	socket = new io();
 	window.s = socket;
 	socket.on('connect', function () {
-		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		sendSocketMessage('requestGameData', gameId);
-		
 		socket.onevent = function (packet) {
 			var param1 = packet.data[0];
 			if (typeof param1 === 'string') {
@@ -4475,44 +4461,9 @@ function connect() {
 				changeReceivedOverNet(param1);
 			}
 		};
-		
-		
-		socket.on('gameData', function (data) {
-			console.log('dataaaa', data);
-		});
 	});
 }
 window.addEventListener('load', connect);
-/*
-function createSocket() {
-	if (!window.SockJS)
-		return;
-	
-	socket = new SockJS('/socket');
-	socket.onopen = () => {
-		clearInterval(reconnectInterval);
-		connected = true;
-		console.log('socket opened');
-		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		sendSocketMessage('requestGameData', gameId);
-	};
-	socket.onmessage = function (e) {
-		let { type, body } = parseSocketMessage(e.data);
-		let listener = listeners[type];
-
-		if (listener)
-			listener(body);
-		else
-			console.error('Invalid socket message', e);
-	};
-	socket.onclose = function () {
-		connected = false;
-		console.log('socket closed');
-		
-		setTimeout(tryToConnect, 1000);
-	};
-}
-*/
 
 /*
  Global event system
@@ -4547,8 +4498,8 @@ var events = {
 				try {
 					listeners[event][i].apply(null, args);
 				} catch (e) {
-					if (console && console.error) {
-						console.error(e);
+					if (console && console.sendError) {
+						console.sendError(e);
 					}
 				}
 				*/
@@ -4561,8 +4512,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5181,7 +5130,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5992,22 +5940,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7761,11 +7693,6 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7839,19 +7766,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8598,7 +8512,11 @@ var loadedPromise = events.getLoadEventPromise('loaded');
 modulesRegisteredPromise.then(function () {
 	loaded = true;
 	events.dispatch('loaded');
-	setNetworkEnabled(true);
+});
+
+configureNetSync({
+	networkEnabled: true,
+	context: 'edit'
 });
 
 loadedPromise.then(function () {
@@ -8684,14 +8602,14 @@ Editor.prototype.update = function update () {
 };
 
 
-var options = null;
+var options$1 = null;
 function loadOptions() {
-	if (!options) {
+	if (!options$1) {
 		try {
-			options = JSON.parse(localStorage.openEditPlayOptions);
+			options$1 = JSON.parse(localStorage.openEditPlayOptions);
 		} catch(e) {
 			// default options
-			options = {
+			options$1 = {
 				moduleContainerPacked_bottom: true
 			};
 		}
@@ -8699,15 +8617,15 @@ function loadOptions() {
 }
 function setOption(id, stringValue) {
 	loadOptions();
-	options[id] = stringValue;
+	options$1[id] = stringValue;
 	try {
-		localStorage.openEditPlayOptions = JSON.stringify(options);
+		localStorage.openEditPlayOptions = JSON.stringify(options$1);
 	} catch(e) {
 	}
 }
 function getOption(id) {
 	loadOptions();
-	return options[id];
+	return options$1[id];
 }
 
 window.Property = Property;

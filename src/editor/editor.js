@@ -20,7 +20,7 @@ import { game } from '../core/game';
 import Serializable from '../core/serializable';
 import { addChangeListener, serializables, executeExternal, setChangeOrigin, changeType } from '../core/serializableManager';
 import assert from '../util/assert';
-import { setNetworkEnabled } from '../util/net';
+import { configureNetSync } from '../util/net';
 import './help';
 import './test';
 import * as performance from '../util/performance'
@@ -34,7 +34,11 @@ export let loadedPromise = events.getLoadEventPromise('loaded');
 modulesRegisteredPromise.then(() => {
 	loaded = true;
 	events.dispatch('loaded');
-	setNetworkEnabled(true);
+});
+
+configureNetSync({
+	networkEnabled: true,
+	context: 'edit'
 });
 
 loadedPromise.then(() => {

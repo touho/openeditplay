@@ -1897,7 +1897,11 @@ var isClient$1 = typeof window !== 'undefined';
 
 var Game = (function (PropertyOwner$$1) {
 	function Game(predefinedId) {
-		if (isClient$1) {
+		if (game)
+			{ console.error('Only one game allowed.'); }
+		
+		/*
+		if (isClient) {
 			if (game) {
 				try {
 					game.delete();
@@ -1906,6 +1910,7 @@ var Game = (function (PropertyOwner$$1) {
 				}
 			}
 		}
+		*/
 		
 		PropertyOwner$$1.apply(this, arguments);
 		
@@ -1913,7 +1918,9 @@ var Game = (function (PropertyOwner$$1) {
 			game = this;
 		}
 
-		gameCreateListeners.forEach(function (listener) { return listener(); });
+		setTimeout(function () {
+			gameCreateListeners.forEach(function (listener) { return listener(game); });
+		}, 1);
 	}
 
 	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;
@@ -1955,6 +1962,12 @@ Serializable.registerSerializable(Game, 'gam', function (json) {
 });
 
 var gameCreateListeners = [];
+function listenGameCreation(listener) {
+	gameCreateListeners.push(listener);
+	
+	if (game)
+		{ listener(game); }
+}
 
 var p2;
 if (isClient)
@@ -4179,28 +4192,17 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
-// LZW-compress a string
+var options = {
+	context: null, // 'play' or 'edit'
+	networkEnabled: false
+};
 
-
-// Decompress an LZW-encoded string
-
-var networkEnabled = false;
-
-function setNetworkEnabled(enabled) {
-	if ( enabled === void 0 ) enabled = true;
-
-	networkEnabled = enabled;
-}
-
-var shouldStartSceneWhenGameLoaded = false;
-
-function startSceneWhenGameLoaded() {
-	shouldStartSceneWhenGameLoaded = true;
+function configureNetSync(_options) {
+	options = Object.assign(options, _options);
 }
 
 var changes = [];
 var valueChanges = {}; // id => change
-var clientStartTime = Date.now();
 
 function isInSceneTree(change) {
 	return change.reference._rootType === 'sce';
@@ -4219,7 +4221,7 @@ function getQueryVariable(variable) {
 }
 
 function changeReceivedOverNet(packedChanges) {
-	if (!networkEnabled)
+	if (!options.networkEnabled)
 		{ return; }
 
 	packedChanges.forEach(function (change) {
@@ -4232,36 +4234,18 @@ function changeReceivedOverNet(packedChanges) {
 function gameReceivedOverNet(gameData) {
 	console.log('receive gameData', gameData);
 	if (!gameData)
-		{ return; }
-	// console.log('gameData', gameData);
+		{ return console.error('Game data was not received'); }
+	
 	executeExternal(function () {
 		Serializable.fromJSON(gameData);
 	});
 	localStorage.openEditPlayGameId = gameData.id;
 	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
 	history.replaceState({}, null, ("?gameId=" + (gameData.id)));
-
-	if (shouldStartSceneWhenGameLoaded) {
-		var levelIndex = 0;
-
-		function play() {
-			var levels = game.getChildren('lvl');
-			if (levelIndex >= levels.length)
-				{ levelIndex = 0; }
-			levels[levelIndex].createScene().play();
-		}
-
-		play();
-
-		game.listen('levelCompleted', function () {
-			levelIndex++;
-			play();
-		});
-	}
 }
 
 addChangeListener(function (change) {
-	if (change.external || !networkEnabled)
+	if (change.external || !options.networkEnabled)
 		{ return; } // Don't send a change that you have received.
 
 	if (isInSceneTree(change)) // Don't sync scene
@@ -4291,14 +4275,31 @@ function sendSocketMessage(eventName, data) {
 }
 
 var listeners$1 = {
-	gameData: gameReceivedOverNet,
-	requestGameId: function requestGameId() {
-		if (game)
-			{ sendSocketMessage('gameId', game.id); }
+	data: function data(result) {
+		var profile = result.profile;
+		var gameData = result.gameData;
+		localStorage.openEditPlayUserId = profile.userId;
+		localStorage.openEditPlayUserToken = profile.userToken;
+		gameReceivedOverNet(gameData);
 	},
-	refreshIfOlderThan: function refreshIfOlderThan(requiredClientTime) {
-		if (clientStartTime < requiredClientTime)
-			{ location.reload(); }
+	identifyYourself: function identifyYourself() {
+		if (game) 
+			{ return location.reload(); }
+
+		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
+		var userId = localStorage.openEditPlayUserId; // if doesn't exist, server will create one
+		var userToken = localStorage.openEditPlayUserToken; // if doesn't exist, server will create one
+		var context = options.context;
+		sendSocketMessage('identify', {userId: userId, userToken: userToken, gameId: gameId, context: context});
+	},
+	errorMessage: function errorMessage(result) {
+		var message = result.message;
+		var isFatal = result.isFatal;
+		var data = result.data;
+		console.error(("Server sent " + (isFatal ? 'FATAL ERROR' : 'error') + ":"), message, data);
+		if (isFatal) {
+			document.body.textContent = message;
+		}
 	}
 };
 
@@ -4321,9 +4322,6 @@ function connect() {
 	socket = new io();
 	window.s = socket;
 	socket.on('connect', function () {
-		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		sendSocketMessage('requestGameData', gameId);
-		
 		socket.onevent = function (packet) {
 			var param1 = packet.data[0];
 			if (typeof param1 === 'string') {
@@ -4333,44 +4331,9 @@ function connect() {
 				changeReceivedOverNet(param1);
 			}
 		};
-		
-		
-		socket.on('gameData', function (data) {
-			console.log('dataaaa', data);
-		});
 	});
 }
 window.addEventListener('load', connect);
-/*
-function createSocket() {
-	if (!window.SockJS)
-		return;
-	
-	socket = new SockJS('/socket');
-	socket.onopen = () => {
-		clearInterval(reconnectInterval);
-		connected = true;
-		console.log('socket opened');
-		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		sendSocketMessage('requestGameData', gameId);
-	};
-	socket.onmessage = function (e) {
-		let { type, body } = parseSocketMessage(e.data);
-		let listener = listeners[type];
-
-		if (listener)
-			listener(body);
-		else
-			console.error('Invalid socket message', e);
-	};
-	socket.onclose = function () {
-		connected = false;
-		console.log('socket closed');
-		
-		setTimeout(tryToConnect, 1000);
-	};
-}
-*/
 
 var previousWidth = null;
 var previousHeight = null;
@@ -4657,8 +4620,30 @@ function getRelativePositionToArrowCenter(point) {
 
 disableAllChanges();
 
-startSceneWhenGameLoaded();
-setNetworkEnabled(true);
+configureNetSync({
+	networkEnabled: true,
+	shouldStartSceneWhenGameLoaded: true,
+	context: 'play'
+});
+
+listenGameCreation(function (game$$1) {
+	var levelIndex = 0;
+
+	function play() {
+		var levels = game$$1.getChildren('lvl');
+		if (levelIndex >= levels.length)
+			{ levelIndex = 0; }
+		levels[levelIndex].createScene().play();
+	}
+
+	play();
+
+	game$$1.listen('levelCompleted', function () {
+		levelIndex++;
+		play();
+	});
+});
+
 
 listenKeyDown(function (keyValue) {
 	if (keyValue === key.space && scene)

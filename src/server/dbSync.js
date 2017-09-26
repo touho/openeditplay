@@ -34,12 +34,14 @@ where s1.type = 'gam' and s2.type = 'prp';
 	}))
 };
 
-dbSync.getGame = async function(gameId) {
+dbSync.getGame = async function(gameId, allowNewGame) {
 	let serializables = await db.query('SELECT * FROM serializable WHERE gameId = ?', [gameId]);
 	if (serializables.length > 0)
 		return ServerSerializable.buildTree(serializables);
-	else
+	else if (allowNewGame)
 		return createNewGame();
+	else
+		return null;
 };
 
 dbSync.writeChangeToDatabase = async function (change, gameId) {

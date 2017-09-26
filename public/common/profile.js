@@ -13,7 +13,7 @@ let profile = {};
 			return console.error('profile.setButtonContainer can only be called once');
 		buttonContainer = container;
 		
-		return; // Remove this line to enable profile
+		// return; // Remove this line to enable profile
 
 		windowLoadPromise.then(() => {
 			profileButton = new ProfileButton();

@@ -3952,7 +3952,7 @@
 			return true;
 		},
 		/**
-		 * get the last error
+		 * get the last sendError
 		 * @name last_error()
 		 * @return {Object}
 		 */
@@ -7729,7 +7729,7 @@
 
 	(function ($, undefined) {
 		$.vakata.storage = {
-			// simply specifying the functions in FF throws an error
+			// simply specifying the functions in FF throws an sendError
 			set : function (key, val) { return window.localStorage.setItem(key, val); },
 			get : function (key) { return window.localStorage.getItem(key); },
 			del : function (key) { return window.localStorage.removeItem(key); }

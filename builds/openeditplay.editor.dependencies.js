@@ -11093,7 +11093,7 @@ function GSSolver(options){
     this.iterations = options.iterations || 10;
 
     /**
-     * The error tolerance, per constraint. If the total error is below this limit, the solver will stop iterating. Set to zero for as good solution as possible, but to something larger than zero to make computations faster.
+     * The sendError tolerance, per constraint. If the total sendError is below this limit, the solver will stop iterating. Set to zero for as good solution as possible, but to something larger than zero to make computations faster.
      * @property tolerance
      * @type {Number}
      * @default 1e-7
@@ -11179,7 +11179,7 @@ GSSolver.prototype.solve = function(h, world){
             // Iterate over contact equations to get normal forces
             for(iter=0; iter!==maxFrictionIter; iter++){
 
-                // Accumulate the total error for each iteration.
+                // Accumulate the total sendError for each iteration.
                 deltalambdaTot = 0.0;
 
                 for(j=0; j!==Neq; j++){
@@ -11191,7 +11191,7 @@ GSSolver.prototype.solve = function(h, world){
 
                 this.usedIterations++;
 
-                // If the total error is small enough - stop iterate
+                // If the total sendError is small enough - stop iterate
                 if(deltalambdaTot*deltalambdaTot <= tolSquared){
                     break;
                 }
@@ -11220,7 +11220,7 @@ GSSolver.prototype.solve = function(h, world){
         // Iterate over all equations
         for(iter=0; iter!==maxIter; iter++){
 
-            // Accumulate the total error for each iteration.
+            // Accumulate the total sendError for each iteration.
             deltalambdaTot = 0.0;
             for(j=0; j!==Neq; j++){
                 c = equations[j];
@@ -11231,7 +11231,7 @@ GSSolver.prototype.solve = function(h, world){
 
             this.usedIterations++;
 
-            // If the total error is small enough - stop iterate
+            // If the total sendError is small enough - stop iterate
             if(deltalambdaTot*deltalambdaTot < tolSquared){
                 break;
             }
@@ -13424,7 +13424,8 @@ World.prototype.raycast = function(result, ray){
 
 },{"../collision/AABB":2,"../collision/Narrowphase":5,"../collision/SAPBroadphase":8,"../events/EventEmitter":21,"../material/ContactMaterial":22,"../material/Material":23,"../math/vec2":25,"../objects/Body":26,"../shapes/Shape":40,"../solver/GSSolver":41,"../utils/OverlapKeeper":45,"../utils/Utils":50,"./UnionFind":51}]},{},[31])
 (31)
-});/*!
+});
+/*!
  * pixi.js - v4.5.3
  * Compiled Fri, 30 Jun 2017 17:48:47 UTC
  *
@@ -16766,7 +16767,7 @@ function runTimeout(fun) {
             // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
             return cachedSetTimeout.call(null, fun, 0);
         } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global sendError
             return cachedSetTimeout.call(this, fun, 0);
         }
     }
@@ -16791,7 +16792,7 @@ function runClearTimeout(marker) {
             // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
             return cachedClearTimeout.call(null, marker);
         } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global sendError.
             // Some versions of I.E. have different rules for clearTimeout vs setTimeout
             return cachedClearTimeout.call(this, marker);
         }
@@ -16958,10 +16959,10 @@ process.umask = function() { return 0; };
 	/*--------------------------------------------------------------------------*/
 
 	/**
-	 * A generic error utility function.
+	 * A generic sendError utility function.
 	 * @private
-	 * @param {String} type The error type.
-	 * @returns {Error} Throws a `RangeError` with the applicable error message.
+	 * @param {String} type The sendError type.
+	 * @returns {Error} Throws a `RangeError` with the applicable sendError message.
 	 */
 	function error(type) {
 		throw new RangeError(errors[type]);
@@ -18596,12 +18597,12 @@ var Loader = function () {
          */
 
         /**
-         * When an error occurrs the loader and resource are disaptched.
+         * When an sendError occurrs the loader and resource are disaptched.
          *
          * @memberof Loader
          * @callback OnErrorSignal
-         * @param {Loader} loader - The loader the error happened in.
-         * @param {Resource} resource - The resource that caused the error.
+         * @param {Loader} loader - The loader the sendError happened in.
+         * @param {Resource} resource - The resource that caused the sendError.
          */
 
         /**
@@ -19186,7 +19187,7 @@ var Resource = function () {
         this.metadata = options.metadata || {};
 
         /**
-         * The error that occurred while loading (if any).
+         * The sendError that occurred while loading (if any).
          *
          * @member {Error}
          * @readonly
@@ -19296,8 +19297,8 @@ var Resource = function () {
         this.onProgress = new _miniSignals2.default();
 
         /**
-         * Dispatched once this resource has loaded, if there was an error it will
-         * be in the `error` property.
+         * Dispatched once this resource has loaded, if there was an sendError it will
+         * be in the `sendError` property.
          *
          * The callback looks like {@link Resource.OnCompleteSignal}.
          *
@@ -19388,7 +19389,7 @@ var Resource = function () {
     /**
      * Aborts the loading of this resource, with an optional message.
      *
-     * @param {string} message - The message to use for the error
+     * @param {string} message - The message to use for the sendError
      */
 
 
@@ -19398,7 +19399,7 @@ var Resource = function () {
             return;
         }
 
-        // store error
+        // store sendError
         this.error = new Error(message);
 
         // abort the actual loading
@@ -19689,7 +19690,7 @@ var Resource = function () {
     /**
      * Called if a load errors out.
      *
-     * @param {Event} event - The error event from the element that emits it.
+     * @param {Event} event - The sendError event from the element that emits it.
      * @private
      */
 
@@ -19713,7 +19714,7 @@ var Resource = function () {
     };
 
     /**
-     * Called if an error event fires for xhr/xdr.
+     * Called if an sendError event fires for xhr/xdr.
      *
      * @private
      * @param {XMLHttpRequestErrorEvent|Event} event - Error event.
@@ -20186,7 +20187,7 @@ function _noop() {} /* empty */
  *
  * @param {Array.<*>} array - Array to iterate.
  * @param {function} iterator - Function to call for each element.
- * @param {function} callback - Function to call when done, or on error.
+ * @param {function} callback - Function to call when done, or on sendError.
  * @param {boolean} [deferNext=false] - Break synchronous each loop by calling next with a setTimeout of 1.
  */
 function eachSeries(array, iterator, callback, deferNext) {
@@ -22476,7 +22477,7 @@ var Container = function (_DisplayObject) {
     };
 
     /**
-     * Adds a child to the container at a specified index. If the index is out of bounds an error will be thrown
+     * Adds a child to the container at a specified index. If the index is out of bounds an sendError will be thrown
      *
      * @param {PIXI.DisplayObject} child - The child to add
      * @param {number} index - The index to place the child in
@@ -37445,7 +37446,7 @@ var BaseTexture = function (_EventEmitter) {
         /**
          * Set to true if the source is currently loading.
          *
-         * If an Image source is loading the 'loaded' or 'error' event will be
+         * If an Image source is loading the 'loaded' or 'sendError' event will be
          * dispatched when the operation ends. An underyling source that is
          * immediately-available bypasses loading entirely.
          *
@@ -37641,7 +37642,7 @@ var BaseTexture = function (_EventEmitter) {
      * Load a source.
      *
      * If the source is not-immediately-available, such as an image that needs to be
-     * downloaded, then the 'loaded' or 'error' event will be dispatched in the future
+     * downloaded, then the 'loaded' or 'sendError' event will be dispatched in the future
      * and `hasLoaded` will remain false after this call.
      *
      * The logic state after calling `loadSource` directly or indirectly (eg. `fromImage`, `new BaseTexture`) is:
@@ -37649,7 +37650,7 @@ var BaseTexture = function (_EventEmitter) {
      *     if (texture.hasLoaded) {
      *        // texture ready for use
      *     } else if (texture.isLoading) {
-     *        // listen to 'loaded' and/or 'error' events on texture
+     *        // listen to 'loaded' and/or 'sendError' events on texture
      *     } else {
      *        // not loading, not going to load UNLESS the source is reloaded
      *        // (it may still make sense to listen to the events)
@@ -37848,7 +37849,7 @@ var BaseTexture = function (_EventEmitter) {
 
         var svgXhr = new XMLHttpRequest();
 
-        // This throws error on IE, so SVG Document can't be used
+        // This throws sendError on IE, so SVG Document can't be used
         // svgXhr.responseType = 'document';
 
         // This is not needed since we load the svg as string (breaks IE too)
@@ -49316,7 +49317,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  *     // resources is an object where the key is the name of the resource loaded and the value is the resource object.
  *     // They have a couple default properties:
  *     // - `url`: The URL that the resource was loaded from
- *     // - `error`: The error that happened when trying to load (if any)
+ *     // - `sendError`: The sendError that happened when trying to load (if any)
  *     // - `data`: The raw data that was loaded
  *     // also may contain other properties based on the middleware that runs.
  *     sprites.bunny = new PIXI.TilingSprite(resources.bunny.texture);

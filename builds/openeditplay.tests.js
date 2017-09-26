@@ -1872,7 +1872,11 @@ var isClient$1 = typeof window !== 'undefined';
 
 var Game = (function (PropertyOwner$$1) {
 	function Game(predefinedId) {
-		if (isClient$1) {
+		if (game)
+			{ console.error('Only one game allowed.'); }
+		
+		/*
+		if (isClient) {
 			if (game) {
 				try {
 					game.delete();
@@ -1881,6 +1885,7 @@ var Game = (function (PropertyOwner$$1) {
 				}
 			}
 		}
+		*/
 		
 		PropertyOwner$$1.apply(this, arguments);
 		
@@ -1888,7 +1893,9 @@ var Game = (function (PropertyOwner$$1) {
 			game = this;
 		}
 
-		gameCreateListeners.forEach(function (listener) { return listener(); });
+		setTimeout(function () {
+			gameCreateListeners.forEach(function (listener) { return listener(game); });
+		}, 1);
 	}
 
 	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;

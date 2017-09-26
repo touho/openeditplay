@@ -87,7 +87,7 @@ if (!global.TARGET_NONE) {
 
 		/*
 		if (target === 'all') {
-			buildCss('src/main.scss', 'builds/openeditplay.css', () => {
+			buildCss('src/main.scss', 'builds/openeditplay.play.css', () => {
 				copy('builds/openeditplay.cs*', 'public/play/css/');
 			});
 		}
@@ -105,7 +105,7 @@ if (!global.TARGET_NONE) {
 
 	watch(['public/edit/**/*', 'public/play/**/*'], () => {
 		if (serverProcess && serverProcess.connected)
-			serverProcess.send({refreshOldBrowsers: true});
+			serverProcess.send('refreshOldBrowsers');
 	});
 	
 	if (target === 'all') {
@@ -251,7 +251,7 @@ function autobuildJs(entry, destination, options) {
 				}, 200);
 			}
 
-				// Rollup stops watching when it encounters an error.
+				// Rollup stops watching when it encounters an sendError.
 				// That's not something we want, so wait until the faulty
 				// file changes and then restart the watcher.
 				if (err instanceof SyntaxError) {
@@ -264,9 +264,9 @@ function autobuildJs(entry, destination, options) {
 					syntaxError(err.file, err.message);
 				} else {
 					if (err.code) {
-						console.log('error code', err.code);
+						console.log('sendError code', err.code);
 					}
-					console.log('Some Rollup error', err);
+					console.log('Some Rollup sendError', err);
 				}
 				break;
 

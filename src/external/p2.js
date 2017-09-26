@@ -11083,7 +11083,7 @@ function GSSolver(options){
     this.iterations = options.iterations || 10;
 
     /**
-     * The error tolerance, per constraint. If the total error is below this limit, the solver will stop iterating. Set to zero for as good solution as possible, but to something larger than zero to make computations faster.
+     * The sendError tolerance, per constraint. If the total sendError is below this limit, the solver will stop iterating. Set to zero for as good solution as possible, but to something larger than zero to make computations faster.
      * @property tolerance
      * @type {Number}
      * @default 1e-7
@@ -11169,7 +11169,7 @@ GSSolver.prototype.solve = function(h, world){
             // Iterate over contact equations to get normal forces
             for(iter=0; iter!==maxFrictionIter; iter++){
 
-                // Accumulate the total error for each iteration.
+                // Accumulate the total sendError for each iteration.
                 deltalambdaTot = 0.0;
 
                 for(j=0; j!==Neq; j++){
@@ -11181,7 +11181,7 @@ GSSolver.prototype.solve = function(h, world){
 
                 this.usedIterations++;
 
-                // If the total error is small enough - stop iterate
+                // If the total sendError is small enough - stop iterate
                 if(deltalambdaTot*deltalambdaTot <= tolSquared){
                     break;
                 }
@@ -11210,7 +11210,7 @@ GSSolver.prototype.solve = function(h, world){
         // Iterate over all equations
         for(iter=0; iter!==maxIter; iter++){
 
-            // Accumulate the total error for each iteration.
+            // Accumulate the total sendError for each iteration.
             deltalambdaTot = 0.0;
             for(j=0; j!==Neq; j++){
                 c = equations[j];
@@ -11221,7 +11221,7 @@ GSSolver.prototype.solve = function(h, world){
 
             this.usedIterations++;
 
-            // If the total error is small enough - stop iterate
+            // If the total sendError is small enough - stop iterate
             if(deltalambdaTot*deltalambdaTot < tolSquared){
                 break;
             }

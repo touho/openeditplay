@@ -15,6 +15,10 @@ let isClient = typeof window !== 'undefined';
 
 export default class Game extends PropertyOwner {
 	constructor(predefinedId) {
+		if (game)
+			console.error('Only one game allowed.');
+		
+		/*
 		if (isClient) {
 			if (game) {
 				try {
@@ -24,6 +28,7 @@ export default class Game extends PropertyOwner {
 				}
 			}
 		}
+		*/
 		
 		super(...arguments);
 		
@@ -31,7 +36,9 @@ export default class Game extends PropertyOwner {
 			game = this;
 		}
 
-		gameCreateListeners.forEach(listener => listener());
+		setTimeout(() => {
+			gameCreateListeners.forEach(listener => listener(game));
+		}, 1);
 	}
 	initWithChildren() {
 		super.initWithChildren(...arguments);
@@ -70,5 +77,5 @@ export function listenGameCreation(listener) {
 	gameCreateListeners.push(listener);
 	
 	if (game)
-		listener();
+		listener(game);
 }

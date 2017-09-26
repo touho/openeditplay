@@ -12,6 +12,8 @@ html, body {
   background: black;
   margin: 0;
   padding: 0;
+  
+  color: white;
 
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
@@ -65,6 +67,10 @@ canvas {
 }
 body.nativeFullscreen #backButton {
   visibility: visible;
+}
+
+body div#touchUI {
+  display: none; /* Do not display any touch UI if not touch screen */
 }
 
 body.touch div#touchUI {

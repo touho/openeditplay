@@ -1,4 +1,6 @@
 const dbSync = require('./dbSync');
+const user = require('./user');
+
 let connection = module.exports;
 
 let socketServer;
@@ -9,29 +11,43 @@ connection.init = function(httpServer) {
 	});
 };
 
+
 // gameId => array of Connections
 let connections = new Map();
+function onConnectedToAGame(connection) {
+	if (!connections.has(connection.gameId))
+		connections.set(connection.gameId, new Set());
+	connections.get(connection.gameId).add(connection);
+}
 
-let requiredClientTime = Date.now();
-
-process.on('message', () => {
-	requiredClientTime = Date.now();
-	connections.forEach(connectionList => {
-		connectionList.forEach(connection => {
-			connection.refreshIfOld();
+process.on('message', message => {
+	if (message === 'refreshOldBrowsers') {
+		connections.forEach(connectionList => {
+			connectionList.forEach(connection => {
+				connection.requestIdentify();
+			});
 		});
-	});
+	}
 });
+
+/*
+Socket handshake:
+
+Server: identifyYourself
+Client: identify({userId, userToken, gameId, context}) // context = play | edit
+Server: data({profile, gameData}) // if userId or userToken doesn't match, create a new profile
+
+ */
 
 class Connection {
 	constructor(socket) {
 		this.socket = socket;
 		this.gameId = null;
+		this.userId = null;
 		
 		let listeners = {
 			disconnecting: () => this.disconnected(),
-			setGameId: gameId => this.setGameId(gameId),
-			requestGameData: gameId => this.onRequestGameData(gameId)
+			identify: identifyData => this.onIdentify(identifyData)
 		};
 		
 		socket.onevent = packet => {
@@ -44,8 +60,7 @@ class Connection {
 			}
 		};
 
-		this.requestGameId();
-		this.refreshIfOld();
+		this.requestIdentify();
 	}
 	disconnected() {
 		connections.delete(this);
@@ -75,34 +90,43 @@ class Connection {
 			console.error('socket.c', e);
 		}
 	}
-	async onRequestGameData(gameId) {
+	async onIdentify(identifyData) {
+		if (this.gameId)
+			return console.error('Connection.onIdentify: gameId already exists');
+		
 		try {
-			let gameData = await dbSync.getGame(gameId);
-			this.setGameId(gameData.id);
-			this.send('gameData', gameData);
+			let { gameId, userId, userToken, context } = identifyData;
+			this.userId = userId;
+			let gameData = await dbSync.getGame(gameId, context === 'edit');
+			if (gameData) {
+				this.gameId = gameData.id;
+				onConnectedToAGame(this);
+				let profile = await user.getProfile(userId, userToken);
+				this.send('data', {
+					gameData,
+					profile
+				});
+			} else {
+				this.sendError('Game not found', true);
+			}
 		} catch(e) {
-			console.error('socket.requestGameData', e);
+			console.error('Connection.onIdentify', e);
 		}
 	}
-	setGameId(gameId) {
-		if (this.gameId && this.gameId.length > 5)
-			return;
-
-		this.gameId = gameId;
-		if (!connections.has(gameId))
-			connections.set(gameId, new Set());
-		connections.get(gameId).add(this);
-	}
-	requestGameId() {
-		this.send('requestGameId');
-	}
-	refreshIfOld() {
-		this.send('refreshIfOlderThan', requiredClientTime);
+	requestIdentify() {
+		this.send('identifyYourself');
 	}
 	send(eventName, data) {
 		if (eventName)
 			this.socket.emit(eventName, data);
 		else
 			this.socket.emit(data);
+	}
+	sendError(message, isFatal, data) {
+		this.send('errorMessage', {
+			message: '' + message,
+			isFatal: !!isFatal,
+			data
+		});
 	}
 }
