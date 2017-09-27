@@ -36,3 +36,5 @@ process.on('uncaughtException', function (err) {
 });
 
 process.on('unhandledRejection', r => console.log('unhandledRejection', r));
+
+require('./service');

@@ -1,5 +1,5 @@
-const db = require("./db");
-const dbSync = require('./dbSync');
+const db = require("../db");
+const dbSync = require('../dbSync');
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 const CHAR_COUNT = CHARACTERS.length;
@@ -15,7 +15,7 @@ function createGameId() {
 	return id;
 }
 
-module.exports = async function createNewGame() {
+module.exports = async function createNewGame(connection) {
 	let id = createGameId();
 	let conflictingResults = await db.query(`SELECT * FROM serializable WHERE id = ? OR gameId = ?`, [id, id]);
 
@@ -32,7 +32,7 @@ module.exports = async function createNewGame() {
 		v: game,
 		p: null
 	}, id);
-
+	
 	return game;
 };
 

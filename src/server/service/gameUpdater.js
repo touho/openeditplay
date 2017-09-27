@@ -1,7 +1,11 @@
-let db = require('../db');
-let limit = require('../util/callLimiter').limit;
-let gameUpdate = module.exports;
+// This service is not needed unless the services need to be separated from the main process.
 
+
+const gameUpdating = require('../game/gameUpdating');
+
+let gameUpdater = module.exports;
+
+/*
 const SQL1 = `
 select gameId,
 	max(updatedAt) lastUpdate,
@@ -13,21 +17,8 @@ select gameId,
 from serializable
 group by gameId;
 `;
+*/
 
-const SQL2 = `
-select *
-from serializable
-where updatedAt > NOW() - interval 1 day
-group by gameId;
-`;
-
-const SQL3 = `
-select *
-from game;
-`;
-
-gameUpdate.interval = 5000;
-
-gameUpdate.run = limit(gameUpdate.interval, 'soon', async () => {
-	
-});
+gameUpdater.start = function() {
+	setInterval(gameUpdating.updateAllDirtyGames, gameUpdating.DIRTY_GAME_UPDATE_INTERVAL);
+};

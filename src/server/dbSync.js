@@ -2,7 +2,8 @@ let dbSync = module.exports;
 
 const db = require('./db');
 const ServerSerializable = require('./ServerSerializable');
-const createNewGame = require('./createNewGame');
+const createNewGame = require('./game/createNewGame');
+const gameUpdating = require('./game/gameUpdating');
 
 let changeType = {
 	addSerializableToTree: 'a', // parentId, reference
@@ -44,7 +45,7 @@ dbSync.getGame = async function(gameId, allowNewGame) {
 		return null;
 };
 
-dbSync.writeChangeToDatabase = async function (change, gameId) {
+dbSync.writeChangeToDatabase = async function (change, gameId, optionalConnection) {
 	// let id = change[keyToShortKey.id];
 	// let value = change[keyToShortKey.value];
 	// let parentId = change[keyToShortKey.parentId];
@@ -59,6 +60,8 @@ dbSync.writeChangeToDatabase = async function (change, gameId) {
 		let newValue = '';
 		
 		if (id.startsWith('prp')) {
+			gameUpdating.markDirty(gameId, optionalConnection);
+			
 			newValue = JSON.stringify(change[keyToShortKey.value]);
 			writeId = id;
 		} else {
@@ -90,6 +93,8 @@ SET value = ?
 WHERE gameId = ? and id = ?
 		`, [newValue, gameId, writeId]); // id is wrong if (id.startsWith('epr') && id.includes('_')) {
 	} else if (type === changeType.addSerializableToTree) {
+		gameUpdating.markDirty(gameId, optionalConnection);
+		
 		let value = change[keyToShortKey.value];
 		let parentId = change[keyToShortKey.parentId];
 		
@@ -104,6 +109,8 @@ INSERT serializable (gameId, id, type, parentId, value, name)
 VALUES ${valuesSQL};
 		`, valuesParameters);
 	} else if (type === changeType.deleteAllChildren) {
+		gameUpdating.markDirty(gameId, optionalConnection);
+		
 		let id = change[keyToShortKey.id];
 		let children = await db.query(`
 SELECT id
@@ -113,6 +120,8 @@ WHERE parentId = ? and gameId = ?
 		if (children.length > 0)
 			return deleteListOfSerializables(children.map(c => c.id), gameId);
 	} else if (type === changeType.deleteSerializable) {
+		gameUpdating.markDirty(gameId, optionalConnection);
+		
 		let id = change[keyToShortKey.id];
 		return deleteListOfSerializables([id], gameId);
 	} else if (type === changeType.move) {

@@ -44,6 +44,7 @@ class Connection {
 		this.socket = socket;
 		this.gameId = null;
 		this.userId = null;
+		this.ip = socket.request.connection._peername.address;
 		
 		let listeners = {
 			disconnecting: () => this.disconnected(),
@@ -75,7 +76,7 @@ class Connection {
 		try {
 			changes.forEach(async change => {
 				try {
-					await dbSync.writeChangeToDatabase(change, this.gameId);
+					await dbSync.writeChangeToDatabase(change, this.gameId, this);
 				} catch(e) {
 					console.error('socket.c writeChangeToDatabase', e);
 				}
