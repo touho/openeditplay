@@ -657,8 +657,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -785,10 +783,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1972,6 +1966,389 @@ function sortInheritedComponentDatas(a, b) {
 	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 }
 
+var text = function (str) { return doc.createTextNode(str); };
+
+function mount (parent, child, before) {
+  var parentEl = parent.el || parent;
+  var childEl = child.el || child;
+
+  if (isList(childEl)) {
+    childEl = childEl.el;
+  }
+
+  if (child === childEl && childEl.__redom_view) {
+    // try to look up the view if not provided
+    child = childEl.__redom_view;
+  }
+
+  if (child !== childEl) {
+    childEl.__redom_view = child;
+  }
+
+  if (child.isMounted) {
+    child.remount && child.remount();
+  } else {
+    child.mount && child.mount();
+  }
+
+  if (before) {
+    parentEl.insertBefore(childEl, before.el || before);
+  } else {
+    parentEl.appendChild(childEl);
+  }
+
+  if (child.isMounted) {
+    child.remounted && child.remounted();
+  } else {
+    child.isMounted = true;
+    child.mounted && child.mounted();
+  }
+
+  return child;
+}
+
+function unmount (parent, child) {
+  var parentEl = parent.el || parent;
+  var childEl = child.el || child;
+
+  if (child === childEl && childEl.__redom_view) {
+    // try to look up the view if not provided
+    child = childEl.__redom_view;
+  }
+
+  child.unmount && child.unmount();
+
+  parentEl.removeChild(childEl);
+
+  child.isMounted = false;
+  child.unmounted && child.unmounted();
+
+  return child;
+}
+
+function setStyle (view, arg1, arg2) {
+  var el = view.el || view;
+
+  if (arguments.length > 2) {
+    el.style[arg1] = arg2;
+  } else if (isString(arg1)) {
+    el.setAttribute('style', arg1);
+  } else {
+    for (var key in arg1) {
+      setStyle(el, key, arg1[key]);
+    }
+  }
+}
+
+function setAttr (view, arg1, arg2) {
+  var el = view.el || view;
+  var isSVG = el instanceof window.SVGElement;
+
+  if (arguments.length > 2) {
+    if (arg1 === 'style') {
+      setStyle(el, arg2);
+    } else if (isSVG && isFunction(arg2)) {
+      el[arg1] = arg2;
+    } else if (!isSVG && (arg1 in el || isFunction(arg2))) {
+      el[arg1] = arg2;
+    } else {
+      el.setAttribute(arg1, arg2);
+    }
+  } else {
+    for (var key in arg1) {
+      setAttr(el, key, arg1[key]);
+    }
+  }
+}
+
+function parseArguments (element, args) {
+  for (var i = 0; i < args.length; i++) {
+    var arg = args[i];
+
+    if (!arg) {
+      continue;
+    }
+
+    // support middleware
+    if (typeof arg === 'function') {
+      arg(element);
+    } else if (isString(arg) || isNumber(arg)) {
+      element.appendChild(text(arg));
+    } else if (isNode(arg) || isNode(arg.el) || isList(arg.el)) {
+      mount(element, arg);
+    } else if (arg.length) {
+      parseArguments(element, arg);
+    } else if (typeof arg === 'object') {
+      setAttr(element, arg);
+    }
+  }
+}
+
+var isString = function (a) { return typeof a === 'string'; };
+var isNumber = function (a) { return typeof a === 'number'; };
+var isFunction = function (a) { return typeof a === 'function'; };
+
+var isNode = function (a) { return a && a.nodeType; };
+var isList = function (a) { return a && a.__redom_list; };
+
+var doc = document;
+
+var HASH = '#'.charCodeAt(0);
+var DOT = '.'.charCodeAt(0);
+
+function createElement (query, ns) {
+  var tag;
+  var id;
+  var className;
+
+  var mode = 0;
+  var start = 0;
+
+  for (var i = 0; i <= query.length; i++) {
+    var char = query.charCodeAt(i);
+
+    if (char === HASH || char === DOT || !char) {
+      if (mode === 0) {
+        if (i === 0) {
+          tag = 'div';
+        } else if (!char) {
+          tag = query;
+        } else {
+          tag = query.substring(start, i);
+        }
+      } else {
+        var slice = query.substring(start, i);
+
+        if (mode === 1) {
+          id = slice;
+        } else if (className) {
+          className += ' ' + slice;
+        } else {
+          className = slice;
+        }
+      }
+
+      start = i + 1;
+
+      if (char === HASH) {
+        mode = 1;
+      } else {
+        mode = 2;
+      }
+    }
+  }
+
+  var element = ns ? doc.createElementNS(ns, tag) : doc.createElement(tag);
+
+  if (id) {
+    element.id = id;
+  }
+
+  if (className) {
+    if (ns) {
+      element.setAttribute('class', className);
+    } else {
+      element.className = className;
+    }
+  }
+
+  return element;
+}
+
+var htmlCache = {};
+
+var memoizeHTML = function (query) { return htmlCache[query] || createElement(query); };
+
+function html (query) {
+  var arguments$1 = arguments;
+
+  var args = [], len = arguments.length - 1;
+  while ( len-- > 0 ) { args[ len ] = arguments$1[ len + 1 ]; }
+
+  var element;
+
+  if (isString(query)) {
+    element = memoizeHTML(query).cloneNode(false);
+  } else if (isNode(query)) {
+    element = query.cloneNode(false);
+  } else {
+    throw new Error('At least one argument required');
+  }
+
+  parseArguments(element, args);
+
+  return element;
+}
+
+html.extend = function (query) {
+  var clone = memoizeHTML(query);
+
+  return html.bind(this, clone);
+};
+
+var el = html;
+
+function setChildren (parent, children) {
+  if (children.length === undefined) {
+    return setChildren(parent, [children]);
+  }
+
+  var parentEl = parent.el || parent;
+  var traverse = parentEl.firstChild;
+
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+
+    if (!child) {
+      continue;
+    }
+
+    var childEl = child.el || child;
+
+    if (isList(childEl)) {
+      childEl = childEl.el;
+    }
+
+    if (childEl === traverse) {
+      traverse = traverse.nextSibling;
+      continue;
+    }
+
+    mount(parent, child, traverse);
+  }
+
+  while (traverse) {
+    var next = traverse.nextSibling;
+
+    unmount(parent, traverse);
+
+    traverse = next;
+  }
+}
+
+function list (parent, View, key, initData) {
+  return new List(parent, View, key, initData);
+}
+
+function List (parent, View, key, initData) {
+  this.__redom_list = true;
+  this.View = View;
+  this.key = key;
+  this.initData = initData;
+  this.views = [];
+  this.el = getParentEl(parent);
+
+  if (key) {
+    this.lookup = {};
+  }
+}
+
+List.extend = function (parent, View, key, initData) {
+  return List.bind(List, parent, View, key, initData);
+};
+
+list.extend = List.extend;
+
+List.prototype.update = function (data) {
+  if ( data === void 0 ) { data = []; }
+
+  var View = this.View;
+  var key = this.key;
+  var functionKey = isFunction(key);
+  var initData = this.initData;
+  var newViews = new Array(data.length);
+  var oldViews = this.views;
+  var newLookup = key && {};
+  var oldLookup = key && this.lookup;
+
+  for (var i = 0; i < data.length; i++) {
+    var item = data[i];
+    var view = (void 0);
+
+    if (key) {
+      var id = functionKey ? key(item) : item[key];
+      view = newViews[i] = oldLookup[id] || new View(initData, item, i, data);
+      newLookup[id] = view;
+      view.__id = id;
+    } else {
+      view = newViews[i] = oldViews[i] || new View(initData, item, i, data);
+    }
+    var el$$1 = view.el;
+    if (el$$1.__redom_list) {
+      el$$1 = el$$1.el;
+    }
+    el$$1.__redom_view = view;
+    view.update && view.update(item, i, data);
+  }
+
+  setChildren(this, newViews);
+
+  if (key) {
+    this.lookup = newLookup;
+  }
+  this.views = newViews;
+};
+
+function getParentEl (parent) {
+  if (isString(parent)) {
+    return html(parent);
+  } else if (isNode(parent.el)) {
+    return parent.el;
+  } else {
+    return parent;
+  }
+}
+
+var Router = function Router (parent, Views, initData) {
+  this.el = getParentEl(parent);
+  this.Views = Views;
+  this.initData = initData;
+};
+Router.prototype.update = function update (route, data) {
+  if (route !== this.route) {
+    var Views = this.Views;
+    var View = Views[route];
+
+    this.view = View && new View(this.initData, data);
+    this.route = route;
+
+    setChildren(this.el, [ this.view ]);
+  }
+  this.view && this.view.update && this.view.update(data, route);
+};
+
+var SVG = 'http://www.w3.org/2000/svg';
+
+var svgCache = {};
+
+var memoizeSVG = function (query) { return svgCache[query] || createElement(query, SVG); };
+
+function stickyNonModalErrorPopup(text$$1) {
+	document.body.style.filter = 'contrast(70%) brightness(130%) saturate(200%) sepia(40%) hue-rotate(300deg)';
+	
+	var popup = el('div', text$$1, {
+		style: {
+			'position': 'fixed',
+			'display': 'inline-block',
+			'max-width': '600%',
+			'top': '20%',
+			'width': '100%',
+			'padding': '40px 10%',
+			'font-size': '20px',
+			'z-index': '100000',
+			'color': 'white',
+			'background': '#0c0c0c',
+			'text-align': 'center',
+			'user-select': 'auto !important',
+			'box-sizing': 'border-box'
+		}
+	});
+	
+	mount(document.body, popup);
+}
+
+window.sticky = stickyNonModalErrorPopup;
+
 var propertyTypes = [
 	createPropertyType('name', 'No name', createPropertyType.string)
 ];
@@ -2015,11 +2392,13 @@ var Game = (function (PropertyOwner$$1) {
 		addChange(changeType.addSerializableToTree, this);
 	};
 	Game.prototype.delete = function delete$1 () {
+		addChange(changeType.deleteSerializable, this);
 		if (!PropertyOwner$$1.prototype.delete.call(this)) { return false; }
 		
 		if (game === this)
 			{ game = null; }
-		console.log('game.delete');
+
+		stickyNonModalErrorPopup('Game deleted');
 		
 		return true;
 	};
@@ -2936,8 +3315,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4327,397 +4704,10 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
-var text = function (str) { return doc.createTextNode(str); };
-
-function mount (parent, child, before) {
-  var parentEl = parent.el || parent;
-  var childEl = child.el || child;
-
-  if (isList(childEl)) {
-    childEl = childEl.el;
-  }
-
-  if (child === childEl && childEl.__redom_view) {
-    // try to look up the view if not provided
-    child = childEl.__redom_view;
-  }
-
-  if (child !== childEl) {
-    childEl.__redom_view = child;
-  }
-
-  if (child.isMounted) {
-    child.remount && child.remount();
-  } else {
-    child.mount && child.mount();
-  }
-
-  if (before) {
-    parentEl.insertBefore(childEl, before.el || before);
-  } else {
-    parentEl.appendChild(childEl);
-  }
-
-  if (child.isMounted) {
-    child.remounted && child.remounted();
-  } else {
-    child.isMounted = true;
-    child.mounted && child.mounted();
-  }
-
-  return child;
-}
-
-function unmount (parent, child) {
-  var parentEl = parent.el || parent;
-  var childEl = child.el || child;
-
-  if (child === childEl && childEl.__redom_view) {
-    // try to look up the view if not provided
-    child = childEl.__redom_view;
-  }
-
-  child.unmount && child.unmount();
-
-  parentEl.removeChild(childEl);
-
-  child.isMounted = false;
-  child.unmounted && child.unmounted();
-
-  return child;
-}
-
-function setStyle (view, arg1, arg2) {
-  var el = view.el || view;
-
-  if (arguments.length > 2) {
-    el.style[arg1] = arg2;
-  } else if (isString(arg1)) {
-    el.setAttribute('style', arg1);
-  } else {
-    for (var key in arg1) {
-      setStyle(el, key, arg1[key]);
-    }
-  }
-}
-
-function setAttr (view, arg1, arg2) {
-  var el = view.el || view;
-  var isSVG = el instanceof window.SVGElement;
-
-  if (arguments.length > 2) {
-    if (arg1 === 'style') {
-      setStyle(el, arg2);
-    } else if (isSVG && isFunction(arg2)) {
-      el[arg1] = arg2;
-    } else if (!isSVG && (arg1 in el || isFunction(arg2))) {
-      el[arg1] = arg2;
-    } else {
-      el.setAttribute(arg1, arg2);
-    }
-  } else {
-    for (var key in arg1) {
-      setAttr(el, key, arg1[key]);
-    }
-  }
-}
-
-function parseArguments (element, args) {
-  for (var i = 0; i < args.length; i++) {
-    var arg = args[i];
-
-    if (!arg) {
-      continue;
-    }
-
-    // support middleware
-    if (typeof arg === 'function') {
-      arg(element);
-    } else if (isString(arg) || isNumber(arg)) {
-      element.appendChild(text(arg));
-    } else if (isNode(arg) || isNode(arg.el) || isList(arg.el)) {
-      mount(element, arg);
-    } else if (arg.length) {
-      parseArguments(element, arg);
-    } else if (typeof arg === 'object') {
-      setAttr(element, arg);
-    }
-  }
-}
-
-var isString = function (a) { return typeof a === 'string'; };
-var isNumber = function (a) { return typeof a === 'number'; };
-var isFunction = function (a) { return typeof a === 'function'; };
-
-var isNode = function (a) { return a && a.nodeType; };
-var isList = function (a) { return a && a.__redom_list; };
-
-var doc = document;
-
-var HASH = '#'.charCodeAt(0);
-var DOT = '.'.charCodeAt(0);
-
-function createElement (query, ns) {
-  var tag;
-  var id;
-  var className;
-
-  var mode = 0;
-  var start = 0;
-
-  for (var i = 0; i <= query.length; i++) {
-    var char = query.charCodeAt(i);
-
-    if (char === HASH || char === DOT || !char) {
-      if (mode === 0) {
-        if (i === 0) {
-          tag = 'div';
-        } else if (!char) {
-          tag = query;
-        } else {
-          tag = query.substring(start, i);
-        }
-      } else {
-        var slice = query.substring(start, i);
-
-        if (mode === 1) {
-          id = slice;
-        } else if (className) {
-          className += ' ' + slice;
-        } else {
-          className = slice;
-        }
-      }
-
-      start = i + 1;
-
-      if (char === HASH) {
-        mode = 1;
-      } else {
-        mode = 2;
-      }
-    }
-  }
-
-  var element = ns ? doc.createElementNS(ns, tag) : doc.createElement(tag);
-
-  if (id) {
-    element.id = id;
-  }
-
-  if (className) {
-    if (ns) {
-      element.setAttribute('class', className);
-    } else {
-      element.className = className;
-    }
-  }
-
-  return element;
-}
-
-var htmlCache = {};
-
-var memoizeHTML = function (query) { return htmlCache[query] || createElement(query); };
-
-function html (query) {
-  var arguments$1 = arguments;
-
-  var args = [], len = arguments.length - 1;
-  while ( len-- > 0 ) { args[ len ] = arguments$1[ len + 1 ]; }
-
-  var element;
-
-  if (isString(query)) {
-    element = memoizeHTML(query).cloneNode(false);
-  } else if (isNode(query)) {
-    element = query.cloneNode(false);
-  } else {
-    throw new Error('At least one argument required');
-  }
-
-  parseArguments(element, args);
-
-  return element;
-}
-
-html.extend = function (query) {
-  var clone = memoizeHTML(query);
-
-  return html.bind(this, clone);
-};
-
-var el = html;
-
-function setChildren (parent, children) {
-  if (children.length === undefined) {
-    return setChildren(parent, [children]);
-  }
-
-  var parentEl = parent.el || parent;
-  var traverse = parentEl.firstChild;
-
-  for (var i = 0; i < children.length; i++) {
-    var child = children[i];
-
-    if (!child) {
-      continue;
-    }
-
-    var childEl = child.el || child;
-
-    if (isList(childEl)) {
-      childEl = childEl.el;
-    }
-
-    if (childEl === traverse) {
-      traverse = traverse.nextSibling;
-      continue;
-    }
-
-    mount(parent, child, traverse);
-  }
-
-  while (traverse) {
-    var next = traverse.nextSibling;
-
-    unmount(parent, traverse);
-
-    traverse = next;
-  }
-}
-
-function list (parent, View, key, initData) {
-  return new List(parent, View, key, initData);
-}
-
-function List (parent, View, key, initData) {
-  this.__redom_list = true;
-  this.View = View;
-  this.key = key;
-  this.initData = initData;
-  this.views = [];
-  this.el = getParentEl(parent);
-
-  if (key) {
-    this.lookup = {};
-  }
-}
-
-List.extend = function (parent, View, key, initData) {
-  return List.bind(List, parent, View, key, initData);
-};
-
-list.extend = List.extend;
-
-List.prototype.update = function (data) {
-  if ( data === void 0 ) { data = []; }
-
-  var View = this.View;
-  var key = this.key;
-  var functionKey = isFunction(key);
-  var initData = this.initData;
-  var newViews = new Array(data.length);
-  var oldViews = this.views;
-  var newLookup = key && {};
-  var oldLookup = key && this.lookup;
-
-  for (var i = 0; i < data.length; i++) {
-    var item = data[i];
-    var view = (void 0);
-
-    if (key) {
-      var id = functionKey ? key(item) : item[key];
-      view = newViews[i] = oldLookup[id] || new View(initData, item, i, data);
-      newLookup[id] = view;
-      view.__id = id;
-    } else {
-      view = newViews[i] = oldViews[i] || new View(initData, item, i, data);
-    }
-    var el$$1 = view.el;
-    if (el$$1.__redom_list) {
-      el$$1 = el$$1.el;
-    }
-    el$$1.__redom_view = view;
-    view.update && view.update(item, i, data);
-  }
-
-  setChildren(this, newViews);
-
-  if (key) {
-    this.lookup = newLookup;
-  }
-  this.views = newViews;
-};
-
-function getParentEl (parent) {
-  if (isString(parent)) {
-    return html(parent);
-  } else if (isNode(parent.el)) {
-    return parent.el;
-  } else {
-    return parent;
-  }
-}
-
-var Router = function Router (parent, Views, initData) {
-  this.el = getParentEl(parent);
-  this.Views = Views;
-  this.initData = initData;
-};
-Router.prototype.update = function update (route, data) {
-  if (route !== this.route) {
-    var Views = this.Views;
-    var View = Views[route];
-
-    this.view = View && new View(this.initData, data);
-    this.route = route;
-
-    setChildren(this.el, [ this.view ]);
-  }
-  this.view && this.view.update && this.view.update(data, route);
-};
-
-var SVG = 'http://www.w3.org/2000/svg';
-
-var svgCache = {};
-
-var memoizeSVG = function (query) { return svgCache[query] || createElement(query, SVG); };
-
-function stickyNonModalErrorPopup(text$$1) {
-	document.body.style.filter = 'contrast(70%) brightness(130%) saturate(200%) sepia(40%) hue-rotate(300deg)';
-	
-	var popup = el('div', text$$1, {
-		style: {
-			'position': 'fixed',
-			'display': 'inline-block',
-			'max-width': '600%',
-			'top': '20%',
-			'width': '100%',
-			'padding': '40px 10%',
-			'font-size': '20px',
-			'z-index': '100000',
-			'color': 'white',
-			'background': '#0c0c0c',
-			'text-align': 'center',
-			'user-select': 'auto !important',
-			'box-sizing': 'border-box'
-		}
-	});
-	
-	mount(document.body, popup);
-}
-
-window.sticky = stickyNonModalErrorPopup;
-
 var options = {
 	context: null, // 'play' or 'edit'
 	networkEnabled: false
 };
-
-function markGameToBeDeleted() {
-	sendSocketMessage('deleteGame');
-}
 
 function configureNetSync(_options) {
 	options = Object.assign(options, _options);
@@ -4914,8 +4904,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5177,7 +5165,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5988,22 +5975,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7757,11 +7728,6 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7835,19 +7801,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8421,9 +8374,8 @@ var Game$2 = (function (Module$$1) {
 		Module$$1.call(
 			this, this.propertyEditor = new PropertyEditor(),
 			el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
-				if (confirm('Are you sure you want to delete this game? Game will be deleted in one hour if no one will access the game before that.')) {
-					markGameToBeDeleted();
-					alert('Deleting in one or two hours.');
+				if (confirm(("Delete game '" + (game.name) + "'? (Cannot be undone)"))) {
+					game.delete();
 				}
 			} })
 		);

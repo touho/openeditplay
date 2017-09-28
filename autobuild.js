@@ -128,7 +128,7 @@ if (!global.TARGET_NONE) {
 			return;
 
 		if (serverProcess) {
-			console.log('on close')
+			console.log('on close', Date.now());
 			serverProcess.on('close', launchServer);
 			serverProcess.kill('SIGHUP');
 		} else {

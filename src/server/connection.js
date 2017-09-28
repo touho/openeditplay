@@ -49,15 +49,14 @@ class Connection {
 		
 		let listeners = {
 			disconnecting: () => this.disconnected(),
-			identify: identifyData => this.onIdentify(identifyData),
-			deleteGame: () => this.onDeleteGame()
+			identify: identifyData => this.onIdentify(identifyData)
 		};
 		
 		socket.onevent = packet => {
 			let param1 = packet.data[0];
 			if (typeof param1 === 'string') {
 				listeners[param1] && listeners[param1](packet.data[1]);
-			} else {
+			} else if (this.context === 'edit') {
 				// Optimized change-event
 				this.changeReceived(param1);
 			}
@@ -123,11 +122,6 @@ class Connection {
 		} catch(e) {
 			console.error('Connection.onIdentify', e);
 		}
-	}
-	async onDeleteGame() {
-		// All users with edit access have delete access
-		if (this.context === 'edit')
-			gameUpdating.markToBeDeleted(this.gameId);
 	}
 	requestIdentify() {
 		this.send('identifyYourself');

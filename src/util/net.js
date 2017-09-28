@@ -16,10 +16,6 @@ let options = {
 	networkEnabled: false
 };
 
-export function markGameToBeDeleted() {
-	sendSocketMessage('deleteGame');
-}
-
 export function configureNetSync(_options) {
 	options = Object.assign(options, _options);
 }

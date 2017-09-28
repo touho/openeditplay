@@ -20,21 +20,6 @@ gameUpdating.markDirty = async function(gameId, optionalConnection) {
 	setTimeout(gameUpdating.updateAllDirtyGames, 1000);
 };
 
-gameUpdating.markToBeDeleted = async function(gameId) {
-	await db.query('update game set markedToBeDeleted = UTC_TIMESTAMP where id = ?', [gameId]);
-};
-
-// This function should be called each time someone wants to play or edit a game
-gameUpdating.gameWithSerializablesRequested = async function(gameId) {
-	// Do not delete games that are used.
-	let results = await db.query('update game set markedToBeDeleted = NULL where id = ?', [gameId]);
-	if (results.affectedRows === 0) {
-		// No game? Lets create one since there are already some serializables.
-		await gameUpdating.insertGame(gameId);
-		setTimeout(gameUpdating.updateAllDirtyGames, 1000);
-	}
-};
-
 gameUpdating.updateAllDirtyGames = limit(gameUpdating.DIRTY_GAME_UPDATE_INTERVAL, 'soon', async () => {
 	let dirtyGameIds = await db.query(`
 select id
@@ -49,6 +34,11 @@ setTimeout(gameUpdating.updateAllDirtyGames, gameUpdating.DIRTY_GAME_UPDATE_INTE
 gameUpdating.insertGame = async function(id, optionalConnection) {
 	optionalConnection = optionalConnection || {ip: '?', userId: '?'};
 	await db.query('insert game (id, creatorIP, creatorUserId) values (?, ?, ?)', [id, optionalConnection.ip, optionalConnection.userId]);
+};
+
+gameUpdating.deleteGame = async function(gameId) {
+	await db.query('delete from game where id = ?', [gameId]);
+	await db.query('delete from serializable where gameId = ?', [gameId]);
 };
 
 gameUpdating.updateGame = async function(gameId, optionalConnection) {

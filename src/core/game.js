@@ -3,6 +3,7 @@ import { addChange, changeType, setChangeOrigin } from './serializableManager';
 import Prototype from '../core/prototype'
 import assert from '../util/assert'
 import PropertyOwner, { Prop } from '../core/propertyOwner';
+import {stickyNonModalErrorPopup} from '../util/popup'
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -45,11 +46,13 @@ export default class Game extends PropertyOwner {
 		addChange(changeType.addSerializableToTree, this);
 	}
 	delete() {
+		addChange(changeType.deleteSerializable, this);
 		if (!super.delete()) return false;
 		
 		if (game === this)
 			game = null;
-		console.log('game.delete');
+
+		stickyNonModalErrorPopup('Game deleted');
 		
 		return true;
 	}

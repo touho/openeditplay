@@ -1,5 +1,4 @@
 import { el, list, mount } from 'redom';
-import { markGameToBeDeleted } from '../../util/net';
 import Module from './module';
 import PropertyEditor from '../views/propertyEditor';
 import { game } from '../../core/game';
@@ -11,9 +10,8 @@ class Game extends Module {
 		super(
 			this.propertyEditor = new PropertyEditor(),
 			el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: () => {
-				if (confirm('Are you sure you want to delete this game? Game will be deleted in one hour if no one will access the game before that.')) {
-					markGameToBeDeleted();
-					alert('Deleting in one or two hours.');
+				if (confirm(`Delete game '${game.name}'? (Cannot be undone)`)) {
+					game.delete();
 				}
 			} })
 		);

@@ -35,12 +35,15 @@ where s1.type = 'gam' and s2.type = 'prp';
 	}))
 };
 
+function idLooksLikeGameId(gameId) {
+	return typeof gameId === 'string' && gameId.length > 15 && gameId.startsWith('gam');
+}
+
 dbSync.getGame = async function(gameId, allowNewGame) {
 	let serializables = await db.query('SELECT * FROM serializable WHERE gameId = ?', [gameId]);
 	if (serializables.length > 0) {
-		await gameUpdating.gameWithSerializablesRequested(gameId);
 		return ServerSerializable.buildTree(serializables);
-	} else if (allowNewGame)
+	} else if (allowNewGame && !idLooksLikeGameId(gameId))
 		return createNewGame();
 	else
 		return null;
@@ -128,10 +131,13 @@ WHERE parentId = ? and gameId = ?
 		if (children.length > 0)
 			return deleteListOfSerializables(children.map(c => c.id), gameId);
 	} else if (type === changeType.deleteSerializable) {
-		await gameUpdating.markDirty(gameId, optionalConnection);
-		
 		let id = change[keyToShortKey.id];
-		return deleteListOfSerializables([id], gameId);
+		if (id === gameId) {
+			await gameUpdating.deleteGame(gameId);
+		} else {
+			await gameUpdating.markDirty(gameId, optionalConnection);
+			return deleteListOfSerializables([id], gameId);
+		}
 	} else if (type === changeType.move) {
 		await gameUpdating.markDirty(gameId, optionalConnection);
 		let id = change[keyToShortKey.id];
