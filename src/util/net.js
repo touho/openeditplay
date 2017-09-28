@@ -8,13 +8,17 @@ import {
 } from '../core/serializableManager'
 import Serializable from '../core/serializable';
 import {game} from '../core/game';
-
 import {limit} from './callLimiter';
+import {stickyNonModalErrorPopup} from "./popup";
 
 let options = {
 	context: null, // 'play' or 'edit'
 	networkEnabled: false
 };
+
+export function markGameToBeDeleted() {
+	sendSocketMessage('deleteGame');
+}
 
 export function configureNetSync(_options) {
 	options = Object.assign(options, _options);
@@ -54,13 +58,17 @@ function gameReceivedOverNet(gameData) {
 	console.log('receive gameData', gameData);
 	if (!gameData)
 		return console.error('Game data was not received');
-	
-	executeExternal(() => {
-		Serializable.fromJSON(gameData);
-	});
-	localStorage.openEditPlayGameId = gameData.id;
-	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
-	history.replaceState({}, null, `?gameId=${gameData.id}`);
+	try {
+		executeExternal(() => {
+			Serializable.fromJSON(gameData);
+		});
+		localStorage.openEditPlayGameId = gameData.id;
+		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
+		history.replaceState({}, null, `?gameId=${gameData.id}`);
+	} catch(e) {
+		console.error('Game is corrupt.', e);
+		stickyNonModalErrorPopup('Game is corrupt.');
+	}
 }
 
 addChangeListener(change => {
@@ -128,13 +136,14 @@ let listeners = {
 		let {message, isFatal, data} = result;
 		console.error(`Server sent ${isFatal ? 'FATAL ERROR' : 'error'}:`, message, data);
 		if (isFatal) {
-			document.body.textContent = message;
+			stickyNonModalErrorPopup(message);
+			// document.body.textContent = message;
 		}
 	}
 };
 
 let sendChanges = limit(200, 'soon', () => {
-	if (!socket || changes.length === 0)
+	if (!socket || changes.length === 0 || !options.networkEnabled)
 		return;
 	
 	let packedChanges = changes.map(packChange);
@@ -161,6 +170,11 @@ function connect() {
 				changeReceivedOverNet(param1);
 			}
 		};
+		socket.on('disconnect', () => {
+			console.warn('Disconnected!');
+			stickyNonModalErrorPopup('Disconnected!');
+			options.networkEnabled = false;
+		});
 	});
 }
 window.addEventListener('load', connect);

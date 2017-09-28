@@ -1919,7 +1919,6 @@ Prototype.create = function(name) {
 
 Serializable.registerSerializable(Prototype, 'prt');
 
-
 function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	if ( _depth === void 0 ) _depth = 0;
 
@@ -2034,14 +2033,12 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam', function (json) {
 	if (json.c) {
-		console.log('json.c', json.c);
 		json.c.sort(function (a, b) {
 			if (a.id.startsWith('prt'))
 				{ return -1; }
 			else
 				{ return 1; }
 		});
-		console.log('json.c after', json.c);
 	}
 	return new Game(json.id);
 });
@@ -4330,216 +4327,6 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
-var options = {
-	context: null, // 'play' or 'edit'
-	networkEnabled: false
-};
-
-function configureNetSync(_options) {
-	options = Object.assign(options, _options);
-}
-
-var changes = [];
-var valueChanges = {}; // id => change
-
-function isInSceneTree(change) {
-	return change.reference._rootType === 'sce';
-}
-
-function getQueryVariable(variable) {
-	var query = window.location.search.substring(1);
-	var vars = query.split('&');
-	for (var i = 0; i < vars.length; i++) {
-		var pair = vars[i].split('=');
-		if (decodeURIComponent(pair[0]) == variable) {
-			return decodeURIComponent(pair[1]);
-		}
-	}
-	console.log('Query variable %s not found', variable);
-}
-
-function changeReceivedOverNet(packedChanges) {
-	if (!options.networkEnabled)
-		{ return; }
-
-	packedChanges.forEach(function (change) {
-		change = unpackChange(change);
-		if (change) {
-			executeChange(change);
-		}
-	});
-}
-function gameReceivedOverNet(gameData) {
-	console.log('receive gameData', gameData);
-	if (!gameData)
-		{ return console.error('Game data was not received'); }
-	
-	executeExternal(function () {
-		Serializable.fromJSON(gameData);
-	});
-	localStorage.openEditPlayGameId = gameData.id;
-	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
-	history.replaceState({}, null, ("?gameId=" + (gameData.id)));
-}
-
-addChangeListener(function (change) {
-	if (change.external || !options.networkEnabled)
-		{ return; } // Don't send a change that you have received.
-
-	if (isInSceneTree(change)) // Don't sync scene
-		{ return; }
-
-	if (change.type === changeType.setPropertyValue) {
-		var duplicateChange = valueChanges[change.id];
-		if (duplicateChange) {
-			changes.splice(changes.indexOf(duplicateChange), 1);
-		}
-		valueChanges[change.id] = change;
-	}
-	changes.push(change);
-	
-	if (sendChanges)
-		{ sendChanges(); }
-});
-
-function sendSocketMessage(eventName, data) {
-	if (!socket)
-		{ return console.log('Could not send', eventName); }
-	
-	if (eventName)
-		{ socket.emit(eventName, data); }
-	else
-		{ socket.emit(data); }
-}
-
-var listeners$1 = {
-	data: function data(result) {
-		var profile = result.profile;
-		var gameData = result.gameData;
-		localStorage.openEditPlayUserId = profile.userId;
-		localStorage.openEditPlayUserToken = profile.userToken;
-		gameReceivedOverNet(gameData);
-	},
-	identifyYourself: function identifyYourself() {
-		if (game) 
-			{ return location.reload(); }
-
-		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
-		var userId = localStorage.openEditPlayUserId; // if doesn't exist, server will create one
-		var userToken = localStorage.openEditPlayUserToken; // if doesn't exist, server will create one
-		var context = options.context;
-		sendSocketMessage('identify', {userId: userId, userToken: userToken, gameId: gameId, context: context});
-	},
-	errorMessage: function errorMessage(result) {
-		var message = result.message;
-		var isFatal = result.isFatal;
-		var data = result.data;
-		console.error(("Server sent " + (isFatal ? 'FATAL ERROR' : 'error') + ":"), message, data);
-		if (isFatal) {
-			document.body.textContent = message;
-		}
-	}
-};
-
-var sendChanges = limit(200, 'soon', function () {
-	if (!socket || changes.length === 0)
-		{ return; }
-	
-	var packedChanges = changes.map(packChange);
-	changes.length = 0;
-	valueChanges = {};
-	sendSocketMessage('', packedChanges);
-});
-
-var socket;
-function connect() {
-	if (!window.io) {
-		return console.error('socket.io not defined after window load.');
-	}
-	
-	socket = new io();
-	window.s = socket;
-	socket.on('connect', function () {
-		socket.onevent = function (packet) {
-			var param1 = packet.data[0];
-			if (typeof param1 === 'string') {
-				listeners$1[param1](packet.data[1]);
-			} else {
-				// Optimized change-event
-				changeReceivedOverNet(param1);
-			}
-		};
-	});
-}
-window.addEventListener('load', connect);
-
-/*
- Global event system
-
- let unlisten = events.listen('event name', function(params, ...) {});
- eventManager.dispatch('event name', paramOrParamArray);
- unlisten();
- */
-
-var listeners$2 = {};
-
-var events = {
-	listen: function listen(event, callback) {
-		if (!listeners$2.hasOwnProperty(event)) {
-			listeners$2[event] = [];
-		}
-		listeners$2[event].push(callback);
-		return function () {
-			var index = listeners$2[event].indexOf(callback);
-			listeners$2[event].splice(index, 1);
-		};
-	},
-	dispatch: function dispatch(event) {
-		var args = [], len = arguments.length - 1;
-		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
-
-		if (listeners$2.hasOwnProperty(event)) {
-			var listener = listeners$2[event];
-			for (var i = 0; i < listener.length; ++i) {
-				listener[i].apply(null, args);
-				/*
-				try {
-					listeners[event][i].apply(null, args);
-				} catch (e) {
-					if (console && console.sendError) {
-						console.sendError(e);
-					}
-				}
-				*/
-			}
-		}
-	},
-	getLoadEventPromise: function getLoadEventPromise(event) {
-		return new Promise(function(res) {
-			events.listen(event, res);
-		});
-	}
-};
-// DOM / ReDom event system
-
-function dispatch(view, type, data) {
-	var el = view === window ? view : view.el || view;
-	var debug = 'Debug info ' + new Error().stack;
-	el.dispatchEvent(new CustomEvent(type, {
-		detail: { data: data, debug: debug, view: view },
-		bubbles: true
-	}));
-}
-function listen(view, type, handler) {
-	var el = view === window ? view : view.el || view;
-	el.addEventListener(type, function (event) {
-		if (event instanceof CustomEvent)
-			{ handler(event.detail.data, event.detail.view); }
-		else
-			{ handler(event); }
-	});
-}
-
 var text = function (str) { return doc.createTextNode(str); };
 
 function mount (parent, child, before) {
@@ -4896,6 +4683,256 @@ var SVG = 'http://www.w3.org/2000/svg';
 var svgCache = {};
 
 var memoizeSVG = function (query) { return svgCache[query] || createElement(query, SVG); };
+
+function stickyNonModalErrorPopup(text$$1) {
+	document.body.style.filter = 'contrast(70%) brightness(130%) saturate(200%) sepia(40%) hue-rotate(300deg)';
+	
+	var popup = el('div', text$$1, {
+		style: {
+			'position': 'fixed',
+			'display': 'inline-block',
+			'max-width': '600%',
+			'top': '20%',
+			'width': '100%',
+			'padding': '40px 10%',
+			'font-size': '20px',
+			'z-index': '100000',
+			'color': 'white',
+			'background': '#0c0c0c',
+			'text-align': 'center',
+			'user-select': 'auto !important',
+			'box-sizing': 'border-box'
+		}
+	});
+	
+	mount(document.body, popup);
+}
+
+window.sticky = stickyNonModalErrorPopup;
+
+var options = {
+	context: null, // 'play' or 'edit'
+	networkEnabled: false
+};
+
+function markGameToBeDeleted() {
+	sendSocketMessage('deleteGame');
+}
+
+function configureNetSync(_options) {
+	options = Object.assign(options, _options);
+}
+
+var changes = [];
+var valueChanges = {}; // id => change
+
+function isInSceneTree(change) {
+	return change.reference._rootType === 'sce';
+}
+
+function getQueryVariable(variable) {
+	var query = window.location.search.substring(1);
+	var vars = query.split('&');
+	for (var i = 0; i < vars.length; i++) {
+		var pair = vars[i].split('=');
+		if (decodeURIComponent(pair[0]) == variable) {
+			return decodeURIComponent(pair[1]);
+		}
+	}
+	console.log('Query variable %s not found', variable);
+}
+
+function changeReceivedOverNet(packedChanges) {
+	if (!options.networkEnabled)
+		{ return; }
+
+	packedChanges.forEach(function (change) {
+		change = unpackChange(change);
+		if (change) {
+			executeChange(change);
+		}
+	});
+}
+function gameReceivedOverNet(gameData) {
+	console.log('receive gameData', gameData);
+	if (!gameData)
+		{ return console.error('Game data was not received'); }
+	try {
+		executeExternal(function () {
+			Serializable.fromJSON(gameData);
+		});
+		localStorage.openEditPlayGameId = gameData.id;
+		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
+		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
+	} catch(e) {
+		console.error('Game is corrupt.', e);
+		stickyNonModalErrorPopup('Game is corrupt.');
+	}
+}
+
+addChangeListener(function (change) {
+	if (change.external || !options.networkEnabled)
+		{ return; } // Don't send a change that you have received.
+
+	if (isInSceneTree(change)) // Don't sync scene
+		{ return; }
+
+	if (change.type === changeType.setPropertyValue) {
+		var duplicateChange = valueChanges[change.id];
+		if (duplicateChange) {
+			changes.splice(changes.indexOf(duplicateChange), 1);
+		}
+		valueChanges[change.id] = change;
+	}
+	changes.push(change);
+	
+	if (sendChanges)
+		{ sendChanges(); }
+});
+
+function sendSocketMessage(eventName, data) {
+	if (!socket)
+		{ return console.log('Could not send', eventName); }
+	
+	if (eventName)
+		{ socket.emit(eventName, data); }
+	else
+		{ socket.emit(data); }
+}
+
+var listeners$1 = {
+	data: function data(result) {
+		var profile = result.profile;
+		var gameData = result.gameData;
+		localStorage.openEditPlayUserId = profile.userId;
+		localStorage.openEditPlayUserToken = profile.userToken;
+		gameReceivedOverNet(gameData);
+	},
+	identifyYourself: function identifyYourself() {
+		if (game) 
+			{ return location.reload(); }
+
+		var gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
+		var userId = localStorage.openEditPlayUserId; // if doesn't exist, server will create one
+		var userToken = localStorage.openEditPlayUserToken; // if doesn't exist, server will create one
+		var context = options.context;
+		sendSocketMessage('identify', {userId: userId, userToken: userToken, gameId: gameId, context: context});
+	},
+	errorMessage: function errorMessage(result) {
+		var message = result.message;
+		var isFatal = result.isFatal;
+		var data = result.data;
+		console.error(("Server sent " + (isFatal ? 'FATAL ERROR' : 'error') + ":"), message, data);
+		if (isFatal) {
+			stickyNonModalErrorPopup(message);
+			// document.body.textContent = message;
+		}
+	}
+};
+
+var sendChanges = limit(200, 'soon', function () {
+	if (!socket || changes.length === 0 || !options.networkEnabled)
+		{ return; }
+	
+	var packedChanges = changes.map(packChange);
+	changes.length = 0;
+	valueChanges = {};
+	sendSocketMessage('', packedChanges);
+});
+
+var socket;
+function connect() {
+	if (!window.io) {
+		return console.error('socket.io not defined after window load.');
+	}
+	
+	socket = new io();
+	window.s = socket;
+	socket.on('connect', function () {
+		socket.onevent = function (packet) {
+			var param1 = packet.data[0];
+			if (typeof param1 === 'string') {
+				listeners$1[param1](packet.data[1]);
+			} else {
+				// Optimized change-event
+				changeReceivedOverNet(param1);
+			}
+		};
+		socket.on('disconnect', function () {
+			console.warn('Disconnected!');
+			stickyNonModalErrorPopup('Disconnected!');
+			options.networkEnabled = false;
+		});
+	});
+}
+window.addEventListener('load', connect);
+
+/*
+ Global event system
+
+ let unlisten = events.listen('event name', function(params, ...) {});
+ eventManager.dispatch('event name', paramOrParamArray);
+ unlisten();
+ */
+
+var listeners$2 = {};
+
+var events = {
+	listen: function listen(event, callback) {
+		if (!listeners$2.hasOwnProperty(event)) {
+			listeners$2[event] = [];
+		}
+		listeners$2[event].push(callback);
+		return function () {
+			var index = listeners$2[event].indexOf(callback);
+			listeners$2[event].splice(index, 1);
+		};
+	},
+	dispatch: function dispatch(event) {
+		var args = [], len = arguments.length - 1;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
+
+		if (listeners$2.hasOwnProperty(event)) {
+			var listener = listeners$2[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
+				/*
+				try {
+					listeners[event][i].apply(null, args);
+				} catch (e) {
+					if (console && console.sendError) {
+						console.sendError(e);
+					}
+				}
+				*/
+			}
+		}
+	},
+	getLoadEventPromise: function getLoadEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
+	}
+};
+// DOM / ReDom event system
+
+function dispatch(view, type, data) {
+	var el = view === window ? view : view.el || view;
+	var debug = 'Debug info ' + new Error().stack;
+	el.dispatchEvent(new CustomEvent(type, {
+		detail: { data: data, debug: debug, view: view },
+		bubbles: true
+	}));
+}
+function listen(view, type, handler) {
+	var el = view === window ? view : view.el || view;
+	el.addEventListener(type, function (event) {
+		if (event instanceof CustomEvent)
+			{ handler(event.detail.data, event.detail.view); }
+		else
+			{ handler(event); }
+	});
+}
 
 var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIcon) {
 	var this$1 = this;
@@ -8383,7 +8420,12 @@ var Game$2 = (function (Module$$1) {
 	function Game() {
 		Module$$1.call(
 			this, this.propertyEditor = new PropertyEditor(),
-			el('div.gameDeleteInfo', 'To delete this game, remove all types and levels. Game will be automatically destroyed after 1h of inactivity.')
+			el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
+				if (confirm('Are you sure you want to delete this game? Game will be deleted in one hour if no one will access the game before that.')) {
+					markGameToBeDeleted();
+					alert('Deleting in one or two hours.');
+				}
+			} })
 		);
 		this.id = 'game';
 		this.name = 'Game';

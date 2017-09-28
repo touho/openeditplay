@@ -60,14 +60,12 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam', json => {
 	if (json.c) {
-		console.log('json.c', json.c);
 		json.c.sort((a, b) => {
 			if (a.id.startsWith('prt'))
 				return -1;
 			else
 				return 1;
 		});
-		console.log('json.c after', json.c);
 	}
 	return new Game(json.id);
 });

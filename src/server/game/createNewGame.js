@@ -31,7 +31,7 @@ module.exports = async function createNewGame(connection) {
 		t: dbSync.changeType.addSerializableToTree,
 		v: game,
 		p: null
-	}, id);
+	}, id, connection);
 	
 	return game;
 };

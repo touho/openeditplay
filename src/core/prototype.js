@@ -201,7 +201,6 @@ Prototype.create = function(name) {
 
 Serializable.registerSerializable(Prototype, 'prt');
 
-
 function getDataFromPrototype(prototype, originalPrototype, filter, _depth = 0) {
 	let data;
 

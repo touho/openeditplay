@@ -1,5 +1,4 @@
 const db = require('../db');
-const gameUpdater = require('../service/gameUpdater');
 const limit = require('../util/callLimiter').limit;
 
 
@@ -7,16 +6,33 @@ let gameUpdating = module.exports;
 
 gameUpdating.DIRTY_GAME_UPDATE_INTERVAL = 5000;
 
+gameUpdating.GAME_NOT_FOUND = 'game not found';
+
+
 // TODO: limit the number of function calls per gameId
 gameUpdating.markDirty = async function(gameId, optionalConnection) {
 	let updateResults = await db.query('update game set isDirty = 1 where id = ?', [gameId]);
 
 	if (updateResults.affectedRows === 0) {
-		await gameUpdating.insertGame(gameId, optionalConnection);
-		console.log('game was not marked dirty. created instead.', updateResults);
+		throw new Error(`gameUpdating.markDirty ${gameUpdating.GAME_NOT_FOUND}: ${gameId}`);
 	}
 
 	setTimeout(gameUpdating.updateAllDirtyGames, 1000);
+};
+
+gameUpdating.markToBeDeleted = async function(gameId) {
+	await db.query('update game set markedToBeDeleted = UTC_TIMESTAMP where id = ?', [gameId]);
+};
+
+// This function should be called each time someone wants to play or edit a game
+gameUpdating.gameWithSerializablesRequested = async function(gameId) {
+	// Do not delete games that are used.
+	let results = await db.query('update game set markedToBeDeleted = NULL where id = ?', [gameId]);
+	if (results.affectedRows === 0) {
+		// No game? Lets create one since there are already some serializables.
+		await gameUpdating.insertGame(gameId);
+		setTimeout(gameUpdating.updateAllDirtyGames, 1000);
+	}
 };
 
 gameUpdating.updateAllDirtyGames = limit(gameUpdating.DIRTY_GAME_UPDATE_INTERVAL, 'soon', async () => {
@@ -28,30 +44,36 @@ where isDirty = 1;
 	dirtyGameIds.forEach(gameRow => gameUpdating.updateGame(gameRow.id));
 });
 
+setTimeout(gameUpdating.updateAllDirtyGames, gameUpdating.DIRTY_GAME_UPDATE_INTERVAL);
+
 gameUpdating.insertGame = async function(id, optionalConnection) {
 	optionalConnection = optionalConnection || {ip: '?', userId: '?'};
 	await db.query('insert game (id, creatorIP, creatorUserId) values (?, ?, ?)', [id, optionalConnection.ip, optionalConnection.userId]);
 };
 
 gameUpdating.updateGame = async function(gameId, optionalConnection) {
-	let statistics = await db.queryOne(getStatisticsSQL, [gameId]);
-	let nameRow = await db.queryOne(getNameSQL, [gameId]);
-	
-	let updateParameters = [
-		statistics.serializables,
-		statistics.levels,
-		statistics.prototypes,
-		statistics.entityPrototypes,
-		statistics.componentDatas,
-		JSON.parse(nameRow.value),
-		0, // is dirty? not anymore
-		gameId
-	];
-	
-	let updateResults = await db.query(updateSQL, updateParameters);
-	if (updateResults.affectedRows === 0) {
-		await gameUpdating.insertGame(gameId, optionalConnection);
-		console.error('game was not updated. created instead.', updateResults);
+	try {
+		let statistics = await db.queryOne(getStatisticsSQL, [gameId]);
+		let nameRow = await db.queryOne(getNameSQL, [gameId]);
+
+		let updateParameters = [
+			statistics.serializables,
+			statistics.levels,
+			statistics.prototypes,
+			statistics.entityPrototypes,
+			statistics.componentDatas,
+			JSON.parse(nameRow.value),
+			0, // is dirty? not anymore
+			gameId
+		];
+
+		let updateResults = await db.query(updateSQL, updateParameters);
+		if (updateResults.affectedRows === 0) {
+			await gameUpdating.insertGame(gameId, optionalConnection);
+			console.error('game was not updated. created instead.', updateResults);
+		}
+	} catch(e) {
+		console.error('gameUpdating.updateGame', e);
 	}
 };
 

@@ -45,7 +45,7 @@ if (!global.TARGET_NONE) {
 
 	// Editor CSS
 	watch('src/**/*.scss', () => {
-		buildCss('src/editorMain.scss', 'builds/openeditplay.editor.css', () => {
+		buildCss('src/editor/editor.scss', 'builds/openeditplay.editor.css', () => {
 			copy('builds/openeditplay.editor.cs*', 'public/edit/css/');
 		});
 	}, true);
@@ -109,7 +109,8 @@ if (!global.TARGET_NONE) {
 	});
 	
 	if (target === 'all') {
-		autobuildJs('src/testMain.js', 'builds/openeditplay.tests.js');
+		// tests aren't used actively and they are not very overwhelming
+		// autobuildJs('src/testMain.js', 'builds/openeditplay.tests.js');
 	}
 
 	// Server restarter
@@ -119,21 +120,26 @@ if (!global.TARGET_NONE) {
 		setTimeout(() => {
 			console.log('Launching server.');
 			serverProcess = cp.fork(ROOT + 'src/server/main.js');
-		}, 100);
+		}, 200);
 	}
 	let serverProcess = null;
-	watch(['src/server/*'], args => {
+	watch(['src/server/**/*'], args => {
 		if (serverProcess === 'wait')
 			return;
 
 		if (serverProcess) {
+			console.log('on close')
 			serverProcess.on('close', launchServer);
 			serverProcess.kill('SIGHUP');
 		} else {
 			launchServer();
 		}
 	});
-	launchServer();
+	// Start server when a heavy build process has been done.
+	let serverStartWatcher = watch('builds/openeditplay.editor.js', () => {
+		serverStartWatcher.close();
+		launchServer();
+	});
 }
 
 function exec(cmd) {
@@ -178,7 +184,7 @@ function buildCss(sourceEntry, destination, callback) {
 	}).catch(err => {
 		console.log('err', err);
 	});
-};
+}
 
 function autobuildJs(entry, destination, options) {
 	options = Object.assign({
@@ -245,7 +251,7 @@ function autobuildJs(entry, destination, options) {
 				console.log(`Fix ${filename} to continue`);
 				setTimeout(() => {
 					let watcher = watch(filename, () => {
-						watcher.close();
+							watcher.close();
 						autobuildJs(entry, destination, options);
 					});
 				}, 200);

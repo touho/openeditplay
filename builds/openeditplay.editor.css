@@ -1,4 +1,4 @@
-/*@import "main.scss";*/
+
 /*$editor-effect-color: $cool-cyan;*/
 /*$editor-effect-color: #f3ebd8;*/
 .button {
@@ -261,9 +261,6 @@ img.logo:hover {
 }
 .module-topbar {
   overflow: hidden;
-}
-.gameDeleteInfo {
-  padding: 10px;
 }
 .module-types .addTypeButton {
   transform: translateY(1px);

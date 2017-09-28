@@ -1,7 +1,7 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(factory());
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
+  typeof define === 'function' && define.amd ? define(factory) :
+  (factory());
 }(this, (function () { 'use strict';
 
 function assert(condition, message) {
@@ -1834,7 +1834,6 @@ Prototype.create = function(name) {
 
 Serializable.registerSerializable(Prototype, 'prt');
 
-
 function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	if ( _depth === void 0 ) _depth = 0;
 
@@ -1949,14 +1948,12 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam', function (json) {
 	if (json.c) {
-		console.log('json.c', json.c);
 		json.c.sort(function (a, b) {
 			if (a.id.startsWith('prt'))
 				{ return -1; }
 			else
 				{ return 1; }
 		});
-		console.log('json.c after', json.c);
 	}
 	return new Game(json.id);
 });
@@ -4192,10 +4189,332 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
+var text = function (str) { return doc.createTextNode(str); };
+
+function mount (parent, child, before) {
+  var parentEl = parent.el || parent;
+  var childEl = child.el || child;
+
+  if (isList(childEl)) {
+    childEl = childEl.el;
+  }
+
+  if (child === childEl && childEl.__redom_view) {
+    // try to look up the view if not provided
+    child = childEl.__redom_view;
+  }
+
+  if (child !== childEl) {
+    childEl.__redom_view = child;
+  }
+
+  if (child.isMounted) {
+    child.remount && child.remount();
+  } else {
+    child.mount && child.mount();
+  }
+
+  if (before) {
+    parentEl.insertBefore(childEl, before.el || before);
+  } else {
+    parentEl.appendChild(childEl);
+  }
+
+  if (child.isMounted) {
+    child.remounted && child.remounted();
+  } else {
+    child.isMounted = true;
+    child.mounted && child.mounted();
+  }
+
+  return child;
+}
+
+function unmount (parent, child) {
+  var parentEl = parent.el || parent;
+  var childEl = child.el || child;
+
+  if (child === childEl && childEl.__redom_view) {
+    // try to look up the view if not provided
+    child = childEl.__redom_view;
+  }
+
+  child.unmount && child.unmount();
+
+  parentEl.removeChild(childEl);
+
+  child.isMounted = false;
+  child.unmounted && child.unmounted();
+
+  return child;
+}
+
+function setStyle (view, arg1, arg2) {
+  var el = view.el || view;
+
+  if (arguments.length > 2) {
+    el.style[arg1] = arg2;
+  } else if (isString(arg1)) {
+    el.setAttribute('style', arg1);
+  } else {
+    for (var key in arg1) {
+      setStyle(el, key, arg1[key]);
+    }
+  }
+}
+
+function setAttr (view, arg1, arg2) {
+  var el = view.el || view;
+  var isSVG = el instanceof window.SVGElement;
+
+  if (arguments.length > 2) {
+    if (arg1 === 'style') {
+      setStyle(el, arg2);
+    } else if (isSVG && isFunction(arg2)) {
+      el[arg1] = arg2;
+    } else if (!isSVG && (arg1 in el || isFunction(arg2))) {
+      el[arg1] = arg2;
+    } else {
+      el.setAttribute(arg1, arg2);
+    }
+  } else {
+    for (var key in arg1) {
+      setAttr(el, key, arg1[key]);
+    }
+  }
+}
+
+function parseArguments (element, args) {
+  for (var i = 0; i < args.length; i++) {
+    var arg = args[i];
+
+    if (!arg) {
+      continue;
+    }
+
+    // support middleware
+    if (typeof arg === 'function') {
+      arg(element);
+    } else if (isString(arg) || isNumber(arg)) {
+      element.appendChild(text(arg));
+    } else if (isNode(arg) || isNode(arg.el) || isList(arg.el)) {
+      mount(element, arg);
+    } else if (arg.length) {
+      parseArguments(element, arg);
+    } else if (typeof arg === 'object') {
+      setAttr(element, arg);
+    }
+  }
+}
+
+var isString = function (a) { return typeof a === 'string'; };
+var isNumber = function (a) { return typeof a === 'number'; };
+var isFunction = function (a) { return typeof a === 'function'; };
+
+var isNode = function (a) { return a && a.nodeType; };
+var isList = function (a) { return a && a.__redom_list; };
+
+var doc = document;
+
+var HASH = '#'.charCodeAt(0);
+var DOT = '.'.charCodeAt(0);
+
+function createElement (query, ns) {
+  var tag;
+  var id;
+  var className;
+
+  var mode = 0;
+  var start = 0;
+
+  for (var i = 0; i <= query.length; i++) {
+    var char = query.charCodeAt(i);
+
+    if (char === HASH || char === DOT || !char) {
+      if (mode === 0) {
+        if (i === 0) {
+          tag = 'div';
+        } else if (!char) {
+          tag = query;
+        } else {
+          tag = query.substring(start, i);
+        }
+      } else {
+        var slice = query.substring(start, i);
+
+        if (mode === 1) {
+          id = slice;
+        } else if (className) {
+          className += ' ' + slice;
+        } else {
+          className = slice;
+        }
+      }
+
+      start = i + 1;
+
+      if (char === HASH) {
+        mode = 1;
+      } else {
+        mode = 2;
+      }
+    }
+  }
+
+  var element = ns ? doc.createElementNS(ns, tag) : doc.createElement(tag);
+
+  if (id) {
+    element.id = id;
+  }
+
+  if (className) {
+    if (ns) {
+      element.setAttribute('class', className);
+    } else {
+      element.className = className;
+    }
+  }
+
+  return element;
+}
+
+var htmlCache = {};
+
+var memoizeHTML = function (query) { return htmlCache[query] || createElement(query); };
+
+function html (query) {
+  var arguments$1 = arguments;
+
+  var args = [], len = arguments.length - 1;
+  while ( len-- > 0 ) { args[ len ] = arguments$1[ len + 1 ]; }
+
+  var element;
+
+  if (isString(query)) {
+    element = memoizeHTML(query).cloneNode(false);
+  } else if (isNode(query)) {
+    element = query.cloneNode(false);
+  } else {
+    throw new Error('At least one argument required');
+  }
+
+  parseArguments(element, args);
+
+  return element;
+}
+
+html.extend = function (query) {
+  var clone = memoizeHTML(query);
+
+  return html.bind(this, clone);
+};
+
+var el = html;
+
+function setChildren (parent, children) {
+  if (children.length === undefined) {
+    return setChildren(parent, [children]);
+  }
+
+  var parentEl = parent.el || parent;
+  var traverse = parentEl.firstChild;
+
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+
+    if (!child) {
+      continue;
+    }
+
+    var childEl = child.el || child;
+
+    if (isList(childEl)) {
+      childEl = childEl.el;
+    }
+
+    if (childEl === traverse) {
+      traverse = traverse.nextSibling;
+      continue;
+    }
+
+    mount(parent, child, traverse);
+  }
+
+  while (traverse) {
+    var next = traverse.nextSibling;
+
+    unmount(parent, traverse);
+
+    traverse = next;
+  }
+}
+
+function getParentEl (parent) {
+  if (isString(parent)) {
+    return html(parent);
+  } else if (isNode(parent.el)) {
+    return parent.el;
+  } else {
+    return parent;
+  }
+}
+
+var Router = function Router (parent, Views, initData) {
+  this.el = getParentEl(parent);
+  this.Views = Views;
+  this.initData = initData;
+};
+Router.prototype.update = function update (route, data) {
+  if (route !== this.route) {
+    var Views = this.Views;
+    var View = Views[route];
+
+    this.view = View && new View(this.initData, data);
+    this.route = route;
+
+    setChildren(this.el, [ this.view ]);
+  }
+  this.view && this.view.update && this.view.update(data, route);
+};
+
+var SVG = 'http://www.w3.org/2000/svg';
+
+var svgCache = {};
+
+var memoizeSVG = function (query) { return svgCache[query] || createElement(query, SVG); };
+
+function stickyNonModalErrorPopup(text$$1) {
+	document.body.style.filter = 'contrast(70%) brightness(130%) saturate(200%) sepia(40%) hue-rotate(300deg)';
+	
+	var popup = el('div', text$$1, {
+		style: {
+			'position': 'fixed',
+			'display': 'inline-block',
+			'max-width': '600%',
+			'top': '20%',
+			'width': '100%',
+			'padding': '40px 10%',
+			'font-size': '20px',
+			'z-index': '100000',
+			'color': 'white',
+			'background': '#0c0c0c',
+			'text-align': 'center',
+			'user-select': 'auto !important',
+			'box-sizing': 'border-box'
+		}
+	});
+	
+	mount(document.body, popup);
+}
+
+window.sticky = stickyNonModalErrorPopup;
+
 var options = {
 	context: null, // 'play' or 'edit'
 	networkEnabled: false
 };
+
+
 
 function configureNetSync(_options) {
 	options = Object.assign(options, _options);
@@ -4235,13 +4554,17 @@ function gameReceivedOverNet(gameData) {
 	console.log('receive gameData', gameData);
 	if (!gameData)
 		{ return console.error('Game data was not received'); }
-	
-	executeExternal(function () {
-		Serializable.fromJSON(gameData);
-	});
-	localStorage.openEditPlayGameId = gameData.id;
-	// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
-	history.replaceState({}, null, ("?gameId=" + (gameData.id)));
+	try {
+		executeExternal(function () {
+			Serializable.fromJSON(gameData);
+		});
+		localStorage.openEditPlayGameId = gameData.id;
+		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);
+		history.replaceState({}, null, ("?gameId=" + (gameData.id)));
+	} catch(e) {
+		console.error('Game is corrupt.', e);
+		stickyNonModalErrorPopup('Game is corrupt.');
+	}
 }
 
 addChangeListener(function (change) {
@@ -4298,13 +4621,14 @@ var listeners$1 = {
 		var data = result.data;
 		console.error(("Server sent " + (isFatal ? 'FATAL ERROR' : 'error') + ":"), message, data);
 		if (isFatal) {
-			document.body.textContent = message;
+			stickyNonModalErrorPopup(message);
+			// document.body.textContent = message;
 		}
 	}
 };
 
 var sendChanges = limit(200, 'soon', function () {
-	if (!socket || changes.length === 0)
+	if (!socket || changes.length === 0 || !options.networkEnabled)
 		{ return; }
 	
 	var packedChanges = changes.map(packChange);
@@ -4331,6 +4655,11 @@ function connect() {
 				changeReceivedOverNet(param1);
 			}
 		};
+		socket.on('disconnect', function () {
+			console.warn('Disconnected!');
+			stickyNonModalErrorPopup('Disconnected!');
+			options.networkEnabled = false;
+		});
 	});
 }
 window.addEventListener('load', connect);

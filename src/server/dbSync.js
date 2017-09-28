@@ -37,14 +37,16 @@ where s1.type = 'gam' and s2.type = 'prp';
 
 dbSync.getGame = async function(gameId, allowNewGame) {
 	let serializables = await db.query('SELECT * FROM serializable WHERE gameId = ?', [gameId]);
-	if (serializables.length > 0)
+	if (serializables.length > 0) {
+		await gameUpdating.gameWithSerializablesRequested(gameId);
 		return ServerSerializable.buildTree(serializables);
-	else if (allowNewGame)
+	} else if (allowNewGame)
 		return createNewGame();
 	else
 		return null;
 };
 
+// After calling this function, call "await gameUpdating.markDirty(gameId, optionalConnection);"
 dbSync.writeChangeToDatabase = async function (change, gameId, optionalConnection) {
 	// let id = change[keyToShortKey.id];
 	// let value = change[keyToShortKey.value];
@@ -60,7 +62,7 @@ dbSync.writeChangeToDatabase = async function (change, gameId, optionalConnectio
 		let newValue = '';
 		
 		if (id.startsWith('prp')) {
-			gameUpdating.markDirty(gameId, optionalConnection);
+			await gameUpdating.markDirty(gameId, optionalConnection);
 			
 			newValue = JSON.stringify(change[keyToShortKey.value]);
 			writeId = id;
@@ -93,10 +95,16 @@ SET value = ?
 WHERE gameId = ? and id = ?
 		`, [newValue, gameId, writeId]); // id is wrong if (id.startsWith('epr') && id.includes('_')) {
 	} else if (type === changeType.addSerializableToTree) {
-		gameUpdating.markDirty(gameId, optionalConnection);
-		
 		let value = change[keyToShortKey.value];
 		let parentId = change[keyToShortKey.parentId];
+		
+		if (!parentId) {
+			// A game.
+			console.log('Inserting a game');
+			await gameUpdating.insertGame(gameId, optionalConnection);
+		} else {
+			await gameUpdating.markDirty(gameId, optionalConnection);
+		}
 		
 		let serializables = ServerSerializable.getSerializables(value, parentId);
 		
@@ -109,7 +117,7 @@ INSERT serializable (gameId, id, type, parentId, value, name)
 VALUES ${valuesSQL};
 		`, valuesParameters);
 	} else if (type === changeType.deleteAllChildren) {
-		gameUpdating.markDirty(gameId, optionalConnection);
+		await gameUpdating.markDirty(gameId, optionalConnection);
 		
 		let id = change[keyToShortKey.id];
 		let children = await db.query(`
@@ -120,11 +128,12 @@ WHERE parentId = ? and gameId = ?
 		if (children.length > 0)
 			return deleteListOfSerializables(children.map(c => c.id), gameId);
 	} else if (type === changeType.deleteSerializable) {
-		gameUpdating.markDirty(gameId, optionalConnection);
+		await gameUpdating.markDirty(gameId, optionalConnection);
 		
 		let id = change[keyToShortKey.id];
 		return deleteListOfSerializables([id], gameId);
 	} else if (type === changeType.move) {
+		await gameUpdating.markDirty(gameId, optionalConnection);
 		let id = change[keyToShortKey.id];
 		let parentId = change[keyToShortKey.parentId];
 		

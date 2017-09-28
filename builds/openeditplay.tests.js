@@ -1809,7 +1809,6 @@ Prototype.create = function(name) {
 
 Serializable.registerSerializable(Prototype, 'prt');
 
-
 function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	if ( _depth === void 0 ) _depth = 0;
 
@@ -1924,14 +1923,12 @@ Game.prototype.isRoot = true;
 
 Serializable.registerSerializable(Game, 'gam', function (json) {
 	if (json.c) {
-		console.log('json.c', json.c);
 		json.c.sort(function (a, b) {
 			if (a.id.startsWith('prt'))
 				{ return -1; }
 			else
 				{ return 1; }
 		});
-		console.log('json.c after', json.c);
 	}
 	return new Game(json.id);
 });

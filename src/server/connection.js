@@ -1,5 +1,6 @@
 const dbSync = require('./dbSync');
 const user = require('./user');
+const gameUpdating = require('./game/gameUpdating');
 
 let connection = module.exports;
 
@@ -10,7 +11,6 @@ connection.init = function(httpServer) {
 		new Connection(socket);
 	});
 };
-
 
 // gameId => array of Connections
 let connections = new Map();
@@ -44,11 +44,13 @@ class Connection {
 		this.socket = socket;
 		this.gameId = null;
 		this.userId = null;
+		this.context = null; // play | edit
 		this.ip = socket.request.connection._peername.address;
 		
 		let listeners = {
 			disconnecting: () => this.disconnected(),
-			identify: identifyData => this.onIdentify(identifyData)
+			identify: identifyData => this.onIdentify(identifyData),
+			deleteGame: () => this.onDeleteGame()
 		};
 		
 		socket.onevent = packet => {
@@ -79,6 +81,13 @@ class Connection {
 					await dbSync.writeChangeToDatabase(change, this.gameId, this);
 				} catch(e) {
 					console.error('socket.c writeChangeToDatabase', e);
+					
+					if (e.message.includes(gameUpdating.GAME_NOT_FOUND)) {
+						this.sendError('Game not found. Please refresh.', true);
+					} else {
+						this.sendError('Invalid change', true);
+					}
+					return;
 				}
 			});
 
@@ -98,6 +107,7 @@ class Connection {
 		try {
 			let { gameId, userId, userToken, context } = identifyData;
 			this.userId = userId;
+			this.context = context;
 			let gameData = await dbSync.getGame(gameId, context === 'edit');
 			if (gameData) {
 				this.gameId = gameData.id;
@@ -113,6 +123,11 @@ class Connection {
 		} catch(e) {
 			console.error('Connection.onIdentify', e);
 		}
+	}
+	async onDeleteGame() {
+		// All users with edit access have delete access
+		if (this.context === 'edit')
+			gameUpdating.markToBeDeleted(this.gameId);
 	}
 	requestIdentify() {
 		this.send('identifyYourself');

@@ -9,6 +9,7 @@ const user = require('./user');
 app.use(compression({
 	level: 1
 }));
+
 app.use(express.static('public'));
 
 app.get('/api/gameListSample', (req, res) => {
