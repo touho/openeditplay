@@ -7,7 +7,7 @@
 #
 # Host: 127.0.0.1 (MySQL 5.7.17)
 # Database: openeditplay
-# Generation Time: 2017-09-29 00:32:02 +0000
+# Generation Time: 2017-09-29 00:39:20 +0000
 # ************************************************************
 
 
@@ -27,7 +27,7 @@ DROP TABLE IF EXISTS `game`;
 
 CREATE TABLE `game` (
   `id` varchar(30) NOT NULL DEFAULT '',
-  `name` varchar(50) NOT NULL COMMENT 'metadata',
+  `name` varchar(50) DEFAULT '' COMMENT 'metadata',
   `creatorIP` varchar(15) NOT NULL DEFAULT '' COMMENT 'IP where the game is created',
   `creatorUserId` varchar(30) NOT NULL DEFAULT '',
   `isDirty` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1 if meta data in this table needs recalculating',
