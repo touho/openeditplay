@@ -13,3 +13,11 @@ function getAjax(url) {
 		xhttp.send();
 	});
 }
+
+function standaloneMobileLinkClickEventSupport(e) {
+	if (window.navigator.standalone) {
+		e.preventDefault();
+		let url = e.target.getAttribute('href');
+		window.location.href = url;
+	}
+}

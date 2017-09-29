@@ -88,6 +88,9 @@
 </div>
 
 <script>
+    window.IS_SMALL_SCREEN = window.screen.width < 800;
+    window.IS_MOBILE_STANDALONE = window.navigator.standalone;
+    
 	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
 	
 	window.addEventListener('load', () => {
@@ -103,10 +106,10 @@
 
 		let topBarBackground = document.getElementById('topBarBackground');
 
-		if (window.screen.width < 800)
+		if (IS_SMALL_SCREEN)
 			document.body.classList.add('isSmallDevice');
 
-		if (window.navigator.standalone) {
+		if (IS_MOBILE_STANDALONE) {
 			// In standalone mode, just show the top bar always. In iOS, scolling events can't be trusted.
 			topBarBackground.style.opacity = 1;
 		} else {

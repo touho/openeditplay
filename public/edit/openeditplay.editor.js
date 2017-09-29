@@ -5771,6 +5771,18 @@ prototypeAccessors.selectedEntity.get = function () {
 	if (this.sceneModule && this.sceneModule.selectedEntities.length > 0)
 		{ return this.sceneModule.selectedEntities[0]; }
 };
+Help.prototype.copyGame = function copyGame () {
+	var prototypes = game.getChildren('prt').map(function (prt) { return prt.toJSON(); });
+	var levels = game.getChildren('lvl').map(function (lvl) { return lvl.toJSON(); });
+	return JSON.stringify([].concat(prototypes, levels));
+};
+Help.prototype.pasteGame = function pasteGame (data) {
+	game.getChildren('lvl').forEach(function (lvl) { return lvl.delete(); });
+	game.getChildren('prt').forEach(function (prt) { return prt.delete(); });
+		
+	var children = JSON.parse(data).map(Serializable.fromJSON);
+	game.addChildren(children);
+};
 
 Object.defineProperties( Help.prototype, prototypeAccessors );
 
