@@ -1,3 +1,5 @@
+// This service is probably not needed because socket.disconnecting cleans dummy games
+
 const db = require('../db');
 const gameUpdating = require("../game/gameUpdating");
 
@@ -20,5 +22,7 @@ having diff < 10;
 `;
 async function deleteDummyGames() {
 	let dummyGames = await db.query(getDummyGamesSQL);
-	dummyGames.map(game => game.id).forEach(gameUpdating.deleteGame);
+	
+	// deleteGameIfDummy knows better if the game is dummy.
+	dummyGames.map(game => game.id).forEach(gameUpdating.deleteGameIfDummy);
 }

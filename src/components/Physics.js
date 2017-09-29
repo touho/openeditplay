@@ -7,7 +7,7 @@ const PHYSICS_SCALE = 1/50;
 export { PHYSICS_SCALE };
 const PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
-const DENSITY_SCALE = 1/10;
+const DENSITY_SCALE = 3/10;
 
 const type = {
 	dynamic: p2.Body.DYNAMIC,

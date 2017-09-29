@@ -41,6 +41,21 @@ gameUpdating.deleteGame = async function(gameId) {
 	await db.query('delete from serializable where gameId = ?', [gameId]);
 };
 
+const getGameEditingDiffSQL = `
+select timestampdiff(second, min(s.createdAt), max(s.updatedAt)) diff
+from game
+left join serializable s on game.id = s.gameId
+where game.id = ?
+group by game.id;
+`;
+gameUpdating.deleteGameIfDummy = async function(gameId) {
+	let diffRow = await db.queryOne(getGameEditingDiffSQL, [gameId]);
+	if (diffRow.diff <= 2) {
+		// Less than 2 second of editing. Consider dummy.
+		await gameUpdating.deleteGame(gameId);
+	}
+};
+
 gameUpdating.updateGame = async function(gameId, optionalConnection) {
 	try {
 		let statistics = await db.queryOne(getStatisticsSQL, [gameId]);

@@ -46,9 +46,9 @@ class Connection {
 		this.userId = null;
 		this.context = null; // play | edit
 		this.ip = socket.request.connection._peername.address;
+		this.changeCount = 0;
 		
 		let listeners = {
-			disconnecting: () => this.disconnected(),
 			identify: identifyData => this.onIdentify(identifyData)
 		};
 		
@@ -61,21 +61,26 @@ class Connection {
 				this.changeReceived(param1);
 			}
 		};
+		
+		socket.on('disconnecting', () => this.disconnected());
 
 		this.requestIdentify();
 	}
 	disconnected() {
-		connections.delete(this);
-		if (connections.has(this.gameId)) {
-			let gameConnections = connections.get(this.gameId);
+		let gameConnections = connections.get(this.gameId);
+		if (gameConnections) {
 			gameConnections.delete(this);
-			if (gameConnections.size === 0)
+			if (gameConnections.size === 0) {
 				connections.delete(this.gameId);
+
+				gameUpdating.deleteGameIfDummy(this.gameId);
+			}
 		}
 	}
 	changeReceived(changes) {
 		try {
 			changes.forEach(async change => {
+				this.changeCount++;
 				try {
 					await dbSync.writeChangeToDatabase(change, this.gameId, this);
 				} catch(e) {

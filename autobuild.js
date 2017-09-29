@@ -116,9 +116,10 @@ if (!global.TARGET_NONE) {
 	// Server restarter
 	function launchServer() {
 		// Timeout so that js and css files would have time to build before server force restarts clients
+		console.log("serverProcess = 'wait';", Date.now());
 		serverProcess = 'wait';
 		setTimeout(() => {
-			console.log('Launching server.');
+			console.log('Launching server.', Date.now());
 			serverProcess = cp.fork(ROOT + 'src/server/main.js');
 		}, 200);
 	}
@@ -127,17 +128,21 @@ if (!global.TARGET_NONE) {
 		if (serverProcess === 'wait')
 			return;
 
-		if (serverProcess) {
+		if (serverProcess && !serverProcess.killed) {
 			console.log('on close', Date.now());
 			serverProcess.on('close', launchServer);
+			console.log('on close set');
 			serverProcess.kill('SIGHUP');
+			console.log('kill sent');
 		} else {
+			console.log('else launchServer');
 			launchServer();
 		}
 	});
 	// Start server when a heavy build process has been done.
 	let serverStartWatcher = watch('builds/openeditplay.editor.js', () => {
 		serverStartWatcher.close();
+		console.log('server start launchServer');
 		launchServer();
 	});
 }

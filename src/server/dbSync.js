@@ -103,7 +103,6 @@ WHERE gameId = ? and id = ?
 		
 		if (!parentId) {
 			// A game.
-			console.log('Inserting a game');
 			await gameUpdating.insertGame(gameId, optionalConnection);
 		} else {
 			await gameUpdating.markDirty(gameId, optionalConnection);

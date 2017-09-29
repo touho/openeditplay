@@ -32,86 +32,38 @@ module.exports = async function createNewGame(connection) {
 		v: game,
 		p: null
 	}, id, connection);
-	
+
 	return game;
 };
 
-const INITIAL_GAME_CHILDREN = [
-	{
-		"id": "prte2f3KiHuM0sF8fGr",
-		"c": [
-			{
-				"id": "prpQUR3Ei2tKQ10XL40",
-				"v": "Static",
-				"n": "name"
-			},
-			{
-				"id": "cdaUTyhrNmhJgbj3hWz",
-				"c": [
-					{
-						"id": "prptvjNMPCRfYOB18By",
-						"v": "static",
-						"n": "type"
-					}
-				],
-				"cid": "_Physics",
-				"n": "Physics"
-			},
-			{
-				"id": "cdayHf6lKxMHybf1UDm",
-				"cid": "cidAqAv86xu0G",
-				"n": "Shape"
-			}
-		]
-	},
-	{
-		"id": "prtTsDqevlt2okzITrF",
-		"c": [
-			{
-				"id": "prpcCUqrxeQMOamqIbc",
-				"v": "Dynamic",
-				"n": "name"
-			},
-			{
-				"id": "cda9QvRA0RtxAJ2Y73E",
-				"cid": "cidPNowJEkdoK",
-				"n": "Shape"
-			},
-			{
-				"id": "cdaGVd0cK6exGIvPlm8",
-				"cid": "_Physics",
-				"n": "Physics"
-			}
-		]
-	},
-	{
-		"id": "prtrQ10Xvlt26lKIsrk",
-		"c": [
-			{
-				"id": "prp_testPrototypeName",
-				"v": "Actor",
-				"n": "name"
-			},
-			{
-				"id": "cdalev0lEyN36HMU1yq",
-				"cid": "_CharacterController",
-				"n": "CharacterController"
-			},
-			{
-				"id": "cdaP5MbwTHjlNTtsbOf",
-				"cid": "_Physics",
-				"n": "Physics"
-			},
-			{
-				"id": "cdatyGx2WHvS86caySN",
-				"cid": "cidhFIVThaem3",
-				"n": "Shape"
-			}
-		]
-	},
-	{
-		"id": "prp_gameName",
-		"v": "My game",
-		"n": "name"
-	}
-];
+const INITIAL_GAME_CHILDREN = [{
+	"id": "prte2f3KiHuM0sF8fGr",
+	"c": [{"id": "prpQUR3Ei2tKQ10XL40", "v": "Static", "n": "name"}, {
+		"id": "cdaUTyhrNmhJgbj3hWz",
+		"c": [{"id": "prptvjNMPCRfYOB18By", "v": "static", "n": "type"}],
+		"cid": "_Physics",
+		"n": "Physics"
+	}, {"id": "cdayHf6lKxMHybf1UDm", "cid": "cidAqAv86xu0G", "n": "Shape"}]
+}, {
+	"id": "prtTsDqevlt2okzITrF",
+	"c": [{"id": "prpcCUqrxeQMOamqIbc", "v": "Dynamic", "n": "name"}, {
+		"id": "cda9QvRA0RtxAJ2Y73E",
+		"cid": "cidPNowJEkdoK",
+		"n": "Shape"
+	}, {"id": "cdaGVd0cK6exGIvPlm8", "cid": "_Physics", "n": "Physics"}]
+}, {
+	"id": "prtrQ10Xvlt26lKIsrk",
+	"c": [{"id": "prp_testPrototypeName", "v": "Actor", "n": "name"}, {
+		"id": "cdalev0lEyN36HMU1yq",
+		"cid": "_CharacterController",
+		"n": "CharacterController"
+	}, {
+		"id": "cdaP5MbwTHjlNTtsbOf",
+		"c": [{"id": "prp7GBI7ptGoOB0czCf", "v": 1, "n": "rotationalDrag"}],
+		"cid": "_Physics",
+		"n": "Physics"
+	}, {"id": "cdatyGx2WHvS86caySN", "cid": "cidhFIVThaem3", "n": "Shape"}]
+}, {
+	"id": "lvloRefeYW72V69c3Q1",
+	"c": [{"id": "prpfI8ByaPzgGnGavwE", "v": "Level 1", "n": "name"}]
+}, {"id": "prp_gameName", "v": "My game", "n": "name"}];

@@ -716,6 +716,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
+// info about type, validator, validatorParameters, initialValue
+
+
+
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -2330,11 +2334,11 @@ function deleteBody(owner, body) {
 var defaultMaterialOptions = {
 	friction: 0.3,
 	restitution: 0,
-	stiffness: 1e6,
-	relaxation: 3,
-	frictionStiffness: 1e6,
-	frictionRelaxation: 4,
-	surfaceVelocity: 0
+	stiffness: 1e6, // Hardness of the contact. Less stiffness will make the objects penetrate more, and will make the contact act more like a spring than a contact force.
+	relaxation: 5, // Original: 3. Small number makes bounce. Big number makes object stay inside another object.
+	frictionStiffness: 1e6, // Stiffness of the resulting friction force. For most cases, the value of this property should be a large number. I cannot think of any case where you would want less frictionStiffness.
+	frictionRelaxation: 4, // Relaxation of the resulting friction force. The default value should be good for most simulations.
+	surfaceVelocity: 0 // Will add surface velocity to this material. If bodyA rests on top if bodyB, and the surface velocity is positive, bodyA will slide to the right.
 };
 
 function createMaterial(owner, options) {
@@ -3123,6 +3127,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3708,7 +3714,7 @@ Component.register({
 var PHYSICS_SCALE = 1/50;
 var PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
 
-var DENSITY_SCALE = 1/10;
+var DENSITY_SCALE = 3/10;
 
 var type = {
 	dynamic: p2$1.Body.DYNAMIC,
