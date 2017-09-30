@@ -16,7 +16,7 @@ gameDeleter.start = function() {
 const getDummyGamesSQL = `
 select id, timestampdiff(second, min(createdAt), max(updatedAt)) diff
 from game
-where updatedAt < UTC_TIMESTAMP - interval 1 hour
+where updatedAt < UTC_TIMESTAMP - interval 6 hour
 group by id
 having diff < 10;
 `;

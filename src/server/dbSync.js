@@ -42,6 +42,11 @@ function idLooksLikeGameId(gameId) {
 dbSync.getGame = async function(gameId, allowNewGame) {
 	let serializables = await db.query('SELECT * FROM serializable WHERE gameId = ?', [gameId]);
 	if (serializables.length > 0) {
+		try {
+			await db.queryOne('select id from game where id = ?', [gameId]);
+		} catch(e) {
+			await gameUpdating.insertGame(gameId);
+		}
 		return ServerSerializable.buildTree(serializables);
 	} else if (allowNewGame && !idLooksLikeGameId(gameId))
 		return createNewGame();

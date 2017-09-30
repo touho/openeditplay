@@ -72,8 +72,6 @@ class Connection {
 			gameConnections.delete(this);
 			if (gameConnections.size === 0) {
 				connections.delete(this.gameId);
-
-				gameUpdating.deleteGameIfDummy(this.gameId);
 			}
 		}
 	}
