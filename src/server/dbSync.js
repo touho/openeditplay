@@ -109,6 +109,7 @@ WHERE gameId = ? and id = ?
 		if (!parentId) {
 			// A game.
 			await gameUpdating.insertGame(gameId, optionalConnection);
+			setTimeout(gameUpdating.updateAllDirtyGames, 1000);
 		} else {
 			await gameUpdating.markDirty(gameId, optionalConnection);
 		}

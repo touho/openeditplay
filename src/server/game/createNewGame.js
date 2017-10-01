@@ -32,7 +32,7 @@ module.exports = async function createNewGame(connection) {
 		v: game,
 		p: null
 	}, id, connection);
-
+	
 	return game;
 };
 
