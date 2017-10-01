@@ -1,2 +1,2 @@
 // require('./gameUpdater');
-// require('./gameDeleter').start();
+require('./gameDeleter').start();
