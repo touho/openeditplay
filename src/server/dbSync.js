@@ -21,6 +21,13 @@ let keyToShortKey = {
 dbSync.changeType = changeType;
 dbSync.keyToShortKey = keyToShortKey;
 
+/*
+select id, name, createdAt, updatedAt, serializableCount, levelCount, prototypeCount, entityPrototypeCount, componentDataCount
+from game
+where serializableCount > 0 and name != '' and serializableCount != ?;
+
+[createNewGame.newGameSerializableCount]
+ */
 dbSync.getGames = async function() {
 	let games = await db.query(`
 select s1.id, s2.value as name

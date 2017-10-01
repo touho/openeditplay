@@ -18,7 +18,7 @@ gameDeleter.start = function() {
 const getDummyGamesSQL = `
 select id
 from game
-where createdAt > UTC_TIMESTAMP - interval 2 day and serializableCount = ? and entityPrototypeCount = 0;
+where createdAt between (UTC_TIMESTAMP - interval 2 day) and (UTC_TIMESTAMP - interval 6 hour) and serializableCount = ? and entityPrototypeCount = 0;
 `;
 async function deleteDummyGames() {
 	let dummyGames = await db.query(getDummyGamesSQL, [createNewGame.newGameSerializableCount]);
