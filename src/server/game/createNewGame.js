@@ -36,6 +36,7 @@ module.exports = async function createNewGame(connection) {
 	return game;
 };
 
+// Children must not have any entityPrototypes. see gameDeleter.js sql
 const INITIAL_GAME_CHILDREN = [{
 	"id": "prte2f3KiHuM0sF8fGr",
 	"c": [{"id": "prpQUR3Ei2tKQ10XL40", "v": "Static", "n": "name"}, {
@@ -67,3 +68,6 @@ const INITIAL_GAME_CHILDREN = [{
 	"id": "lvloRefeYW72V69c3Q1",
 	"c": [{"id": "prpfI8ByaPzgGnGavwE", "v": "Level 1", "n": "name"}]
 }, {"id": "prp_gameName", "v": "My game", "n": "name"}];
+
+// + 1 for game serializable that is created. These are only children.
+module.exports.newGameSerializableCount = JSON.stringify(INITIAL_GAME_CHILDREN).match(/"id"/g).length + 1;

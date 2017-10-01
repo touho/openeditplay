@@ -42,16 +42,16 @@ gameUpdating.deleteGame = async function(gameId) {
 };
 
 const getGameEditingDiffSQL = `
-select timestampdiff(second, min(s.createdAt), max(s.updatedAt)) diff
-from game
-left join serializable s on game.id = s.gameId
-where game.id = ?
-group by game.id;
+select timestampdiff(second, min(createdAt), max(updatedAt)) diff
+from serializable
+where gameId = ?
+group by gameId
+having diff < 2;
 `;
 gameUpdating.deleteGameIfDummy = async function(gameId) {
-	let diffRow = await db.queryOne(getGameEditingDiffSQL, [gameId]);
-	if (diffRow.diff <= 2) {
-		// Less than 2 second of editing. Consider dummy.
+	let diffRows = await db.query(getGameEditingDiffSQL, [gameId]);
+	if (diffRows.length === 1) {
+		// Less than 2 second of "editing". Consider dummy.
 		await gameUpdating.deleteGame(gameId);
 	}
 };

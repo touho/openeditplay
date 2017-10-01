@@ -2,6 +2,7 @@
 
 const db = require('../db');
 const gameUpdating = require("../game/gameUpdating");
+const createNewGame = require("../game/createNewGame");
 
 let gameDeleter = module.exports;
 
@@ -13,15 +14,14 @@ gameDeleter.start = function() {
 	setTimeout(deleteDummyGames, 1000 * 10);
 };
 
+// fast select suspicious games. if they are just suspicious and not really dummy games, stop fetching them after 2 days.
 const getDummyGamesSQL = `
-select id, timestampdiff(second, min(createdAt), max(updatedAt)) diff
+select id
 from game
-where updatedAt < UTC_TIMESTAMP - interval 6 hour
-group by id
-having diff < 10;
+where createdAt > UTC_TIMESTAMP - interval 2 day and serializableCount = ? and entityPrototypeCount = 0;
 `;
 async function deleteDummyGames() {
-	let dummyGames = await db.query(getDummyGamesSQL);
+	let dummyGames = await db.query(getDummyGamesSQL, [createNewGame.newGameSerializableCount]);
 	
 	// deleteGameIfDummy knows better if the game is dummy.
 	dummyGames.map(game => game.id).forEach(gameUpdating.deleteGameIfDummy);
