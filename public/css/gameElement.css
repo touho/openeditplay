@@ -2,8 +2,11 @@ table.gameList {
     width: 100%;
     margin: 0 auto;
     text-align: left;
-    max-width: 700px;
-    border-collapse: collapse;
+    border-collapse: co llapse;
+}
+
+table.gameList > * {
+    min-width: 600px;
 }
 
 thead.gameListHeader > th {
@@ -14,7 +17,6 @@ thead.gameListHeader > th {
 
 .gameElement {
     text-align: left;
-    
     background: white;
 }
 
@@ -23,7 +25,7 @@ table.gameList .gameElement:not(:first-of-type) {
 }
 
 .gameElement > td {
-    padding: 10px;
+    padding: 10px 5px 10px 5px;
 }
 /*
 .moreGamesGame {
@@ -42,9 +44,12 @@ table.gameList .gameElement:not(:first-of-type) {
 .gameElementName {
     color: black;
     text-shadow: rgba(0, 0, 0, 0.4) 0 1px 3px;
-    
+    min-width: 120px;
     font-size: 18px;
+}
 
+.gameElementPlay {
+    width: 1px;
 }
 
 .linkButton {
@@ -62,38 +67,4 @@ table.gameList .gameElement:not(:first-of-type) {
 .editButton {
     filter: grayscale(80%);
     font-size: 16px;
-}
-
-@media (max-width: 900px) {
-    /*
-    Mobile alternative for tables
-     */
-    thead.gameListHeader {
-        display: none;
-    }
-    tbody.gameListContent {
-        display: block;
-    }
-    tr.gameElement {
-        display: block;
-        padding: 20px 10px;
-    }
-    tr.gameElement > td {
-        display: inline-block;
-    }
-    tr.gameElement > td.gameElementName {
-        display: block;
-    }
-    td.gameElementSize::before {
-        content: 'size '
-    }
-    td.gameElementCreated::before {
-        content: 'created '
-    }
-    td.gameElementModified::before {
-        content: 'modified '
-    }
-    .gameElement > td {
-        padding: 5px 15px 5px 0;
-    }
 }
