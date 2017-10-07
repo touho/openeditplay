@@ -156,6 +156,10 @@ html, body {
     padding: 70px 20px;
 }
 
+#games {
+    text-align: center;
+}
+
 #about {
     background: #fafffb;
     margin: 0px auto;

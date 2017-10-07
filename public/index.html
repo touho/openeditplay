@@ -11,7 +11,7 @@
     <script src="/js/gameElement.js"></script>
     <script src="/common/profile.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable = no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable = no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/img/logo_graphics.png">
@@ -23,7 +23,7 @@
 <div id="topBar">
     <div id="topBarBackground"></div>
     <a id="createGameTopBarButton" href="/edit/?gameId=?">Create Game</a>
-    <a href="#gameList">Games</a>
+    <a href="#games">Games</a>
     <a href="#about">About</a>
     <div id="profileButtonContainer"></div>
 </div>
@@ -35,10 +35,10 @@
     <div id="tooSmallScreen">Use desktop browser to create games</div>
 </div>
 
-<div id="gameList" class="section">
+<div id="games" class="section">
     <div class="sectionTitle">GAMES</div>
 
-    <div id="gameListContent">
+    <div id="gamesContent">
 
     </div>
 </div>
@@ -94,11 +94,10 @@
 	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
 	
 	window.addEventListener('load', () => {
-		let gameListContent = document.getElementById('gameListContent');
+		let gameListContent = document.getElementById('gamesContent');
 		getAjax('/api/gameListSample').then(gameListData => {
 			let gameList = new GameList();
 			gameList.update(gameListData);
-
 			redom.mount(gameListContent, gameList);
 		}).catch(() => {
 			redom.mount(gameListContent, redom.text('Could not load'));

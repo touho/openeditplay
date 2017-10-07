@@ -30,16 +30,12 @@ where serializableCount > 0 and name != '' and serializableCount != ?;
  */
 dbSync.getGames = async function() {
 	let games = await db.query(`
-select s1.id, s2.value as name
-from serializable s1
-left join serializable s2 on s1.id = s2.parentId
-where s1.type = 'gam' and s2.type = 'prp';
-	`);
+select id, name, createdAt, updatedAt, serializableCount, levelCount, prototypeCount, entityPrototypeCount, componentDataCount
+from game
+where serializableCount > 0 and name != '' and serializableCount != ?;
+	`, [createNewGame.newGameSerializableCount]);
 	
-	return games.map(g => ({
-		id: g.id,
-		name: JSON.parse(g.name)
-	}))
+	return games;
 };
 
 function idLooksLikeGameId(gameId) {

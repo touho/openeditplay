@@ -128,14 +128,10 @@ if (!global.TARGET_NONE) {
 		if (serverProcess === 'wait')
 			return;
 
-		if (serverProcess && !serverProcess.killed) {
-			console.log('on close', Date.now());
+		if (serverProcess && serverProcess.exitCode === null) {
 			serverProcess.on('close', launchServer);
-			console.log('on close set');
 			serverProcess.kill('SIGHUP');
-			console.log('kill sent');
 		} else {
-			console.log('else launchServer');
 			launchServer();
 		}
 	});
