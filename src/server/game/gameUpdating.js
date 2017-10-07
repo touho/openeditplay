@@ -20,6 +20,16 @@ gameUpdating.markDirty = async function(gameId, optionalConnection) {
 	setTimeout(gameUpdating.updateAllDirtyGames, 1000);
 };
 
+// TODO: limit the number of function calls per gameId
+// The lightest possible way to mark a game updated. Will not make the game dirty.
+gameUpdating.markUpdated = async function (gameId) {
+	return db.query(`
+update game
+set updatedAt = UTC_TIMESTAMP
+where id=?;
+	`, [gameId]);
+};
+
 gameUpdating.updateAllDirtyGames = limit(gameUpdating.DIRTY_GAME_UPDATE_INTERVAL, 'soon', async () => {
 	let dirtyGameIds = await db.query(`
 select id

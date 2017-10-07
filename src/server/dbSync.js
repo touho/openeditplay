@@ -73,6 +73,7 @@ dbSync.writeChangeToDatabase = async function (change, gameId, optionalConnectio
 		let newValue = '';
 		
 		if (id.startsWith('prp')) {
+			// The property might be game name. Game meta data must be recalculated.
 			await gameUpdating.markDirty(gameId, optionalConnection);
 			
 			newValue = JSON.stringify(change[keyToShortKey.value]);
@@ -95,6 +96,9 @@ WHERE id = ? AND gameId = ?;
 				valueObject[propertyTinyName] = change[keyToShortKey.value];
 				newValue = JSON.stringify(valueObject);
 				writeId = parentId;
+
+				// Game meta data doesn't have to be recalculated. Just mark the game updated.
+				await gameUpdating.markUpdated(gameId);
 			} else {
 				throw new Error('Can not set value of non-property');
 			}
