@@ -1,8 +1,15 @@
+div.gameListContainer {
+    width: 100%;
+    overflow: auto;
+    max-width: 800px;
+    margin: 0 auto;
+
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 8px 8px -4px;
+}
+
 table.gameList {
     width: 100%;
-    margin: 0 auto;
     text-align: left;
-    max-width: 800px;
     border-collapse: collapse;
 }
 
@@ -14,15 +21,16 @@ thead.gameListHeader > th {
     padding: 0 5px;
 }
 
+tbody.gameListContent {
+    border-top: 1px solid #fbfbfb;
+}
+
 
 
 .gameElement {
     text-align: left;
     background: white;
-}
-
-table.gameList .gameElement:not(:first-of-type) {
-    box-shadow: inset rgba(0, 0, 0, 0.13) 0 4px 13px -6px;
+    background: linear-gradient(to bottom, white, #f9f9f9);
 }
 
 .gameElement > td {

@@ -37,10 +37,6 @@
 
 <div id="games" class="section">
     <div class="sectionTitle">GAMES</div>
-
-    <div id="gamesContent">
-
-    </div>
 </div>
 
 <div id="about" class="section">
@@ -94,13 +90,13 @@
 	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
 	
 	window.addEventListener('load', () => {
-		let gameListContent = document.getElementById('gamesContent');
+		let gamesElement = document.getElementById('games');
 		getAjax('/api/gameListSample').then(gameListData => {
 			let gameList = new GameList();
 			gameList.update(gameListData);
-			redom.mount(gameListContent, gameList);
+			redom.mount(gamesElement, gameList);
 		}).catch(() => {
-			redom.mount(gameListContent, redom.text('Could not load'));
+			redom.mount(gamesElement, redom.text('Could not load'));
         });
 
 		let topBarBackground = document.getElementById('topBarBackground');

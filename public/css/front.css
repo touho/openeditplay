@@ -156,20 +156,8 @@ html, body {
     padding: 70px 0px;
 }
 
-/*
-@media (max-width: 800px) {
-    .section {
-        padding: 70px 0px;
-    }
-}
-*/
-
 #games {
     text-align: center;
-}
-#gamesContent {
-    max-width: 100%;
-    overflow: auto;
 }
 
 #about {
