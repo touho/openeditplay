@@ -8,6 +8,9 @@ gameUpdating.DIRTY_GAME_UPDATE_INTERVAL = 5000;
 
 gameUpdating.GAME_NOT_FOUND = 'game not found';
 
+gameUpdating.idLooksLikeGameId = function(gameId) {
+	return typeof gameId === 'string' && gameId.length > 15 && gameId.startsWith('gam');
+};
 
 // TODO: limit the number of function calls per gameId
 gameUpdating.markDirty = async function(gameId, optionalConnection) {

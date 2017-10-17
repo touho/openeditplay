@@ -1,5 +1,5 @@
 import { el, list, mount } from 'redom';
-import events, { dispatch, listen } from '../events';
+import events, { dispatch, listen } from '../../util/events';
 import { setOption, getOption } from '../editor';
 import * as performance from '../../util/performance';
 

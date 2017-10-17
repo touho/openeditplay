@@ -6,7 +6,7 @@ const server = require('http').Server(app);
 const compression = require('compression');
 const connection = require('./connection');
 const dbSync = require('./dbSync');
-const user = require('./user');
+const userTools = require('./userTools');
 
 app.use(compression({
 	level: 1
@@ -25,7 +25,10 @@ app.get('/api/gameListSample', (req, res) => {
 	});
 });
 app.get('/api/profile', (req, res) => {
-	res.send(user.getProfile(req.query.userId, req.query.userToken));
+	userTools.getProfile(req.query.userId, req.query.userToken).then(profile => {
+		console.log('profile', profile);
+		res.send(profile);
+	});
 });
 
 server.listen(3000, function(){

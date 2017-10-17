@@ -5,7 +5,7 @@ import {list, el} from 'redom';
 import assert from '../../../util/assert';
 import {setChangeOrigin} from '../../../core/serializableManager';
 import Confirmation from './Confirmation';
-import { dispatch, listen } from '../../events';
+import { dispatch, listen } from '../../../util/events';
 
 const CATEGORY_ORDER = [
 	'Common',
@@ -19,7 +19,6 @@ export default class ComponentAdder extends Popup {
 	constructor(parent) {
 		super({
 			title: 'Add Component',
-			width: '500px',
 			content: list('div.componentAdderContent', Category, undefined, parent)
 		});
 

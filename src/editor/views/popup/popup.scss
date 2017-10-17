@@ -26,8 +26,8 @@ div.popup div.popupContent {
   max-width: 90%;
   max-height: 90%;
   display: inline-block;
-  background: gray;
-  background: linear-gradient(to bottom right, #858585, #606060);
+  background: #676767;
+  background: linear-gradient(to bottom right, #696969, #505050);
   border-radius: 20px;
   padding: 10px;
   border: 1px solid $editor-effect-color;
@@ -40,6 +40,10 @@ div.popup div.popupTitle {
   margin-top: 10px;
   text-align: center;
   font-size: 1.2em;
+}
+
+div.popup div.genericCustomContent {
+  margin: 0 20px 10px 20px;
 }
 
 div.popup div.popupButtons {

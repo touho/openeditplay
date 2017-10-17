@@ -4,8 +4,8 @@ import { game } from '../../core/game';
 import { editor } from '../editor';
 import Level from '../../core/level';
 import { Button } from '../views/popup/popup';
-import { dispatch, listen } from '../events';
-import events from "../events";
+import { dispatch, listen } from '../../util/events';
+import events from "../../util/events";
 
 export function createNewLevel() {
 	let lvl = new Level();

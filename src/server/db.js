@@ -6,8 +6,10 @@ var connectionPool = require('mysql2').createPool(global.config.db);
 db.query = async function (sql, params) {
 	return new Promise((resolve, reject) => {
 		connectionPool.getConnection(function (err, connection) {
-			if (err)
+			if (err) {
+				console.error('SQL error', sql, params);
 				return reject('Could not get MySQL connection');
+			}
 			
 			connection.query(sql, params, function (err, rows, fields) {
 				connection.release();

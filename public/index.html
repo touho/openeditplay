@@ -11,7 +11,8 @@
     <script src="/js/gameElement.js"></script>
     <script src="/common/profile.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable = no">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable = no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/img/logo_graphics.png">
@@ -43,10 +44,9 @@
     <div class="sectionTitle">ABOUT</div>
 
     <p>
-        Open Edit Play is an attempt to revolutionize making and sharing games - gamifying game making.
-        The goal is not to create a topnotch game engine that allows creation of any game.
-        The goal is to make it easy to share interactive game ideas with your friends and to let game creators focus on
-        creativity.
+        Open Edit Play is an attempt to revolutionize making and sharing games - gamifying game making itself.
+        The goal is not to create a topnotch game engine that allows creation of any type of game.
+        The goal is to make it easy to share little game ideas with people and to let game creators focus on creativity.
     </p>
 
     <div id="aboutList">
@@ -84,11 +84,11 @@
 </div>
 
 <script>
-    window.IS_SMALL_SCREEN = window.screen.width < 800;
-    window.IS_MOBILE_STANDALONE = window.navigator.standalone;
-    
+	window.IS_SMALL_SCREEN = window.screen.width < 800;
+	window.IS_MOBILE_STANDALONE = window.navigator.standalone;
+
 	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
-	
+
 	window.addEventListener('load', () => {
 		let gamesElement = document.getElementById('games');
 		getAjax('/api/gameListSample').then(gameListData => {
@@ -97,7 +97,7 @@
 			redom.mount(gamesElement, gameList);
 		}).catch(() => {
 			redom.mount(gamesElement, redom.text('Could not load'));
-        });
+		});
 
 		let topBarBackground = document.getElementById('topBarBackground');
 

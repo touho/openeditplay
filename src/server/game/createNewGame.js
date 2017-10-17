@@ -1,22 +1,9 @@
 const db = require("../db");
 const dbSync = require('../dbSync');
-
-const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
-const CHAR_COUNT = CHARACTERS.length;
-
-const RANDOM_CHAR_COUNT = 16;
-
-const random = Math.random;
-
-function createGameId() {
-	let id = 'gam';
-	for (let i = RANDOM_CHAR_COUNT - 1; i >= 0; --i)
-		id += CHARACTERS[random() * CHAR_COUNT | 0];
-	return id;
-}
+const idGenerator = require('../util/idGenerator');
 
 module.exports = async function createNewGame(connection) {
-	let id = createGameId();
+	let id = idGenerator.generateId('gam');
 	let conflictingResults = await db.query(`SELECT * FROM serializable WHERE id = ? OR gameId = ?`, [id, id]);
 
 	if (conflictingResults.length > 0)

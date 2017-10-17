@@ -71,7 +71,7 @@ button.button i.fa {
   position: relative;
 }
 .moduleTab {
-  background: #2c2c2c;
+  background: rgba(0, 0, 0, 0.30);
   padding: 1px 5px;
   border-top: 1px solid;
   border-left: 1px solid;
@@ -83,7 +83,6 @@ button.button i.fa {
 .moduleTab:not(.moduleSelected) {
   filter: saturate(0);
   /*opacity: 0.5;*/
-  background: #2c2c2c;
 }
 .moduleTab.moduleSelected {
   opacity: 1;
@@ -249,7 +248,7 @@ img.logo:hover {
 .topIconTextButtonContent {
   transform: translateY(-50%);
   padding: 10px;
-  background: #333;
+  background: rgba(0, 0, 0, 0.08);
   border: 1px outset #444;
 }
 .topIconTextButtonContent:hover {
@@ -293,7 +292,7 @@ img.logo:hover {
 }
 .typesDragHelper {
   margin-top: 30px;
-  color: #2f2f2f;
+  color: rgba(0, 0, 0, 0.17);
   text-shadow: none;
   font-size: 30px;
   letter-spacing: 5px;
@@ -421,7 +420,7 @@ img.logo:hover {
   border-top: none !important;
 }
 .performanceItem {
-  border-top: 1px solid #424242;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .performanceItemName {
   display: inline-block;
@@ -455,7 +454,7 @@ img.logo:hover {
   color: #d7d7d7;
 }
 .jstree-default .jstree-clicked {
-  background: #444344;
+  background: rgba(255, 255, 255, 0.06);;
   color: #d7d7d7;
 }
 div.propertyEditor div.container[type='icd'], div.propertyEditor div.container[type='com'] {
@@ -543,8 +542,17 @@ td.nameCell .infoI {
 tr.property.visibleIf.hidden {
   display: none;
 }
+tr.property.visibleIf .nameCell::before {
+  content: '\25CF';
+  font-size: 12px;
+  opacity: 0.3;
+  position: absolute;
+  left: 3px;
+  top: 5px;
+}
 tr.property.visibleIf .nameCell {
-  border-left: 15px solid #363636;
+  background: transparent;
+  padding-left: 17px;
 }
 td.propertyContent {
   width: 99%;
@@ -585,7 +593,7 @@ td.propertyContent {
   z-index: 10;
 }
 .propertyEditor .property input {
-  background: #272727;
+  background: rgba(0, 0, 0, 0.12);
   border: 1px inset #444;
   padding: 2px 3px;
   outline: none;
@@ -645,7 +653,7 @@ td.propertyContent {
   border: 1px solid white;
   padding: 15px;
   border-radius: 8px;
-  background: #888;
+  background: rgba(200, 200, 200, 0.25);
   max-width: 400px;
 
   box-shadow: 2px 2px 8px 1px #555;
@@ -691,8 +699,8 @@ div.popup div.popupContent {
   max-width: 90%;
   max-height: 90%;
   display: inline-block;
-  background: gray;
-  background: linear-gradient(to bottom right, #858585, #606060);
+  background: #676767;
+  background: linear-gradient(to bottom right, #696969, #505050);
   border-radius: 20px;
   padding: 10px;
   border: 1px solid #d7d7d7;
@@ -704,6 +712,9 @@ div.popup div.popupTitle {
   margin-top: 10px;
   text-align: center;
   font-size: 1.2em;
+}
+div.popup div.genericCustomContent {
+  margin: 0 20px 10px 20px;
 }
 div.popup div.popupButtons {
 }
@@ -727,6 +738,9 @@ body, html {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   text-shadow: 1px 1px 1px #060606;
   overflow: hidden; /* disables osX scrolling effect*/
+}
+body.noEditAccess {
+  background: #232f24;
 }
 .select-none {
   -webkit-user-select: none;  /* Chrome all / Safari all */

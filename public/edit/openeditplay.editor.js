@@ -657,8 +657,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -785,10 +783,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3321,8 +3315,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4712,6 +4704,72 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
+/*
+ Global event system
+
+ let unlisten = events.listen('event name', function(params, ...) {});
+ eventManager.dispatch('event name', paramOrParamArray);
+ unlisten();
+ */
+
+var listeners$2 = {};
+
+var events = {
+	listen: function listen(event, callback) {
+		if (!listeners$2.hasOwnProperty(event)) {
+			listeners$2[event] = [];
+		}
+		listeners$2[event].push(callback);
+		return function () {
+			var index = listeners$2[event].indexOf(callback);
+			listeners$2[event].splice(index, 1);
+		};
+	},
+	dispatch: function dispatch(event) {
+		var args = [], len = arguments.length - 1;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
+
+		if (listeners$2.hasOwnProperty(event)) {
+			var listener = listeners$2[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
+				/*
+				try {
+					listeners[event][i].apply(null, args);
+				} catch (e) {
+					if (console && console.sendError) {
+						console.sendError(e);
+					}
+				}
+				*/
+			}
+		}
+	},
+	// Promise is resolved when next event if this type is sent
+	getEventPromise: function getEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
+	}
+};
+function dispatch(view, type, data) {
+	var el = view === window ? view : view.el || view;
+	var debug = 'Debug info ' + new Error().stack;
+	el.dispatchEvent(new CustomEvent(type, {
+		detail: { data: data, debug: debug, view: view },
+		bubbles: true
+	}));
+}
+function listen(view, type, handler) {
+	var el = view === window ? view : view.el || view;
+	el.addEventListener(type, function (event) {
+		if (event instanceof CustomEvent)
+			{ handler(event.detail.data, event.detail.view); }
+		else
+			{ handler(event); }
+	});
+}
+
 var options = {
 	context: null, // 'play' or 'edit'
 	networkEnabled: false
@@ -4802,8 +4860,20 @@ var listeners$1 = {
 	data: function data(result) {
 		var profile = result.profile;
 		var gameData = result.gameData;
-		localStorage.openEditPlayUserId = profile.userId;
+		var editAccess = result.editAccess;
+		localStorage.openEditPlayUserId = profile.id;
 		localStorage.openEditPlayUserToken = profile.userToken;
+		
+		if (!editAccess) {
+			configureNetSync({
+				networkEnabled: false
+			});
+			events.dispatch('noEditAccess');
+		}
+		
+		delete profile.userToken;
+		window.user = profile;
+		
 		gameReceivedOverNet(gameData);
 	},
 	identifyYourself: function identifyYourself() {
@@ -4864,73 +4934,6 @@ function connect() {
 	});
 }
 window.addEventListener('load', connect);
-
-/*
- Global event system
-
- let unlisten = events.listen('event name', function(params, ...) {});
- eventManager.dispatch('event name', paramOrParamArray);
- unlisten();
- */
-
-var listeners$2 = {};
-
-var events = {
-	listen: function listen(event, callback) {
-		if (!listeners$2.hasOwnProperty(event)) {
-			listeners$2[event] = [];
-		}
-		listeners$2[event].push(callback);
-		return function () {
-			var index = listeners$2[event].indexOf(callback);
-			listeners$2[event].splice(index, 1);
-		};
-	},
-	dispatch: function dispatch(event) {
-		var args = [], len = arguments.length - 1;
-		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
-
-		if (listeners$2.hasOwnProperty(event)) {
-			var listener = listeners$2[event];
-			for (var i = 0; i < listener.length; ++i) {
-				listener[i].apply(null, args);
-				/*
-				try {
-					listeners[event][i].apply(null, args);
-				} catch (e) {
-					if (console && console.sendError) {
-						console.sendError(e);
-					}
-				}
-				*/
-			}
-		}
-	},
-	getLoadEventPromise: function getLoadEventPromise(event) {
-		return new Promise(function(res) {
-			events.listen(event, res);
-		});
-	}
-};
-// DOM / ReDom event system
-
-function dispatch(view, type, data) {
-	var el = view === window ? view : view.el || view;
-	var debug = 'Debug info ' + new Error().stack;
-	el.dispatchEvent(new CustomEvent(type, {
-		detail: { data: data, debug: debug, view: view },
-		bubbles: true
-	}));
-}
-function listen(view, type, handler) {
-	var el = view === window ? view : view.el || view;
-	el.addEventListener(type, function (event) {
-		if (event instanceof CustomEvent)
-			{ handler(event.detail.data, event.detail.view); }
-		else
-			{ handler(event); }
-	});
-}
 
 var ModuleContainer = function ModuleContainer(moduleContainerName, packButtonIcon) {
 	var this$1 = this;
@@ -5175,7 +5178,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5998,22 +6000,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7243,13 +7229,21 @@ var Popup = function Popup(ref) {
 	var title = ref.title; if ( title === void 0 ) title = 'Undefined popup';
 	var cancelCallback = ref.cancelCallback; if ( cancelCallback === void 0 ) cancelCallback = null;
 	var width = ref.width; if ( width === void 0 ) width = null;
-	var content = ref.content; if ( content === void 0 ) content = el('div', 'Undefined content');
+	var content = ref.content; if ( content === void 0 ) content = el('div.genericCustomContent', 'Undefined content');
 
+	console.log('width ? width + \'px\' : undefined', width ? width + 'px' : undefined);
 	this.el = el('div.popup', {
-			style: { 'z-index': 1000 + popupDepth++ }
+			style: {
+				'z-index': 1000 + popupDepth++
+			}
 		},
 		new Layer(this),
 		el('div.popupContent',
+			{
+				style: {
+					width: width
+				}
+			},
 			this.text = el('div.popupTitle'),
 			this.content = content
 		)
@@ -7562,7 +7556,6 @@ var ComponentAdder = (function (Popup$$1) {
 
 		Popup$$1.call(this, {
 			title: 'Add Component',
-			width: '500px',
 			content: list('div.componentAdderContent', Category, undefined, parent)
 		});
 
@@ -7767,11 +7760,6 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7845,19 +7833,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8538,7 +8513,7 @@ var PerformanceItem = function PerformanceItem(initItem) {
 	else if (value > 0.4)
 		{ this.el.style.color = ''; }
 	else
-		{ this.el.style.color = '#888'; }
+		{ this.el.style.color = 'rgba(200, 200, 200, 0.5)'; }
     };
 
 var FPSMeter = function FPSMeter() {
@@ -8602,8 +8577,8 @@ window.test = function() {
 
 var loaded = false;
 
-var modulesRegisteredPromise = events.getLoadEventPromise('modulesRegistered');
-var loadedPromise = events.getLoadEventPromise('loaded');
+var modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
+var loadedPromise = events.getEventPromise('loaded');
 
 modulesRegisteredPromise.then(function () {
 	loaded = true;
@@ -8697,6 +8672,17 @@ Editor.prototype.update = function update () {
 	this.layout.update();
 };
 
+events.listen('noEditAccess', function () {
+	loadedPromise.then(function () {
+		document.body.classList.add('noEditAccess');
+		new Popup({
+			title: 'No edit access',
+			width: '500px',
+			content: el('div.genericCustomContent', "Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!")
+		});
+		// alert(`No edit access. Your changes won't be saved.`);
+	});
+});
 
 var options$1 = null;
 function loadOptions() {

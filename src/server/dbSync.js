@@ -32,17 +32,13 @@ dbSync.getGames = async function() {
 	let games = await db.query(`
 select id, name, createdAt, updatedAt, serializableCount, levelCount, prototypeCount, entityPrototypeCount, componentDataCount
 from game
-where serializableCount > 0 and name != '' and serializableCount != ?;
+where serializableCount > 0 /* and name != '' and serializableCount != ?*/ ;
 	`, [createNewGame.newGameSerializableCount]);
 	
 	return games;
 };
 
-function idLooksLikeGameId(gameId) {
-	return typeof gameId === 'string' && gameId.length > 15 && gameId.startsWith('gam');
-}
-
-dbSync.getGame = async function(gameId, allowNewGame) {
+dbSync.getGame = async function(gameId) {
 	let serializables = await db.query('SELECT * FROM serializable WHERE gameId = ?', [gameId]);
 	if (serializables.length > 0) {
 		try {
@@ -51,9 +47,7 @@ dbSync.getGame = async function(gameId, allowNewGame) {
 			await gameUpdating.insertGame(gameId);
 		}
 		return ServerSerializable.buildTree(serializables);
-	} else if (allowNewGame && !idLooksLikeGameId(gameId))
-		return createNewGame();
-	else
+	} else
 		return null;
 };
 

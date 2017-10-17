@@ -36,7 +36,8 @@ let events = {
 			}
 		}
 	},
-	getLoadEventPromise(event) {
+	// Promise is resolved when next event if this type is sent
+	getEventPromise(event) {
 		return new Promise(function(res) {
 			events.listen(event, res);
 		});

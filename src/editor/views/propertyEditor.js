@@ -1,5 +1,5 @@
 import { el, list, mount } from 'redom';
-import events, { listen, dispatch } from '../events';
+import events, { listen, dispatch } from '../../util/events';
 import showPopup from './popup/popup';
 import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';

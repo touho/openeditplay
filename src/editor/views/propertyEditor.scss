@@ -95,8 +95,17 @@ td.nameCell .infoI {
 tr.property.visibleIf.hidden {
   display: none;
 }
+tr.property.visibleIf .nameCell::before {
+  content: '\25CF';
+  font-size: 12px;
+  opacity: 0.3;
+  position: absolute;
+  left: 3px;
+  top: 5px;
+}
 tr.property.visibleIf .nameCell {
-  border-left: 15px solid $other-backround;
+  background: transparent;
+  padding-left: 17px;
 }
 td.propertyContent {
   width: 99%;

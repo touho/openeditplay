@@ -1,4 +1,4 @@
-import events from './events';
+import events from '../util/events';
 import Layout from './layout/layout';
 
 import './module/topBar';
@@ -25,11 +25,12 @@ import './help';
 import './test';
 import * as performance from '../util/performance'
 import { limit } from '../util/callLimiter';
+import Popup from './views/popup/popup';
 
 let loaded = false;
 
-export let modulesRegisteredPromise = events.getLoadEventPromise('modulesRegistered');
-export let loadedPromise = events.getLoadEventPromise('loaded');
+export let modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
+export let loadedPromise = events.getEventPromise('loaded');
 
 modulesRegisteredPromise.then(() => {
 	loaded = true;
@@ -125,6 +126,17 @@ class Editor {
 	}
 }
 
+events.listen('noEditAccess', () => {
+	loadedPromise.then(() => {
+		document.body.classList.add('noEditAccess');
+		new Popup({
+			title: 'No edit access',
+			width: '500px',
+			content: el('div.genericCustomContent', `Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!`)
+		});
+		// alert(`No edit access. Your changes won't be saved.`);
+	});
+});
 
 let options = null;
 function loadOptions() {

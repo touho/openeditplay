@@ -22,7 +22,7 @@
 }
 
 .moduleTab {
-  background: #2c2c2c;
+  background: rgba(0, 0, 0, 0.30);
   padding: 1px 5px;
   border-top: 1px solid;
   border-left: 1px solid;
@@ -34,7 +34,6 @@
 .moduleTab:not(.moduleSelected) {
   filter: saturate(0);
   //opacity: 0.5;
-  background: #2c2c2c;
 }
 .moduleTab.moduleSelected {
   opacity: 1;

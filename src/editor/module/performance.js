@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import events, { dispatch, listen } from '../events';
+import events, { dispatch, listen } from '../../util/events';
 import * as performance from '../../util/performance';
 import { scene } from '../../core/scene';
 
@@ -68,7 +68,7 @@ class PerformanceItem {
 		else if (value > 0.4)
 			this.el.style.color = '';
 		else
-			this.el.style.color = '#888';
+			this.el.style.color = 'rgba(200, 200, 200, 0.5)';
     }
 }
 

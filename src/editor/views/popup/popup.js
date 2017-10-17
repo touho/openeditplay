@@ -8,13 +8,21 @@ export default class Popup {
 		title = 'Undefined popup',
 		cancelCallback = null,
 		width = null,
-		content = el('div', 'Undefined content')
+		content = el('div.genericCustomContent', 'Undefined content')
 	}) {
+		console.log('width ? width + \'px\' : undefined', width ? width + 'px' : undefined)
 		this.el = el('div.popup', {
-				style: { 'z-index': 1000 + popupDepth++ }
+				style: {
+					'z-index': 1000 + popupDepth++
+				}
 			},
 			new Layer(this),
 			el('div.popupContent',
+				{
+					style: {
+						width
+					}
+				},
 				this.text = el('div.popupTitle'),
 				this.content = content
 			)

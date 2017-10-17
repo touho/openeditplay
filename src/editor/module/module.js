@@ -1,5 +1,5 @@
 import { el, list, mount } from 'redom';
-import events from '../events';
+import events from '../../util/events';
 
 let moduleIdToModule = {};
 

@@ -22,7 +22,10 @@ let profile = {};
 			mount(document.body, profileMenu);
 			mount(buttonContainer, profileButton);
 
-			getAjax('/api/profile').then(profile => {
+			getAjax(`/api/profile?userId=${localStorage.openEditPlayUserId}&userToken=${localStorage.openEditPlayUserToken}`).then(profile => {
+				delete profile.userToken;
+				window.user = profile;
+				
 				profileMenu.gamesCreated.textContent = profile.games;
 			});
 		});

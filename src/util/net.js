@@ -10,6 +10,7 @@ import Serializable from '../core/serializable';
 import {game} from '../core/game';
 import {limit} from './callLimiter';
 import {stickyNonModalErrorPopup} from "./popup";
+import events from './events';
 
 let options = {
 	context: null, // 'play' or 'edit'
@@ -113,9 +114,20 @@ function sendSocketMessage(eventName, data) {
 
 let listeners = {
 	data(result) {
-		let {profile, gameData} = result;
-		localStorage.openEditPlayUserId = profile.userId;
+		let {profile, gameData, editAccess} = result;
+		localStorage.openEditPlayUserId = profile.id;
 		localStorage.openEditPlayUserToken = profile.userToken;
+		
+		if (!editAccess) {
+			configureNetSync({
+				networkEnabled: false
+			});
+			events.dispatch('noEditAccess');
+		}
+		
+		delete profile.userToken;
+		window.user = profile;
+		
 		gameReceivedOverNet(gameData);
 	},
 	identifyYourself() {

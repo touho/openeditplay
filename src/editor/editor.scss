@@ -33,6 +33,10 @@ body, html {
   overflow: hidden; // disables osX scrolling effect
 }
 
+body.noEditAccess {
+  background: $noEditAccess-backround;
+}
+
 .select-none {
   -webkit-user-select: none;  /* Chrome all / Safari all */
   -moz-user-select: none;     /* Firefox all */

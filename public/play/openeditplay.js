@@ -716,10 +716,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
-// info about type, validator, validatorParameters, initialValue
-
-
-
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -3127,8 +3123,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4511,6 +4505,56 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
+/*
+ Global event system
+
+ let unlisten = events.listen('event name', function(params, ...) {});
+ eventManager.dispatch('event name', paramOrParamArray);
+ unlisten();
+ */
+
+var listeners$2 = {};
+
+var events = {
+	listen: function listen(event, callback) {
+		if (!listeners$2.hasOwnProperty(event)) {
+			listeners$2[event] = [];
+		}
+		listeners$2[event].push(callback);
+		return function () {
+			var index = listeners$2[event].indexOf(callback);
+			listeners$2[event].splice(index, 1);
+		};
+	},
+	dispatch: function dispatch(event) {
+		var args = [], len = arguments.length - 1;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
+
+		if (listeners$2.hasOwnProperty(event)) {
+			var listener = listeners$2[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
+				/*
+				try {
+					listeners[event][i].apply(null, args);
+				} catch (e) {
+					if (console && console.sendError) {
+						console.sendError(e);
+					}
+				}
+				*/
+			}
+		}
+	},
+	// Promise is resolved when next event if this type is sent
+	getEventPromise: function getEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
+	}
+};
+// DOM / ReDom event system
+
 var options = {
 	context: null, // 'play' or 'edit'
 	networkEnabled: false
@@ -4601,8 +4645,20 @@ var listeners$1 = {
 	data: function data(result) {
 		var profile = result.profile;
 		var gameData = result.gameData;
-		localStorage.openEditPlayUserId = profile.userId;
+		var editAccess = result.editAccess;
+		localStorage.openEditPlayUserId = profile.id;
 		localStorage.openEditPlayUserToken = profile.userToken;
+		
+		if (!editAccess) {
+			configureNetSync({
+				networkEnabled: false
+			});
+			events.dispatch('noEditAccess');
+		}
+		
+		delete profile.userToken;
+		window.user = profile;
+		
 		gameReceivedOverNet(gameData);
 	},
 	identifyYourself: function identifyYourself() {

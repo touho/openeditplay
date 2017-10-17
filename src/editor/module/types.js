@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import events from '../events';
+import events from '../../util/events';
 import Prototype from '../../core/prototype';
 import { getSerializable, changeType, setChangeOrigin } from '../../core/serializableManager';
 import assert from '../../util/assert';

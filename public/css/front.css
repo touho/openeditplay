@@ -4,11 +4,14 @@
     box-sizing: border-box;
 }
 
-html, body {
+html {
+    background: #484a48;
+}
+body {
     font-family: Arial;
     text-align: center;
     /*background: #f1f7f0;*/
-    background: #eee;
+    background: #f5f5f5;
     background-image: url("/img/bg_pattern.png");
 }
 

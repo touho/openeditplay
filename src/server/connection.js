@@ -1,6 +1,7 @@
 const dbSync = require('./dbSync');
-const user = require('./user');
+const userTools = require('./userTools');
 const gameUpdating = require('./game/gameUpdating');
+const createNewGame = require('./game/createNewGame');
 
 let connection = module.exports;
 
@@ -45,6 +46,7 @@ class Connection {
 		this.gameId = null;
 		this.userId = null;
 		this.context = null; // play | edit
+		this.editAccess = false;
 		this.ip = socket.request.connection._peername.address;
 		this.changeCount = 0;
 		
@@ -76,6 +78,11 @@ class Connection {
 		}
 	}
 	changeReceived(changes) {
+		if (!this.editAccess) {
+			this.sendError('No edit access');
+			return;
+		}
+		
 		try {
 			changes.forEach(async change => {
 				this.changeCount++;
@@ -108,16 +115,37 @@ class Connection {
 		
 		try {
 			let { gameId, userId, userToken, context } = identifyData;
-			this.userId = userId;
 			this.context = context;
-			let gameData = await dbSync.getGame(gameId, context === 'edit');
+			this.gameId = gameId;
+			this.userId = userId;
+			
+			let validUser = null;
+				
+			let gameData = await dbSync.getGame(gameId);
+			
+			if (!gameData && context === 'edit' && !gameUpdating.idLooksLikeGameId(gameId)) {
+				validUser = await userTools.getValidUser(this, userToken);
+				this.userId = validUser.id; // update from more reliable source
+				
+				gameData = await createNewGame(this);
+			}
+			
 			if (gameData) {
-				this.gameId = gameData.id;
+				if (!validUser)
+					validUser = await userTools.getValidUser(this, userToken);
+				this.userId = validUser.id; // update from more reliable source
+				
+				this.gameId = gameData.id; // update from more reliable source
+				
+				// This user might be a new user
+				await userTools.userActivity(this, validUser);
+				
 				onConnectedToAGame(this);
-				let profile = await user.getProfile(userId, userToken);
+				let profile = await userTools.getProfile(validUser.id, validUser.userToken);
 				this.send('data', {
 					gameData,
-					profile
+					profile,
+					editAccess: this.editAccess
 				});
 			} else {
 				this.sendError('Game not found', true);

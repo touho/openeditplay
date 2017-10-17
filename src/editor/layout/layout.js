@@ -8,7 +8,7 @@ export default class Layout {
 			let container = new ModuleContainer(...args);
 			this.moduleContainers.push(container);
 			return container;
-		}
+		};
 		this.el = el('div.editorLayout',
 			el('div.nonRight',
 				addContainer('top', null),

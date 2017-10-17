@@ -1,6 +1,6 @@
 import {el, list, mount} from 'redom';
 import Module from './module';
-import events, {dispatch, listen} from '../events';
+import events, {dispatch, listen} from '../../util/events';
 import {
 	listenMouseMove,
 	listenMouseDown,
