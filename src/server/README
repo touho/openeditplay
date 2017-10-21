@@ -1,0 +1,3 @@
+server folder uses Node.js kind of modules:
+- require('')
+- module.exports = ''

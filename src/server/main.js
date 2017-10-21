@@ -7,6 +7,7 @@ const compression = require('compression');
 const connection = require('./connection');
 const dbSync = require('./dbSync');
 const userTools = require('./userTools');
+const api = require('./api');
 
 app.use(compression({
 	level: 1
@@ -14,22 +15,7 @@ app.use(compression({
 
 app.use(express.static('public'));
 
-app.get('/api/gameListSample', (req, res) => {
-	dbSync.getGames().then(games => {
-		res.send(games);
-	}).catch(e => {
-		console.error('gameListSample sendError:', e);
-		res.status(500).send({
-			error: e
-		});
-	});
-});
-app.get('/api/profile', (req, res) => {
-	userTools.getProfile(req.query.userId, req.query.userToken).then(profile => {
-		console.log('profile', profile);
-		res.send(profile);
-	});
-});
+api.init(app);
 
 server.listen(3000, function(){
 	console.log('listening on *:3000');

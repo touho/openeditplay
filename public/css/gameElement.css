@@ -32,6 +32,9 @@ tbody.gameListContent {
     background: white;
     background: linear-gradient(to bottom, white, #f9f9f9);
 }
+.gameElement.isMyGame {
+    border-left: 2px solid #5fbe5f;
+}
 
 .gameElement > td {
     padding: 10px 5px 10px 5px;
@@ -69,6 +72,9 @@ tbody.gameListContent {
 }
 .linkButton:hover {
     opacity: 1;
+}
+.gameElementSecondaryButton {
+    filter: grayscale(80%);
 }
 .playButton {
     margin-bottom: 10px;

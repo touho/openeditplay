@@ -10,7 +10,6 @@ export default class Popup {
 		width = null,
 		content = el('div.genericCustomContent', 'Undefined content')
 	}) {
-		console.log('width ? width + \'px\' : undefined', width ? width + 'px' : undefined)
 		this.el = el('div.popup', {
 				style: {
 					'z-index': 1000 + popupDepth++

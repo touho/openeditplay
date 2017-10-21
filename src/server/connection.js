@@ -121,7 +121,7 @@ class Connection {
 			
 			let validUser = null;
 				
-			let gameData = await dbSync.getGame(gameId);
+			let gameData = await dbSync.getGameData(gameId);
 			
 			if (!gameData && context === 'edit' && !gameUpdating.idLooksLikeGameId(gameId)) {
 				validUser = await userTools.getValidUser(this, userToken);
@@ -136,6 +136,11 @@ class Connection {
 				this.userId = validUser.id; // update from more reliable source
 				
 				this.gameId = gameData.id; // update from more reliable source
+				
+				let game = await dbSync.getGame(this.gameId);
+				
+				if (game.creatorUserId === this.userId)
+					this.editAccess = true;
 				
 				// This user might be a new user
 				await userTools.userActivity(this, validUser);

@@ -1,4 +1,4 @@
-import Popup, { Button } from './popup';
+import Popup, { Button } from './Popup';
 import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
 import { list, el } from 'redom';

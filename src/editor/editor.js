@@ -15,17 +15,23 @@ import './module/game';
 
 import './module/performance';
 
-import { el, list, mount } from 'redom';
-import { game } from '../core/game';
+import {el, list, mount} from 'redom';
+import {game} from '../core/game';
 import Serializable from '../core/serializable';
-import { addChangeListener, serializables, executeExternal, setChangeOrigin, changeType } from '../core/serializableManager';
+import {
+	addChangeListener,
+	serializables,
+	executeExternal,
+	setChangeOrigin,
+	changeType
+} from '../core/serializableManager';
 import assert from '../util/assert';
-import { configureNetSync } from '../util/net';
+import {configureNetSync} from '../util/net';
 import './help';
 import './test';
 import * as performance from '../util/performance'
-import { limit } from '../util/callLimiter';
-import Popup from './views/popup/popup';
+import {limit} from '../util/callLimiter';
+import OKPopup from "./views/popup/OKPopup";
 
 let loaded = false;
 
@@ -38,7 +44,8 @@ modulesRegisteredPromise.then(() => {
 });
 
 configureNetSync({
-	networkEnabled: true,
+	serverToClientEnabled: true,
+	clientToServerEnabled: true,
 	context: 'edit'
 });
 
@@ -70,15 +77,16 @@ addChangeListener(change => {
 });
 
 export let editor = null;
+
 class Editor {
 	constructor(game) {
 		assert(game);
-		
+
 		this.layout = new Layout();
-		
+
 		this.game = game;
 		this.selectedLevel = null;
-		
+
 		this.selection = {
 			type: 'none',
 			items: [],
@@ -87,22 +95,24 @@ class Editor {
 
 		mount(document.body, this.layout);
 	}
+
 	setLevel(level) {
 		if (level && level.threeLetterType === 'lvl')
 			this.selectedLevel = level;
 		else
 			this.selectedLevel = null;
-		
+
 		this.select([], this);
 		events.dispatch('setLevel', this.selectedLevel);
 	}
+
 	select(items, origin) {
 		if (!items)
 			items = [];
 		else if (!Array.isArray(items))
 			items = [items];
 		this.selection.items = [].concat(items);
-		
+
 		let types = Array.from(new Set(items.map(i => i.threeLetterType)));
 		if (types.length === 0)
 			this.selection.type = 'none';
@@ -110,16 +120,17 @@ class Editor {
 			this.selection.type = types[0];
 		else
 			this.selection.type = 'mixed';
-		
+
 		events.dispatch('change', {
 			type: 'editorSelection',
 			reference: this.selection,
 			origin
 		});
-		
+
 		// editorUpdateLimited(); // doesn't work for some reason
 		this.update();
 	}
+
 	update() {
 		if (!this.game) return;
 		this.layout.update();
@@ -129,21 +140,25 @@ class Editor {
 events.listen('noEditAccess', () => {
 	loadedPromise.then(() => {
 		document.body.classList.add('noEditAccess');
-		new Popup({
-			title: 'No edit access',
-			width: '500px',
-			content: el('div.genericCustomContent', `Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!`)
-		});
+		new OKPopup('No edit access',
+			`Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!`
+		);
 		// alert(`No edit access. Your changes won't be saved.`);
+	});
+
+	configureNetSync({
+		clientToServerEnabled: false,
+		serverToClientEnabled: false
 	});
 });
 
 let options = null;
+
 function loadOptions() {
 	if (!options) {
 		try {
 			options = JSON.parse(localStorage.openEditPlayOptions);
-		} catch(e) {
+		} catch (e) {
 			// default options
 			options = {
 				moduleContainerPacked_bottom: true
@@ -151,14 +166,16 @@ function loadOptions() {
 		}
 	}
 }
+
 export function setOption(id, stringValue) {
 	loadOptions();
 	options[id] = stringValue;
 	try {
 		localStorage.openEditPlayOptions = JSON.stringify(options);
-	} catch(e) {
+	} catch (e) {
 	}
 }
+
 export function getOption(id) {
 	loadOptions();
 	return options[id];

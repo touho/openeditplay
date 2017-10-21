@@ -1,6 +1,5 @@
-import Popup, { Button, popupDepth } from './popup';
+import Popup, { Button, popupDepth } from './Popup';
 import { el, mount, list } from 'redom';
-import {listenKeyDown, key} from "../../../util/input";
 
 export default class Confirmation extends Popup {
 	/*

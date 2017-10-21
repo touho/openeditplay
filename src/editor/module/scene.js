@@ -194,7 +194,7 @@ class SceneModule extends Module {
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
 
-		this.playButton = new TopButton({
+		this.primaryButton = new TopButton({
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: btn => {
@@ -318,7 +318,7 @@ class SceneModule extends Module {
 				this.pasteEntities();
 				this.draw();
 			} else if (k === key.p) {
-				this.playButton.click();
+				this.primaryButton.click();
 			} else if (k === key.r) {
 				this.stopButton.click();
 			} else if (scene) {
@@ -597,13 +597,13 @@ class SceneModule extends Module {
 		if (scene.playing) {
 			this.el.classList.remove('noScene');
 			this.el.classList.add('hideScenePauseInformation', 'playing');
-			this.playButton.icon.className = 'fa fa-pause';
-			this.playButton.text.innerHTML = '<u>P</u>ause';
+			this.primaryButton.icon.className = 'fa fa-pause';
+			this.primaryButton.text.innerHTML = '<u>P</u>ause';
 		} else {
 			this.el.classList.remove('noScene', 'playing');
 			this.el.classList.toggle('hideScenePauseInformation', isInitialState);
-			this.playButton.icon.className = 'fa fa-play';
-			this.playButton.text.innerHTML = '<u>P</u>lay';
+			this.primaryButton.icon.className = 'fa fa-play';
+			this.primaryButton.text.innerHTML = '<u>P</u>lay';
 		}
 	}
 
@@ -738,7 +738,7 @@ class SceneModule extends Module {
 			scene.setZoom(this.editorCameraZoom);
 			scene.updateCamera();
 		}
-		this.playButton.icon.className = 'fa fa-play';
+		this.primaryButton.icon.className = 'fa fa-play';
 		this.playingModeChanged();
 		this.draw();
 

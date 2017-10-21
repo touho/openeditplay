@@ -5,14 +5,19 @@ let profile = {};
 	let profileButton = null;
 	let profileMenu = null;
 	let buttonContainer = null;
-	
+
 	let windowLoadPromise = new Promise((resolve, reject) => window.addEventListener('load', resolve));
-	
+
+	let promiseResolve = null;
+	profile.promise = new Promise((resolve, reject) => {
+		promiseResolve = resolve;
+	});
+
 	profile.setButtonContainer = container => {
 		if (buttonContainer)
 			return console.error('profile.setButtonContainer can only be called once');
 		buttonContainer = container;
-		
+
 		// return; // Remove this line to enable profile
 
 		windowLoadPromise.then(() => {
@@ -22,29 +27,33 @@ let profile = {};
 			mount(document.body, profileMenu);
 			mount(buttonContainer, profileButton);
 
-			getAjax(`/api/profile?userId=${localStorage.openEditPlayUserId}&userToken=${localStorage.openEditPlayUserToken}`).then(profile => {
-				delete profile.userToken;
-				window.user = profile;
-				
-				profileMenu.gamesCreated.textContent = profile.games;
+			getAjax(`/api/profile?userId=${localStorage.openEditPlayUserId}&userToken=${localStorage.openEditPlayUserToken}`).then(user => {
+				delete user.userToken;
+				if (user.games)
+					user.gameIdList = user.games.map(game => game.id);
+				window.user = user;
+				if (promiseResolve)
+					promiseResolve(user) && console.log('resolved');
+				profileMenu.gamesCreated.textContent = user.games;
 			});
 		});
 	};
-	
+
 	class ProfileButton {
-	    constructor() {
-	        this.el = el('img.profileButton', {
-	        	src: '/img/profile.png',
+		constructor() {
+			this.el = el('img.profileButton', {
+				src: '/img/profile.png',
 				onclick: () => profileMenu.el.classList.toggle('visible')
 			});
-	    }
-	    update(data) {
-	    }
+		}
+
+		update(data) {
+		}
 	}
-	
+
 	class ProfileMenu {
-	    constructor() {
-	        this.el = el('div.profileMenu',
+		constructor() {
+			this.el = el('div.profileMenu',
 				el('div.profileMenuContent',
 					el('div.gamesCreatedBlock',
 						'Welcome to Open Edit Play! Play or Edit a game and profile will be created for you.',
@@ -57,9 +66,10 @@ let profile = {};
 					onclick: () => profileMenu.el.classList.toggle('visible')
 				}
 			);
-	    }
-	    update(data) {
-	    }
+		}
+
+		update(data) {
+		}
 	}
 })();
 

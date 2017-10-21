@@ -19,7 +19,7 @@ const preprocess = require('rollup-plugin-preprocess').default;
 const ROOT = path.join(__dirname, './');
 module.exports.ROOT = ROOT;
 
-let targets = ['dev', 'all']; // TODO: add 'devOnce' and 'allOnce' ... or just 'build' or 'once'
+let targets = ['all', 'editor']; // TODO: add 'editorOnce' and 'allOnce' ... or just 'build' or 'once'
 let target = process.argv[2];
 if (targets.indexOf(target) < 0)
 	target = targets[0];

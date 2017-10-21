@@ -21,6 +21,10 @@ let keyToShortKey = {
 dbSync.changeType = changeType;
 dbSync.keyToShortKey = keyToShortKey;
 
+dbSync.GAME_TABLE_FIELDS = ['id', 'name', 'createdAt', 'updatedAt', 'serializableCount', 'levelCount', 'prototypeCount', 'entityPrototypeCount', 'componentDataCount'];
+dbSync.USER_TABLE_FIELDS = ['id', 'userToken', 'nickname', 'email', 'blockedAt', 'createdAt'];
+dbSync.USER_ACTIVITY_TABLE_FIELDS = ['type', 'gameId', 'data', 'count'];
+
 /*
 select id, name, createdAt, updatedAt, serializableCount, levelCount, prototypeCount, entityPrototypeCount, componentDataCount
 from game
@@ -28,22 +32,36 @@ where serializableCount > 0 and name != '' and serializableCount != ?;
 
 [createNewGame.newGameSerializableCount]
  */
-dbSync.getGames = async function() {
+dbSync.getGames = async function () {
 	let games = await db.query(`
-select id, name, createdAt, updatedAt, serializableCount, levelCount, prototypeCount, entityPrototypeCount, componentDataCount
+select ${dbSync.GAME_TABLE_FIELDS.join(',')}
 from game
 where serializableCount > 0 /* and name != '' and serializableCount != ?*/ ;
 	`, [createNewGame.newGameSerializableCount]);
-	
+
 	return games;
 };
 
-dbSync.getGame = async function(gameId) {
+dbSync.getGamesForUser = async function (userId) {
+	let games = await db.query(`
+select ${dbSync.GAME_TABLE_FIELDS.join(',')}
+from game
+where serializableCount > 0 and creatorUserId = ?;
+	`, [userId]);
+
+	return games;
+};
+
+dbSync.getGame = async function (gameId) {
+	return db.queryOne('select * from game where id = ?', [gameId]);
+};
+
+dbSync.getGameData = async function (gameId) {
 	let serializables = await db.query('SELECT * FROM serializable WHERE gameId = ?', [gameId]);
 	if (serializables.length > 0) {
 		try {
 			await db.queryOne('select id from game where id = ?', [gameId]);
-		} catch(e) {
+		} catch (e) {
 			await gameUpdating.insertGame(gameId);
 		}
 		return ServerSerializable.buildTree(serializables);
@@ -58,18 +76,18 @@ dbSync.writeChangeToDatabase = async function (change, gameId, optionalConnectio
 	// let parentId = change[keyToShortKey.parentId];
 
 	let type = change[keyToShortKey.type];
-	
+
 	if (!type) {
 		// changeType.setPropertyValue
-		
+
 		let id = change[keyToShortKey.id];
 		let writeId;
 		let newValue = '';
-		
+
 		if (id.startsWith('prp')) {
 			// The property might be game name. Game meta data must be recalculated.
 			await gameUpdating.markDirty(gameId, optionalConnection);
-			
+
 			newValue = JSON.stringify(change[keyToShortKey.value]);
 			writeId = id;
 		} else {
@@ -85,8 +103,8 @@ WHERE id = ? AND gameId = ?;
 				if (valueRow.value)
 					valueObject = JSON.parse(valueRow.value);
 				else
-					valueObject = { };
-				
+					valueObject = {};
+
 				valueObject[propertyTinyName] = change[keyToShortKey.value];
 				newValue = JSON.stringify(valueObject);
 				writeId = parentId;
@@ -97,7 +115,7 @@ WHERE id = ? AND gameId = ?;
 				throw new Error('Can not set value of non-property');
 			}
 		}
-		
+
 		return db.query(`
 UPDATE serializable
 SET value = ?
@@ -106,7 +124,7 @@ WHERE gameId = ? and id = ?
 	} else if (type === changeType.addSerializableToTree) {
 		let value = change[keyToShortKey.value];
 		let parentId = change[keyToShortKey.parentId];
-		
+
 		if (!parentId) {
 			// A game.
 			await gameUpdating.insertGame(gameId, optionalConnection);
@@ -114,20 +132,20 @@ WHERE gameId = ? and id = ?
 		} else {
 			await gameUpdating.markDirty(gameId, optionalConnection);
 		}
-		
+
 		let serializables = ServerSerializable.getSerializables(value, parentId);
-		
+
 		let valuesSQL = serializables.map(s => '(?,?,?,?,?,?)').join(',');
 		let valueArrays = serializables.map(s => ([gameId, s.id, s.type, s.parentId, s.value, s.name]));
 		let valuesParameters = [].concat.apply([], valueArrays);
-		
+
 		return db.query(`
 INSERT serializable (gameId, id, type, parentId, value, name)
 VALUES ${valuesSQL};
 		`, valuesParameters);
 	} else if (type === changeType.deleteAllChildren) {
 		await gameUpdating.markDirty(gameId, optionalConnection);
-		
+
 		let id = change[keyToShortKey.id];
 		let children = await db.query(`
 SELECT id
@@ -148,7 +166,7 @@ WHERE parentId = ? and gameId = ?
 		await gameUpdating.markDirty(gameId, optionalConnection);
 		let id = change[keyToShortKey.id];
 		let parentId = change[keyToShortKey.parentId];
-		
+
 		return db.query(`
 UPDATE serializable
 SET parentId = ?
@@ -169,13 +187,13 @@ SELECT id
 FROM serializable
 WHERE parentId IN ${inString} AND gameId = ?
 	`, [gameId]);
-	
+
 	// Delete serializables
 	await db.query(`
 DELETE FROM serializable
 WHERE id IN ${inString} AND gameId = ?
 	`, [gameId]);
-	
+
 	if (children.length > 0) {
 		await deleteListOfSerializables(children.map(c => c.id), gameId);
 	}

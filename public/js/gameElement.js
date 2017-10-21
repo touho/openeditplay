@@ -31,10 +31,33 @@ class Game {
 		this.el = el('tr.gameElement',
 			this.name = el('td.gameElementName'),
 			this.play = el('td.gameElementPlay',
-				this.playButton = el('a.linkButton.playButton', 'Play', {
+				this.primaryButton = el('a.linkButton', 'Play', {
 					onclick: standaloneMobileLinkClickEventSupport
 				}),
-				this.editButton = el('a.linkButton.editButton', 'Edit')
+				this.secondaryButton = el('a.linkButton.hideInSmallScreens.gameElementSecondaryButton', '...', {
+					href: '#',
+					onclick: e => {
+						e.preventDefault();
+						if (this.isMyGame) {
+							window.location.href = '/edit/?gameId=' + this.gameId
+							/*
+							new ContextMenu(this.secondaryButton, [
+								{
+									label: 'Edit',
+									callback: () => window.location.href = '/edit/?gameId=' + this.gameId
+								}
+							]);	
+							*/
+						} else {
+							new ContextMenu(this.secondaryButton, [
+								{
+									label: 'Open editor sandbox',
+									callback: () => window.location.href = '/edit/?gameId=' + this.gameId
+								}
+							]);
+						}
+					}
+				})
 			),
 			this.size = el('td.gameElementSize', {title: sizeExplanation}),
 			this.levels = el('td.gameElementLevels'),
@@ -44,6 +67,9 @@ class Game {
 	}
 
 	update(gameData) {
+		this.isMyGame = null;
+		this.gameId = gameData.id;
+		
 		this.name.textContent = gameData.name;
 		this.size.textContent = gameData.serializableCount;
 		this.levels.textContent = gameData.levelCount;
@@ -54,8 +80,21 @@ class Game {
 		this.modified.textContent = dateToAgoFormat(gameData.updatedAt);
 		this.modified.setAttribute('title', new Date(gameData.updatedAt).toLocaleString());
 
-		this.playButton.setAttribute('href', '/play/?gameId=' + gameData.id);
-		this.editButton.setAttribute('href', '/edit/?gameId=' + gameData.id);
+		this.primaryButton.setAttribute('href', '/play/?gameId=' + gameData.id);
+		
+		profile.promise.then(user => {
+			this.isMyGame = !!(user.gameIdList && user.gameIdList.includes(gameData.id));
+			this.el.classList.toggle('isMyGame', this.isMyGame);
+			
+			// this.primaryButton.classList.toggle('playButton', !this.isMyGame);
+			// this.primaryButton.classList.toggle('editButton', this.isMyGame);
+			
+			if (this.isMyGame) {
+				this.secondaryButton.textContent = 'Edit';
+			} else {
+				this.secondaryButton.textContent = '...';
+			}
+		});
 	}
 }
 

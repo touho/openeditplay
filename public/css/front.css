@@ -125,7 +125,6 @@ body {
 }
 
 #tooSmallScreen {
-    visibility: hidden;
     display: inline-block;
     font-size: 20px;
     font-weight: bold;
@@ -161,6 +160,11 @@ body {
 
 #games {
     text-align: center;
+}
+
+#myGames {
+    text-align: center;
+    display: none;
 }
 
 #about {
@@ -215,11 +219,9 @@ li {
     color: gray;
 }
 
-body.isSmallDevice #createGameButton,
-body.isSmallDevice #createGameTopBarButton,
-body.isSmallDevice .editButton {
-    display: none;
+body.isSmallDevice .hideInSmallScreens {
+    display: none !important;
 }
-body.isSmallDevice #tooSmallScreen {
-    visibility: visible;
+body:not(.isSmallDevice) .hideInBigScreens {
+    display: none !important;
 }

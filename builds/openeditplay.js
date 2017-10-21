@@ -160,7 +160,6 @@ function executeChange(change) {
 	var newScene;
 	
 	executeExternal(function () {
-		console.log('execute change', change.type, change.id || change.value);
 		if (change.type === changeType.setPropertyValue) {
 			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
 		} else if (change.type === changeType.addSerializableToTree) {
@@ -715,6 +714,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3123,6 +3126,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4556,8 +4561,9 @@ var events = {
 // DOM / ReDom event system
 
 var options = {
-	context: null, // 'play' or 'edit'
-	networkEnabled: false
+	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
+	serverToClientEnabled: true,
+	clientToServerEnabled: false 
 };
 
 function configureNetSync(_options) {
@@ -4584,9 +4590,8 @@ function getQueryVariable(variable) {
 }
 
 function changeReceivedOverNet(packedChanges) {
-	if (!options.networkEnabled)
+	if (!options.serverToClientEnabled)
 		{ return; }
-
 	packedChanges.forEach(function (change) {
 		change = unpackChange(change);
 		if (change) {
@@ -4612,7 +4617,7 @@ function gameReceivedOverNet(gameData) {
 }
 
 addChangeListener(function (change) {
-	if (change.external || !options.networkEnabled)
+	if (change.external || !options.clientToServerEnabled)
 		{ return; } // Don't send a change that you have received.
 
 	if (isInSceneTree(change)) // Don't sync scene
@@ -4650,9 +4655,6 @@ var listeners$1 = {
 		localStorage.openEditPlayUserToken = profile.userToken;
 		
 		if (!editAccess) {
-			configureNetSync({
-				networkEnabled: false
-			});
 			events.dispatch('noEditAccess');
 		}
 		
@@ -4684,12 +4686,13 @@ var listeners$1 = {
 };
 
 var sendChanges = limit(200, 'soon', function () {
-	if (!socket || changes.length === 0 || !options.networkEnabled)
+	if (!socket || changes.length === 0 || !options.clientToServerEnabled)
 		{ return; }
 	
 	var packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
+	console.log('send change');
 	sendSocketMessage('', packedChanges);
 });
 
@@ -4714,7 +4717,8 @@ function connect() {
 		socket.on('disconnect', function () {
 			console.warn('Disconnected!');
 			stickyNonModalErrorPopup('Disconnected!');
-			options.networkEnabled = false;
+			options.serverToClientEnabled = false;
+			options.clientToServerEnabled = false;
 		});
 	});
 }
@@ -5006,8 +5010,8 @@ function getRelativePositionToArrowCenter(point) {
 disableAllChanges();
 
 configureNetSync({
-	networkEnabled: true,
-	shouldStartSceneWhenGameLoaded: true,
+	serverToClientEnabled: true,
+	clientToServerEnabled: false,
 	context: 'play'
 });
 

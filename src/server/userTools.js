@@ -1,25 +1,28 @@
 let idGenerator = require('./util/idGenerator');
 const db = require("./db");
+const dbSync = require("./dbSync");
 let user = module.exports;
 
 user.getProfile = async function(userId, userToken) {
 	// Get user first because it validates the userToken
-	let user;
+	let profile;
 	try {
-		user = await db.queryOne('select * from user where id = ? and userToken = ?', [userId, userToken]);
+		profile = await db.queryOne(`select ${dbSync.USER_TABLE_FIELDS.join(',')} from user where id = ? and userToken = ?`, [userId, userToken]);
 	} catch(e) {
 		return {
 			id: null
 		};
 	}
 	
-	let userActivity = await db.query('select * from userActivity where userId = ?', [userId]);
-	let games = await db.query('select * from game where creatorUserId = ?', [userId]);
+	let userActivity = await db.query(`select ${dbSync.USER_ACTIVITY_TABLE_FIELDS.join(',')} from userActivity where userId = ?`, [userId]);
+	let games = await db.query(`select ${dbSync.GAME_TABLE_FIELDS.join(',')} from game where creatorUserId = ?`, [userId]);
 	
-	user.userActivity = userActivity;
-	user.games = games;
+	profile.userActivity = userActivity;
+	profile.games = games;
 	
-	return user;
+	console.log('returning profile', profile)
+	
+	return profile;
 };
 
 user.getValidUser = async function(connection, userToken) {

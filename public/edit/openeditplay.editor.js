@@ -628,7 +628,6 @@ function executeChange(change) {
 	var newScene;
 	
 	executeExternal(function () {
-		console.log('execute change', change.type, change.id || change.value);
 		if (change.type === changeType.setPropertyValue) {
 			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
 		} else if (change.type === changeType.addSerializableToTree) {
@@ -657,6 +656,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -783,6 +784,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3315,6 +3320,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4752,6 +4759,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -4771,8 +4780,9 @@ function listen(view, type, handler) {
 }
 
 var options = {
-	context: null, // 'play' or 'edit'
-	networkEnabled: false
+	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
+	serverToClientEnabled: true,
+	clientToServerEnabled: false 
 };
 
 function configureNetSync(_options) {
@@ -4799,9 +4809,8 @@ function getQueryVariable(variable) {
 }
 
 function changeReceivedOverNet(packedChanges) {
-	if (!options.networkEnabled)
+	if (!options.serverToClientEnabled)
 		{ return; }
-
 	packedChanges.forEach(function (change) {
 		change = unpackChange(change);
 		if (change) {
@@ -4827,7 +4836,7 @@ function gameReceivedOverNet(gameData) {
 }
 
 addChangeListener(function (change) {
-	if (change.external || !options.networkEnabled)
+	if (change.external || !options.clientToServerEnabled)
 		{ return; } // Don't send a change that you have received.
 
 	if (isInSceneTree(change)) // Don't sync scene
@@ -4865,9 +4874,6 @@ var listeners$1 = {
 		localStorage.openEditPlayUserToken = profile.userToken;
 		
 		if (!editAccess) {
-			configureNetSync({
-				networkEnabled: false
-			});
 			events.dispatch('noEditAccess');
 		}
 		
@@ -4899,12 +4905,13 @@ var listeners$1 = {
 };
 
 var sendChanges = limit(200, 'soon', function () {
-	if (!socket || changes.length === 0 || !options.networkEnabled)
+	if (!socket || changes.length === 0 || !options.clientToServerEnabled)
 		{ return; }
 	
 	var packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
+	console.log('send change');
 	sendSocketMessage('', packedChanges);
 });
 
@@ -4929,7 +4936,8 @@ function connect() {
 		socket.on('disconnect', function () {
 			console.warn('Disconnected!');
 			stickyNonModalErrorPopup('Disconnected!');
-			options.networkEnabled = false;
+			options.serverToClientEnabled = false;
+			options.clientToServerEnabled = false;
 		});
 	});
 }
@@ -5178,6 +5186,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6000,6 +6009,22 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -6331,7 +6356,7 @@ var SceneModule = (function (Module$$1) {
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
 
-		this.playButton = new TopButton({
+		this.primaryButton = new TopButton({
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
 			callback: function (btn) {
@@ -6455,7 +6480,7 @@ var SceneModule = (function (Module$$1) {
 				this$1.pasteEntities();
 				this$1.draw();
 			} else if (k === key.p) {
-				this$1.playButton.click();
+				this$1.primaryButton.click();
 			} else if (k === key.r) {
 				this$1.stopButton.click();
 			} else if (scene) {
@@ -6742,13 +6767,13 @@ var SceneModule = (function (Module$$1) {
 		if (scene.playing) {
 			this.el.classList.remove('noScene');
 			this.el.classList.add('hideScenePauseInformation', 'playing');
-			this.playButton.icon.className = 'fa fa-pause';
-			this.playButton.text.innerHTML = '<u>P</u>ause';
+			this.primaryButton.icon.className = 'fa fa-pause';
+			this.primaryButton.text.innerHTML = '<u>P</u>ause';
 		} else {
 			this.el.classList.remove('noScene', 'playing');
 			this.el.classList.toggle('hideScenePauseInformation', isInitialState);
-			this.playButton.icon.className = 'fa fa-play';
-			this.playButton.text.innerHTML = '<u>P</u>lay';
+			this.primaryButton.icon.className = 'fa fa-play';
+			this.primaryButton.text.innerHTML = '<u>P</u>lay';
 		}
 	};
 
@@ -6885,7 +6910,7 @@ var SceneModule = (function (Module$$1) {
 			scene.setZoom(this.editorCameraZoom);
 			scene.updateCamera();
 		}
-		this.playButton.icon.className = 'fa fa-play';
+		this.primaryButton.icon.className = 'fa fa-play';
 		this.playingModeChanged();
 		this.draw();
 
@@ -7231,7 +7256,6 @@ var Popup = function Popup(ref) {
 	var width = ref.width; if ( width === void 0 ) width = null;
 	var content = ref.content; if ( content === void 0 ) content = el('div.genericCustomContent', 'Undefined content');
 
-	console.log('width ? width + \'px\' : undefined', width ? width + 'px' : undefined);
 	this.el = el('div.popup', {
 			style: {
 				'z-index': 1000 + popupDepth++
@@ -7760,6 +7784,11 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7833,6 +7862,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8575,6 +8617,47 @@ FPSMeter.prototype.update = function update (fpsData) {
 window.test = function() {
 };
 
+var OKPopup = (function (Popup$$1) {
+	function OKPopup(title, textContent, buttonOptions, callback) {
+		var this$1 = this;
+
+		var listView;
+		Popup$$1.call(this, {
+			title: title,
+			width: '500px',
+			content: el('div',
+				el('div.genericCustomContent', textContent),
+				listView = list('div.confirmationButtons', Button)
+			),
+			cancelCallback: callback
+		});
+
+		listView.update([Object.assign(
+			{
+				text: 'OK'
+			}, buttonOptions, {
+				callback: function () {
+					callback && callback();
+					this$1.remove();
+				}
+			}
+		)]);
+
+		var okButton = listView.views[0];
+		okButton.el.focus();
+	}
+
+	if ( Popup$$1 ) OKPopup.__proto__ = Popup$$1;
+	OKPopup.prototype = Object.create( Popup$$1 && Popup$$1.prototype );
+	OKPopup.prototype.constructor = OKPopup;
+
+	OKPopup.prototype.remove = function remove () {
+		Popup$$1.prototype.remove.call(this);
+	};
+
+	return OKPopup;
+}(Popup));
+
 var loaded = false;
 
 var modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
@@ -8586,7 +8669,8 @@ modulesRegisteredPromise.then(function () {
 });
 
 configureNetSync({
-	networkEnabled: true,
+	serverToClientEnabled: true,
+	clientToServerEnabled: true,
 	context: 'edit'
 });
 
@@ -8618,14 +8702,15 @@ addChangeListener(function (change) {
 });
 
 var editor = null;
+
 var Editor = function Editor(game$$1) {
 	assert(game$$1);
-		
+
 	this.layout = new Layout();
-		
+
 	this.game = game$$1;
 	this.selectedLevel = null;
-		
+
 	this.selection = {
 		type: 'none',
 		items: [],
@@ -8634,22 +8719,24 @@ var Editor = function Editor(game$$1) {
 
 	mount(document.body, this.layout);
 };
+
 Editor.prototype.setLevel = function setLevel (level) {
 	if (level && level.threeLetterType === 'lvl')
 		{ this.selectedLevel = level; }
 	else
 		{ this.selectedLevel = null; }
-		
+
 	this.select([], this);
 	events.dispatch('setLevel', this.selectedLevel);
 };
+
 Editor.prototype.select = function select (items, origin) {
 	if (!items)
 		{ items = []; }
 	else if (!Array.isArray(items))
 		{ items = [items]; }
 	this.selection.items = [].concat(items);
-		
+
 	var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
 	if (types.length === 0)
 		{ this.selection.type = 'none'; }
@@ -8657,16 +8744,17 @@ Editor.prototype.select = function select (items, origin) {
 		{ this.selection.type = types[0]; }
 	else
 		{ this.selection.type = 'mixed'; }
-		
+
 	events.dispatch('change', {
 		type: 'editorSelection',
 		reference: this.selection,
 		origin: origin
 	});
-		
+
 	// editorUpdateLimited(); // doesn't work for some reason
 	this.update();
 };
+
 Editor.prototype.update = function update () {
 	if (!this.game) { return; }
 	this.layout.update();
@@ -8675,21 +8763,25 @@ Editor.prototype.update = function update () {
 events.listen('noEditAccess', function () {
 	loadedPromise.then(function () {
 		document.body.classList.add('noEditAccess');
-		new Popup({
-			title: 'No edit access',
-			width: '500px',
-			content: el('div.genericCustomContent', "Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!")
-		});
+		new OKPopup('No edit access',
+			"Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!"
+		);
 		// alert(`No edit access. Your changes won't be saved.`);
+	});
+
+	configureNetSync({
+		clientToServerEnabled: false,
+		serverToClientEnabled: false
 	});
 });
 
 var options$1 = null;
+
 function loadOptions() {
 	if (!options$1) {
 		try {
 			options$1 = JSON.parse(localStorage.openEditPlayOptions);
-		} catch(e) {
+		} catch (e) {
 			// default options
 			options$1 = {
 				moduleContainerPacked_bottom: true
@@ -8697,14 +8789,16 @@ function loadOptions() {
 		}
 	}
 }
+
 function setOption(id, stringValue) {
 	loadOptions();
 	options$1[id] = stringValue;
 	try {
 		localStorage.openEditPlayOptions = JSON.stringify(options$1);
-	} catch(e) {
+	} catch (e) {
 	}
 }
+
 function getOption(id) {
 	loadOptions();
 	return options$1[id];

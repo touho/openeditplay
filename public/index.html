@@ -6,9 +6,11 @@
     <link rel="stylesheet" href="css/front.css">
     <link rel="stylesheet" href="/common/profile.css">
     <link rel="stylesheet" href="css/gameElement.css">
+    <link rel="stylesheet" href="css/contextMenu.css">
     <script src="/js/redom.min.js"></script>
     <script src="/js/util.js"></script>
     <script src="/js/gameElement.js"></script>
+    <script src="/js/contextMenu.js"></script>
     <script src="/common/profile.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -23,7 +25,7 @@
 
 <div id="topBar">
     <div id="topBarBackground"></div>
-    <a id="createGameTopBarButton" href="/edit/?gameId=?">Create Game</a>
+    <a id="createGameTopBarButton" class="hideInSmallScreens" href="/edit/?gameId=?">Create Game</a>
     <a href="#games">Games</a>
     <a href="#about">About</a>
     <div id="profileButtonContainer"></div>
@@ -32,12 +34,16 @@
 <div id="topArea">
     <div id="topAreaBackground"></div>
     <div id="title">Open Edit Play</div>
-    <a id="createGameButton" href="/edit/?gameId=?">Create Game</a>
-    <div id="tooSmallScreen">Use desktop browser to create games</div>
+    <a id="createGameButton" class="hideInSmallScreens" href="/edit/?gameId=?">Create Game</a>
+    <div id="tooSmallScreen" class="hideInBigScreens">Use desktop browser to create games</div>
 </div>
 
 <div id="games" class="section">
     <div class="sectionTitle">GAMES</div>
+</div>
+
+<div id="myGames" class="section" style="display: none;">
+    <div class="sectionTitle">MY GAMES</div>
 </div>
 
 <div id="about" class="section">
@@ -46,7 +52,7 @@
     <p>
         Open Edit Play is an attempt to revolutionize making and sharing games - gamifying game making itself.
         The goal is not to create a topnotch game engine that allows creation of any type of game.
-        The goal is to make it easy to share little game ideas with people and to let game creators focus on creativity.
+        The goal is to make it easy to share little game ideas with others and to let game creators focus on creativity.
     </p>
 
     <div id="aboutList">
@@ -87,6 +93,9 @@
 	window.IS_SMALL_SCREEN = window.screen.width < 800;
 	window.IS_MOBILE_STANDALONE = window.navigator.standalone;
 
+	if (IS_SMALL_SCREEN)
+		document.body.classList.add('isSmallDevice');
+
 	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
 
 	window.addEventListener('load', () => {
@@ -95,14 +104,21 @@
 			let gameList = new GameList();
 			gameList.update(gameListData);
 			redom.mount(gamesElement, gameList);
-		}).catch(() => {
+		}).catch((e) => {
 			redom.mount(gamesElement, redom.text('Could not load'));
 		});
+		
+		profile.promise.then(profile => {
+			if (!profile.id || profile.games.length === 0)
+				return;
+			let myGamesElement = document.getElementById('myGames');
+			myGamesElement.style.display = 'block';
+			let myGameList = new GameList();
+			myGameList.update(profile.games);
+			redom.mount(myGamesElement, myGameList);
+        });
 
 		let topBarBackground = document.getElementById('topBarBackground');
-
-		if (IS_SMALL_SCREEN)
-			document.body.classList.add('isSmallDevice');
 
 		if (IS_MOBILE_STANDALONE) {
 			// In standalone mode, just show the top bar always. In iOS, scolling events can't be trusted.

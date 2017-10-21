@@ -200,7 +200,6 @@ export function executeChange(change) {
 	let newScene;
 	
 	executeExternal(() => {
-		console.log('execute change', change.type, change.id || change.value);
 		if (change.type === changeType.setPropertyValue) {
 			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
 		} else if (change.type === changeType.addSerializableToTree) {

@@ -14,8 +14,8 @@ import * as fullscreen from './util/fullscreen';
 disableAllChanges();
 
 configureNetSync({
-	networkEnabled: true,
-	shouldStartSceneWhenGameLoaded: true,
+	serverToClientEnabled: true,
+	clientToServerEnabled: false,
 	context: 'play'
 });
 

@@ -1,0 +1,15 @@
+div.contextMenu {
+    position: absolute;
+    background: white;
+
+    box-shadow: 1px 1px 13px rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+div.contextMenuItem {
+    padding: 10px;
+    cursor: pointer;
+}
+div.contextMenuItem:hover {
+    background: #f5f5f5;
+}

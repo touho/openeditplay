@@ -13,8 +13,9 @@ import {stickyNonModalErrorPopup} from "./popup";
 import events from './events';
 
 let options = {
-	context: null, // 'play' or 'edit'
-	networkEnabled: false
+	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
+	serverToClientEnabled: true,
+	clientToServerEnabled: false 
 };
 
 export function configureNetSync(_options) {
@@ -41,9 +42,8 @@ function getQueryVariable(variable) {
 }
 
 function changeReceivedOverNet(packedChanges) {
-	if (!options.networkEnabled)
+	if (!options.serverToClientEnabled)
 		return;
-
 	packedChanges.forEach(change => {
 		change = unpackChange(change);
 		if (change) {
@@ -69,7 +69,7 @@ function gameReceivedOverNet(gameData) {
 }
 
 addChangeListener(change => {
-	if (change.external || !options.networkEnabled)
+	if (change.external || !options.clientToServerEnabled)
 		return; // Don't send a change that you have received.
 
 	if (isInSceneTree(change)) // Don't sync scene
@@ -119,9 +119,6 @@ let listeners = {
 		localStorage.openEditPlayUserToken = profile.userToken;
 		
 		if (!editAccess) {
-			configureNetSync({
-				networkEnabled: false
-			});
 			events.dispatch('noEditAccess');
 		}
 		
@@ -151,12 +148,13 @@ let listeners = {
 };
 
 let sendChanges = limit(200, 'soon', () => {
-	if (!socket || changes.length === 0 || !options.networkEnabled)
+	if (!socket || changes.length === 0 || !options.clientToServerEnabled)
 		return;
 	
 	let packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
+	console.log('send change');
 	sendSocketMessage('', packedChanges);
 });
 
@@ -181,7 +179,8 @@ function connect() {
 		socket.on('disconnect', () => {
 			console.warn('Disconnected!');
 			stickyNonModalErrorPopup('Disconnected!');
-			options.networkEnabled = false;
+			options.serverToClientEnabled = false;
+			options.clientToServerEnabled = false;
 		});
 	});
 }

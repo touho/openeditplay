@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import events, { listen, dispatch } from '../../util/events';
-import showPopup from './popup/popup';
+import showPopup from './popup/Popup';
 import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';
 import editors from './propertyEditorTypes';

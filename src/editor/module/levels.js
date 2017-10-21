@@ -3,7 +3,7 @@ import Module from './module';
 import { game } from '../../core/game';
 import { editor } from '../editor';
 import Level from '../../core/level';
-import { Button } from '../views/popup/popup';
+import { Button } from '../views/popup/Popup';
 import { dispatch, listen } from '../../util/events';
 import events from "../../util/events";
 

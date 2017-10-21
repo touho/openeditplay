@@ -47,6 +47,6 @@ test.setPropertyValue = (id, value, game = GAME_ID) => {
 	return dbSync.writeChangeToDatabase(change, game);
 };
 
-test.getGame = (game = GAME_ID) => {
-	return dbSync.getGame(game);
+test.getGameData = (game = GAME_ID) => {
+	return dbSync.getGameData(game);
 };
