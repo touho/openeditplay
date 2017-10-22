@@ -47,7 +47,8 @@ class Connection {
 		this.userId = null;
 		this.context = null; // play | edit
 		this.editAccess = false;
-		this.ip = socket.handshake.headers['x-real-ip'];
+		// x-real-ip from nginx, handshake.address for local environment
+		this.ip = socket.handshake.headers['x-real-ip'] || socket.handshake.address;
 		this.changeCount = 0;
 		
 		let listeners = {
