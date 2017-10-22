@@ -20,8 +20,6 @@ user.getProfile = async function(userId, userToken) {
 	profile.userActivity = userActivity;
 	profile.games = games;
 	
-	console.log('returning profile', profile)
-	
 	return profile;
 };
 

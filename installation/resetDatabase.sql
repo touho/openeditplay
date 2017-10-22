@@ -7,7 +7,7 @@
 #
 # Host: 127.0.0.1 (MySQL 5.7.17)
 # Database: openeditplay
-# Generation Time: 2017-10-09 07:50:02 +0000
+# Generation Time: 2017-10-22 06:15:31 +0000
 # ************************************************************
 
 
@@ -28,7 +28,7 @@ DROP TABLE IF EXISTS `game`;
 CREATE TABLE `game` (
   `id` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `name` varchar(50) CHARACTER SET utf8 COLLATE utf8_bin DEFAULT '' COMMENT 'metadata',
-  `creatorIP` varchar(15) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '' COMMENT 'IP where the game is created',
+  `creatorIP` varchar(40) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '' COMMENT 'IP where the game is created',
   `creatorUserId` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `isDirty` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1 if meta data in this table needs recalculating',
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -94,8 +94,8 @@ DROP TABLE IF EXISTS `userActivity`;
 CREATE TABLE `userActivity` (
   `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT,
   `userId` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
-  `firstIP` varchar(15) NOT NULL DEFAULT '',
-  `lastIP` varchar(15) NOT NULL DEFAULT '',
+  `firstIP` varchar(40) NOT NULL DEFAULT '',
+  `lastIP` varchar(40) NOT NULL DEFAULT '',
   `type` enum('play','edit','editaccess') NOT NULL DEFAULT 'play',
   `gameId` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `data` varchar(200) DEFAULT NULL,
