@@ -47,7 +47,7 @@ class Connection {
 		this.userId = null;
 		this.context = null; // play | edit
 		this.editAccess = false;
-		this.ip = socket.request.connection._peername.address;
+		this.ip = socket.handshake.headers['x-real-ip'];
 		this.changeCount = 0;
 		
 		let listeners = {
