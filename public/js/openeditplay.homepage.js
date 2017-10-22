@@ -482,10 +482,7 @@ ContextMenu.prototype.remove = function remove () {
 var ContextMenuItem = function ContextMenuItem() {
 	var this$1 = this;
 
-	var el$$1 = redom.el;
-	var list$$1 = redom.list;
-
-	this.el = el$$1('div.contextMenuItem',
+	this.el = el('div.contextMenuItem',
 		{
 			onclick: function () { return this$1.callback && this$1.callback(); }
 		}

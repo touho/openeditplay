@@ -35,8 +35,6 @@ export class ContextMenu {
 
 class ContextMenuItem {
 	constructor() {
-		let {el, list} = redom;
-
 		this.el = el('div.contextMenuItem',
 			{
 				onclick: () => this.callback && this.callback()
