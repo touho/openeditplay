@@ -1,16 +1,16 @@
-import './core'
-import './components'
-import { keyPressed, key, listenKeyDown, simulateKeyEvent } from './util/input'
-import { scene, listenSceneCreation } from './core/scene';
-import { listenGameCreation } from './core/game';
-import { configureNetSync } from './util/net'
-import { disableAllChanges } from './core/property';
+import '../core/index'
+import '../components'
+import { keyPressed, key, listenKeyDown, simulateKeyEvent } from '../util/input'
+import { scene, listenSceneCreation } from '../core/scene';
+import { listenGameCreation } from '../core/game';
+import { configureNetSync } from '../core/net'
+import { disableAllChanges } from '../core/property';
 
-import './player/canvasResize'
-import './player/touchControlManager'
+import './canvasResize'
+import './touchControlManager'
 
 
-import * as fullscreen from './util/fullscreen';
+import * as fullscreen from '../util/fullscreen';
 disableAllChanges();
 
 configureNetSync({

@@ -3,15 +3,8 @@
 <head>
 
     <link rel="icon" type="image/png" href="/img/logo_graphics.png"/>
-    <link rel="stylesheet" href="css/front.css">
-    <link rel="stylesheet" href="/common/profile.css">
-    <link rel="stylesheet" href="css/gameElement.css">
-    <link rel="stylesheet" href="css/contextMenu.css">
-    <script src="/js/redom.min.js"></script>
-    <script src="/js/util.js"></script>
-    <script src="/js/gameElement.js"></script>
-    <script src="/js/contextMenu.js"></script>
-    <script src="/common/profile.js"></script>
+    <link rel="stylesheet" href="/css/openeditplay.homepage.css">
+    <script src="/js/openeditplay.homepage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable = no">
@@ -88,64 +81,5 @@
     <br>
     2017
 </div>
-
-<script>
-	window.IS_SMALL_SCREEN = window.screen.width < 800;
-	window.IS_MOBILE_STANDALONE = window.navigator.standalone;
-
-	if (IS_SMALL_SCREEN)
-		document.body.classList.add('isSmallDevice');
-
-	profile.setButtonContainer(document.getElementById('profileButtonContainer'));
-
-	window.addEventListener('load', () => {
-		let gamesElement = document.getElementById('games');
-		getAjax('/api/gameListSample').then(gameListData => {
-			let gameList = new GameList();
-			gameList.update(gameListData);
-			redom.mount(gamesElement, gameList);
-		}).catch((e) => {
-			redom.mount(gamesElement, redom.text('Could not load'));
-		});
-		
-		profile.promise.then(profile => {
-			if (!profile.id || profile.games.length === 0)
-				return;
-			let myGamesElement = document.getElementById('myGames');
-			myGamesElement.style.display = 'block';
-			let myGameList = new GameList();
-			myGameList.update(profile.games);
-			redom.mount(myGamesElement, myGameList);
-        });
-
-		let topBarBackground = document.getElementById('topBarBackground');
-
-		if (IS_MOBILE_STANDALONE) {
-			// In standalone mode, just show the top bar always. In iOS, scolling events can't be trusted.
-			topBarBackground.style.opacity = 1;
-		} else {
-			// In large devices, do mooth scrolling experience
-
-			window.onscroll = function () {
-				"use strict";
-				let scroll = document.documentElement.scrollTop || document.body.scrollTop;
-
-				let point1 = 100;
-				let point2 = 350;
-				let fullOpacity = 1;
-
-				if (scroll < point1) {
-					topBarBackground.style.opacity = 0;
-				} else if (scroll < point2) {
-					topBarBackground.style.opacity = (scroll - point1) / (point2 - point1) * fullOpacity;
-				} else {
-					topBarBackground.style.opacity = fullOpacity;
-				}
-			};
-			window.onscroll();
-		}
-	});
-</script>
-
 </body>
 </html>

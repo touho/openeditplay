@@ -1,9 +1,8 @@
+import {el, mount, list} from 'redom';
 
 // item: {label, callback}
-class ContextMenu {
+export class ContextMenu {
 	constructor(triggerElement, items) {
-		let {el, list, mount} = redom;
-		
 		let triggerBounds = triggerElement.getBoundingClientRect();
 		
 

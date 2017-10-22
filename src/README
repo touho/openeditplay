@@ -1,3 +1,17 @@
 src folder contains most of the source code of open edit play. front page code is coded in separate public folder
 
 Everything here (except server folder) uses ES6 modules and goes through rollup which generates ES5.
+
+
+Folders from high level to low level:
+
+homepage
+editor
+player
+components
+core
+feature
+external
+util
+
+server is 100% isolated

@@ -75,30 +75,42 @@ if (!global.TARGET_NONE) {
 
 	// Game engine JS and CSS
 	if (target === 'all') {
-		autobuildJs('src/main.js', 'builds/openeditplay.js', {
+		autobuildJs('src/player/main.js', 'builds/openeditplay.js', {
 			copyTo: 'public/play/',
 			optimize: true
 		});
-		autobuildJs('src/main.js', 'builds/openeditplay.min.js', {
+		autobuildJs('src/player/main.js', 'builds/openeditplay.min.js', {
 			uglify: true,
 			copyTo: 'public/play/',
 			optimize: true
 		});
 
-		/*
-		if (target === 'all') {
-			buildCss('src/main.scss', 'builds/openeditplay.play.css', () => {
-				copy('builds/openeditplay.cs*', 'public/play/css/');
+		autobuildJs('src/homepage/main.js', 'builds/openeditplay.homepage.js', {
+			copyTo: 'public/js/',
+			optimize: true
+		});
+		autobuildJs('src/homepage/main.js', 'builds/openeditplay.homepage.min.js', {
+			uglify: true,
+			copyTo: 'public/js/',
+			optimize: true
+		});
+		watch('src/homepage/**/*.scss', () => {
+			buildCss('src/homepage/main.scss', 'builds/openeditplay.homepage.css', () => {
+				copy('builds/openeditplay.homepage.cs*', 'public/css/');
 			});
-		}
-		*/
+		}, true);
+		
+		watch('src/player/player.css', () => {
+			copy('src/player/player.css', 'builds/openeditplay.player.css');
+			copy('src/player/player.css', 'public/play/css/openeditplay.player.css');
+		}, true);
 	}
 
 	// Editor JS
-	autobuildJs('src/editorMain.js', 'builds/openeditplay.editor.js', {
+	autobuildJs('src/editor/main.js', 'builds/openeditplay.editor.js', {
 		copyTo: 'public/edit/'
 	});
-	// autobuildJs('src/editorMain.js', 'builds/openeditplay.editor.min.js', {
+	// autobuildJs('src/main.js', 'builds/openeditplay.editor.min.js', {
 	// 	uglify: true,
 	// 	copyTo: 'public/'
 	// });

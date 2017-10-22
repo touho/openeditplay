@@ -5,8 +5,8 @@ export { default as Prop } from './propertyType';
 
 export default class PropertyOwner extends Serializable {
 	constructor(predefinedId = false) {
-		assert(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 		super(predefinedId);
+		assert(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 		this._properties = {};
 	}
 	// Just a helper

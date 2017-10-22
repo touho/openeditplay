@@ -1,4 +1,4 @@
-function getAjax(url) {
+export function getAjax(url) {
 	return new Promise(function(resolve, reject) {
 		let xhttp = new XMLHttpRequest();
 		xhttp.onreadystatechange = function() {
@@ -14,7 +14,7 @@ function getAjax(url) {
 	});
 }
 
-function standaloneMobileLinkClickEventSupport(e) {
+export function standaloneMobileLinkClickEventSupport(e) {
 	if (window.navigator.standalone) {
 		e.preventDefault();
 		let url = e.target.getAttribute('href');
@@ -23,7 +23,7 @@ function standaloneMobileLinkClickEventSupport(e) {
 }
 
 // 2016-01-01 -> 3 years ago
-function dateToAgoFormat(date) {
+export function dateToAgoFormat(date) {
 	date = new Date(date);
 	
 	let now = new Date();

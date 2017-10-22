@@ -1,0 +1,10 @@
+rm -f builds/openeditplay*
+
+rm -f public/js/openeditplay*
+rm -f public/css/openeditplay*
+
+rm -f public/play/openeditplay*
+rm -f public/play/css/openeditplay*
+
+rm -f public/edit/openeditplay*
+rm -f public/edit/css/openeditplay*

@@ -5,12 +5,12 @@ import {
 	executeChange,
 	executeExternal,
 	changeType
-} from '../core/serializableManager'
-import Serializable from '../core/serializable';
-import {game} from '../core/game';
-import {limit} from './callLimiter';
-import {stickyNonModalErrorPopup} from "./popup";
-import events from './events';
+} from './serializableManager'
+import Serializable from './serializable';
+import {game} from './game';
+import {limit} from '../util/callLimiter';
+import {stickyNonModalErrorPopup} from "../util/popup";
+import events from '../util/events';
 
 let options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.

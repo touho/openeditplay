@@ -26,7 +26,7 @@ import {
 	changeType
 } from '../core/serializableManager';
 import assert from '../util/assert';
-import {configureNetSync} from '../util/net';
+import {configureNetSync} from '../core/net';
 import './help';
 import './test';
 import * as performance from '../util/performance'

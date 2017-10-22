@@ -1,0 +1,383 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    background: #484a48;
+}
+
+body {
+    font-family: Arial;
+    text-align: center;
+    /*background: #f1f7f0;*/
+    background: #f5f5f5;
+    background-image: url("/img/bg_pattern.png");
+}
+
+#topBar {
+    width: 100vw;
+    position: fixed;
+    z-index: 100;
+    height: 40px;
+    text-align: center;
+}
+
+#topBarBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    background: linear-gradient(to bottom, #3e3e3e, #1d1d1d);
+    box-shadow: black 0 2px 14px -2px;
+    opacity: 0;
+    /*transition: opacity 0.7s;*/
+}
+
+#topBar a {
+    color: #dddddd;
+    text-decoration: none;
+    font-size: 18px;
+    position: relative;
+    top: 9px;
+    margin: 0px 10px;
+    font-weight: bold;
+}
+
+#topBar a:hover {
+    /*color: #52bb52;*/
+    /*text-shadow: #52bb52 0 0 1px;*/
+    text-shadow: #bcffc2 1px 1px 3px;
+}
+
+#profileButtonContainer {
+    position: fixed;
+    top: 0px;
+    right: 10px;
+    z-index: 1000;
+}
+
+#createGameTopBarButton {
+    color: #8ec983 !important;
+}
+
+#topArea {
+    height: 400px;
+    position: relative;
+    background: black;
+    text-align: center;
+    user-select: none;
+}
+
+#topAreaBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("/img/header-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.5;
+    z-index: 1;
+}
+
+#title {
+    display: inline-block;
+    width: 100%;
+    z-index: 2;
+    color: white;
+    font-size: 9vw;
+    font-weight: bold;
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    transform: translateX(-50%);
+    opacity: 0.4;
+    text-shadow: rgba(255, 255, 255, 0.63) 1px 4px 12px;
+    cursor: default;
+}
+
+@media (min-width: 1111px) {
+    #title {
+        font-size: 100px;
+    }
+}
+
+#createGameButton {
+    display: inline-block;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    text-shadow: #2d4f2a 0px 1px 4px;
+    border: 1px solid #5ebf5e;
+    background-color: #42cc42;
+    background: linear-gradient(to bottom, #9bff82, #4fb157);
+    box-shadow: rgba(125, 255, 129, 0.77) 0px 0px 23px 1px;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    position: absolute;
+    left: 50%;
+    top: 70%;
+    transform: translateX(-50%);
+    z-index: 2;
+    opacity: 0.9;
+}
+
+#createGameButton:hover {
+    opacity: 1;
+}
+
+#tooSmallScreen {
+    display: inline-block;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    text-shadow: #2d4f2a 0px 1px 4px;
+    border: 1px solid #5ebf5e;
+    background-color: #42cc42;
+    background: linear-gradient(to bottom, #9bff82, #4fb157);
+    box-shadow: rgba(136, 164, 134, 0.77) 0px 0px 23px 1px;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    position: absolute;
+    left: 50%;
+    top: 70%;
+    transform: translateX(-50%);
+    z-index: 2;
+    filter: grayscale(100%);  
+    width: 250px;
+}
+
+.sectionTitle {
+    font-size: 40px;
+    font-weight: bold;
+    margin-bottom: 30px;
+    color: #333;
+    z-index: 4;
+}
+
+.section {
+    padding: 70px 0px;
+}
+
+#games {
+    text-align: center;
+}
+
+#myGames {
+    text-align: center;
+    display: none;
+}
+
+#about {
+    background: #fafffb;
+    margin: 0px auto;
+    width: 90%;
+    max-width: 900px;
+    padding: 60px 5vw;
+}
+
+#about p {
+    text-align: left;
+}
+
+#aboutListTitle {
+    font-size: 20px;
+    color: gray;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+#aboutList {
+    display: inline-block;
+    text-align: left;
+    max-width: 400px;
+    color: #404040;
+    margin-top: 50px;
+}
+
+.normalLink {
+    text-decoration: none;
+    color: #64d662;
+}
+
+li {
+    margin-bottom: 10px;
+}
+
+#openEditPlayExplanation {
+    text-align: left;
+    margin-top: 50px;
+}
+
+#footer {
+    padding: 30px;
+    background: #484a48;
+    color: gray;
+    font-size: 12px;
+}
+
+#footer a {
+    text-decoration: none;
+    color: gray;
+}
+
+body.isSmallDevice .hideInSmallScreens {
+    display: none !important;
+}
+
+body:not(.isSmallDevice) .hideInBigScreens {
+    display: none !important;
+}
+
+.profileButton {
+    display: inline-block;
+    color: white;
+    padding: 7px;
+    cursor: pointer;
+    height: 40px;
+    opacity: 0.9;
+}
+
+.profileButton:hover {
+    opacity: 1;
+}
+
+div.profileMenu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1001;
+    text-align: center;
+}
+
+div.profileMenu.visible {
+    display: inline-block;
+}
+
+div.profileMenu div.profileMenuContent {
+    background: white;
+    max-width: 500px;
+    margin: auto;
+    margin-top: 20vh;
+    
+    padding: 30px;
+}
+
+div.contextMenu {
+    position: absolute;
+    background: white;
+
+    box-shadow: 1px 1px 13px rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+div.contextMenuItem {
+    padding: 10px;
+    cursor: pointer;
+}
+
+div.contextMenuItem:hover {
+    background: #f5f5f5;
+}
+
+div.gameListContainer {
+    width: 100%;
+    overflow: auto;
+    max-width: 800px;
+    margin: 0 auto;
+
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 8px 8px -4px;
+}
+
+table.gameList {
+    width: 100%;
+    text-align: left;
+    border-collapse: collapse;
+}
+
+table.gameList > * {
+    min-width: 600px;
+}
+
+thead.gameListHeader > th {
+    padding: 0 5px;
+}
+
+tbody.gameListContent {
+    border-top: 1px solid #fbfbfb;
+}
+
+.gameElement {
+    text-align: left;
+    background: white;
+    background: linear-gradient(to bottom, white, #f9f9f9);
+}
+
+.gameElement.isMyGame {
+    border-left: 2px solid #5fbe5f;
+}
+
+.gameElement > td {
+    padding: 10px 5px 10px 5px;
+}
+
+/*
+.moreGamesGame {
+    width: 400px;
+    height: 200px;
+    display: inline-block;
+    margin: 10px;
+    vertical-align: bottom;
+    position: relative;
+}
+*/
+
+.moreGamesGame .linkButton {
+    margin-top: 80px;
+}
+
+.gameElementName {
+    color: black;
+    text-shadow: rgba(0, 0, 0, 0.4) 0 1px 3px;
+    min-width: 120px;
+    font-size: 18px;
+}
+
+.gameElementPlay {
+    width: 1px;
+}
+
+.linkButton {
+    text-decoration: none;
+    font-weight: bold;
+    color: #5ebf5e;
+    padding: 7px 15px;
+}
+
+.linkButton:hover {
+    opacity: 1;
+}
+
+.gameElementSecondaryButton {
+    filter: grayscale(80%);
+}
+
+.playButton {
+    margin-bottom: 10px;
+}
+
+.editButton {
+    filter: grayscale(80%);
+    font-size: 16px;
+}

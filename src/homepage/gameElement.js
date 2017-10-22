@@ -1,9 +1,12 @@
+import {dateToAgoFormat, standaloneMobileLinkClickEventSupport} from "./util";
+import {ContextMenu} from "./contextMenu";
+import {el, mount, list} from 'redom';
+import {profilePromise} from "./profile";
+
 const sizeExplanation = 'Game size in data units. Every object in scene, type, component, level and property is a data unit.';
 
-class GameList {
+export class GameList {
 	constructor() {
-		let el = redom.el;
-
 		this.el = el('div.gameListContainer',
 			el('table.gameList',
 				el('thead.gameListHeader',
@@ -14,7 +17,7 @@ class GameList {
 					el('th.gameListHeaderCreated', 'Created'),
 					el('th.gameListHeaderModified', 'Modified')
 				),
-				this.list = redom.list('tbody.gameListContent', Game)
+				this.list = list('tbody.gameListContent', Game)
 			)
 		);
 	}
@@ -26,8 +29,6 @@ class GameList {
 
 class Game {
 	constructor() {
-		let el = redom.el;
-
 		this.el = el('tr.gameElement',
 			this.name = el('td.gameElementName'),
 			this.play = el('td.gameElementPlay',
@@ -82,7 +83,7 @@ class Game {
 
 		this.primaryButton.setAttribute('href', '/play/?gameId=' + gameData.id);
 		
-		profile.promise.then(user => {
+		profilePromise.then(user => {
 			this.isMyGame = !!(user.gameIdList && user.gameIdList.includes(gameData.id));
 			this.el.classList.toggle('isMyGame', this.isMyGame);
 			

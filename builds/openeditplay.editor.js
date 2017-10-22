@@ -1260,8 +1260,8 @@ var PropertyOwner = (function (Serializable$$1) {
 	function PropertyOwner(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
-		assert(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 		Serializable$$1.call(this, predefinedId);
+		assert(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 		this._properties = {};
 	}
 
