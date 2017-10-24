@@ -6,10 +6,10 @@ import {profilePromise, setButtonContainer} from "./profile";
 window.IS_SMALL_SCREEN = window.screen.width < 800;
 window.IS_MOBILE_STANDALONE = window.navigator.standalone;
 
-if (IS_SMALL_SCREEN)
-	document.body.classList.add('isSmallDevice');
-
 window.addEventListener('load', () => {
+	if (IS_SMALL_SCREEN)
+		document.body.classList.add('isSmallDevice');
+	
 	setButtonContainer(document.getElementById('profileButtonContainer'));
 	
 	let gamesElement = document.getElementById('games');

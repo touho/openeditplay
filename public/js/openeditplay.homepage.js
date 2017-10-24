@@ -677,10 +677,10 @@ Game.prototype.update = function update (gameData) {
 window.IS_SMALL_SCREEN = window.screen.width < 800;
 window.IS_MOBILE_STANDALONE = window.navigator.standalone;
 
-if (IS_SMALL_SCREEN)
-	{ document.body.classList.add('isSmallDevice'); }
-
 window.addEventListener('load', function () {
+	if (IS_SMALL_SCREEN)
+		{ document.body.classList.add('isSmallDevice'); }
+	
 	setButtonContainer(document.getElementById('profileButtonContainer'));
 	
 	var gamesElement = document.getElementById('games');
