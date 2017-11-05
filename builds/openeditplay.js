@@ -715,6 +715,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
+// info about type, validator, validatorParameters, initialValue
+
+
+
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -2330,7 +2334,7 @@ var defaultMaterialOptions = {
 	friction: 0.3,
 	restitution: 0,
 	stiffness: 1e6, // Hardness of the contact. Less stiffness will make the objects penetrate more, and will make the contact act more like a spring than a contact force.
-	relaxation: 5, // Original: 3. Small number makes bounce. Big number makes object stay inside another object.
+	relaxation: 4, // Original: 3. Small number makes bounce. Big number makes object stay inside another object.
 	frictionStiffness: 1e6, // Stiffness of the resulting friction force. For most cases, the value of this property should be a large number. I cannot think of any case where you would want less frictionStiffness.
 	frictionRelaxation: 4, // Relaxation of the resulting friction force. The default value should be good for most simulations.
 	surfaceVelocity: 0 // Will add surface velocity to this material. If bodyA rests on top if bodyB, and the surface velocity is positive, bodyA will slide to the right.
@@ -3122,6 +3126,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3920,6 +3926,7 @@ Component.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -4419,7 +4426,26 @@ Component.register({
 					bodyVelocity[1] = -this.jumpSpeed * PHYSICS_SCALE;
 				} else {
 					// going up
-					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed * PHYSICS_SCALE;
+					var velocityVector = Vector.fromArray(bodyVelocity);
+
+					var contactEquations = getWorld(this.scene).narrowphase.contactEquations;
+					var body = this.Physics.body;
+					
+					for (var i = contactEquations.length - 1; i >= 0; --i) {
+						var contact = contactEquations[i];
+						if (contact.bodyA === body || contact.bodyB === body) {
+							var normal = Vector.fromArray(contact.normalA);
+							if (contact.bodyB === body)
+								{ normal.multiplyScalar(-1); }
+							var dotProduct = velocityVector.dot(normal);
+							if (dotProduct < 0) {
+								// character is moving away from the contact. could be caused by physics engine.
+								velocityVector.subtract(normal.multiplyScalar(dotProduct));
+							}
+						}
+					}
+					
+					bodyVelocity[1] = velocityVector.y - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},
@@ -4432,17 +4458,16 @@ Component.register({
 			
 			if (!body)
 				{ return false; }
-			/*
-			if (body.sleepState === p2.Body.SLEEPING)
-				return true;
-			*/
+			
+			if (body.sleepState === p2$1.Body.SLEEPING)
+				{ return true; }
+			
 			for (var i = contactEquations.length - 1; i >= 0; --i) {
 				var contact = contactEquations[i];
 				if (contact.bodyA === body || contact.bodyB === body) {
 					var normalY = contact.normalA[1];
 					if (contact.bodyB === body)
 						{ normalY *= -1; }
-					console.log('normalY', normalY);
 					if (normalY > 0.5)
 						{ return true; }
 				}
@@ -4575,6 +4600,7 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
 
 var options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
