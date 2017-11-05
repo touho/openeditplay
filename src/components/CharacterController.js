@@ -18,6 +18,7 @@ Component.register({
 		Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		Prop('controlType', 'jumper', Prop.enum, Prop.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		Prop('jumpSpeed', 300, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('controlType', 'jumper')),
+		Prop('jumpAddedToVelocity', 0.4, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('controlType', 'jumper'), '1 means that jump speed is added to y velocity when object has y velocity.'),
 		Prop('breakInTheAir', true, Prop.bool, Prop.visibleIf('controlType', 'jumper')),
 		Prop('speed', 200, Prop.float, Prop.float.range(0, 1000)),
 		Prop('acceleration', 2000, Prop.float, Prop.float.range(0, 10000)),
@@ -156,7 +157,7 @@ Component.register({
 						}
 					}
 					
-					bodyVelocity[1] = velocityVector.y - this.jumpSpeed * PHYSICS_SCALE;
+					bodyVelocity[1] = velocityVector.y * this.jumpAddedToVelocity - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},

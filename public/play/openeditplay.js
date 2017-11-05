@@ -715,10 +715,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
-// info about type, validator, validatorParameters, initialValue
-
-
-
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -3126,8 +3122,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3418,7 +3412,7 @@ Component.register({
 				{ this.Transform.position = this.Transform.position.add(this.positionVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
 
 			if (!this.scaleVariance.isZero())
-				{ this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
+				{ this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(Math.random())); }
 			
 			if (this.angleVariance)
 				{ this.Transform.angle += this.angleVariance * (-1 + 2 * Math.random()); }
@@ -3926,7 +3920,6 @@ Component.register({
 	}
 });
 
-// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -4301,6 +4294,7 @@ Component.register({
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
+		createPropertyType('jumpAddedToVelocity', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('controlType', 'jumper'), '1 means that jump speed is added to y velocity when object has y velocity.'),
 		createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('speed', 200, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('acceleration', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000)),
@@ -4445,7 +4439,7 @@ Component.register({
 						}
 					}
 					
-					bodyVelocity[1] = velocityVector.y - this.jumpSpeed * PHYSICS_SCALE;
+					bodyVelocity[1] = velocityVector.y * this.jumpAddedToVelocity - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},
@@ -4600,7 +4594,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
 
 var options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.

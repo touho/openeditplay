@@ -656,8 +656,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -784,10 +782,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3320,8 +3314,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3612,7 +3604,7 @@ Component$1.register({
 				{ this.Transform.position = this.Transform.position.add(this.positionVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
 
 			if (!this.scaleVariance.isZero())
-				{ this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(-1 + 2 * Math.random())); }
+				{ this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(Math.random())); }
 			
 			if (this.angleVariance)
 				{ this.Transform.angle += this.angleVariance * (-1 + 2 * Math.random()); }
@@ -4120,7 +4112,6 @@ Component$1.register({
 	}
 });
 
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -4502,6 +4493,7 @@ Component$1.register({
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
+		createPropertyType('jumpAddedToVelocity', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('controlType', 'jumper'), '1 means that jump speed is added to y velocity when object has y velocity.'),
 		createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
 		createPropertyType('speed', 200, createPropertyType.float, createPropertyType.float.range(0, 1000)),
 		createPropertyType('acceleration', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000)),
@@ -4646,7 +4638,7 @@ Component$1.register({
 						}
 					}
 					
-					bodyVelocity[1] = velocityVector.y - this.jumpSpeed * PHYSICS_SCALE;
+					bodyVelocity[1] = velocityVector.y * this.jumpAddedToVelocity - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},
@@ -4801,8 +4793,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5228,7 +5218,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6051,22 +6040,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -6087,6 +6060,8 @@ Component$1.register({
 		scale: null,
 		angle: null,
 		position: null,
+		
+		listeners: null,
 
 		positionHelper: null,
 		
@@ -6135,6 +6110,8 @@ Component$1.register({
 		init: function init() {
 			var this$1 = this;
 
+			this.listeners = [];
+			
 			this.listenProperty(this.Transform, 'position', function (position) {
 				if (this$1.scene.playing) {
 					this$1.requiresWidgetUpdate = true;
@@ -6154,15 +6131,15 @@ Component$1.register({
 				
 				this$1.updateWidgets();
 			});
-			
-			this.scene.listen('pause', function () {
+
+			this.listeners.push(this.scene.listen('pause', function () {
 				if (this$1.requiresWidgetUpdate) {
 					this$1.positionHelper.x = this$1.Transform.position.x;
 					this$1.positionHelper.y = this$1.Transform.position.y;
 					this$1.updateWidgets();
 					this$1.requiresWidgetUpdate = false;
 				}
-			});
+			}));
 
 			
 			this.position.init();
@@ -6188,8 +6165,8 @@ Component$1.register({
 			// gra.x = 0;
 			// gra.y = 0;
 			// this.stage.addChild(gra);
-			
-			this.zoomListener = this.scene.listen('zoomChange', function () { return this$1.updateZoomLevel(); });
+
+			this.listeners.push(this.scene.listen('zoomChange', function () { return this$1.updateZoomLevel(); }));
 			this.updateZoomLevel();
 		},
 		
@@ -6209,11 +6186,9 @@ Component$1.register({
 			this.widgets.forEach(function (widget) {
 				widget.sleep();
 			});
-			
-			if (this.zoomListener) {
-				this.zoomListener();
-				this.zoomListener = null;
-			}
+
+			this.listeners.forEach(function (listener) { return listener(); });
+			this.listeners = null;
 
 			this.positionHelper.destroy();
 			this.positionHelper = null;
@@ -7826,11 +7801,6 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7904,19 +7874,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;

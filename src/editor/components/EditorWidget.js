@@ -65,6 +65,8 @@ export default Component.register({
 		scale: null,
 		angle: null,
 		position: null,
+		
+		listeners: null,
 
 		positionHelper: null,
 		
@@ -105,6 +107,8 @@ export default Component.register({
 			}
 		},
 		init() {
+			this.listeners = [];
+			
 			this.listenProperty(this.Transform, 'position', position => {
 				if (this.scene.playing) {
 					this.requiresWidgetUpdate = true;
@@ -124,15 +128,15 @@ export default Component.register({
 				
 				this.updateWidgets();
 			});
-			
-			this.scene.listen('pause', () => {
+
+			this.listeners.push(this.scene.listen('pause', () => {
 				if (this.requiresWidgetUpdate) {
 					this.positionHelper.x = this.Transform.position.x;
 					this.positionHelper.y = this.Transform.position.y;
 					this.updateWidgets();
 					this.requiresWidgetUpdate = false;
 				}
-			});
+			}));
 
 			
 			this.position.init();
@@ -158,8 +162,8 @@ export default Component.register({
 			// gra.x = 0;
 			// gra.y = 0;
 			// this.stage.addChild(gra);
-			
-			this.zoomListener = this.scene.listen('zoomChange', () => this.updateZoomLevel());
+
+			this.listeners.push(this.scene.listen('zoomChange', () => this.updateZoomLevel()))
 			this.updateZoomLevel();
 		},
 		
@@ -179,11 +183,9 @@ export default Component.register({
 			this.widgets.forEach(widget => {
 				widget.sleep();
 			});
-			
-			if (this.zoomListener) {
-				this.zoomListener();
-				this.zoomListener = null;
-			}
+
+			this.listeners.forEach(listener => listener());
+			this.listeners = null;
 
 			this.positionHelper.destroy();
 			this.positionHelper = null;

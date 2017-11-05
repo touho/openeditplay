@@ -17,7 +17,7 @@ Component.register({
 				this.Transform.position = this.Transform.position.add(this.positionVariance.clone().multiplyScalar(-1 + 2 * Math.random()));
 
 			if (!this.scaleVariance.isZero())
-				this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(-1 + 2 * Math.random()));
+				this.Transform.scale = this.Transform.scale.add(this.scaleVariance.clone().multiplyScalar(Math.random()));
 			
 			if (this.angleVariance)
 				this.Transform.angle += this.angleVariance * (-1 + 2 * Math.random());
