@@ -48,7 +48,7 @@ const defaultMaterialOptions = {
 	friction: 0.3,
 	restitution: 0,
 	stiffness: 1e6, // Hardness of the contact. Less stiffness will make the objects penetrate more, and will make the contact act more like a spring than a contact force.
-	relaxation: 5, // Original: 3. Small number makes bounce. Big number makes object stay inside another object.
+	relaxation: 4, // Original: 3. Small number makes bounce. Big number makes object stay inside another object.
 	frictionStiffness: 1e6, // Stiffness of the resulting friction force. For most cases, the value of this property should be a large number. I cannot think of any case where you would want less frictionStiffness.
 	frictionRelaxation: 4, // Relaxation of the resulting friction force. The default value should be good for most simulations.
 	surfaceVelocity: 0 // Will add surface velocity to this material. If bodyA rests on top if bodyB, and the surface velocity is positive, bodyA will slide to the right.

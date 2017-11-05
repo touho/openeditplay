@@ -137,7 +137,26 @@ Component.register({
 					bodyVelocity[1] = -this.jumpSpeed * PHYSICS_SCALE;
 				} else {
 					// going up
-					bodyVelocity[1] = bodyVelocity[1] - this.jumpSpeed * PHYSICS_SCALE;
+					let velocityVector = Vector.fromArray(bodyVelocity);
+
+					let contactEquations = getWorld(this.scene).narrowphase.contactEquations;
+					let body = this.Physics.body;
+					
+					for (let i = contactEquations.length - 1; i >= 0; --i) {
+						let contact = contactEquations[i];
+						if (contact.bodyA === body || contact.bodyB === body) {
+							let normal = Vector.fromArray(contact.normalA);
+							if (contact.bodyB === body)
+								normal.multiplyScalar(-1);
+							let dotProduct = velocityVector.dot(normal);
+							if (dotProduct < 0) {
+								// character is moving away from the contact. could be caused by physics engine.
+								velocityVector.subtract(normal.multiplyScalar(dotProduct));
+							}
+						}
+					}
+					
+					bodyVelocity[1] = velocityVector.y - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
 		},

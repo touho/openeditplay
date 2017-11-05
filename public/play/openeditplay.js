@@ -715,10 +715,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
-// info about type, validator, validatorParameters, initialValue
-
-
-
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -3126,8 +3122,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3927,6 +3921,28 @@ Component.register({
 });
 
 Component.register({
+	name: 'Lifetime',
+	description: 'Set the object to be destroyed after a time period',
+	category: 'Core', // You can also make up new categories.
+	icon: 'fa-bars', // Font Awesome id
+	requirements: ['Transform'], // These shared components are autofilled. Error if component is not found.
+	properties: [
+		createPropertyType('lifetime', 3, createPropertyType.float, createPropertyType.float.range(0.01, 1000), 'Life time seconds')
+	],
+	parentClass: Component,
+	prototype: {
+		onUpdate: function onUpdate() {
+			var lifetime = this.scene.time - this.startTime;
+			if (lifetime >= this.lifetime)
+				{ this.entity.delete(); }
+		},
+		init: function init() {
+			this.startTime = this.scene.time;
+		}
+	}
+});
+
+Component.register({
 	name: 'Particles',
 	category: 'Graphics',
 	description: 'Particle engine gives eye candy.',
@@ -4416,16 +4432,17 @@ Component.register({
 			
 			if (!body)
 				{ return false; }
-			
-			if (body.sleepState === p2$1.Body.SLEEPING)
-				{ return true; }
-			
+			/*
+			if (body.sleepState === p2.Body.SLEEPING)
+				return true;
+			*/
 			for (var i = contactEquations.length - 1; i >= 0; --i) {
 				var contact = contactEquations[i];
 				if (contact.bodyA === body || contact.bodyB === body) {
 					var normalY = contact.normalA[1];
 					if (contact.bodyB === body)
 						{ normalY *= -1; }
+					console.log('normalY', normalY);
 					if (normalY > 0.5)
 						{ return true; }
 				}
@@ -4558,7 +4575,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
 
 var options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.

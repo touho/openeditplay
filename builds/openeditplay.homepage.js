@@ -446,6 +446,7 @@ var svgCache = {};
 
 var memoizeSVG = function (query) { return svgCache[query] || createElement(query, SVG); };
 
+// item: {label, callback}
 var ContextMenu = function ContextMenu(triggerElement, items) {
 	var this$1 = this;
 
