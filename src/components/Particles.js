@@ -1,7 +1,7 @@
 import {Component, Prop} from '../core/component';
 import Vector from '../util/vector';
 import {Color} from '../util/color';
-import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics';
+import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics/graphics';
 import { isClient } from '../util/environment';
 
 import { PHYSICS_SCALE } from './Physics';
@@ -69,7 +69,7 @@ Component.register({
 				});
 			});
 			
-			this.scene.mainLayer.addChild(this.container);
+			this.scene.layers.main.addChild(this.container);
 			
 			this.initParticles();
 			['particleLifetime', 'particleCount'].forEach(propertyName => {

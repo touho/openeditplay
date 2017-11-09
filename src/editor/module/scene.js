@@ -25,7 +25,7 @@ import * as sceneDraw from '../util/sceneDrawUtil';
 import Vector from '../../util/vector';
 import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
 import {help} from '../help';
-import PIXI from '../../feature/graphics';
+import PIXI from '../../feature/graphics/graphics';
 import * as performance from '../../util/performance';
 import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
 
@@ -91,7 +91,7 @@ class SceneModule extends Module {
 					onclick: () => {
 						if (!scene) return;
 
-						let bounds = scene.stage.getLocalBounds();
+						let bounds = scene.layers.move.getLocalBounds();
 
 						scene.cameraPosition.setScalars(
 							bounds.x + bounds.width / 2,
@@ -610,7 +610,7 @@ class SceneModule extends Module {
 	makeSureSceneHasEditorLayer() {
 		if (!scene.editorLayer) {
 			scene.editorLayer = new PIXI.Container();
-			scene.stage.addChild(scene.editorLayer);
+			scene.layers.move.addChild(scene.editorLayer);
 
 			scene.widgetLayer = new PIXI.Container();
 			scene.positionHelperLayer = new PIXI.Container();

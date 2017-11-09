@@ -656,6 +656,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -782,6 +784,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2823,18 +2829,22 @@ var Scene = (function (Serializable$$1) {
 			this.cameraZoom = 1;
 			
 			var self = this;
-			function createLayer() {
-				// let layer = new PIXI.Container();
+			function createLayer(parent) {
+				if ( parent === void 0 ) parent = self.stage;
+
 				var layer = new PIXI$2.Container();
-				self.stage.addChild(layer);
+				parent.addChild(layer);
 				return layer;
 			}
-			this.backgroundLayer = createLayer();
-			this.behindLayer = createLayer();
-			this.mainLayer = createLayer();
-			this.frontLayer = createLayer();
-			this.UILayer = createLayer();
-			
+			this.layers = {
+				static: createLayer(), // doesn't move when camera does
+				background: createLayer(), // moves a little when camera does
+				move: createLayer(), // moves with camera
+				ui: createLayer() // doesn't move, is on front
+			};
+			this.layers.behind = createLayer(this.layers.move);
+			this.layers.main = createLayer(this.layers.move);
+			this.layers.front = createLayer(this.layers.move);
 			
 			// let gra = new PIXI.Graphics();
 			// // gra.lineStyle(4, 0xFF3300, 1);
@@ -2897,8 +2907,8 @@ var Scene = (function (Serializable$$1) {
 			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
-		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
-		this.stage.scale.set(this.cameraZoom, this.cameraZoom);
+		this.layers.move.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
+		this.layers.move.scale.set(this.cameraZoom, this.cameraZoom);
 	};
 
 	Scene.prototype.win = function win () {
@@ -3078,8 +3088,8 @@ var Scene = (function (Serializable$$1) {
 	
 	Scene.prototype.mouseToWorld = function mouseToWorld (mousePosition) {
 		return new Vector(
-			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
-			this.stage.pivot.y + mousePosition.y / this.cameraZoom
+			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom,
+			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom
 		);
 	};
 	
@@ -3314,6 +3324,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3675,7 +3687,7 @@ Component$1.register({
 			this.sprite.y = T.position.y;
 			this.sprite.rotation = T.angle;
 
-			this.scene.mainLayer.addChild(this.sprite);
+			this.scene.layers.main.addChild(this.sprite);
 		},
 		updateTexture: function updateTexture() {
 			var textureAndAnchor = this.getTextureAndAnchor();
@@ -4112,6 +4124,7 @@ Component$1.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -4199,7 +4212,7 @@ Component$1.register({
 				});
 			});
 			
-			this.scene.mainLayer.addChild(this.container);
+			this.scene.layers.main.addChild(this.container);
 			
 			this.initParticles();
 			['particleLifetime', 'particleCount'].forEach(function (propertyName) {
@@ -4793,6 +4806,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -5218,6 +5233,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6040,6 +6056,22 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -6269,7 +6301,7 @@ var SceneModule = (function (Module$$1) {
 					onclick: function () {
 						if (!scene) { return; }
 
-						var bounds = scene.stage.getLocalBounds();
+						var bounds = scene.layers.move.getLocalBounds();
 
 						scene.cameraPosition.setScalars(
 							bounds.x + bounds.width / 2,
@@ -6797,7 +6829,7 @@ var SceneModule = (function (Module$$1) {
 	SceneModule.prototype.makeSureSceneHasEditorLayer = function makeSureSceneHasEditorLayer () {
 		if (!scene.editorLayer) {
 			scene.editorLayer = new PIXI$2.Container();
-			scene.stage.addChild(scene.editorLayer);
+			scene.layers.move.addChild(scene.editorLayer);
 
 			scene.widgetLayer = new PIXI$2.Container();
 			scene.positionHelperLayer = new PIXI$2.Container();
@@ -7801,6 +7833,11 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7874,6 +7911,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;

@@ -1,4 +1,4 @@
-import { isClient } from '../util/environment';
+import { isClient } from '../../util/environment';
 
 let PIXI;
 

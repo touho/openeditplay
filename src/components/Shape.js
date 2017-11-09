@@ -1,7 +1,7 @@
 import {Component, Prop} from '../core/component';
 import Vector from '../util/vector';
 import {Color} from '../util/color';
-import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics';
+import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics/graphics';
 
 Component.register({
 	name: 'Shape',
@@ -64,7 +64,7 @@ Component.register({
 			this.sprite.y = T.position.y;
 			this.sprite.rotation = T.angle;
 
-			this.scene.mainLayer.addChild(this.sprite);
+			this.scene.layers.main.addChild(this.sprite);
 		},
 		updateTexture() {
 			let textureAndAnchor = this.getTextureAndAnchor();

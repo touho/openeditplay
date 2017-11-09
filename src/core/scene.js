@@ -5,7 +5,7 @@ import {addChange, changeType, setChangeOrigin} from './serializableManager';
 import {isClient} from '../util/environment';
 import {createWorld, deleteWorld, updateWorld} from '../feature/physics';
 import {listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed} from '../util/input';
-import {default as PIXI, getRenderer} from '../feature/graphics';
+import {default as PIXI, getRenderer} from '../feature/graphics/graphics';
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
 
@@ -38,18 +38,20 @@ export default class Scene extends Serializable {
 			this.cameraZoom = 1;
 			
 			let self = this;
-			function createLayer() {
-				// let layer = new PIXI.Container();
+			function createLayer(parent = self.stage) {
 				let layer = new PIXI.Container();
-				self.stage.addChild(layer);
+				parent.addChild(layer);
 				return layer;
 			}
-			this.backgroundLayer = createLayer();
-			this.behindLayer = createLayer();
-			this.mainLayer = createLayer();
-			this.frontLayer = createLayer();
-			this.UILayer = createLayer();
-			
+			this.layers = {
+				static: createLayer(), // doesn't move when camera does
+				background: createLayer(), // moves a little when camera does
+				move: createLayer(), // moves with camera
+				ui: createLayer() // doesn't move, is on front
+			};
+			this.layers.behind = createLayer(this.layers.move);
+			this.layers.main = createLayer(this.layers.move);
+			this.layers.front = createLayer(this.layers.move);
 			
 			// let gra = new PIXI.Graphics();
 			// // gra.lineStyle(4, 0xFF3300, 1);
@@ -108,8 +110,8 @@ export default class Scene extends Serializable {
 			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
-		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
-		this.stage.scale.set(this.cameraZoom, this.cameraZoom);
+		this.layers.move.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
+		this.layers.move.scale.set(this.cameraZoom, this.cameraZoom);
 	}
 
 	win() {
@@ -287,8 +289,8 @@ export default class Scene extends Serializable {
 	
 	mouseToWorld(mousePosition) {
 		return new Vector(
-			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
-			this.stage.pivot.y + mousePosition.y / this.cameraZoom
+			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom,
+			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom
 		);
 	}
 	
