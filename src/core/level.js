@@ -1,6 +1,7 @@
 import Serializable from './serializable';
 import PropertyOwner, { Prop } from '../core/propertyOwner';
 import Scene, { scene } from './scene';
+import events from "../util/events";
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -13,9 +14,9 @@ export default class Level extends PropertyOwner {
 	createScene(predefinedSceneObject = false) {
 		if (!predefinedSceneObject)
 			new Scene();
-		let entities = this.getChildren('epr').map(epr => epr.createEntity());
-		scene.addChildren(entities);
-		scene.level = this;
+		
+		scene.loadLevel(this);
+		
 		return scene;
 	}
 	isEmpty() {

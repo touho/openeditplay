@@ -91,7 +91,7 @@ export class Component extends PropertyOwner {
 			this.scene.removeComponent(this);
 		
 		this.forEachChild('com', c => c._sleep());
-		// console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
+		
 		this._listenRemoveFunctions.forEach(f => f());
 		this._listenRemoveFunctions.length = 0;
 	}

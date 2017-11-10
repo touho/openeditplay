@@ -2,7 +2,7 @@ import { Component, Prop } from '../core/component';
 import { key, keyPressed, listenKeyDown } from '../util/input';
 import assert from '../util/assert'
 import Vector from '../util/vector';
-import { getWorld, default as p2 } from '../feature/physics';
+import { getWorld, default as p2 } from '../features/physics';
 import {PHYSICS_SCALE} from './Physics'
 import { absLimit } from '../util/algorithm';
 

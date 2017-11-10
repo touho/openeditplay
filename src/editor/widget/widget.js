@@ -1,5 +1,5 @@
 import Vector from '../../util/vector';
-import PIXI from '../../feature/graphics/graphics';
+import PIXI from '../../features/graphics';
 import { scene } from '../../core/scene'
 
 export let defaultWidgetRadius = 5;

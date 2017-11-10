@@ -4,6 +4,7 @@ import Prototype from '../core/prototype'
 import assert from '../util/assert'
 import PropertyOwner, { Prop } from '../core/propertyOwner';
 import {stickyNonModalErrorPopup} from '../util/popup'
+import '../modules';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)

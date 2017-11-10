@@ -1,7 +1,7 @@
 import {Component, Prop} from '../core/component';
 import Vector from '../util/vector';
 import {Color} from '../util/color';
-import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../feature/graphics/graphics';
+import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../features/graphics';
 import { isClient } from '../util/environment';
 
 import { PHYSICS_SCALE } from './Physics';
@@ -213,7 +213,7 @@ Component.register({
 				p
 			;
 			
-			for (let i = this.particleCount - 1; i >= 0; --i) {
+			for (let i = 0; i < this.particleCount; i++) {
 				p = particles[i];
 				
 				if (!p.alive) {

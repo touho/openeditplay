@@ -235,8 +235,8 @@ export default class Serializable {
 		let listeners = this._listeners[event];
 		if (!listeners)
 			return;
-
-		for (var i = listeners.length - 1; i >= 0; --i) {
+		
+		for (let i = 0; i < listeners.length; i++) {
 // @ifndef OPTIMIZE
 			try {
 // @endif

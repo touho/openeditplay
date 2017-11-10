@@ -2,12 +2,12 @@ import Serializable from './serializable';
 import assert from '../util/assert';
 import {game} from './game';
 import {addChange, changeType, setChangeOrigin} from './serializableManager';
-import {isClient} from '../util/environment';
-import {createWorld, deleteWorld, updateWorld} from '../feature/physics';
+import {createWorld, deleteWorld, updateWorld} from '../features/physics';
 import {listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed} from '../util/input';
-import {default as PIXI, getRenderer} from '../feature/graphics/graphics';
+import {default as PIXI, getRenderer} from '../features/graphics';
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
+import events from "../util/events";
 
 let scene = null;
 export {scene};
@@ -20,59 +20,52 @@ export default class Scene extends Serializable {
 	constructor(predefinedId = false) {
 		super(predefinedId);
 
-		if (isClient) {
-			if (scene) {
-				try {
-					scene.delete();
-				} catch (e) {
-					console.warn('Deleting old scene failed', e);
-				}
+		if (scene) {
+			try {
+				scene.delete();
+			} catch (e) {
+				console.warn('Deleting old scene failed', e);
 			}
-			scene = this;
-			window.scene = this;
-
-			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
-			this.renderer = getRenderer(this.canvas);
-			this.stage = new PIXI.Container();
-			this.cameraPosition = new Vector(0, 0);
-			this.cameraZoom = 1;
-			
-			let self = this;
-			function createLayer(parent = self.stage) {
-				let layer = new PIXI.Container();
-				parent.addChild(layer);
-				return layer;
-			}
-			this.layers = {
-				static: createLayer(), // doesn't move when camera does
-				background: createLayer(), // moves a little when camera does
-				move: createLayer(), // moves with camera
-				ui: createLayer() // doesn't move, is on front
-			};
-			this.layers.behind = createLayer(this.layers.move);
-			this.layers.main = createLayer(this.layers.move);
-			this.layers.front = createLayer(this.layers.move);
-			
-			// let gra = new PIXI.Graphics();
-			// // gra.lineStyle(4, 0xFF3300, 1);
-			// gra.beginFill(0x66CCFF);
-			// gra.drawRect(0, 0, 10, 10);
-			// gra.endFill();
-			// gra.x = 0;
-			// gra.y = 0;
-			// this.stage.addChild(gra);
-			
-			
-			// Deprecated
-			// this.context = this.canvas.getContext('2d');
-
-			this.mouseListeners = [
-				listenMouseMove(this.canvas, mousePosition => this.dispatch('onMouseMove', mousePosition)),
-				listenMouseDown(this.canvas, mousePosition => this.dispatch('onMouseDown', mousePosition)),
-				listenMouseUp(this.canvas, mousePosition => this.dispatch('onMouseUp', mousePosition))
-			];
 		}
-		this.level = null;
+		scene = this;
+		window.scene = this;
+
+		this.canvas = document.querySelector('canvas.openEditPlayCanvas');
+		this.renderer = getRenderer(this.canvas);
+
+		this.mouseListeners = [
+			listenMouseMove(this.canvas, mousePosition => this.dispatch('onMouseMove', mousePosition)),
+			listenMouseDown(this.canvas, mousePosition => this.dispatch('onMouseDown', mousePosition)),
+			listenMouseUp(this.canvas, mousePosition => this.dispatch('onMouseUp', mousePosition))
+		];
+
+		addChange(changeType.addSerializableToTree, this);
+		
+		sceneCreateListeners.forEach(listener => listener());
+	}
+	
+	loadLevel(level) {
+		this.level = level;
+		
+		this.stage = new PIXI.Container();
+		this.cameraPosition = new Vector(0, 0);
+		this.cameraZoom = 1;
+
+		let self = this;
+		function createLayer(parent = self.stage) {
+			let layer = new PIXI.Container();
+			parent.addChild(layer);
+			return layer;
+		}
+		this.layers = {
+			static: createLayer(), // doesn't move when camera does
+			background: createLayer(), // moves a little when camera does
+			move: createLayer(), // moves with camera
+			ui: createLayer() // doesn't move, is on front
+		};
+		this.layers.behind = createLayer(this.layers.move);
+		this.layers.main = createLayer(this.layers.move);
+		this.layers.front = createLayer(this.layers.move);
 
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
@@ -81,14 +74,37 @@ export default class Scene extends Serializable {
 		this.playing = false;
 		this.time = 0;
 		this.won = false;
-
-		addChange(changeType.addSerializableToTree, this);
-
+		
 		createWorld(this, physicsOptions);
 
-		this.draw();
+		events.dispatch('scene load level before entities', scene, level);
 
-		sceneCreateListeners.forEach(listener => listener());
+		let entities = this.level.getChildren('epr').map(epr => epr.createEntity());
+		this.addChildren(entities);
+
+		events.dispatch('scene load level', scene, level);
+
+		// this.draw();
+	}
+	unloadLevel() {
+		let level = this.level;
+		this.level = null;
+
+		this.pause();
+
+		this.deleteChildren();
+
+		if (this.stage)
+			this.stage.destroy();
+		this.stage = null;
+
+		this.layers = null;
+
+		this.components.clear();
+
+		deleteWorld(this);
+		
+		events.dispatch('scene unload level', scene, level);
 	}
 	
 	setCameraPositionToPlayer() {
@@ -136,7 +152,9 @@ export default class Scene extends Serializable {
 		setChangeOrigin(this);
 
 		// Update logic
+		performanceTool.start('Component updates');
 		this.dispatch('onUpdate', dt, this.time);
+		performanceTool.stop('Component updates');
 
 		// Update physics
 		performanceTool.start('Physics');
@@ -182,23 +200,15 @@ export default class Scene extends Serializable {
 	reset() {
 		if (!this._alive)
 			return; // scene has been replaced by another one
+
 		this.resetting = true;
-		this.pause();
-		this.deleteChildren();
-
-		deleteWorld(this);
-		createWorld(this, physicsOptions);
-
-		this.won = false;
-		this.time = 0;
 		
-		// this.cameraZoom = 1;
-		// this.cameraPosition.setScalars(0, 0);
-
-		if (this.level) {
-			this.level.createScene(this);
-		}
+		let level = this.level;
+		this.unloadLevel();
 		
+		if (level)
+			this.loadLevel(level);
+
 		this.draw();
 		delete this.resetting;
 		
@@ -225,32 +235,20 @@ export default class Scene extends Serializable {
 
 		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
-		
-		// this.cameraZoom = 1;
-		// this.cameraPosition.setScalars(0, 0);
 
 		this.requestAnimFrame();
 
-
 		if (this.time === 0)
 			this.dispatch('onStart');
-
-		/*
-		 let player = game.findChild('prt', p => p.name === 'Player', true);
-		 if (player) {
-		 console.log('Spawning player!', player);
-		 this.spawn(player);
-		 }
-		 */
 		
 		this.dispatch('play');
 	}
 
 	delete() {
 		if (!super.delete()) return false;
-
-		deleteWorld(this);
-
+		
+		this.unloadLevel();
+		
 		if (scene === this)
 			scene = null;
 
@@ -260,9 +258,6 @@ export default class Scene extends Serializable {
 		}
 		
 		this.renderer = null; // Do not call renderer.destroy(). Same renderer is used by all scenes for now.
-		
-		this.stage.destroy();
-		this.stage = null;
 
 		return true;
 	}

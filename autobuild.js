@@ -128,14 +128,12 @@ if (!global.TARGET_NONE) {
 	// Server restarter
 	function launchServer() {
 		// Timeout so that js and css files would have time to build before server force restarts clients
-		console.log("serverProcess = 'wait';", Date.now());
 		serverProcess = 'wait';
 		setTimeout(() => {
-			console.log('Launching server.', Date.now());
 			serverProcess = cp.fork(ROOT + 'src/server/main.js');
 		}, 200);
 	}
-	let serverProcess = null;
+	var serverProcess = null;
 	watch(['src/server/**/*'], args => {
 		if (serverProcess === 'wait')
 			return;
@@ -150,7 +148,6 @@ if (!global.TARGET_NONE) {
 	// Start server when a heavy build process has been done.
 	let serverStartWatcher = watch('builds/openeditplay.editor.js', () => {
 		serverStartWatcher.close();
-		console.log('server start launchServer');
 		launchServer();
 	});
 }

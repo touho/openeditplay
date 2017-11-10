@@ -4,7 +4,6 @@ import Serializable from './serializable';
 import { getSerializable } from './serializableManager';
 import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
-import { scene } from './scene';
 import assert from '../util/assert';
 import Vector from '../util/vector';
 
@@ -121,7 +120,7 @@ export default class EntityPrototype extends Prototype {
 		Transform.getChildren('prp').forEach(handleProperty);
 		return json;
 	}
-	spawnEntityToScene(position) {
+	spawnEntityToScene(scene, position) {
 		if (!scene)
 			return;
 		

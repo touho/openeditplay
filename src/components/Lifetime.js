@@ -14,8 +14,10 @@ export default Component.register({
 	prototype: {
 		onUpdate() {
 			let lifetime = this.scene.time - this.startTime;
-			if (lifetime >= this.lifetime)
-				this.entity.delete();
+			if (lifetime >= this.lifetime) {
+				if (this.entity)
+					this.entity.delete();
+			}
 		},
 		init() {
 			this.startTime = this.scene.time;

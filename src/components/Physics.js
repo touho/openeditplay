@@ -1,6 +1,6 @@
 import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import p2, { addBody, deleteBody, createMaterial, getWorld } from '../feature/physics';
+import p2, { addBody, deleteBody, createMaterial, getWorld } from '../features/physics';
 import assert from '../util/assert';
 
 const PHYSICS_SCALE = 1/50;

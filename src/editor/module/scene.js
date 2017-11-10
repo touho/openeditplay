@@ -25,7 +25,7 @@ import * as sceneDraw from '../util/sceneDrawUtil';
 import Vector from '../../util/vector';
 import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
 import {help} from '../help';
-import PIXI from '../../feature/graphics/graphics';
+import PIXI from '../../features/graphics';
 import * as performance from '../../util/performance';
 import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
 
@@ -203,7 +203,7 @@ class SceneModule extends Module {
 
 				setChangeOrigin(this);
 
-				this.makeSureSceneHasEditorLayer();
+				// this.makeSureSceneHasEditorLayer();
 
 				this.clearState();
 				
@@ -251,6 +251,27 @@ class SceneModule extends Module {
 			this.clearState();
 			this.draw();
 		});
+		
+		events.listen('scene load level before entities', (scene, level) => {
+			assert(!scene.editorLayer, 'editorLayer should not be there');
+		
+			scene.editorLayer = new PIXI.Container();
+			scene.layers.move.addChild(scene.editorLayer);
+
+			scene.widgetLayer = new PIXI.Container();
+			scene.positionHelperLayer = new PIXI.Container();
+			scene.selectionLayer = new PIXI.Container();
+
+			scene.editorLayer.addChild(
+				scene.widgetLayer,
+				scene.positionHelperLayer,
+				scene.selectionLayer
+			);
+		});
+		events.listen('scene unload level', (scene, level) => {
+			assert(scene.editorLayer, 'editorLayer should be there');
+			delete scene.editorLayer; // No need to destroy. Scene does it already.
+		});
 
 		// Change in serializable tree
 		events.listen('prototypeClicked', prototype => {
@@ -277,9 +298,8 @@ class SceneModule extends Module {
 			performance.start('Editor: Scene');
 
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
-
 				// Make sure the scene has the layers for EditorWidget
-				this.makeSureSceneHasEditorLayer();
+				// this.makeSureSceneHasEditorLayer();
 
 				change.reference.addComponents([
 					Component.create('EditorWidget')
@@ -352,7 +372,7 @@ class SceneModule extends Module {
 			if (!scene || !mousePos || scene.playing) // !mousePos if mouse has not moved since refresh
 				return;
 
-			this.makeSureSceneHasEditorLayer();
+			// this.makeSureSceneHasEditorLayer();
 
 			mousePos = scene.mouseToWorld(mousePos);
 
@@ -607,23 +627,6 @@ class SceneModule extends Module {
 		}
 	}
 
-	makeSureSceneHasEditorLayer() {
-		if (!scene.editorLayer) {
-			scene.editorLayer = new PIXI.Container();
-			scene.layers.move.addChild(scene.editorLayer);
-
-			scene.widgetLayer = new PIXI.Container();
-			scene.positionHelperLayer = new PIXI.Container();
-			scene.selectionLayer = new PIXI.Container();
-
-			scene.editorLayer.addChild(
-				scene.widgetLayer,
-				scene.positionHelperLayer,
-				scene.selectionLayer
-			);
-		}
-	}
-
 	fixAspectRatio() {
 		if (scene && this.canvas) {
 			let change = false;
@@ -639,6 +642,7 @@ class SceneModule extends Module {
 			// scene.renderer.resize(this.canvas.width, this.canvas.height);
 
 			if (change) {
+				events.dispatch('canvas resize', scene);
 				this.draw();
 			}
 		}

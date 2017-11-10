@@ -448,8 +448,8 @@ Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
 	var listeners = this._listeners[event];
 	if (!listeners)
 		{ return; }
-
-	for (var i = listeners.length - 1; i >= 0; --i) {
+		
+	for (var i = 0; i < listeners.length; i++) {
 
 			listeners[i](a, b, c);
 
@@ -2206,6 +2206,150 @@ function stickyNonModalErrorPopup(text$$1) {
 
 window.sticky = stickyNonModalErrorPopup;
 
+/*
+ Global event system
+
+ let unlisten = events.listen('event name', function(params, ...) {});
+ eventManager.dispatch('event name', paramOrParamArray);
+ unlisten();
+ */
+
+var listeners$1 = {};
+
+var events = {
+	listen: function listen(event, callback) {
+		if (!listeners$1.hasOwnProperty(event)) {
+			listeners$1[event] = [];
+		}
+		listeners$1[event].push(callback);
+		return function () {
+			var index = listeners$1[event].indexOf(callback);
+			listeners$1[event].splice(index, 1);
+		};
+	},
+	dispatch: function dispatch(event) {
+		var args = [], len = arguments.length - 1;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
+
+		if (listeners$1.hasOwnProperty(event)) {
+			var listener = listeners$1[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
+				/*
+				try {
+					listeners[event][i].apply(null, args);
+				} catch (e) {
+					if (console && console.sendError) {
+						console.sendError(e);
+					}
+				}
+				*/
+			}
+		}
+	},
+	// Promise is resolved when next event if this type is sent
+	getEventPromise: function getEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
+	}
+};
+// DOM / ReDom event system
+
+var PIXI;
+
+if (isClient) {
+	PIXI = window.PIXI;
+	PIXI.ticker.shared.stop();
+}
+
+var PIXI$1 = PIXI;
+
+var renderer = null; // Only one PIXI renderer supported for now
+
+function getRenderer(canvas) {
+	/*
+	return {
+		render: () => {},
+		resize: () => {}
+	};
+	*/
+	
+	if (!renderer) {
+		renderer = PIXI.autoDetectRenderer({
+			view: canvas,
+			autoResize: true,
+			antialias: true
+		});
+
+		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
+		if (renderer.plugins.interaction) // if interaction is left out from pixi build, interaction is no defined
+			{ renderer.plugins.interaction.destroy(); }
+	}
+	
+	return renderer;
+}
+
+var texturesAndAnchors = {};
+
+function getHashedTextureAndAnchor(hash) {
+	return texturesAndAnchors[hash];
+}
+function generateTextureAndAnchor(graphicsObject, hash) {
+	if (!texturesAndAnchors[hash]) {
+		var bounds = graphicsObject.getLocalBounds();
+		var anchor = {
+			x: -bounds.x / bounds.width,
+			y: -bounds.y / bounds.height
+		};
+		texturesAndAnchors[hash] = {
+			texture: renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2),
+			anchor: anchor
+		};
+	}
+	return texturesAndAnchors[hash];
+}
+
+function createCanvas() {
+	var RESOLUTION = 10;
+	var canvas = document.createElement('canvas');
+	canvas.width  = 1;
+	canvas.height = RESOLUTION;
+	var ctx = canvas.getContext('2d');
+	var gradient = ctx.createLinearGradient(0, 0, 0, RESOLUTION * 0.8);
+	// gradient.addColorStop(0, "#5886c8");
+	// gradient.addColorStop(1, "#9eb6d5");
+	gradient.addColorStop(0, "#94c4ff");
+	gradient.addColorStop(1, "#345a39");
+	ctx.fillStyle = gradient;
+	ctx.fillRect(0, 0, 1, RESOLUTION);
+	return canvas;
+}
+
+events.listen('scene load level', function (scene) {
+	var gradientCanvas = createCanvas();
+	var sprite = new PIXI$1.Sprite(PIXI$1.Texture.fromCanvas(gradientCanvas));
+	scene.backgroundGradient = sprite;
+	updateSceneBackgroundGradient(scene);
+	scene.layers.static.addChild(sprite);
+});
+
+events.listen('scene unload level', function (scene) {
+	delete scene.backgroundGradient;
+});
+
+events.listen('canvas resize', function (scene) {
+	updateSceneBackgroundGradient(scene);
+});
+
+function updateSceneBackgroundGradient(scene) {
+	if (!scene.canvas || !scene.backgroundGradient)
+		{ return; }
+	
+	scene.backgroundGradient.width = scene.canvas.width;
+	scene.backgroundGradient.height = scene.canvas.height;
+}
+
 var propertyTypes = [
 	createPropertyType('name', 'No name', createPropertyType.string)
 ];
@@ -2530,60 +2674,6 @@ function simulateKeyEvent(eventName, keyCode) {
 	}
 }
 
-var PIXI;
-
-if (isClient) {
-	PIXI = window.PIXI;
-	PIXI.ticker.shared.stop();
-}
-
-var PIXI$1 = PIXI;
-
-var renderer = null; // Only one PIXI renderer supported for now
-
-function getRenderer(canvas) {
-	/*
-	return {
-		render: () => {},
-		resize: () => {}
-	};
-	*/
-	
-	if (!renderer) {
-		renderer = PIXI.autoDetectRenderer({
-			view: canvas,
-			autoResize: true,
-			antialias: true
-		});
-
-		// Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
-		if (renderer.plugins.interaction) // if interaction is left out from pixi build, interaction is no defined
-			{ renderer.plugins.interaction.destroy(); }
-	}
-	
-	return renderer;
-}
-
-var texturesAndAnchors = {};
-
-function getHashedTextureAndAnchor(hash) {
-	return texturesAndAnchors[hash];
-}
-function generateTextureAndAnchor(graphicsObject, hash) {
-	if (!texturesAndAnchors[hash]) {
-		var bounds = graphicsObject.getLocalBounds();
-		var anchor = {
-			x: -bounds.x / bounds.width,
-			y: -bounds.y / bounds.height
-		};
-		texturesAndAnchors[hash] = {
-			texture: renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2),
-			anchor: anchor
-		};
-	}
-	return texturesAndAnchors[hash];
-}
-
 var performance$1;
 performance$1 = isClient ? window.performance : { now: Date.now };
 
@@ -2617,57 +2707,58 @@ var Scene = (function (Serializable$$1) {
 
 		Serializable$$1.call(this, predefinedId);
 
-		if (isClient) {
-			if (scene) {
-				try {
-					scene.delete();
-				} catch (e) {
-					console.warn('Deleting old scene failed', e);
-				}
+		if (scene) {
+			try {
+				scene.delete();
+			} catch (e) {
+				console.warn('Deleting old scene failed', e);
 			}
-			scene = this;
-			window.scene = this;
-
-			this.canvas = document.querySelector('canvas.openEditPlayCanvas');
-			this.renderer = getRenderer(this.canvas);
-			this.stage = new PIXI$1.Container();
-			this.cameraPosition = new Vector(0, 0);
-			this.cameraZoom = 1;
-			
-			var self = this;
-			function createLayer() {
-				// let layer = new PIXI.Container();
-				var layer = new PIXI$1.Container();
-				self.stage.addChild(layer);
-				return layer;
-			}
-			this.backgroundLayer = createLayer();
-			this.behindLayer = createLayer();
-			this.mainLayer = createLayer();
-			this.frontLayer = createLayer();
-			this.UILayer = createLayer();
-			
-			
-			// let gra = new PIXI.Graphics();
-			// // gra.lineStyle(4, 0xFF3300, 1);
-			// gra.beginFill(0x66CCFF);
-			// gra.drawRect(0, 0, 10, 10);
-			// gra.endFill();
-			// gra.x = 0;
-			// gra.y = 0;
-			// this.stage.addChild(gra);
-			
-			
-			// Deprecated
-			// this.context = this.canvas.getContext('2d');
-
-			this.mouseListeners = [
-				listenMouseMove(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseMove', mousePosition); }),
-				listenMouseDown(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseDown', mousePosition); }),
-				listenMouseUp(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseUp', mousePosition); })
-			];
 		}
-		this.level = null;
+		scene = this;
+		window.scene = this;
+
+		this.canvas = document.querySelector('canvas.openEditPlayCanvas');
+		this.renderer = getRenderer(this.canvas);
+
+		this.mouseListeners = [
+			listenMouseMove(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseMove', mousePosition); }),
+			listenMouseDown(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseDown', mousePosition); }),
+			listenMouseUp(this.canvas, function (mousePosition) { return this$1.dispatch('onMouseUp', mousePosition); })
+		];
+
+		addChange(changeType.addSerializableToTree, this);
+		
+		sceneCreateListeners.forEach(function (listener) { return listener(); });
+	}
+
+	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
+	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	Scene.prototype.constructor = Scene;
+	
+	Scene.prototype.loadLevel = function loadLevel (level) {
+		this.level = level;
+		
+		this.stage = new PIXI$1.Container();
+		this.cameraPosition = new Vector(0, 0);
+		this.cameraZoom = 1;
+
+		var self = this;
+		function createLayer(parent) {
+			if ( parent === void 0 ) parent = self.stage;
+
+			var layer = new PIXI$1.Container();
+			parent.addChild(layer);
+			return layer;
+		}
+		this.layers = {
+			static: createLayer(), // doesn't move when camera does
+			background: createLayer(), // moves a little when camera does
+			move: createLayer(), // moves with camera
+			ui: createLayer() // doesn't move, is on front
+		};
+		this.layers.behind = createLayer(this.layers.move);
+		this.layers.main = createLayer(this.layers.move);
+		this.layers.front = createLayer(this.layers.move);
 
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
@@ -2676,19 +2767,38 @@ var Scene = (function (Serializable$$1) {
 		this.playing = false;
 		this.time = 0;
 		this.won = false;
-
-		addChange(changeType.addSerializableToTree, this);
-
+		
 		createWorld(this, physicsOptions);
 
-		this.draw();
+		events.dispatch('scene load level before entities', scene, level);
 
-		sceneCreateListeners.forEach(function (listener) { return listener(); });
-	}
+		var entities = this.level.getChildren('epr').map(function (epr) { return epr.createEntity(); });
+		this.addChildren(entities);
 
-	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
-	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
-	Scene.prototype.constructor = Scene;
+		events.dispatch('scene load level', scene, level);
+
+		// this.draw();
+	};
+	Scene.prototype.unloadLevel = function unloadLevel () {
+		var level = this.level;
+		this.level = null;
+
+		this.pause();
+
+		this.deleteChildren();
+
+		if (this.stage)
+			{ this.stage.destroy(); }
+		this.stage = null;
+
+		this.layers = null;
+
+		this.components.clear();
+
+		deleteWorld(this);
+		
+		events.dispatch('scene unload level', scene, level);
+	};
 	
 	Scene.prototype.setCameraPositionToPlayer = function setCameraPositionToPlayer () {
 		var pos = new Vector(0, 0);
@@ -2709,8 +2819,8 @@ var Scene = (function (Serializable$$1) {
 			this.setCameraPositionToPlayer();
 		}
 		// pivot is camera top left corner position
-		this.stage.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
-		this.stage.scale.set(this.cameraZoom, this.cameraZoom);
+		this.layers.move.pivot.set(this.cameraPosition.x - this.canvas.width / 2 / this.cameraZoom, this.cameraPosition.y - this.canvas.height / 2 / this.cameraZoom);
+		this.layers.move.scale.set(this.cameraZoom, this.cameraZoom);
 	};
 
 	Scene.prototype.win = function win () {
@@ -2735,7 +2845,9 @@ var Scene = (function (Serializable$$1) {
 		setChangeOrigin(this);
 
 		// Update logic
+		start('Component updates');
 		this.dispatch('onUpdate', dt, this.time);
+		stop('Component updates');
 
 		// Update physics
 		start('Physics');
@@ -2783,23 +2895,15 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.reset = function reset () {
 		if (!this._alive)
 			{ return; } // scene has been replaced by another one
+
 		this.resetting = true;
-		this.pause();
-		this.deleteChildren();
-
-		deleteWorld(this);
-		createWorld(this, physicsOptions);
-
-		this.won = false;
-		this.time = 0;
 		
-		// this.cameraZoom = 1;
-		// this.cameraPosition.setScalars(0, 0);
-
-		if (this.level) {
-			this.level.createScene(this);
-		}
+		var level = this.level;
+		this.unloadLevel();
 		
+		if (level)
+			{ this.loadLevel(level); }
+
 		this.draw();
 		delete this.resetting;
 		
@@ -2826,32 +2930,20 @@ var Scene = (function (Serializable$$1) {
 
 		this._prevUpdate = 0.001 * performance.now();
 		this.playing = true;
-		
-		// this.cameraZoom = 1;
-		// this.cameraPosition.setScalars(0, 0);
 
 		this.requestAnimFrame();
 
-
 		if (this.time === 0)
 			{ this.dispatch('onStart'); }
-
-		/*
-		 let player = game.findChild('prt', p => p.name === 'Player', true);
-		 if (player) {
-		 console.log('Spawning player!', player);
-		 this.spawn(player);
-		 }
-		 */
 		
 		this.dispatch('play');
 	};
 
 	Scene.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
-
-		deleteWorld(this);
-
+		
+		this.unloadLevel();
+		
 		if (scene === this)
 			{ scene = null; }
 
@@ -2861,9 +2953,6 @@ var Scene = (function (Serializable$$1) {
 		}
 		
 		this.renderer = null; // Do not call renderer.destroy(). Same renderer is used by all scenes for now.
-		
-		this.stage.destroy();
-		this.stage = null;
 
 		return true;
 	};
@@ -2890,8 +2979,8 @@ var Scene = (function (Serializable$$1) {
 	
 	Scene.prototype.mouseToWorld = function mouseToWorld (mousePosition) {
 		return new Vector(
-			this.stage.pivot.x + mousePosition.x / this.cameraZoom,
-			this.stage.pivot.y + mousePosition.y / this.cameraZoom
+			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom,
+			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom
 		);
 	};
 	
@@ -3001,7 +3090,7 @@ var Component = (function (PropertyOwner$$1) {
 			{ this.scene.removeComponent(this); }
 		
 		this.forEachChild('com', function (c) { return c._sleep(); });
-		// console.log(`remove ${this._listenRemoveFunctions.length} listeners`);
+		
 		this._listenRemoveFunctions.forEach(function (f) { return f(); });
 		this._listenRemoveFunctions.length = 0;
 	};
@@ -3250,7 +3339,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		return json;
 		var ref;
 	};
-	EntityPrototype.prototype.spawnEntityToScene = function spawnEntityToScene (position) {
+	EntityPrototype.prototype.spawnEntityToScene = function spawnEntityToScene (scene, position) {
 		if (!scene)
 			{ return; }
 		
@@ -3375,9 +3464,9 @@ var Level = (function (PropertyOwner$$1) {
 
 		if (!predefinedSceneObject)
 			{ new Scene(); }
-		var entities = this.getChildren('epr').map(function (epr) { return epr.createEntity(); });
-		scene.addChildren(entities);
-		scene.level = this;
+		
+		scene.loadLevel(this);
+		
 		return scene;
 	};
 	Level.prototype.isEmpty = function isEmpty () {
@@ -3489,7 +3578,7 @@ Component.register({
 			this.sprite.y = T.position.y;
 			this.sprite.rotation = T.angle;
 
-			this.scene.mainLayer.addChild(this.sprite);
+			this.scene.layers.main.addChild(this.sprite);
 		},
 		updateTexture: function updateTexture() {
 			var textureAndAnchor = this.getTextureAndAnchor();
@@ -3656,7 +3745,9 @@ Component.register({
 			if (!prototype)
 				{ return; }
 
-			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+			var entityPrototype = EntityPrototype.createFromPrototype(prototype);
+			entityPrototype.spawnEntityToScene(this.scene, this.Transform.position);
+			entityPrototype.delete();
 			this.lastSpawn = this.scene.time;
 		}
 	}
@@ -3940,8 +4031,10 @@ Component.register({
 	prototype: {
 		onUpdate: function onUpdate() {
 			var lifetime = this.scene.time - this.startTime;
-			if (lifetime >= this.lifetime)
-				{ this.entity.delete(); }
+			if (lifetime >= this.lifetime) {
+				if (this.entity)
+					{ this.entity.delete(); }
+			}
 		},
 		init: function init() {
 			this.startTime = this.scene.time;
@@ -4014,7 +4107,7 @@ Component.register({
 				});
 			});
 			
-			this.scene.mainLayer.addChild(this.container);
+			this.scene.layers.main.addChild(this.container);
 			
 			this.initParticles();
 			['particleLifetime', 'particleCount'].forEach(function (propertyName) {
@@ -4165,7 +4258,7 @@ Component.register({
 				lerp,
 				p;
 			
-			for (var i = this.particleCount - 1; i >= 0; --i) {
+			for (var i = 0; i < this.particleCount; i++) {
 				p = particles[i];
 				
 				if (!p.alive) {
@@ -4553,56 +4646,6 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	}
 }
 
-/*
- Global event system
-
- let unlisten = events.listen('event name', function(params, ...) {});
- eventManager.dispatch('event name', paramOrParamArray);
- unlisten();
- */
-
-var listeners$2 = {};
-
-var events = {
-	listen: function listen(event, callback) {
-		if (!listeners$2.hasOwnProperty(event)) {
-			listeners$2[event] = [];
-		}
-		listeners$2[event].push(callback);
-		return function () {
-			var index = listeners$2[event].indexOf(callback);
-			listeners$2[event].splice(index, 1);
-		};
-	},
-	dispatch: function dispatch(event) {
-		var args = [], len = arguments.length - 1;
-		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
-
-		if (listeners$2.hasOwnProperty(event)) {
-			var listener = listeners$2[event];
-			for (var i = 0; i < listener.length; ++i) {
-				listener[i].apply(null, args);
-				/*
-				try {
-					listeners[event][i].apply(null, args);
-				} catch (e) {
-					if (console && console.sendError) {
-						console.sendError(e);
-					}
-				}
-				*/
-			}
-		}
-	},
-	// Promise is resolved when next event if this type is sent
-	getEventPromise: function getEventPromise(event) {
-		return new Promise(function(res) {
-			events.listen(event, res);
-		});
-	}
-};
-// DOM / ReDom event system
-
 var options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
 	serverToClientEnabled: true,
@@ -4689,7 +4732,7 @@ function sendSocketMessage(eventName, data) {
 		{ socket.emit(data); }
 }
 
-var listeners$1 = {
+var listeners$2 = {
 	data: function data(result) {
 		var profile = result.profile;
 		var gameData = result.gameData;
@@ -4751,7 +4794,7 @@ function connect() {
 		socket.onevent = function (packet) {
 			var param1 = packet.data[0];
 			if (typeof param1 === 'string') {
-				listeners$1[param1](packet.data[1]);
+				listeners$2[param1](packet.data[1]);
 			} else {
 				// Optimized change-event
 				changeReceivedOverNet(param1);
@@ -4793,6 +4836,8 @@ function resizeCanvas() {
 		
 		previousWidth = width;
 		previousHeight = height;
+		
+		events.dispatch('canvas resize', scene);
 	}
 	
 	setSize(true);

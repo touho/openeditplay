@@ -1,5 +1,6 @@
 import { scene, listenSceneCreation } from '../core/scene';
 import debug from './debug'
+import events from "../util/events";
 
 let previousWidth = null;
 let previousHeight = null;
@@ -27,6 +28,8 @@ function resizeCanvas() {
 		
 		previousWidth = width;
 		previousHeight = height;
+		
+		events.dispatch('canvas resize', scene);
 	}
 	
 	setSize(true);

@@ -47,7 +47,9 @@ Component.register({
 			if (!prototype)
 				return;
 
-			EntityPrototype.createFromPrototype(prototype).spawnEntityToScene(this.Transform.position);
+			let entityPrototype = EntityPrototype.createFromPrototype(prototype);
+			entityPrototype.spawnEntityToScene(this.scene, this.Transform.position);
+			entityPrototype.delete();
 			this.lastSpawn = this.scene.time;
 		}
 	}
