@@ -1,3 +1,5 @@
+import events from "./events";
+
 const UPDATE_INTERVAL = 1000; //ms
 
 import { isClient } from './environment';
@@ -9,7 +11,13 @@ let snapshotPerformance = []; // is static data for UPDATE_INTERVAL. then it cha
 let cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
 let currentPerformanceMeters = {}; // very short term
 
-let snapshotListener = null;
+let perSecondSnapshot = [];
+let currentPerSecondMeters = {};
+export function eventHappened(name, count = 1) {
+	// @ifndef OPTIMIZE
+	currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
+	// @endif
+}
 
 export function start(name) {
 	// @ifndef OPTIMIZE
@@ -27,21 +35,19 @@ export function stop(name) {
 	// @endif
 }
 
+let performanceInterval = null;
 export function startPerformanceUpdates() {
-	setInterval(() => {
+	performanceInterval = setInterval(() => {
 		printPrivatePerformance(cumulativePerformance);
 		
 		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
 		cumulativePerformance = {};
-		
-		if (snapshotListener) {
-			snapshotListener(snapshotPerformance);
-		}
-	}, UPDATE_INTERVAL);
-}
+		events.dispatch('performance snapshot', snapshotPerformance);
 
-export function setListener(listener) {
-	snapshotListener = listener;
+		perSecondSnapshot = perSecondObjectToPublicArray(currentPerSecondMeters);
+		currentPerSecondMeters = {};
+		events.dispatch('perSecond snapshot', perSecondSnapshot);
+	}, UPDATE_INTERVAL);
 }
 
 function printPrivatePerformance(object) {
@@ -65,6 +71,12 @@ function performanceObjectToPublicArray(object) {
 	})).sort((a, b) => {
 		return a.value < b.value ? 1 : -1;
 	});
+}
+function perSecondObjectToPublicArray(object) {
+	return Object.keys(object).map(key => ({
+		name: key,
+		count: object[key]
+	})).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export let FRAME_MEMORY_LENGTH = 60 * 8;

@@ -1,6 +1,7 @@
 import assert from '../util/assert';
 import { addSerializable, removeSerializable, addChange, changeType } from './serializableManager';
 import { isClient } from '../util/environment';
+import * as performanceTool from '../util/performance';
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 const CHAR_COUNT = CHARACTERS.length;
@@ -235,6 +236,8 @@ export default class Serializable {
 		let listeners = this._listeners[event];
 		if (!listeners)
 			return;
+		
+		performanceTool.eventHappened('Event ' + event, listeners.length);
 		
 		for (let i = 0; i < listeners.length; i++) {
 // @ifndef OPTIMIZE

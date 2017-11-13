@@ -10,6 +10,168 @@ var isServer = typeof module !== 'undefined';
 if (isClient && isServer)
 	{ throw new Error('Can not be client and server at the same time.'); }
 
+/*
+ Global event system
+
+ let unlisten = events.listen('event name', function(params, ...) {});
+ eventManager.dispatch('event name', paramOrParamArray);
+ unlisten();
+ */
+
+var listeners$1 = {};
+
+var events = {
+	listen: function listen(event, callback) {
+		if (!listeners$1.hasOwnProperty(event)) {
+			listeners$1[event] = [];
+		}
+		listeners$1[event].push(callback);
+		return function () {
+			var index = listeners$1[event].indexOf(callback);
+			listeners$1[event].splice(index, 1);
+		};
+	},
+	dispatch: function dispatch(event) {
+		var args = [], len = arguments.length - 1;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
+
+		if (listeners$1.hasOwnProperty(event)) {
+			var listener = listeners$1[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
+				/*
+				try {
+					listeners[event][i].apply(null, args);
+				} catch (e) {
+					if (console && console.sendError) {
+						console.sendError(e);
+					}
+				}
+				*/
+			}
+		}
+	},
+	// Promise is resolved when next event if this type is sent
+	getEventPromise: function getEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
+	}
+};
+// DOM / ReDom event system
+
+function dispatch(view, type, data) {
+	var el = view === window ? view : view.el || view;
+	var debug = 'Debug info ' + new Error().stack;
+	el.dispatchEvent(new CustomEvent(type, {
+		detail: { data: data, debug: debug, view: view },
+		bubbles: true
+	}));
+}
+function listen(view, type, handler) {
+	var el = view === window ? view : view.el || view;
+	el.addEventListener(type, function (event) {
+		if (event instanceof CustomEvent)
+			{ handler(event.detail.data, event.detail.view); }
+		else
+			{ handler(event); }
+	});
+}
+
+var UPDATE_INTERVAL = 1000; //ms
+
+var performance$1;
+performance$1 = isClient ? window.performance : { now: Date.now };
+
+var snapshotPerformance = []; // is static data for UPDATE_INTERVAL. then it changes.
+var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
+var currentPerformanceMeters = {}; // very short term
+
+var perSecondSnapshot = [];
+var currentPerSecondMeters = {};
+function eventHappened(name, count) {
+	if ( count === void 0 ) count = 1;
+
+	// @ifndef OPTIMIZE
+	currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
+	// @endif
+}
+
+function start(name) {
+	// @ifndef OPTIMIZE
+	currentPerformanceMeters[name] = performance$1.now();
+	// @endif
+}
+
+function stop(name) {
+	// @ifndef OPTIMIZE
+	var millis = performance$1.now() - currentPerformanceMeters[name];
+	if (cumulativePerformance[name])
+		{ cumulativePerformance[name] += millis; }
+	else
+		{ cumulativePerformance[name] = millis; }
+	// @endif
+}
+
+var performanceInterval = null;
+function startPerformanceUpdates() {
+	performanceInterval = setInterval(function () {
+		printPrivatePerformance(cumulativePerformance);
+		
+		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
+		cumulativePerformance = {};
+		events.dispatch('performance snapshot', snapshotPerformance);
+
+		perSecondSnapshot = perSecondObjectToPublicArray(currentPerSecondMeters);
+		currentPerSecondMeters = {};
+		events.dispatch('perSecond snapshot', perSecondSnapshot);
+	}, UPDATE_INTERVAL);
+}
+
+function printPrivatePerformance(object) {
+	var msg = '';
+	Object.keys(object).filter(function (key) { return key.startsWith('#'); }).map(function (key) { return ({
+		name: key,
+		value: object[key] / UPDATE_INTERVAL
+	}); }).sort(function (a, b) {
+		return a.value < b.value ? 1 : -1;
+	}).forEach(function (perf) {
+		msg += "\n   " + (perf.name.substring(1)) + ": " + (perf.value * 100);
+	});
+	if (msg)
+		{ console.log('#Performance:' + msg); }
+}
+
+function performanceObjectToPublicArray(object) {
+	return Object.keys(object).filter(function (key) { return !key.startsWith('#'); }).map(function (key) { return ({
+		name: key,
+		value: object[key] / UPDATE_INTERVAL
+	}); }).sort(function (a, b) {
+		return a.value < b.value ? 1 : -1;
+	});
+}
+function perSecondObjectToPublicArray(object) {
+	return Object.keys(object).map(function (key) { return ({
+		name: key,
+		count: object[key]
+	}); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+}
+
+var FRAME_MEMORY_LENGTH = 60 * 8;
+var frameTimes = [];
+for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	frameTimes.push(0);
+}
+function setFrameTime(seconds) {
+	// @ifndef OPTIMIZE
+	frameTimes.shift();
+	frameTimes.push(seconds);
+	// @endif
+}
+function getFrameTimes() {
+	return frameTimes;
+}
+
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
 
@@ -268,6 +430,8 @@ Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
 	var listeners = this._listeners[event];
 	if (!listeners)
 		{ return; }
+		
+	eventHappened('Event ' + event, listeners.length);
 		
 	for (var i = 0; i < listeners.length; i++) {
 // @ifndef OPTIMIZE
@@ -752,12 +916,7 @@ Object.defineProperty(Property.prototype, 'value', {
 		this._value = this.propertyType.validator.validate(newValue);
 		
 		this.dispatch('change', this._value);
-		
 		if (changesEnabled && this._rootType) { // not scene or empty
-			if (typeof changesEnabled === 'object') {
-				
-			}
-			
 			if (scenePropertyFilter === null
 				|| this._rootType !== 'sce'
 				|| scenePropertyFilter(this)
@@ -1122,7 +1281,9 @@ dataType.float = createDataType({
 	validators: {
 		default: function default$1(x) {
 			x = parseFloat(x);
+			// @ifndef OPTIMIZE
 			validateFloat(x);
+			// @endif
 			return x;
 		},
 		// PropertyType.float.range(min, max)
@@ -1154,7 +1315,9 @@ dataType.int = createDataType({
 	validators: {
 		default: function default$2(x) {
 			x = parseInt(x);
+			// @ifndef OPTIMIZE
 			validateFloat(x);
+			// @endif
 			return x;
 		},
 		// PropertyType.float.range(min, max)
@@ -1532,12 +1695,14 @@ var Entity = (function (Serializable$$1) {
 		this.sleeping = false;
 		this.prototype = null; // should be set immediately after constructor
 		this.localMaster = true; // set false if entity is controlled over the net
+
+		eventHappened('Create object');
 	}
 
 	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
 	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Entity.prototype.constructor = Entity;
-	
+
 	Entity.prototype.makeUpAName = function makeUpAName () {
 		if (this.prototype) {
 			return this.prototype.makeUpAName();
@@ -1561,7 +1726,7 @@ var Entity = (function (Serializable$$1) {
 		assert(this._alive, ALIVE_ERROR);
 		return this.components.get(name) || [];
 	};
-	
+
 	Entity.prototype.getListOfAllComponents = function getListOfAllComponents () {
 		var components = [];
 		this.components.forEach(function (value, key) {
@@ -1569,7 +1734,7 @@ var Entity = (function (Serializable$$1) {
 		});
 		return components;
 	};
-	
+
 	Entity.prototype.clone = function clone () {
 		var entity = new Entity();
 		entity.prototype = this.prototype.clone();
@@ -1601,34 +1766,39 @@ var Entity = (function (Serializable$$1) {
 			component._parent = this$1;
 			component.setRootType(this$1._rootType);
 		}
-		
+
 		if (!this.sleeping)
 			{ Entity.initComponents(components); }
 		return this;
 	};
+
 	Entity.initComponents = function initComponents (components) {
 		for (var i = 0; i < components.length; i++)
 			{ components[i]._preInit(); }
 		for (var i$1 = 0; i$1 < components.length; i$1++)
 			{ components[i$1]._init(); }
 	};
+
 	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
 		for (var i = 0; i < components.length; i++)
 			{ components[i]._sleep(); }
 	};
+
 	Entity.deleteComponents = function deleteComponents (components) {
 		for (var i = 0; i < components.length; i++)
 			{ components[i].delete(); }
 	};
+
 	Entity.prototype.sleep = function sleep () {
 		assert(this._alive, ALIVE_ERROR);
 		if (this.sleeping) { return false; }
-		
+
 		this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
-		
+
 		this.sleeping = true;
 		return true;
 	};
+
 	Entity.prototype.wakeUp = function wakeUp () {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) { return false; }
@@ -1638,16 +1808,20 @@ var Entity = (function (Serializable$$1) {
 		this.sleeping = false;
 		return true;
 	};
+
 	Entity.prototype.delete = function delete$1 () {
 		assert(this._alive, ALIVE_ERROR);
 		this.sleep();
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
-		
+
 		this.components.forEach(function (value, key) { return Entity.deleteComponents(value); });
 		this.components.clear();
-		
+
+		eventHappened('Destroy object');
+
 		return true;
 	};
+
 	Entity.prototype.deleteComponent = function deleteComponent (component) {
 		var array = this.getComponents(component.constructor.componentName);
 		var idx = array.indexOf(component);
@@ -1658,6 +1832,7 @@ var Entity = (function (Serializable$$1) {
 		array.splice(idx, 1);
 		return this;
 	};
+
 	Entity.prototype.setRootType = function setRootType (rootType) {
 		if (this._rootType === rootType)
 			{ return; }
@@ -1670,16 +1845,17 @@ var Entity = (function (Serializable$$1) {
 			}
 		});
 	};
+
 	Entity.prototype.toJSON = function toJSON () {
 		assert(this._alive, ALIVE_ERROR);
-		
+
 		var components = [];
 		this.components.forEach(function (compArray) {
 			compArray.forEach(function (comp) {
 				components.push(comp.toJSON());
 			});
 		});
-		
+
 		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
 			c: components, // overwrite children. earlier this was named 'comp'
 			proto: this.prototype.id
@@ -2354,74 +2530,6 @@ function stickyNonModalErrorPopup(text$$1) {
 
 window.sticky = stickyNonModalErrorPopup;
 
-/*
- Global event system
-
- let unlisten = events.listen('event name', function(params, ...) {});
- eventManager.dispatch('event name', paramOrParamArray);
- unlisten();
- */
-
-var listeners$1 = {};
-
-var events = {
-	listen: function listen(event, callback) {
-		if (!listeners$1.hasOwnProperty(event)) {
-			listeners$1[event] = [];
-		}
-		listeners$1[event].push(callback);
-		return function () {
-			var index = listeners$1[event].indexOf(callback);
-			listeners$1[event].splice(index, 1);
-		};
-	},
-	dispatch: function dispatch(event) {
-		var args = [], len = arguments.length - 1;
-		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
-
-		if (listeners$1.hasOwnProperty(event)) {
-			var listener = listeners$1[event];
-			for (var i = 0; i < listener.length; ++i) {
-				listener[i].apply(null, args);
-				/*
-				try {
-					listeners[event][i].apply(null, args);
-				} catch (e) {
-					if (console && console.sendError) {
-						console.sendError(e);
-					}
-				}
-				*/
-			}
-		}
-	},
-	// Promise is resolved when next event if this type is sent
-	getEventPromise: function getEventPromise(event) {
-		return new Promise(function(res) {
-			events.listen(event, res);
-		});
-	}
-};
-// DOM / ReDom event system
-
-function dispatch(view, type, data) {
-	var el = view === window ? view : view.el || view;
-	var debug = 'Debug info ' + new Error().stack;
-	el.dispatchEvent(new CustomEvent(type, {
-		detail: { data: data, debug: debug, view: view },
-		bubbles: true
-	}));
-}
-function listen(view, type, handler) {
-	var el = view === window ? view : view.el || view;
-	el.addEventListener(type, function (event) {
-		if (event instanceof CustomEvent)
-			{ handler(event.detail.data, event.detail.view); }
-		else
-			{ handler(event); }
-	});
-}
-
 var PIXI$1;
 
 if (isClient) {
@@ -2825,88 +2933,6 @@ if (typeof window !== 'undefined') {
 	};
 }
 
-var UPDATE_INTERVAL = 1000; //ms
-
-var performance$1;
-performance$1 = isClient ? window.performance : { now: Date.now };
-
-var snapshotPerformance = []; // is static data for UPDATE_INTERVAL. then it changes.
-var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
-var currentPerformanceMeters = {}; // very short term
-
-var snapshotListener = null;
-
-function start(name) {
-	// @ifndef OPTIMIZE
-	currentPerformanceMeters[name] = performance$1.now();
-	// @endif
-}
-
-function stop(name) {
-	// @ifndef OPTIMIZE
-	var millis = performance$1.now() - currentPerformanceMeters[name];
-	if (cumulativePerformance[name])
-		{ cumulativePerformance[name] += millis; }
-	else
-		{ cumulativePerformance[name] = millis; }
-	// @endif
-}
-
-function startPerformanceUpdates() {
-	setInterval(function () {
-		printPrivatePerformance(cumulativePerformance);
-		
-		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
-		cumulativePerformance = {};
-		
-		if (snapshotListener) {
-			snapshotListener(snapshotPerformance);
-		}
-	}, UPDATE_INTERVAL);
-}
-
-function setListener(listener) {
-	snapshotListener = listener;
-}
-
-function printPrivatePerformance(object) {
-	var msg = '';
-	Object.keys(object).filter(function (key) { return key.startsWith('#'); }).map(function (key) { return ({
-		name: key,
-		value: object[key] / UPDATE_INTERVAL
-	}); }).sort(function (a, b) {
-		return a.value < b.value ? 1 : -1;
-	}).forEach(function (perf) {
-		msg += "\n   " + (perf.name.substring(1)) + ": " + (perf.value * 100);
-	});
-	if (msg)
-		{ console.log('#Performance:' + msg); }
-}
-
-function performanceObjectToPublicArray(object) {
-	return Object.keys(object).filter(function (key) { return !key.startsWith('#'); }).map(function (key) { return ({
-		name: key,
-		value: object[key] / UPDATE_INTERVAL
-	}); }).sort(function (a, b) {
-		return a.value < b.value ? 1 : -1;
-	});
-}
-
-var FRAME_MEMORY_LENGTH = 60 * 8;
-var frameTimes = [];
-for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
-	frameTimes.push(0);
-}
-function setFrameTime(seconds) {
-	// @ifndef OPTIMIZE
-	frameTimes.shift();
-	frameTimes.push(seconds);
-	// @endif
-}
-function getFrameTimes() {
-	return frameTimes;
-}
-
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -3098,6 +3124,9 @@ var Scene = (function (Serializable$$1) {
 		this.updateCamera();
 		
 		this.renderer.render(this.stage, null, true);
+
+		events.dispatch('scene draw', scene);
+		eventHappened('Draws');
 	};
 
 	Scene.prototype.isInInitialState = function isInInitialState () {
@@ -6787,20 +6816,19 @@ var SceneModule = (function (Module$$1) {
 	SceneModule.prototype.startListeningMovementInput = function startListeningMovementInput () {
 		var this$1 = this;
 
-		var clear = function () {
-			if (this$1.movementInputListener) {
-				clearTimeout(this$1.movementInputListener);
-				this$1.movementInputListener = null;
-			}
-		};
-		clear();
-
-		var cameraPositionSpeed = 8;
-		var cameraZoomSpeed = 0.02;
-
+		window.cancelAnimationFrame(this.requestAnimationFrameId);
+		
+		var cameraPositionSpeed = 300;
+		var cameraZoomSpeed = 0.8;
+		var lastTime = performance.now();
+		
 		var update = function () {
 			if (!scene)
-				{ return clear(); }
+				{ return; }
+			
+			var currentTime = performance.now();
+			var dt = (currentTime - lastTime) / 1000;
+			lastTime = currentTime;
 
 			var dx = 0,
 				dy = 0,
@@ -6815,19 +6843,19 @@ var SceneModule = (function (Module$$1) {
 
 			if (dx === 0 && dy === 0 && dz === 0) {
 				if (!MOVEMENT_KEYS.find(keyPressed))
-					{ clear(); }
+					{ return; }
 			} else {
 				var speed = 1;
 				if (keyPressed(key.shift))
 					{ speed *= 3; }
 
-				var cameraMovementSpeed = speed * cameraPositionSpeed / scene.cameraZoom;
+				var cameraMovementSpeed = speed * cameraPositionSpeed * dt / scene.cameraZoom;
 				scene.cameraPosition.x = absLimit(scene.cameraPosition.x + dx * cameraMovementSpeed, 5000);
 				scene.cameraPosition.y = absLimit(scene.cameraPosition.y + dy * cameraMovementSpeed, 5000);
 
 
 				if (dz !== 0) {
-					var zoomMultiplier = 1 + speed * cameraZoomSpeed;
+					var zoomMultiplier = 1 + speed * cameraZoomSpeed * dt;
 					
 					if (dz > 0)
 						{ scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier)); }
@@ -6842,10 +6870,11 @@ var SceneModule = (function (Module$$1) {
 
 				this$1.draw();
 			}
+			
+			this$1.requestAnimationFrameId = requestAnimationFrame(update);
 		};
 
 		if (scene && !scene.playing) {
-			this.movementInputListener = setInterval(update, 25);
 			update();
 		}
 	};
@@ -8595,10 +8624,10 @@ var PerformanceModule = (function (Module$$1) {
 		
 
 		startPerformanceUpdates();
-		setListener(function (snapshot) {
+		events.listen('performance snapshot', function (snapshot) {
 			if (this$1.moduleContainer.isPacked())
 				{ return; }
-			
+
 			start('Editor: Performance');
 			performanceList.update(snapshot.slice(0, 10).filter(function (item) { return item.value > 0.0005; }));
 			stop('Editor: Performance');
@@ -8704,6 +8733,58 @@ FPSMeter.prototype.update = function update (fpsData) {
 	}
 		
 	c.stroke();
+};
+
+var PerSecond = (function (Module$$1) {
+	function PerSecond() {
+		var counterList;
+		Module$$1.call(
+			this, el('div.perSecond',
+				new PerSecondItem({ name: 'Name', count: '/ sec' }),
+				counterList = list('div.perSecondList', PerSecondItem)
+			)
+		);
+
+		this.name = 'Per second';
+		this.id = 'perSecond';
+		
+		events.listen('perSecond snapshot', function (snapshot) {
+			counterList.update(snapshot);
+		});
+	}
+
+	if ( Module$$1 ) PerSecond.__proto__ = Module$$1;
+	PerSecond.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	PerSecond.prototype.constructor = PerSecond;
+
+	return PerSecond;
+}(Module));
+Module.register(PerSecond, 'bottom');
+
+var PerSecondItem = function PerSecondItem(initItem) {
+	this.el = el('div.perSecondItem',
+		this.name = el('span.perSecondItemName'),
+		this.value = el('span.perSecondItemValue')
+	);
+		
+	if (initItem) {
+		this.update(initItem);
+		this.el.classList.add('perSecondHeader');
+	}
+};
+PerSecondItem.prototype.update = function update (perSecondItem) {
+	this.name.textContent = perSecondItem.name;
+	this.value.textContent = perSecondItem.count;
+/*
+	if (value > 40)
+		this.el.style.color = '#ff7075';
+	else if (value > 10)
+		this.el.style.color = '#ffdab7';
+	else if (value > 0.4)
+		this.el.style.color = '';
+	else
+		this.el.style.color = 'rgba(200, 200, 200, 0.5)';
+		*/
 };
 
 window.test = function() {

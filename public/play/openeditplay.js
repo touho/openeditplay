@@ -193,6 +193,80 @@ var isServer = typeof module !== 'undefined';
 if (isClient && isServer)
 	{ throw new Error('Can not be client and server at the same time.'); }
 
+/*
+ Global event system
+
+ let unlisten = events.listen('event name', function(params, ...) {});
+ eventManager.dispatch('event name', paramOrParamArray);
+ unlisten();
+ */
+
+var listeners$1 = {};
+
+var events = {
+	listen: function listen(event, callback) {
+		if (!listeners$1.hasOwnProperty(event)) {
+			listeners$1[event] = [];
+		}
+		listeners$1[event].push(callback);
+		return function () {
+			var index = listeners$1[event].indexOf(callback);
+			listeners$1[event].splice(index, 1);
+		};
+	},
+	dispatch: function dispatch(event) {
+		var args = [], len = arguments.length - 1;
+		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
+
+		if (listeners$1.hasOwnProperty(event)) {
+			var listener = listeners$1[event];
+			for (var i = 0; i < listener.length; ++i) {
+				listener[i].apply(null, args);
+				/*
+				try {
+					listeners[event][i].apply(null, args);
+				} catch (e) {
+					if (console && console.sendError) {
+						console.sendError(e);
+					}
+				}
+				*/
+			}
+		}
+	},
+	// Promise is resolved when next event if this type is sent
+	getEventPromise: function getEventPromise(event) {
+		return new Promise(function(res) {
+			events.listen(event, res);
+		});
+	}
+};
+// DOM / ReDom event system
+
+var performance$1;
+performance$1 = isClient ? window.performance : { now: Date.now };
+
+function eventHappened(name, count) {
+	if ( count === void 0 ) count = 1;
+
+}
+
+function start(name) {
+}
+
+function stop(name) {
+}
+
+
+
+var FRAME_MEMORY_LENGTH = 60 * 8;
+var frameTimes = [];
+for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	frameTimes.push(0);
+}
+function setFrameTime(seconds) {
+}
+
 var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 var CHAR_COUNT = CHARACTERS.length;
 
@@ -449,6 +523,8 @@ Serializable.prototype.dispatch = function dispatch (event, a, b, c) {
 	if (!listeners)
 		{ return; }
 		
+	eventHappened('Event ' + event, listeners.length);
+		
 	for (var i = 0; i < listeners.length; i++) {
 
 			listeners[i](a, b, c);
@@ -682,12 +758,7 @@ Object.defineProperty(Property.prototype, 'value', {
 		this._value = this.propertyType.validator.validate(newValue);
 		
 		this.dispatch('change', this._value);
-		
 		if (changesEnabled && this._rootType) { // not scene or empty
-			if (typeof changesEnabled === 'object') {
-				
-			}
-			
 			if (scenePropertyFilter === null
 				|| this._rootType !== 'sce'
 				|| scenePropertyFilter(this)
@@ -1052,7 +1123,6 @@ dataType.float = createDataType({
 	validators: {
 		default: function default$1(x) {
 			x = parseFloat(x);
-			validateFloat(x);
 			return x;
 		},
 		// PropertyType.float.range(min, max)
@@ -1084,7 +1154,6 @@ dataType.int = createDataType({
 	validators: {
 		default: function default$2(x) {
 			x = parseInt(x);
-			validateFloat(x);
 			return x;
 		},
 		// PropertyType.float.range(min, max)
@@ -1447,12 +1516,14 @@ var Entity = (function (Serializable$$1) {
 		this.sleeping = false;
 		this.prototype = null; // should be set immediately after constructor
 		this.localMaster = true; // set false if entity is controlled over the net
+
+		eventHappened('Create object');
 	}
 
 	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
 	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Entity.prototype.constructor = Entity;
-	
+
 	Entity.prototype.makeUpAName = function makeUpAName () {
 		if (this.prototype) {
 			return this.prototype.makeUpAName();
@@ -1476,7 +1547,7 @@ var Entity = (function (Serializable$$1) {
 		assert(this._alive, ALIVE_ERROR);
 		return this.components.get(name) || [];
 	};
-	
+
 	Entity.prototype.getListOfAllComponents = function getListOfAllComponents () {
 		var components = [];
 		this.components.forEach(function (value, key) {
@@ -1484,7 +1555,7 @@ var Entity = (function (Serializable$$1) {
 		});
 		return components;
 	};
-	
+
 	Entity.prototype.clone = function clone () {
 		var entity = new Entity();
 		entity.prototype = this.prototype.clone();
@@ -1516,34 +1587,39 @@ var Entity = (function (Serializable$$1) {
 			component._parent = this$1;
 			component.setRootType(this$1._rootType);
 		}
-		
+
 		if (!this.sleeping)
 			{ Entity.initComponents(components); }
 		return this;
 	};
+
 	Entity.initComponents = function initComponents (components) {
 		for (var i = 0; i < components.length; i++)
 			{ components[i]._preInit(); }
 		for (var i$1 = 0; i$1 < components.length; i$1++)
 			{ components[i$1]._init(); }
 	};
+
 	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
 		for (var i = 0; i < components.length; i++)
 			{ components[i]._sleep(); }
 	};
+
 	Entity.deleteComponents = function deleteComponents (components) {
 		for (var i = 0; i < components.length; i++)
 			{ components[i].delete(); }
 	};
+
 	Entity.prototype.sleep = function sleep () {
 		assert(this._alive, ALIVE_ERROR);
 		if (this.sleeping) { return false; }
-		
+
 		this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
-		
+
 		this.sleeping = true;
 		return true;
 	};
+
 	Entity.prototype.wakeUp = function wakeUp () {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) { return false; }
@@ -1553,16 +1629,20 @@ var Entity = (function (Serializable$$1) {
 		this.sleeping = false;
 		return true;
 	};
+
 	Entity.prototype.delete = function delete$1 () {
 		assert(this._alive, ALIVE_ERROR);
 		this.sleep();
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
-		
+
 		this.components.forEach(function (value, key) { return Entity.deleteComponents(value); });
 		this.components.clear();
-		
+
+		eventHappened('Destroy object');
+
 		return true;
 	};
+
 	Entity.prototype.deleteComponent = function deleteComponent (component) {
 		var array = this.getComponents(component.constructor.componentName);
 		var idx = array.indexOf(component);
@@ -1573,6 +1653,7 @@ var Entity = (function (Serializable$$1) {
 		array.splice(idx, 1);
 		return this;
 	};
+
 	Entity.prototype.setRootType = function setRootType (rootType) {
 		if (this._rootType === rootType)
 			{ return; }
@@ -1585,16 +1666,17 @@ var Entity = (function (Serializable$$1) {
 			}
 		});
 	};
+
 	Entity.prototype.toJSON = function toJSON () {
 		assert(this._alive, ALIVE_ERROR);
-		
+
 		var components = [];
 		this.components.forEach(function (compArray) {
 			compArray.forEach(function (comp) {
 				components.push(comp.toJSON());
 			});
 		});
-		
+
 		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
 			c: components, // overwrite children. earlier this was named 'comp'
 			proto: this.prototype.id
@@ -2206,56 +2288,6 @@ function stickyNonModalErrorPopup(text$$1) {
 
 window.sticky = stickyNonModalErrorPopup;
 
-/*
- Global event system
-
- let unlisten = events.listen('event name', function(params, ...) {});
- eventManager.dispatch('event name', paramOrParamArray);
- unlisten();
- */
-
-var listeners$1 = {};
-
-var events = {
-	listen: function listen(event, callback) {
-		if (!listeners$1.hasOwnProperty(event)) {
-			listeners$1[event] = [];
-		}
-		listeners$1[event].push(callback);
-		return function () {
-			var index = listeners$1[event].indexOf(callback);
-			listeners$1[event].splice(index, 1);
-		};
-	},
-	dispatch: function dispatch(event) {
-		var args = [], len = arguments.length - 1;
-		while ( len-- > 0 ) args[ len ] = arguments[ len + 1 ];
-
-		if (listeners$1.hasOwnProperty(event)) {
-			var listener = listeners$1[event];
-			for (var i = 0; i < listener.length; ++i) {
-				listener[i].apply(null, args);
-				/*
-				try {
-					listeners[event][i].apply(null, args);
-				} catch (e) {
-					if (console && console.sendError) {
-						console.sendError(e);
-					}
-				}
-				*/
-			}
-		}
-	},
-	// Promise is resolved when next event if this type is sent
-	getEventPromise: function getEventPromise(event) {
-		return new Promise(function(res) {
-			events.listen(event, res);
-		});
-	}
-};
-// DOM / ReDom event system
-
 var PIXI;
 
 if (isClient) {
@@ -2674,27 +2706,6 @@ function simulateKeyEvent(eventName, keyCode) {
 	}
 }
 
-var performance$1;
-performance$1 = isClient ? window.performance : { now: Date.now };
-
-function start(name) {
-}
-
-function stop(name) {
-}
-
-
-
-
-
-var FRAME_MEMORY_LENGTH = 60 * 8;
-var frameTimes = [];
-for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
-	frameTimes.push(0);
-}
-function setFrameTime(seconds) {
-}
-
 var scene = null;
 var physicsOptions = {
 	enableSleeping: true
@@ -2886,6 +2897,9 @@ var Scene = (function (Serializable$$1) {
 		this.updateCamera();
 		
 		this.renderer.render(this.stage, null, true);
+
+		events.dispatch('scene draw', scene);
+		eventHappened('Draws');
 	};
 
 	Scene.prototype.isInInitialState = function isInInitialState () {

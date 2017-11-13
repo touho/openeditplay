@@ -1,6 +1,7 @@
 import Serializable from './serializable';
 import { addChange, changeType, setChangeOrigin } from './serializableManager'; 
 import assert from '../util/assert';
+import * as performanceTool from '../util/performance';
 
 let changesEnabled = true;
 let scenePropertyFilter = null;
@@ -74,12 +75,7 @@ Object.defineProperty(Property.prototype, 'value', {
 		this._value = this.propertyType.validator.validate(newValue);
 		
 		this.dispatch('change', this._value);
-		
 		if (changesEnabled && this._rootType) { // not scene or empty
-			if (typeof changesEnabled === 'object') {
-				
-			}
-			
 			if (scenePropertyFilter === null
 				|| this._rootType !== 'sce'
 				|| scenePropertyFilter(this)

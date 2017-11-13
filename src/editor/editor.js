@@ -14,6 +14,7 @@ import './module/level';
 import './module/game';
 
 import './module/performance';
+import './module/perSecond';
 
 import {el, list, mount} from 'redom';
 import {game} from '../core/game';

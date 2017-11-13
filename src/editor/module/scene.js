@@ -26,7 +26,7 @@ import Vector from '../../util/vector';
 import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
 import {help} from '../help';
 import PIXI from '../../features/graphics';
-import * as performance from '../../util/performance';
+import * as performanceTool from '../../util/performance';
 import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
 
 import '../components/EditorWidget';
@@ -278,7 +278,7 @@ class SceneModule extends Module {
 			if (!scene)
 				return;
 
-			performance.start('Editor: Scene');
+			performanceTool.start('Editor: Scene');
 
 			this.clearState();
 
@@ -291,11 +291,11 @@ class SceneModule extends Module {
 
 			this.draw();
 
-			performance.stop('Editor: Scene');
+			performanceTool.stop('Editor: Scene');
 		});
 
 		events.listen('change', change => {
-			performance.start('Editor: Scene');
+			performanceTool.start('Editor: Scene');
 
 			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
 				// Make sure the scene has the layers for EditorWidget
@@ -309,7 +309,7 @@ class SceneModule extends Module {
 			}
 
 			if (scene && scene.resetting)
-				return performance.stop('Editor: Scene');
+				return performanceTool.stop('Editor: Scene');
 
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
@@ -317,7 +317,7 @@ class SceneModule extends Module {
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
 				this.draw();
 			}
-			performance.stop('Editor: Scene');
+			performanceTool.stop('Editor: Scene');
 		});
 
 		this.zoomInButtonPressed = false;
@@ -460,7 +460,7 @@ class SceneModule extends Module {
 		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
 			return;
 
-		performance.start('Editor: Scene');
+		performanceTool.start('Editor: Scene');
 
 		let mousePos = scene.mouseToWorld(mouseCoordinatePosition || this.previousMousePosInMouseCoordinates);
 
@@ -525,24 +525,23 @@ class SceneModule extends Module {
 		if (needsDraw)
 			this.draw();
 
-		performance.stop('Editor: Scene');
+		performanceTool.stop('Editor: Scene');
 	}
 
 	startListeningMovementInput() {
-		const clear = () => {
-			if (this.movementInputListener) {
-				clearTimeout(this.movementInputListener);
-				this.movementInputListener = null;
-			}
-		};
-		clear();
-
-		const cameraPositionSpeed = 8;
-		const cameraZoomSpeed = 0.02;
-
+		window.cancelAnimationFrame(this.requestAnimationFrameId);
+		
+		const cameraPositionSpeed = 300;
+		const cameraZoomSpeed = 0.8;
+		let lastTime = performance.now();
+		
 		const update = () => {
 			if (!scene)
-				return clear();
+				return;
+			
+			let currentTime = performance.now();
+			let dt = (currentTime - lastTime) / 1000;
+			lastTime = currentTime;
 
 			let dx = 0,
 				dy = 0,
@@ -557,19 +556,19 @@ class SceneModule extends Module {
 
 			if (dx === 0 && dy === 0 && dz === 0) {
 				if (!MOVEMENT_KEYS.find(keyPressed))
-					clear();
+					return;
 			} else {
 				let speed = 1;
 				if (keyPressed(key.shift))
 					speed *= 3;
 
-				let cameraMovementSpeed = speed * cameraPositionSpeed / scene.cameraZoom;
+				let cameraMovementSpeed = speed * cameraPositionSpeed * dt / scene.cameraZoom;
 				scene.cameraPosition.x = absLimit(scene.cameraPosition.x + dx * cameraMovementSpeed, 5000);
 				scene.cameraPosition.y = absLimit(scene.cameraPosition.y + dy * cameraMovementSpeed, 5000);
 
 
 				if (dz !== 0) {
-					let zoomMultiplier = 1 + speed * cameraZoomSpeed;
+					let zoomMultiplier = 1 + speed * cameraZoomSpeed * dt;
 					
 					if (dz > 0)
 						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier));
@@ -584,10 +583,11 @@ class SceneModule extends Module {
 
 				this.draw();
 			}
+			
+			this.requestAnimationFrameId = requestAnimationFrame(update);
 		};
 
 		if (scene && !scene.playing) {
-			this.movementInputListener = setInterval(update, 25);
 			update();
 		}
 	}

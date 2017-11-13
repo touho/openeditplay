@@ -191,6 +191,9 @@ export default class Scene extends Serializable {
 		this.updateCamera();
 		
 		this.renderer.render(this.stage, null, true);
+
+		events.dispatch('scene draw', scene);
+		performanceTool.eventHappened('Draws');
 	}
 
 	isInInitialState() {

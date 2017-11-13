@@ -1,17 +1,20 @@
 import Serializable from './serializable';
 import assert from '../util/assert';
+import * as performanceTool from '../util/performance';
 
 const ALIVE_ERROR = 'entity is already dead';
 
 export default class Entity extends Serializable {
-		constructor(predefinedId = false) {
+	constructor(predefinedId = false) {
 		super(predefinedId);
 		this.components = new Map(); // name -> array
 		this.sleeping = false;
 		this.prototype = null; // should be set immediately after constructor
 		this.localMaster = true; // set false if entity is controlled over the net
+
+		performanceTool.eventHappened('Create object');
 	}
-	
+
 	makeUpAName() {
 		if (this.prototype) {
 			return this.prototype.makeUpAName();
@@ -35,7 +38,7 @@ export default class Entity extends Serializable {
 		assert(this._alive, ALIVE_ERROR);
 		return this.components.get(name) || [];
 	}
-	
+
 	getListOfAllComponents() {
 		let components = [];
 		this.components.forEach((value, key) => {
@@ -43,7 +46,7 @@ export default class Entity extends Serializable {
 		});
 		return components;
 	}
-	
+
 	clone() {
 		let entity = new Entity();
 		entity.prototype = this.prototype.clone();
@@ -73,34 +76,39 @@ export default class Entity extends Serializable {
 			component._parent = this;
 			component.setRootType(this._rootType);
 		}
-		
+
 		if (!this.sleeping)
 			Entity.initComponents(components);
 		return this;
 	}
+
 	static initComponents(components) {
 		for (let i = 0; i < components.length; i++)
 			components[i]._preInit();
 		for (let i = 0; i < components.length; i++)
 			components[i]._init();
 	}
+
 	static makeComponentsSleep(components) {
 		for (let i = 0; i < components.length; i++)
 			components[i]._sleep();
 	}
+
 	static deleteComponents(components) {
 		for (let i = 0; i < components.length; i++)
 			components[i].delete();
 	}
+
 	sleep() {
 		assert(this._alive, ALIVE_ERROR);
 		if (this.sleeping) return false;
-		
+
 		this.components.forEach((value, key) => Entity.makeComponentsSleep(value));
-		
+
 		this.sleeping = true;
 		return true;
 	}
+
 	wakeUp() {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) return false;
@@ -110,16 +118,20 @@ export default class Entity extends Serializable {
 		this.sleeping = false;
 		return true;
 	}
+
 	delete() {
 		assert(this._alive, ALIVE_ERROR);
 		this.sleep();
 		if (!super.delete()) return false;
-		
+
 		this.components.forEach((value, key) => Entity.deleteComponents(value));
 		this.components.clear();
-		
+
+		performanceTool.eventHappened('Destroy object');
+
 		return true;
 	}
+
 	deleteComponent(component) {
 		let array = this.getComponents(component.constructor.componentName);
 		let idx = array.indexOf(component);
@@ -130,6 +142,7 @@ export default class Entity extends Serializable {
 		array.splice(idx, 1);
 		return this;
 	}
+
 	setRootType(rootType) {
 		if (this._rootType === rootType)
 			return;
@@ -142,16 +155,17 @@ export default class Entity extends Serializable {
 			}
 		});
 	}
+
 	toJSON() {
 		assert(this._alive, ALIVE_ERROR);
-		
+
 		let components = [];
 		this.components.forEach(compArray => {
 			compArray.forEach(comp => {
 				components.push(comp.toJSON());
 			});
 		});
-		
+
 		return Object.assign(super.toJSON(), {
 			c: components, // overwrite children. earlier this was named 'comp'
 			proto: this.prototype.id

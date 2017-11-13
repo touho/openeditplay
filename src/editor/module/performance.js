@@ -21,10 +21,10 @@ class PerformanceModule extends Module {
 		
 
 		performance.startPerformanceUpdates();
-		performance.setListener(snapshot => {
+		events.listen('performance snapshot', snapshot => {
 			if (this.moduleContainer.isPacked())
 				return;
-			
+
 			performance.start('Editor: Performance');
 			performanceList.update(snapshot.slice(0, 10).filter(item => item.value > 0.0005));
 			performance.stop('Editor: Performance');

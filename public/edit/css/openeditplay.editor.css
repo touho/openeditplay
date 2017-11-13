@@ -431,6 +431,32 @@ img.logo:hover {
 .fpsMeterCanvas {
   flex: 1;
 }
+.module.module-perSecond {
+  padding: 5px 10px;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+.perSecondList {
+}
+.perSecond {
+  width: 250px;
+  display: inline-block;
+  vertical-align: top;
+}
+.perSecondHeader {
+  font-weight: bold;
+  border-top: none !important;
+}
+.perSecondItem {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.perSecondItemName {
+  display: inline-block;
+  width: 150px;
+}
+.perSecondItemValue {
+}
 .jstree-default .jstree-search {
   color: #c3c3c3;
   left: 10px;

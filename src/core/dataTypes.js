@@ -17,7 +17,9 @@ dataType.float = createDataType({
 	validators: {
 		default(x) {
 			x = parseFloat(x);
+			// @ifndef OPTIMIZE
 			validateFloat(x);
+			// @endif
 			return x;
 		},
 		// PropertyType.float.range(min, max)
@@ -49,7 +51,9 @@ dataType.int = createDataType({
 	validators: {
 		default(x) {
 			x = parseInt(x);
+			// @ifndef OPTIMIZE
 			validateFloat(x);
+			// @endif
 			return x;
 		},
 		// PropertyType.float.range(min, max)
