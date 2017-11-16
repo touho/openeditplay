@@ -241,7 +241,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
 
 var performance$1;
 performance$1 = isClient ? window.performance : { now: Date.now };
@@ -785,10 +784,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3243,8 +3238,6 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3897,7 +3890,10 @@ Component.register({
 				this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; });
 				this$1.body.updateAABB();
 			}));
-			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
+			this.listenProperty(this.Transform, 'angle', update(function (angle) {
+				this$1.body.angle = angle;
+				this$1.body.updateAABB();
+			}));
 			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {
 				this$1.body.setDensity(density * DENSITY_SCALE);
@@ -4048,7 +4044,6 @@ Component.register({
 	}
 });
 
-// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',

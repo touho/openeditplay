@@ -58,8 +58,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -820,8 +818,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -943,10 +939,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3470,8 +3462,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4124,7 +4114,10 @@ Component$1.register({
 				this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; });
 				this$1.body.updateAABB();
 			}));
-			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
+			this.listenProperty(this.Transform, 'angle', update(function (angle) {
+				this$1.body.angle = angle;
+				this$1.body.updateAABB();
+			}));
 			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {
 				this$1.body.setDensity(density * DENSITY_SCALE);
@@ -4275,7 +4268,6 @@ Component$1.register({
 	}
 });
 
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -5318,7 +5310,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6141,22 +6132,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -7922,11 +7897,6 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -8000,19 +7970,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;

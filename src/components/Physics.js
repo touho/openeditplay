@@ -68,7 +68,10 @@ Component.register({
 				this.body.position = position.toArray().map(x => x * PHYSICS_SCALE);
 				this.body.updateAABB();
 			}));
-			this.listenProperty(this.Transform, 'angle', update(angle => this.body.angle = angle));
+			this.listenProperty(this.Transform, 'angle', update(angle => {
+				this.body.angle = angle;
+				this.body.updateAABB();
+			}));
 			this.listenProperty(this.Transform, 'scale', update(scale => this.updateShape()));
 			this.listenProperty(this, 'density', update(density => {
 				this.body.setDensity(density * DENSITY_SCALE);
