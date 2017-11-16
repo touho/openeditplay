@@ -2322,6 +2322,18 @@ function getRenderer(canvas) {
 	return renderer;
 }
 
+function sortDisplayObjects(container) {
+	container.children.sort(sortFunc);
+}
+function sortFunc(a, b) {
+	if (a.y < b.y)
+		{ return -1; }
+	else if (a.y > b.y)
+		{ return 1; }
+	else
+		{ return 0; }
+}
+
 var texturesAndAnchors = {};
 
 function getHashedTextureAndAnchor(hash) {
@@ -2895,6 +2907,8 @@ var Scene = (function (Serializable$$1) {
 		// this.dispatch('onDraw', this.context);
 		
 		this.updateCamera();
+		
+		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 		
 		this.renderer.render(this.stage, null, true);
 
@@ -3879,7 +3893,10 @@ Component.register({
 
 			for (var i = 0; i < Shapes.length; ++i) loop( i );
 
-			this.listenProperty(this.Transform, 'position', update(function (position) { return this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; }); }));
+			this.listenProperty(this.Transform, 'position', update(function (position) {
+				this$1.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; });
+				this$1.body.updateAABB();
+			}));
 			this.listenProperty(this.Transform, 'angle', update(function (angle) { return this$1.body.angle = angle; }));
 			this.listenProperty(this.Transform, 'scale', update(function (scale) { return this$1.updateShape(); }));
 			this.listenProperty(this, 'density', update(function (density) {

@@ -4,7 +4,7 @@ import {game} from './game';
 import {addChange, changeType, setChangeOrigin} from './serializableManager';
 import {createWorld, deleteWorld, updateWorld} from '../features/physics';
 import {listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed} from '../util/input';
-import {default as PIXI, getRenderer} from '../features/graphics';
+import {default as PIXI, getRenderer, sortDisplayObjects} from '../features/graphics';
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
 import events from "../util/events";
@@ -189,6 +189,8 @@ export default class Scene extends Serializable {
 		// this.dispatch('onDraw', this.context);
 		
 		this.updateCamera();
+		
+		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 		
 		this.renderer.render(this.stage, null, true);
 

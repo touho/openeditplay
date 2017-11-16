@@ -64,7 +64,10 @@ Component.register({
 				});
 			}
 
-			this.listenProperty(this.Transform, 'position', update(position => this.body.position = position.toArray().map(x => x * PHYSICS_SCALE)));
+			this.listenProperty(this.Transform, 'position', update(position => {
+				this.body.position = position.toArray().map(x => x * PHYSICS_SCALE);
+				this.body.updateAABB();
+			}));
 			this.listenProperty(this.Transform, 'angle', update(angle => this.body.angle = angle));
 			this.listenProperty(this.Transform, 'scale', update(scale => this.updateShape()));
 			this.listenProperty(this, 'density', update(density => {

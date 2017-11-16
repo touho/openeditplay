@@ -34,6 +34,18 @@ export function getRenderer(canvas) {
 	return renderer;
 }
 
+export function sortDisplayObjects(container) {
+	container.children.sort(sortFunc);
+}
+function sortFunc(a, b) {
+	if (a.y < b.y)
+		return -1;
+	else if (a.y > b.y)
+		return 1;
+	else
+		return 0;
+}
+
 let texturesAndAnchors = {};
 export function resetTexturesAndAnchors() {
 	for (let textureAndAnchor in texturesAndAnchors) {
