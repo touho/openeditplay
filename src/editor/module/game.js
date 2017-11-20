@@ -17,13 +17,6 @@ class Game extends Module {
 		);
 		this.id = 'game';
 		this.name = 'Game';
-		
-		new TopButton({
-			text: 'Play song',
-			callback: () => {
-				window.open('https://open.spotify.com/track/2RECYFqYTiQxGvT0IY9KAw');
-			}
-		})
 	}
 	update() {
 		if (game)

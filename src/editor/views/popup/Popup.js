@@ -76,8 +76,11 @@ export class Button {
 		}
 		this.el.className = newClassName;
 		this.callback = button.callback;
-		if (button.color)
+		if (button.color) {
 			this.el.style['border-color'] = button.color;
+			this.el.style['color'] = button.color;
+			// this.el.style['background'] = button.color;
+		}
 	}
 }
 

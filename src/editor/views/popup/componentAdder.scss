@@ -10,14 +10,12 @@
   overflow: auto;
   margin: 10px;
   max-width: 450px;
-
-  border: 1px solid white;
+  border: 1px solid #151515;
   padding: 15px;
   border-radius: 8px;
-  background: rgba(200, 200, 200, 0.25);
+  background: rgba(0, 0, 0, 0.17);
   max-width: 400px;
-
-  box-shadow: 2px 2px 8px 1px #555;
+  box-shadow: inset 2px 2px 8px 1px #4e4e4e;
 }
 
 .componentAdderContent div.categoryName {

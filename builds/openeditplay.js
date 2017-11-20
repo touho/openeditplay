@@ -241,6 +241,7 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
 
 var performance$1;
 performance$1 = isClient ? window.performance : { now: Date.now };
@@ -784,6 +785,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -2778,6 +2783,9 @@ var Scene = (function (Serializable$$1) {
 		this.layers.main = createLayer(this.layers.move);
 		this.layers.front = createLayer(this.layers.move);
 
+		// this.bloom = new PIXI.filters.AdvancedBloomFilter();
+		// this.layers.move.filters = [this.bloom];
+
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
 
@@ -2898,9 +2906,6 @@ var Scene = (function (Serializable$$1) {
 	};
 
 	Scene.prototype.draw = function draw () {
-		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		// this.dispatch('onDraw', this.context);
-		
 		this.updateCamera();
 		
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
@@ -3238,6 +3243,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3719,6 +3726,55 @@ Component.register({
 });
 
 Component.register({
+	name: 'Sprite',
+	category: 'Common',
+	icon: 'fa-stop',
+	allowMultiple: true,
+	description: 'Draws a sprite on the screen.',
+	properties: [
+	],
+	prototype: {
+		init: function init() {
+			var this$1 = this;
+
+			this.initSprite();
+
+			this.listenProperty(this.Transform, 'position', function (position) {
+				this$1.sprite.x = position.x;
+				this$1.sprite.y = position.y;
+			});
+
+			this.listenProperty(this.Transform, 'angle', function (angle) {
+				this$1.sprite.rotation = angle;
+			});
+
+			this.listenProperty(this.Transform, 'scale', function (scale) {
+				this$1.sprite.scale.x = scale.x;
+				this$1.sprite.scale.y = scale.y;
+			});
+		},
+		initSprite: function initSprite() {
+			this.sprite = PIXI$1.Sprite.fromImage('/img/sprite.png');
+			this.sprite.anchor.set(0.5, 0.5);
+			
+			var T = this.Transform;
+
+			this.sprite.x = T.position.x;
+			this.sprite.y = T.position.y;
+			this.sprite.rotation = T.angle;
+			this.sprite.scale.x = T.scale.x;
+			this.sprite.scale.y = T.scale.y;
+
+			this.scene.layers.main.addChild(this.sprite);
+		},
+		sleep: function sleep() {
+			this.sprite.destroy();
+			this.sprite = null;
+		}
+	}
+});
+
+Component.register({
 	name: 'Spawner',
 	description: 'Spawns types to world.',
 	properties: [
@@ -4044,6 +4100,7 @@ Component.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',

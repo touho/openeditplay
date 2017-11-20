@@ -6,38 +6,48 @@
 }
 
 .tabs {
-  padding-left: 2px;
-  padding-top: 5px;
-  overflow: hidden;
+  /* padding-left: 2px; */
+  padding-top: 3px;
+  /* overflow: hidden; */
   /* background: #181818; */
   background: rgba(255, 255, 255, 0.02);
-  min-height: 20px;
-  border-bottom: 1px solid rgba(0, 231, 255, 0.04);
+  //min-height: 20px;
+  /* border-bottom: 1px solid rgba(0, 231, 255, 0.04); */
+  margin-bottom: 1px;
 }
 
 .moduleElements {
   flex: 1;
   overflow: hidden;
   position: relative;
+  box-shadow: 0 -1px 6px -2px black;
 }
 
 .moduleTab {
-  background: rgba(0, 0, 0, 0.30);
-  padding: 1px 5px;
+  //background: rgba(0, 0, 0, 0.30);
+  padding: 3px 8px;
   border-top: 1px solid;
   border-left: 1px solid;
   border-right: 1px solid;
-  border-top-left-radius: 5px;
-  border-top-right-radius: 5px;
-  color: $editor-effect-color;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  //color: $editor-effect-color;
+  padding-bottom: 3px;
+  border-color: $layout-border-color;
+  margin-left: -1px; // Make borders collapse
 }
 .moduleTab:not(.moduleSelected) {
-  filter: saturate(0);
+  //filter: saturate(0);
   //opacity: 0.5;
+  box-shadow: inset 0 0px 1px #a2a2a2;
 }
 .moduleTab.moduleSelected {
   opacity: 1;
-  text-shadow: 0px 0px 1px #777;
+  /* text-shadow: 0px 0px 1px #777; */
+  background: $selected-tab-color;
+  z-index: 1000;
+  position: relative;
+  box-shadow: inset 1px 1px 1px -1px #a2a2a2;
 }
 .moduleTab:not(.moduleEnabled) {
   display: none;

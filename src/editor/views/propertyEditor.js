@@ -485,7 +485,7 @@ class Property {
 				{
 					this.name.style.color = parent.componentClass.color;
 
-					mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
+					mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
 						onclick: () => {
 							dispatch(this, 'makingChanges');
 							this.reset();

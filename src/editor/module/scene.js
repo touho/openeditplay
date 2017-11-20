@@ -193,7 +193,49 @@ class SceneModule extends Module {
 		this.selectionEnd = null;
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
+		
+		events.listen('reset', () => {
+			setChangeOrigin(this);
+			this.stopAndReset();
 
+			if (scene.editorLayer)
+				scene.editorLayer.visible = true;
+		});
+		
+		events.listen('play', () => {
+			if (!scene || !scene.level)
+				return;
+
+			setChangeOrigin(this);
+			this.clearState();
+
+			if (scene.isInInitialState())
+				scene.setZoom(1);
+			
+			scene.editorLayer.visible = false;
+			scene.play();
+			this.playingModeChanged();
+			this.updatePropertyChangeCreationFilter();
+		});
+
+		events.listen('pause', () => {
+			if (!scene || !scene.level)
+				return;
+
+			setChangeOrigin(this);
+			this.clearState();
+
+			if (scene.isInInitialState())
+				scene.setZoom(1);
+
+			scene.editorLayer.visible = true;
+			scene.pause();
+			
+			this.draw();
+			this.playingModeChanged();
+			this.updatePropertyChangeCreationFilter();
+		});
+/*
 		this.primaryButton = new TopButton({
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
@@ -233,6 +275,8 @@ class SceneModule extends Module {
 					scene.editorLayer.visible = true;
 			}
 		});
+		
+		*/
 
 		game.listen('levelCompleted', () => {
 			this.playingModeChanged();
@@ -337,10 +381,6 @@ class SceneModule extends Module {
 			} else if (k === key.v) {
 				this.pasteEntities();
 				this.draw();
-			} else if (k === key.p) {
-				this.primaryButton.click();
-			} else if (k === key.r) {
-				this.stopButton.click();
 			} else if (scene) {
 				// Scene controls
 				if (k === key['0']) {
@@ -617,13 +657,9 @@ class SceneModule extends Module {
 		if (scene.playing) {
 			this.el.classList.remove('noScene');
 			this.el.classList.add('hideScenePauseInformation', 'playing');
-			this.primaryButton.icon.className = 'fa fa-pause';
-			this.primaryButton.text.innerHTML = '<u>P</u>ause';
 		} else {
 			this.el.classList.remove('noScene', 'playing');
 			this.el.classList.toggle('hideScenePauseInformation', isInitialState);
-			this.primaryButton.icon.className = 'fa fa-play';
-			this.primaryButton.text.innerHTML = '<u>P</u>lay';
 		}
 	}
 
@@ -742,7 +778,6 @@ class SceneModule extends Module {
 			scene.setZoom(this.editorCameraZoom);
 			scene.updateCamera();
 		}
-		this.primaryButton.icon.className = 'fa fa-play';
 		this.playingModeChanged();
 		this.draw();
 

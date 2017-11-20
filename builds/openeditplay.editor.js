@@ -58,6 +58,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -818,6 +820,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -939,6 +943,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3002,6 +3010,9 @@ var Scene = (function (Serializable$$1) {
 		this.layers.main = createLayer(this.layers.move);
 		this.layers.front = createLayer(this.layers.move);
 
+		// this.bloom = new PIXI.filters.AdvancedBloomFilter();
+		// this.layers.move.filters = [this.bloom];
+
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
 
@@ -3122,9 +3133,6 @@ var Scene = (function (Serializable$$1) {
 	};
 
 	Scene.prototype.draw = function draw () {
-		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		// this.dispatch('onDraw', this.context);
-		
 		this.updateCamera();
 		
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
@@ -3462,6 +3470,8 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3943,6 +3953,55 @@ Component$1.register({
 });
 
 Component$1.register({
+	name: 'Sprite',
+	category: 'Common',
+	icon: 'fa-stop',
+	allowMultiple: true,
+	description: 'Draws a sprite on the screen.',
+	properties: [
+	],
+	prototype: {
+		init: function init() {
+			var this$1 = this;
+
+			this.initSprite();
+
+			this.listenProperty(this.Transform, 'position', function (position) {
+				this$1.sprite.x = position.x;
+				this$1.sprite.y = position.y;
+			});
+
+			this.listenProperty(this.Transform, 'angle', function (angle) {
+				this$1.sprite.rotation = angle;
+			});
+
+			this.listenProperty(this.Transform, 'scale', function (scale) {
+				this$1.sprite.scale.x = scale.x;
+				this$1.sprite.scale.y = scale.y;
+			});
+		},
+		initSprite: function initSprite() {
+			this.sprite = PIXI$2.Sprite.fromImage('/img/sprite.png');
+			this.sprite.anchor.set(0.5, 0.5);
+			
+			var T = this.Transform;
+
+			this.sprite.x = T.position.x;
+			this.sprite.y = T.position.y;
+			this.sprite.rotation = T.angle;
+			this.sprite.scale.x = T.scale.x;
+			this.sprite.scale.y = T.scale.y;
+
+			this.scene.layers.main.addChild(this.sprite);
+		},
+		sleep: function sleep() {
+			this.sprite.destroy();
+			this.sprite = null;
+		}
+	}
+});
+
+Component$1.register({
 	name: 'Spawner',
 	description: 'Spawns types to world.',
 	properties: [
@@ -4268,6 +4327,7 @@ Component$1.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -5310,6 +5370,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -5357,7 +5418,8 @@ var TopBarModule = (function (Module$$1) {
 
 		Module$$1.call(
 			this, this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }),
-			this.buttons = el('div.buttonContainer.select-none')
+			this.buttons = el('div.buttonContainer.select-none'),
+			this.controlButtons = el('div.topSceneControlButtons')
 		);
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
@@ -5369,6 +5431,53 @@ var TopBarModule = (function (Module$$1) {
 		this.logo.onclick = function () {
 			location.href = '/';
 		};
+		
+		var playButtonData = {
+			title: 'Play (P)',
+			icon: 'fa-play',
+			type: 'play',
+			callback: function () { return events.dispatch('play'); }
+		};
+		var pauseButtonData = {
+			title: 'Pause (P)',
+			icon: 'fa-pause',
+			type: 'pause',
+			callback: function () { return events.dispatch('pause'); }
+		};
+		
+		var playButton = new SceneControlButton(playButtonData);
+		var stopButton = new SceneControlButton({
+			title: 'Reset (R)',
+			icon: 'fa-stop',
+			type: 'reset',
+			callback: function () { return events.dispatch('reset'); }
+		});
+		
+		var updateButtons = function () {
+			setTimeout(function () {
+				if (scene.playing)
+					{ playButton.update(pauseButtonData); }
+				else
+					{ playButton.update(playButtonData); }
+				
+				var paused = !scene.playing && !scene.isInInitialState();
+				this$1.controlButtons.classList.toggle('topSceneControlButtonsPaused', paused);
+			}, 0);
+		};
+		
+		events.listen('reset', updateButtons);
+		events.listen('play', updateButtons);
+		events.listen('pause', updateButtons);
+		
+		listenKeyDown(function (keyCode) {
+			if (keyCode === key.p)
+				{ playButton.callback(); }
+			else if (keyCode === key.r)
+				{ stopButton.callback(); }
+		});
+		
+		mount(this.controlButtons, playButton);
+		mount(this.controlButtons, stopButton);
 	}
 
 	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
@@ -5378,6 +5487,22 @@ var TopBarModule = (function (Module$$1) {
 	return TopBarModule;
 }(Module));
 Module.register(TopBarModule, 'top');
+
+var SceneControlButton = function SceneControlButton(data) {
+	var this$1 = this;
+
+	this.el = el('div.button.topSceneControlButton', {
+		onclick: function () { return this$1.callback && this$1.callback(); }
+	});
+	this.update(data);
+};
+SceneControlButton.prototype.update = function update (data) {
+	this.el.setAttribute('title', data.title || '');
+	this.el.setAttribute('controlButtonType', data.type);
+	this.el.innerHTML = '';
+	this.callback = data.callback;
+	mount(this.el, el(("i.fa." + (data.icon))));
+};
 
 var TopButton = function TopButton(ref) {
 	var this$1 = this;
@@ -6132,6 +6257,22 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+
+// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -6464,46 +6605,90 @@ var SceneModule = (function (Module$$1) {
 		this.selectionEnd = null;
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
+		
+		events.listen('reset', function () {
+			setChangeOrigin$1(this$1);
+			this$1.stopAndReset();
 
+			if (scene.editorLayer)
+				{ scene.editorLayer.visible = true; }
+		});
+		
+		events.listen('play', function () {
+			if (!scene || !scene.level)
+				{ return; }
+
+			setChangeOrigin$1(this$1);
+			this$1.clearState();
+
+			if (scene.isInInitialState())
+				{ scene.setZoom(1); }
+			
+			scene.editorLayer.visible = false;
+			scene.play();
+			this$1.playingModeChanged();
+			this$1.updatePropertyChangeCreationFilter();
+		});
+
+		events.listen('pause', function () {
+			if (!scene || !scene.level)
+				{ return; }
+
+			setChangeOrigin$1(this$1);
+			this$1.clearState();
+
+			if (scene.isInInitialState())
+				{ scene.setZoom(1); }
+
+			scene.editorLayer.visible = true;
+			scene.pause();
+			
+			this$1.draw();
+			this$1.playingModeChanged();
+			this$1.updatePropertyChangeCreationFilter();
+		});
+/*
 		this.primaryButton = new TopButton({
 			text: el('span', el('u', 'P'), 'lay'),
 			iconClass: 'fa-play',
-			callback: function (btn) {
+			callback: btn => {
 				if (!scene || !scene.level)
-					{ return; }
+					return;
 
-				setChangeOrigin$1(this$1);
+				setChangeOrigin(this);
 
 				// this.makeSureSceneHasEditorLayer();
 
-				this$1.clearState();
+				this.clearState();
 				
 				if (scene.isInInitialState())
-					{ scene.setZoom(1); }
+					scene.setZoom(1);
 
 				if (scene.playing) {
 					scene.editorLayer.visible = true;
 					scene.pause();
-					this$1.draw();
+					this.draw();
 				} else {
 					scene.editorLayer.visible = false;
 					scene.play();
 				}
-				this$1.playingModeChanged();
-				this$1.updatePropertyChangeCreationFilter();
+				this.playingModeChanged();
+				this.updatePropertyChangeCreationFilter();
 			}
 		});
 		this.stopButton = new TopButton({
 			text: el('span', el('u', 'R'), 'eset'),
 			iconClass: 'fa-stop',
-			callback: function (btn) {
-				setChangeOrigin$1(this$1);
-				this$1.stopAndReset();
+			callback: btn => {
+				setChangeOrigin(this);
+				this.stopAndReset();
 
 				if (scene.editorLayer)
-					{ scene.editorLayer.visible = true; }
+					scene.editorLayer.visible = true;
 			}
 		});
+		
+		*/
 
 		game.listen('levelCompleted', function () {
 			this$1.playingModeChanged();
@@ -6608,10 +6793,6 @@ var SceneModule = (function (Module$$1) {
 			} else if (k === key.v) {
 				this$1.pasteEntities();
 				this$1.draw();
-			} else if (k === key.p) {
-				this$1.primaryButton.click();
-			} else if (k === key.r) {
-				this$1.stopButton.click();
 			} else if (scene) {
 				// Scene controls
 				if (k === key['0']) {
@@ -6896,13 +7077,9 @@ var SceneModule = (function (Module$$1) {
 		if (scene.playing) {
 			this.el.classList.remove('noScene');
 			this.el.classList.add('hideScenePauseInformation', 'playing');
-			this.primaryButton.icon.className = 'fa fa-pause';
-			this.primaryButton.text.innerHTML = '<u>P</u>ause';
 		} else {
 			this.el.classList.remove('noScene', 'playing');
 			this.el.classList.toggle('hideScenePauseInformation', isInitialState);
-			this.primaryButton.icon.className = 'fa fa-play';
-			this.primaryButton.text.innerHTML = '<u>P</u>lay';
 		}
 	};
 
@@ -7023,7 +7200,6 @@ var SceneModule = (function (Module$$1) {
 			scene.setZoom(this.editorCameraZoom);
 			scene.updateCamera();
 		}
-		this.primaryButton.icon.className = 'fa fa-play';
 		this.playingModeChanged();
 		this.draw();
 
@@ -7435,8 +7611,11 @@ Button.prototype.update = function update (button) {
 	}
 	this.el.className = newClassName;
 	this.callback = button.callback;
-	if (button.color)
-		{ this.el.style['border-color'] = button.color; }
+	if (button.color) {
+		this.el.style['border-color'] = button.color;
+		this.el.style['color'] = button.color;
+		// this.el.style['background'] = button.color;
+	}
 };
 
 var Layer = function Layer(popup) {
@@ -7897,6 +8076,11 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -7970,6 +8154,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8357,7 +8554,7 @@ Property$2.prototype.update = function update (property) {
 			{
 				this.name.style.color = parent.componentClass.color;
 
-				mount(this.content, el('i.fa.fa-window-close.button.resetButton.iconButton', {
+				mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
 					onclick: function () {
 						dispatch(this$1, 'makingChanges');
 						this$1.reset();
@@ -8550,13 +8747,6 @@ var Game$2 = (function (Module$$1) {
 		);
 		this.id = 'game';
 		this.name = 'Game';
-		
-		new TopButton({
-			text: 'Play song',
-			callback: function () {
-				window.open('https://open.spotify.com/track/2RECYFqYTiQxGvT0IY9KAw');
-			}
-		});
 	}
 
 	if ( Module$$1 ) Game.__proto__ = Module$$1;

@@ -6,6 +6,8 @@
   overflow: auto;
   visibility: visible;
   position: absolute;
+  background: $selected-tab-color;
+  box-shadow: inset 0px 0px 1px 0px #a2a2a2;
 }
 .module.hidden {
   opacity: 0.0;

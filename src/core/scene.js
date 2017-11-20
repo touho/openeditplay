@@ -67,6 +67,9 @@ export default class Scene extends Serializable {
 		this.layers.main = createLayer(this.layers.move);
 		this.layers.front = createLayer(this.layers.move);
 
+		// this.bloom = new PIXI.filters.AdvancedBloomFilter();
+		// this.layers.move.filters = [this.bloom];
+
 		// To make component based entity search fast:
 		this.components = new Map(); // componentName -> Set of components
 
@@ -185,9 +188,6 @@ export default class Scene extends Serializable {
 	}
 
 	draw() {
-		// this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		// this.dispatch('onDraw', this.context);
-		
 		this.updateCamera();
 		
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);

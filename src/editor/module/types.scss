@@ -11,18 +11,18 @@
 }
 
 .module-types input {
-  background: transparent;
+  background: $other-backround;
   color: $editor-text-color;
   outline: none;
   position: absolute;
   top: 2px;
   right: 2px;
-  border: 1px solid $editor-effect-color-inactive;
+  border: 1px solid #808283;
   width: 70px;
 }
 
 .module-types .searchIcon {
-  color: $editor-effect-color-inactive;
+  color: #808283;
   position: absolute;
   top: 5px;
   right: 5px;

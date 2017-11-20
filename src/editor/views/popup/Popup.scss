@@ -27,11 +27,12 @@ div.popup div.popupContent {
   max-height: 90%;
   display: inline-block;
   background: #676767;
-  background: linear-gradient(to bottom right, #696969, #505050);
+  background: linear-gradient(to bottom, #5a5a5a, #333333);
   border-radius: 20px;
   padding: 10px;
-  border: 1px solid $editor-effect-color;
-  box-shadow: 1px 8px 22px 4px black;
+  border: 1px solid #383838;
+  box-shadow: 1px 8px 32px 4px black;
+  overflow: auto;
 }
 
 div.popup div.popupTitle {

@@ -1,6 +1,7 @@
 import './Transform'
 import './TransformVariance'
 import './Shape'
+import './Sprite'
 import './Spawner'
 import './Trigger'
 import './Physics'

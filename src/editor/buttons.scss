@@ -1,7 +1,7 @@
 .button {
   cursor: pointer;
   opacity: 0.7;
-  transition: all 0.3s;
+  transition: opacity 0.3s;
 }
 .button:hover {
   opacity: 1;
@@ -16,30 +16,36 @@
 
 button.button {
   background: #9c9c9c;
-  background: linear-gradient(to bottom right, #a0a0a0, #3a3a3a);
-  border: 1px outset #8e8e8e;
-  border-radius: 6px;
-  color: #dddddd;
+  background: linear-gradient(to bottom, #636363, #333333);
+  /* border: 1px outset #8e8e8e; */
+  border: 1px solid #191919;
+  border-radius: 3px;
+  //color: #dddddd;
+  color: $editor-text-color;
   outline: none;
-  box-shadow: 0 0 3px black;
+  /* box-shadow: 0 0 3px black; */
   margin: 3px;
   padding: 2px 8px;
   opacity: 0.85;
   font-size: 12px;
   text-shadow: 0 0 1px rgba(0, 0, 0, 0.76);
+  //background: #3e3e3e;
+  box-shadow: inset 1px 1px 1px #ffffff36, 0 0 1px black;
 }
 
 button.button:hover {
-  color: $editor-effect-color;
+  color: $editor-text-color;
 }
 button.button:active {
-  color: $editor-effect-color;
+  color: $editor-text-color;
   border-style: inset;
+  box-shadow: none;
 }
 
 button.button.dangerButton {
-  color: #ffbcc1;
-  //text-shadow: 0 0 1px rgba(0, 0, 0, 0.66);
+  //color: #ffbcc1;
+  background: linear-gradient(to bottom, #714646, #523232);
+  //background: #5f3a3a;
 }
 button.button.dangerButton:hover {
   color: #ffb6bf;
