@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Writers block</title>
+    <script src="redom.min.js"></script>
+
+    <style>
+        @keyframes opacityFrames {
+            0% {
+                opacity: 0;
+            }
+            60% {
+                opacity: 1;
+            }
+            70% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        body > * {
+            position: absolute;
+            transition-timing-function: linear;
+            animation: opacityFrames 20s;
+            transition: transform 20s linear;
+        }
+
+        img {
+            width: 15vw;
+        }
+
+        .text {
+            font-size: 4vw;
+            font-family: Verdana;
+        }
+    </style>
+</head>
+<body>
+</body>
+
+<script>
+	let persons = [
+		'Absent-minded professor',
+		'Angry African-American woman',
+		'Antihero',
+		'Bad boy',
+		'Battle-axe',
+		'Black knight',
+		'Boy next door',
+		'Bug-eyed monster',
+		'Cat lady',
+		'Contender',
+		'Criminal',
+		'Crone',
+		'Damsel in distress',
+		'Dark Lady',
+		'Dark Lord',
+		'Elderly martial arts master',
+		'Fall guy',
+		'Farmer\'s daughter',
+		'Femme fatale',
+		'Final girl',
+		'Gentleman thief',
+		'Girl next door',
+		'Grande dame',
+		'Hag',
+		'Harlequin',
+		'Hooker with a heart of gold',
+		'Hotshot',
+		'Ingenue',
+		'Jock (athlete)',
+		'Knight-errant',
+		'Little Green Men',
+		'Loathly lady',
+		'Lovers',
+		'Tony and Maria (West Side Story)',
+		'Mad scientist',
+		'Magical Negro',
+		'Mammy archetype',
+		'Manic Pixie Dream Girl',
+		'Mary Sue',
+		'Miles Gloriosus',
+		'Mother\'s boy',
+		'Nerd',
+		'Noble savage',
+		'Outlaw (stock character)',
+		'Pantomime dame',
+		'Petrushka',
+		'Pierrot',
+		'Princesse lointaine',
+		'Professor',
+		'Redshirt',
+		'Rightful king',
+		'Senex iratus',
+		'Shrew',
+		'Sinnekins',
+		'Soubrette',
+		'Southern belle',
+		'Space Nazis',
+		'Spear carrier',
+		'Straight man',
+		'Superhero',
+		'Supersoldier',
+		'Supervillain',
+		'Tortured artist',
+		'Town drunk',
+		'Tragic hero',
+		'Village idiot',
+		'Villain',
+		'Priest',
+		'Hunter',
+		'Wise fool',
+		'Wise old man'
+	];
+
+	let themes = [
+		'Loneliness',
+		'Ambition',
+		'Betrayal',
+		'Growing up',
+		'Courage',
+		'Betrayal ',
+		'Discovery',
+		'Escape',
+		'Death',
+		'Fear',
+		'Freedom',
+		'Fantasy',
+		'War',
+		'Environmental',
+		'Fight',
+		'Science',
+		'Treasure',
+		'Architecture',
+		'Magic',
+		'Good versus evil',
+		'Isolation',
+		'Jealousy',
+		'Justice',
+		'Loss',
+		'Loneliness',
+		'Love',
+		'Desire',
+		'Power',
+		'Racism',
+		'Security',
+		'Spirituality and God',
+		'Survival',
+		'Spying'
+	];
+
+	let images = [
+		'img/128px-Padlock-red.svg.png',
+		'img/128px-Shamrock-drawing.svg.png',
+		'img/256px-Pictograms-nps-misc-hold_hand_rail.svg.png',
+		'img/256px-Pictograms-nps-misc-scenic_viewpoint-2.svg.png',
+		'img/256px-Pictograms-nps-misc-watch_for_falling_ice.svg.png',
+		'img/256px-Pictograms-nps-water-hand_launch-small_boat_launch-2.svg.png',
+		'img/256px-Traffic-light.svg.png',
+		'img/350px-Ambox_banner_content.svg.png',
+		'img/512px-Breezeicons-actions-22-view-preview.svg.png',
+		'img/1328101896_Login.png',
+		'img/cap_content.png',
+		'img/Christmas_tree_icon.png',
+		'img/Furkanozdenmaskot.png',
+		'img/Hoja.png',
+		'img/Ideevorming.png',
+		'img/Legenda_grodzisko.svg.png',
+		'img/Mountain_Icon.svg.png',
+		'img/Pear_icon.png',
+		'img/Sports-Climbing-icon.png',
+		'img/Pictograms-nps-misc-beach_access-2.svg',
+		'img/Pictograms-nps-misc-sea_plane-2.svg',
+		'img/Pictograms-nps-misc-uneven_walkways-2.svg',
+		'img/Pictograms-nps-water-fish_cleaning-2.svg',
+		'img/Pictograms-nps-winter-ice_fishing-2.svg',
+		'img/Transnational_Child_Protection_Portal_logo.svg',
+		'img/USRD_KML__.svg'
+	];
+
+	let i = 0;
+
+	function spawn(element) {
+		element = element || [createPerson, createTheme, createImage][i++ % 3]();
+
+		animate(element);
+		redom.mount(document.body, element);
+	}
+
+	setInterval(function() {
+		requestAnimationFrame(function() {spawn();});
+    }, 4000);
+	spawn(redom.el('div.text', 'Breathe deeply', randomColor()));
+	spawn(redom.el('div.text', 'Use your imagination', randomColor()));
+
+	function pickRandom(array) {
+		return array[Math.random() * array.length | 0];
+	}
+
+	function randomColor() {
+		return {
+			style: {
+				color: 'rgb(' + [0, 0, 0].map(function () {
+					return Math.random() * 200 | 0;
+				}).join(',') + ')'
+			}
+		};
+	}
+
+	function createPerson() {
+		return redom.el('div.text.person', pickRandom(persons), randomColor());
+	}
+
+	function createTheme() {
+		return redom.el('div.text.theme', pickRandom(themes), randomColor());
+	}
+
+	function createImage() {
+		return redom.el('img.image', {
+			src: pickRandom(images)
+		});
+	}
+
+	function rnd(val) {
+		return (-0.5 + Math.random()) * 2 * (val || 1);
+	}
+
+	function animate(element) {
+		let startX = 10 + 55 * Math.random();
+		let startY = 10 + 55 * Math.random();
+
+		let travelDistance = 20; // vw per second
+		let dir = Math.PI * 2 * Math.random();
+		let endX = startX + Math.sin(dir) * travelDistance;
+		let endY = startY + Math.cos(dir) * travelDistance;
+
+		let startAngle = (-0.5 + Math.random()) * 20;
+		let endAngle = startAngle + rnd(60);
+
+		function setTransform(x, y, angle) {
+			element.style.transform = 'translateX(' + x + 'vw) translateY(' + y + 'vh) rotate(' + angle + 'deg)';
+		}
+
+		setTransform(startX, startY, startAngle);
+
+		setTimeout(() => {
+			setTransform(endX, endY, endAngle);
+		}, 20);
+
+		setTimeout(function () {
+			element.parentNode.removeChild(element);
+		}, 20000 - 100);
+	}
+</script>
+
+</html>
