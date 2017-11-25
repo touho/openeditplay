@@ -1,5 +1,5 @@
 import { el, list, mount } from 'redom';
-import Vector from '../../util/vector';
+import Vector from '../../../util/vector';
 
 const EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 

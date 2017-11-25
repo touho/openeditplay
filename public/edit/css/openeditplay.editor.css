@@ -133,7 +133,7 @@ div.nonRight {
 }
 div.right {
     border-left: 1px solid #1f1f1f;
-    width: 300px;
+    width: 330px;
     border-radius: 0px;
     min-width: 200px;
 }
@@ -553,21 +553,14 @@ div.topSceneControlButton:last-of-type {
   color: #8d8d8d;
 }
 div.propertyEditor div.container[type='icd'], div.propertyEditor div.container[type='com'] {
-  border: 1px solid #8d8d8d;
-  box-shadow: 0 0 13px 0px black;
-  border-right: none;
-  padding: 5px;
-  padding-right: 0;
-  margin: 5px 0;
-  border-top-left-radius: 3px;
-  border-bottom-left-radius: 3px;
   transition: opacity 0.5s;
+  background: #2d2d2d;
 }
 div.propertyEditor div.container.packed[type='icd'], div.propertyEditor div.container.packed[type='com'] {
-  opacity: 0.6;
-  filter: saturate(0.8);
+  /*opacity: 0.6;*/
+  /*filter: saturate(0.4);*/
 }
-div.propertyEditor div.container[type='icd'] .containerContent, div.propertyEditor div.container[type='com'] .containerContent{
+div.propertyEditor div.container[type='icd'] .containerContent, div.propertyEditor div.container[type='com'] .containerContent {
   overflow: auto;
   height: auto;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(1, 0, 1, 1);
@@ -585,86 +578,79 @@ div.propertyEditor div.container {
   position: relative;
 }
 .propertyEditor {
-  padding-left: 5px;
   padding-bottom: 5px;
+  padding-top: 3px;
 }
-div.propertyEditor div.containerTitle {
+div.propertyEditor div.container[type='icd'] div.containerTitle, div.propertyEditor div.container[type='com'] div.containerTitle {
   cursor: pointer;
-  border-radius: 3px;
   position: relative;
-  padding-left: 23px;
-  margin-bottom: 5px;
+  padding: 2px;
+  background: linear-gradient(to bottom, #5d5d5d, #3c3c3c);
 }
-div.propertyEditor .packed div.containerTitle {
+div.propertyEditor div.container[type='icd'] div.containerTitle::before, div.propertyEditor div.container[type='com'] div.containerTitle::before {
+  content: '\f0d7';
+  font-family: FontAwesome;
+  display: inline-block;
+  width: 42px;
+  margin-left: 3px;
 }
-div.propertyEditor div.containerTitle:hover {
+div.propertyEditor div.container.packed[type='icd'] div.containerTitle::before, div.propertyEditor div.container.packed[type='com'] div.containerTitle::before {
+  content: '\f0da';
+  position: relative;
+  left: 2px;
+}
+div.propertyEditor div.container div.containerTitle:hover {
   color: #8d8d8d;
-  background: rgba(255, 255, 255, 0.05);
+  opacity: 1;
+  /*background: linear-gradient(to bottom, #757575, #424242);*/
+  background: linear-gradient(to bottom, #646464, #434343);
 }
 div.propertyEditor div.containerTitle .icon {
   position: absolute;
-  top: 2px;
-  left: 4px;
+  top: 3px;
+  left: 23px;
 }
-div.propertyEditor table {
-  border-spacing: 0px 2px;
-}
-tr.property {
-  border-bottom: 3px solid;
-  border-color: #282828;
+div.property {
   color: #ccc8c6;
   transition: opacity 0.4s;
   position: relative;
+  display: flex;
+  margin: 2px 4px 2px 6px;
 }
-td.nameCell {
-  width: 10px;
+div.nameCell {
   white-space: nowrap;
-  padding: 3px 5px;
-  background: rgba(0, 0, 0, 0.2);
-  border-top-left-radius: 5px;
-  max-width: 140px;
   text-overflow: ellipsis;
   overflow: hidden;
   position: relative;
+  flex: 1;
 }
-td.nameCell .infoI {
+div.nameCell .infoI {
   position: absolute;
   top: 0px;
-  right: -2px;
+  right: 0px;
   font-size: 10px;
   font-family: monospace;
 }
-tr.property.visibleIf.hidden {
+div.property.visibleIf.hidden {
   display: none;
 }
-tr.property.visibleIf .nameCell::before {
-  content: '\25CF';
-  font-size: 12px;
-  opacity: 0.3;
-  position: absolute;
-  left: 3px;
-  top: 5px;
+div.property.visibleIf .nameCell {
+  padding-left: 10px;
 }
-tr.property.visibleIf .nameCell {
-  background: transparent;
-  padding-left: 17px;
-}
-td.propertyContent {
-  width: 99%;
-  padding: 3px 5px;
-  background: rgba(0, 0, 0, 0.2);
+div.propertyContent {
   position: relative;
   box-sizing: border-box;
+  width: 162px; /* Vector needs atleast 162px */
 }
 .property:not(.ownProperty) {
   opacity: 0.65;
 }
-.container[type='icd'] .property.ownProperty .propertyContent, .container[type='com'] .property.ownProperty .propertyContent{
+.container[type='icd'] .property.ownProperty .propertyContent, .container[type='com'] .property.ownProperty .propertyContent {
   padding-right: 30px;
 }
 .property .resetButton {
   position: absolute;
-  top: 3px;
+  top: 0px;
   right: 7px;
   color: #997d7d;
 }
@@ -673,7 +659,7 @@ td.propertyContent {
 }
 .property .moreButton {
   position: absolute;
-  top: 3px;
+  top: 0px;
   right: 15px;
   color: #8a998c;
 }
@@ -682,8 +668,8 @@ td.propertyContent {
 }
 .logButton {
   position: absolute;
-  top: 5px;
-  right: 2px;
+  top: 3px;
+  right: 10px;
   opacity: 0.3;
   z-index: 10;
 }

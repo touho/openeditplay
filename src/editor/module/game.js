@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import PropertyEditor from '../views/propertyEditor';
+import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { game } from '../../core/game';
 import PropertyOwner from '../../core/propertyOwner'
 import { TopButton } from './topBar'

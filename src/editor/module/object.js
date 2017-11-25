@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import PropertyEditor from '../views/propertyEditor';
+import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import { scene } from '../../core/scene';
 import { listenKeyDown, key } from '../../util/input';

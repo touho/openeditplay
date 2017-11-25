@@ -58,8 +58,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -820,8 +818,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -943,10 +939,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3470,8 +3462,6 @@ Serializable.registerSerializable(Component$1, 'com', function (json) {
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4327,7 +4317,6 @@ Component$1.register({
 	}
 });
 
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -4707,7 +4696,7 @@ Component$1.register({
 	category: 'Common',
 	allowMultiple: false,
 	properties: [
-		createPropertyType('type', 'play', createPropertyType.enum, createPropertyType.enum.values('play', 'AI')),
+		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
 		createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
 		createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down'/*, 'space ship'*/)),
 		createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
@@ -5370,7 +5359,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6257,22 +6245,6 @@ var ScaleWidget = (function (Widget$$1) {
 	return ScaleWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-
-// Export so that other components can have this component as parent
 Component$1.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -8076,6 +8048,24 @@ var ObjectMoreButtonContextMenu = (function (Popup$$1) {
 	return ObjectMoreButtonContextMenu;
 }(Popup));
 
+function skipTransitions(element) {
+	element.classList.add('skipPropertyEditorTransitions');
+	setTimeout(function () {
+		element.classList.remove('skipPropertyEditorTransitions');
+	}, 10);
+} 
+
+function parseTextAndNumber(textAndNumber) {
+	var endingNumberMatch = textAndNumber.match(/\d+$/); // ending number
+	var num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
+	var nameWithoutNumber = endingNumberMatch ? textAndNumber.substring(0, textAndNumber.length - endingNumberMatch[0].length) : textAndNumber;
+	
+	return {
+		text: nameWithoutNumber,
+		number: num
+	};
+}
+
 /*
 Reference: Unbounce
  https://cdn8.webmaster.net/pics/Unbounce2.jpg
@@ -8177,7 +8167,7 @@ var Container = function Container() {
 			this.titleIcon = el('i.icon.fa')
 		),
 		this.content = el('div.containerContent',
-			this.properties = list('table', Property$2, null, this.propertyEditor),
+			this.properties = list('div.propertyEditorProperties', Property$2, null, this.propertyEditor),
 			this.containers = list('div', Container, null, this.propertyEditor),
 			this.controls = el('div'),
 			el('i.button.logButton.fa.fa-eye', {
@@ -8209,8 +8199,6 @@ var Container = function Container() {
 	});
 };
 Container.prototype.update = function update (state) {
-		var this$1 = this;
-
 	var itemChanged = this.item !== state;
 		
 	if (itemChanged) {
@@ -8218,14 +8206,10 @@ Container.prototype.update = function update (state) {
 		this.el.setAttribute('type', this.item.threeLetterType);
 
 		// Skip transitions when changing item
-		this.el.classList.add('skipPropertyEditorTransitions');
-		setTimeout(function () {
-			this$1.el.classList.remove('skipPropertyEditorTransitions');
-		}, 10);
+		skipTransitions(this.el);
 	}
 		
-	if (this.controls.innerHTML !== '')
-		{ this.controls.innerHTML = ''; }
+	this.clearControls();
 		
 	this.titleClickedCallback = null;
 
@@ -8235,6 +8219,10 @@ Container.prototype.update = function update (state) {
 	else if (this.item.threeLetterType === 'prt') { this.updatePrototype(); }
 	else if (this.item.threeLetterType === 'epr') { this.updateEntityPrototype(); }
 	else if (this.item instanceof PropertyOwner) { this.updatePropertyOwner(); }
+};
+Container.prototype.clearControls = function clearControls () {
+	if (this.controls.innerHTML !== '')
+		{ this.controls.innerHTML = ''; }
 };
 Container.prototype.updatePrototype = function updatePrototype () {
 		var this$1 = this;
@@ -8254,15 +8242,13 @@ Container.prototype.updatePrototype = function updatePrototype () {
 		
 	mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: function () {
 		dispatch(this$1, 'makingChanges');
-			
 		var clone = this$1.item.clone();
-
-		var endingNumberMatch = clone.name.match(/\d+$/); // ending number
-		var num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
-		var nameWithoutNumber = endingNumberMatch ? clone.name.substring(0, clone.name.length - endingNumberMatch[0].length) : clone.name;
-		var nameSuggestion = nameWithoutNumber + num++;
+		var ref = parseTextAndNumber(clone.name);
+			var text$$1 = ref.text;
+			var number = ref.number;
+		var nameSuggestion = text$$1 + number++;
 		while (this$1.item.getParent().findChild('prt', function (prt) { return prt.name === nameSuggestion; })) {
-			nameSuggestion = nameWithoutNumber + num++;
+			nameSuggestion = text$$1 + number++;
 		}
 		clone.name = nameSuggestion;
 		this$1.item.getParent().addChild(clone);
@@ -8446,9 +8432,9 @@ Container.prototype.updatePropertyOwner = function updatePropertyOwner () {
 };
 
 var Property$2 = function Property() {
-	this.el = el('tr.property', { name: '' },
-		this.name = el('td.nameCell'),
-		this.content = el('td.propertyContent')
+	this.el = el('div.property', { name: '' },
+		this.name = el('div.nameCell'),
+		this.content = el('div.propertyContent')
 	);
 };
 Property$2.prototype.reset = function reset () {
@@ -8530,6 +8516,7 @@ Property$2.prototype.update = function update (property) {
 		this.el.setAttribute('type', property.propertyType.type.name);
 		this.name.textContent = variableNameToPresentableName(property.propertyType.name);
 		this.name.setAttribute('title', ((property.propertyType.name) + " (" + (property.propertyType.type.name) + ") " + (property.propertyType.description)));
+		this.name.style['font-size'] = this.name.textContent.length > 18 ? '0.8rem' : '1rem';
 		if (property.propertyType.description) {
 			mount(this.name, el('span.infoI', 'i'));
 		}

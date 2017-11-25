@@ -193,7 +193,7 @@ function buildCss(sourceEntry, destination, callback) {
 		console.log(`Built ${destination}`);
 		callback && callback();
 	}).catch(err => {
-		console.log('err', err);
+		console.log('css build error:', err.name, err.reason, err.file);
 	});
 }
 

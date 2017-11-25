@@ -1,20 +1,21 @@
 import { el, list, mount } from 'redom';
-import events, { listen, dispatch } from '../../util/events';
-import showPopup from './popup/Popup';
-import ComponentData from '../../core/componentData';
-import assert from '../../util/assert';
+import events, { listen, dispatch } from '../../../util/events';
+import showPopup from '../popup/Popup';
+import ComponentData from '../../../core/componentData';
+import assert from '../../../util/assert';
 import editors from './propertyEditorTypes';
-import ComponentAdder from './popup/componentAdder';
-import { changeType, setChangeOrigin } from '../../core/serializableManager';
-import { Prop } from '../../core/component';
-import { setOption, getOption, editor } from '../editor';
-import { scene } from '../../core/scene';
-import * as sceneEdit from '../util/sceneEditUtil';
-import PropertyOwner from '../../core/propertyOwner';
-import * as performance from '../../util/performance'
-import ObjectMoreButtonContextMenu from './popup/objectMoreButtonContextMenu'
-import Confirmation from "./popup/Confirmation";
-import { listenKeyDown, key } from '../../util/input';
+import ComponentAdder from '../popup/componentAdder';
+import { changeType, setChangeOrigin } from '../../../core/serializableManager';
+import { Prop } from '../../../core/component';
+import { setOption, getOption, editor } from '../../editor';
+import { scene } from '../../../core/scene';
+import * as sceneEdit from '../../util/sceneEditUtil';
+import PropertyOwner from '../../../core/propertyOwner';
+import * as performance from '../../../util/performance'
+import ObjectMoreButtonContextMenu from '../popup/objectMoreButtonContextMenu'
+import Confirmation from "../popup/Confirmation";
+import { listenKeyDown, key } from '../../../util/input';
+import {parseTextAndNumber, skipTransitions} from './util';
 
 /*
 Reference: Unbounce
@@ -116,7 +117,7 @@ class Container {
 				this.titleIcon = el('i.icon.fa')
 			),
 			this.content = el('div.containerContent',
-				this.properties = list('table', Property, null, this.propertyEditor),
+				this.properties = list('div.propertyEditorProperties', Property, null, this.propertyEditor),
 				this.containers = list('div', Container, null, this.propertyEditor),
 				this.controls = el('div'),
 				el('i.button.logButton.fa.fa-eye', {
@@ -155,14 +156,10 @@ class Container {
 			this.el.setAttribute('type', this.item.threeLetterType);
 
 			// Skip transitions when changing item
-			this.el.classList.add('skipPropertyEditorTransitions');
-			setTimeout(() => {
-				this.el.classList.remove('skipPropertyEditorTransitions');
-			}, 10);
+			skipTransitions(this.el);
 		}
 		
-		if (this.controls.innerHTML !== '')
-			this.controls.innerHTML = '';
+		this.clearControls();
 		
 		this.titleClickedCallback = null;
 
@@ -172,6 +169,10 @@ class Container {
 		else if (this.item.threeLetterType === 'prt') this.updatePrototype();
 		else if (this.item.threeLetterType === 'epr') this.updateEntityPrototype();
 		else if (this.item instanceof PropertyOwner) this.updatePropertyOwner();
+	}
+	clearControls() {
+		if (this.controls.innerHTML !== '')
+			this.controls.innerHTML = '';
 	}
 	updatePrototype() {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
@@ -189,15 +190,11 @@ class Container {
 		
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: () => {
 			dispatch(this, 'makingChanges');
-			
 			let clone = this.item.clone();
-
-			let endingNumberMatch = clone.name.match(/\d+$/); // ending number
-			let num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
-			let nameWithoutNumber = endingNumberMatch ? clone.name.substring(0, clone.name.length - endingNumberMatch[0].length) : clone.name;
-			let nameSuggestion = nameWithoutNumber + num++;
+			let { text, number } = parseTextAndNumber(clone.name);
+			let nameSuggestion = text + number++;
 			while (this.item.getParent().findChild('prt', prt => prt.name === nameSuggestion)) {
-				nameSuggestion = nameWithoutNumber + num++;
+				nameSuggestion = text + number++;
 			}
 			clone.name = nameSuggestion;
 			this.item.getParent().addChild(clone);
@@ -379,9 +376,9 @@ class Container {
 
 class Property {
 	constructor() {
-		this.el = el('tr.property', { name: '' },
-			this.name = el('td.nameCell'),
-			this.content = el('td.propertyContent')
+		this.el = el('div.property', { name: '' },
+			this.name = el('div.nameCell'),
+			this.content = el('div.propertyContent')
 		);
 	}
 	reset() {
@@ -461,6 +458,7 @@ class Property {
 			this.el.setAttribute('type', property.propertyType.type.name);
 			this.name.textContent = variableNameToPresentableName(property.propertyType.name);
 			this.name.setAttribute('title', `${property.propertyType.name} (${property.propertyType.type.name}) ${property.propertyType.description}`);
+			this.name.style['font-size'] = this.name.textContent.length > 18 ? '0.8rem' : '1rem';
 			if (property.propertyType.description) {
 				mount(this.name, el('span.infoI', 'i'));
 			}

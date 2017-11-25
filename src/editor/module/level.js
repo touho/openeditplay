@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import PropertyEditor from '../views/propertyEditor';
+import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import PropertyOwner from '../../core/propertyOwner'
 import { setChangeOrigin } from '../../core/serializableManager';
