@@ -5407,19 +5407,40 @@ var TopBarModule = (function (Module$$1) {
 		Module$$1.call(
 			this, this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }),
 			this.buttons = el('div.buttonContainer.select-none'),
-			this.controlButtons = el('div.topSceneControlButtons')
+			this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'),
+			this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons')
 		);
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
-		
-		events.listen('addTopButtonToTopBar', function (topButton) {
-			mount(this$1.buttons, topButton);
-		});
+		this.keyboardShortcuts = {}; // key.x -> func
 
 		this.logo.onclick = function () {
 			location.href = '/';
 		};
+
+		listenKeyDown(function (keyCode) {
+			this$1.keyboardShortcuts[keyCode] && this$1.keyboardShortcuts[keyCode]();
+		});
 		
+		this.initControlButtons();
+		this.initToolSelectionButtons();
+	}
+
+	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
+	TopBarModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
+	TopBarModule.prototype.constructor = TopBarModule;
+	
+	TopBarModule.prototype.addKeyboardShortcut = function addKeyboardShortcut (key$$1, buttonOrCallback) {
+		if (typeof buttonOrCallback === 'function') {
+			this.keyboardShortcuts[key$$1] = buttonOrCallback;
+		} else {
+			this.keyboardShortcuts[key$$1] = function () { return buttonOrCallback.callback(buttonOrCallback.el); };
+		}
+	};
+	
+	TopBarModule.prototype.initControlButtons = function initControlButtons () {
+		var this$1 = this;
+
 		var playButtonData = {
 			title: 'Play (P)',
 			icon: 'fa-play',
@@ -5432,7 +5453,7 @@ var TopBarModule = (function (Module$$1) {
 			type: 'pause',
 			callback: function () { return events.dispatch('pause'); }
 		};
-		
+
 		var playButton = new SceneControlButton(playButtonData);
 		var stopButton = new SceneControlButton({
 			title: 'Reset (R)',
@@ -5440,37 +5461,77 @@ var TopBarModule = (function (Module$$1) {
 			type: 'reset',
 			callback: function () { return events.dispatch('reset'); }
 		});
-		
+
 		var updateButtons = function () {
 			setTimeout(function () {
 				if (scene.playing)
 					{ playButton.update(pauseButtonData); }
 				else
 					{ playButton.update(playButtonData); }
-				
+
 				var paused = !scene.playing && !scene.isInInitialState();
 				this$1.controlButtons.classList.toggle('topSceneControlButtonsPaused', paused);
 			}, 0);
 		};
-		
+
+		this.addKeyboardShortcut(key.p, playButton);
+		this.addKeyboardShortcut(key.r, stopButton);
+
 		events.listen('reset', updateButtons);
 		events.listen('play', updateButtons);
 		events.listen('pause', updateButtons);
-		
-		listenKeyDown(function (keyCode) {
-			if (keyCode === key.p)
-				{ playButton.callback(); }
-			else if (keyCode === key.r)
-				{ stopButton.callback(); }
-		});
-		
+
 		mount(this.controlButtons, playButton);
 		mount(this.controlButtons, stopButton);
-	}
+	};
+	
+	TopBarModule.prototype.initToolSelectionButtons = function initToolSelectionButtons () {
+		var this$1 = this;
 
-	if ( Module$$1 ) TopBarModule.__proto__ = Module$$1;
-	TopBarModule.prototype = Object.create( Module$$1 && Module$$1.prototype );
-	TopBarModule.prototype.constructor = TopBarModule;
+		var createCallback = function (callback) {
+			return function (element) {
+				this$1.toolSelectionButtons.querySelectorAll('.topSceneControlButton').forEach(function (button) {
+					button.classList.remove('selected');
+				});
+				element.classList.add('selected');
+				callback && callback();
+			}
+		};
+		var tools = {
+			globalMoveTool: new SceneControlButton({
+				title: 'Global move tool (1)',
+				icon: 'fa-arrows',
+				callback: createCallback(function () {
+					changeSelectedTool('globalMoveTool');
+				})
+			}),
+			localMoveTool: new SceneControlButton({
+				title: 'Local move tool (2)',
+				icon: 'fa-arrows-alt',
+				callback: createCallback(function () {
+					changeSelectedTool('localMoveTool');
+				})
+			}),
+			multiTool: new SceneControlButton({
+				title: 'Multitool tool (3)',
+				icon: 'fa-dot-circle-o',
+				callback: createCallback(function () {
+					changeSelectedTool('multiTool');
+				})
+			})
+		};
+
+		this.addKeyboardShortcut(key[1], tools.globalMoveTool);
+		this.addKeyboardShortcut(key[2], tools.localMoveTool);
+		this.addKeyboardShortcut(key[3], tools.multiTool);
+		
+		mount(this.toolSelectionButtons, tools.globalMoveTool);
+		mount(this.toolSelectionButtons, tools.localMoveTool);
+		mount(this.toolSelectionButtons, tools.multiTool);
+
+		tools[selectedToolName].click();
+		// this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
+	};
 
 	return TopBarModule;
 }(Module));
@@ -5480,16 +5541,19 @@ var SceneControlButton = function SceneControlButton(data) {
 	var this$1 = this;
 
 	this.el = el('div.button.topSceneControlButton', {
-		onclick: function () { return this$1.callback && this$1.callback(); }
+		onclick: function () { return this$1.click(); }
 	});
 	this.update(data);
 };
 SceneControlButton.prototype.update = function update (data) {
 	this.el.setAttribute('title', data.title || '');
-	this.el.setAttribute('controlButtonType', data.type);
+	this.el.setAttribute('controlButtonType', data.type || '');
 	this.el.innerHTML = '';
 	this.callback = data.callback;
 	mount(this.el, el(("i.fa." + (data.icon))));
+};
+SceneControlButton.prototype.click = function click () {
+	this.callback && this.callback(this.el);
 };
 
 var TopButton = function TopButton(ref) {
@@ -5533,6 +5597,7 @@ var Widget = function Widget(options) {
 	this.hovering = false;
 	this.component = options.component;
 	this.relativePosition = options.relativePosition || new Vector(0, 0);
+	this.graphics = null;
 };
 Widget.prototype.onDrag = function onDrag (mousePosition, mousePositionChange, affectedEntities) {
 	console.log('Widget dragged');
@@ -5565,30 +5630,11 @@ Widget.prototype.isMouseInWidget = function isMouseInWidget (mousePosition) {
 	return false;
 };
 	
-Widget.prototype.draw = function draw (context) {
-	var p = this.component.Transform.position;
-		
-	var relativePosition = Vector.fromObject(this).subtract(p);
-		
-	var lineStart = relativePosition.clone().setLength(centerWidgetRadius).add(p);
-	var lineEnd = relativePosition.clone().setLength(relativePosition.length() - this.r).add(p);
-
-	context.beginPath();
-	context.moveTo(lineStart.x, lineStart.y);
-	context.lineTo(lineEnd.x, lineEnd.y);
-	context.stroke();
-		
-	context.beginPath();
-	context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-	context.fill();
-	context.stroke();
-};
-
 Widget.prototype.createGraphics = function createGraphics () {
 	var graphics = new PIXI$2.Graphics();
 		
-	graphics.lineStyle(4, 0x000000, 0.2);
-	graphics.drawCircle(0, 0, this.r);
+	graphics.lineStyle(2, 0x000000, 1);
+	graphics.drawCircle(1, 1, this.r);
 
 	graphics.lineStyle(2, 0xFFFFFF, 1);
 	graphics.drawCircle(0, 0, this.r);
@@ -5624,7 +5670,7 @@ Widget.prototype.updateVisibility = function updateVisibility () {
 		if (this.hovering) {
 			this.graphics.alpha = 1;
 		} else {
-			this.graphics.alpha = 0.4;
+			this.graphics.alpha = 0.5;
 		}
 	}
 };
@@ -6056,16 +6102,15 @@ var AngleWidget = (function (Widget$$1) {
 
 		var oldAngle = this.component.Transform.angle;
 		var newAngle = Math.PI + relativeMousePosition.horizontalAngle();
+		if (keyPressed(key.shift)) {
+			newAngle += Math.PI / SHIFT_STEPS;
+			newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
+		}
 		var angleDifference = newAngle - oldAngle;
 		
 		affectedEntities.forEach(function (entity) {
 			var Transform = entity.getComponent('Transform');
-			var newAngle = Transform.angle + angleDifference;
-			if (keyPressed(key.shift)) {
-				newAngle += Math.PI / SHIFT_STEPS;
-				newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
-			}
-			Transform.angle = newAngle;
+			Transform.angle = Transform.angle + angleDifference;
 		});
 	};
 
@@ -6086,27 +6131,25 @@ var AngleWidget = (function (Widget$$1) {
 		var tail = this.relativePosition.clone().setLength(centerWidgetRadius);
 		var head = this.relativePosition.clone().setLength(defaultWidgetDistance - this.r);
 		
-		/*
-		let arrowWing = this.relativePosition.clone().setLength(this.r * 1).multiplyScalar(-1);
-		let arrowWing1 = arrowWing.clone().rotate(Math.PI/2).add(arrowHead);
-		let arrowWing2 = arrowWing.clone().rotate(-Math.PI/2).add(arrowHead);
-
-*/
-		
 		var graphics = new PIXI.Graphics();
 
-		graphics.beginFill(0x000000, 0.4);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
-		graphics.endFill();
-
-		graphics.beginFill(0xFFFFFF, 1);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r);
+		graphics.lineStyle(2, 0x000000, 1);
+		graphics.moveTo(tail.x + 1, tail.y + 1);
+		graphics.lineTo(head.x + 1, head.y + 1);
+		graphics.lineStyle(0);
+		
+		graphics.beginFill(0x000000, 1);
+		graphics.drawCircle(this.relativePosition.x + 1, this.relativePosition.y + 1, this.r);
 		graphics.endFill();
 		
 		graphics.lineStyle(2, 0xFFFFFF, 1);
-
 		graphics.moveTo(tail.x, tail.y);
 		graphics.lineTo(head.x, head.y);
+		graphics.lineStyle(0);
+		
+		graphics.beginFill(0xFFFFFF, 1);
+		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r);
+		graphics.endFill();
 
 		return graphics;
 	};
@@ -6185,28 +6228,29 @@ var ScaleWidget = (function (Widget$$1) {
 	};
 
 	ScaleWidget.prototype.createGraphics = function createGraphics () {
-		var arrowTail = this.relativePosition.clone().setLength(centerWidgetRadius);
-		var arrowHead = this.relativePosition.clone().setLength(this.relativePosition.length() + this.r);
-		var arrowWing = this.relativePosition.clone().setLength(this.r * 1.8).multiplyScalar(-1);
-		var arrowWing1 = arrowWing.clone().rotate(0.6).add(arrowHead);
-		var arrowWing2 = arrowWing.clone().rotate(-0.6).add(arrowHead);
+		var RECT_SIDE = this.r * 1.9;
+		var lineStart = this.relativePosition.clone().setLength(centerWidgetRadius);
+		var lineEnd = this.relativePosition.clone().setLength(this.relativePosition.length() * (1 - RECT_SIDE/2 / defaultWidgetDistance) * 1.01); // Yes, 1.01 looks better
 
 		var graphics = new PIXI.Graphics();
 
-		graphics.beginFill(0x000000, 0.4);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
+		graphics.lineStyle(2, 0x000000, 1);
+		graphics.moveTo(lineEnd.x + 1, lineEnd.y + 1);
+		graphics.lineTo(lineStart.x + 1, lineStart.y + 1);
+		graphics.lineStyle(0, 0x000000, 1);
+		
+		graphics.beginFill(0x000000, 1);
+		graphics.drawRect(this.relativePosition.x - RECT_SIDE/2 + 1, this.relativePosition.y - RECT_SIDE/2 + 1, RECT_SIDE, RECT_SIDE);
 		graphics.endFill();
-		
+
 		graphics.lineStyle(2, 0xFFFFFF, 1);
-		
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowTail.x, arrowTail.y);
+		graphics.moveTo(lineEnd.x, lineEnd.y);
+		graphics.lineTo(lineStart.x, lineStart.y);
+		graphics.lineStyle(0, 0x000000, 1);
 
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowWing1.x, arrowWing1.y);
-
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowWing2.x, arrowWing2.y);
+		graphics.beginFill(0xFFFFFF, 1);
+		graphics.drawRect(this.relativePosition.x - RECT_SIDE/2, this.relativePosition.y - RECT_SIDE/2, RECT_SIDE, RECT_SIDE);
+		graphics.endFill();
 		
 		return graphics;
 	};
@@ -6230,7 +6274,6 @@ var ScaleWidget = (function (Widget$$1) {
 
 		var changeVector = new Vector(1, 1).add(changeDirection.multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
 
-
 		affectedEntities.forEach(function (entity) {
 			var Transform = entity.getComponent('Transform');
 			var newScale = Transform.scale.clone().multiply(changeVector);
@@ -6243,6 +6286,99 @@ var ScaleWidget = (function (Widget$$1) {
 	};
 
 	return ScaleWidget;
+}(Widget));
+
+var MoveWidget = (function (Widget$$1) {
+	function MoveWidget(component, directionX, directionY, globalCoordinates) {
+		Widget$$1.call(this, {
+			component: component,
+			relativePosition: new Vector(directionX, -directionY).multiplyScalar(defaultWidgetDistance)
+		});
+		this.globalCoordinates = globalCoordinates;
+	}
+
+	if ( Widget$$1 ) MoveWidget.__proto__ = Widget$$1;
+	MoveWidget.prototype = Object.create( Widget$$1 && Widget$$1.prototype );
+	MoveWidget.prototype.constructor = MoveWidget;
+
+	MoveWidget.prototype.updatePosition = function updatePosition () {
+		var Transform = this.component.Transform;
+		var pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(this.globalCoordinates ? 0 : Transform.angle).add(Transform.position);
+		this.x = pos.x;
+		this.y = pos.y;
+
+		if (this.graphics) {
+			this.graphics.x = Transform.position.x;
+			this.graphics.y = Transform.position.y;
+			if (!this.globalCoordinates)
+				{ this.graphics.rotation = Transform.angle; }
+		}
+	};
+
+	MoveWidget.prototype.createGraphics = function createGraphics () {
+		var ARROW_SIZE = 1.2;
+		
+		var arrowTail = this.relativePosition.clone().setLength(centerWidgetRadius);
+		var arrowHead = this.relativePosition.clone().setLength(this.relativePosition.length() + this.r * ARROW_SIZE);
+		var arrowHeadBack = this.relativePosition.clone().setLength(this.relativePosition.length() - this.r * 0.5 * ARROW_SIZE);
+		var arrowWing = this.relativePosition.clone().setLength(this.r * ARROW_SIZE).multiplyScalar(-1);
+		var arrowWing1 = arrowWing.clone().rotate(1).add(this.relativePosition);
+		var arrowWing2 = arrowWing.clone().rotate(-1).add(this.relativePosition);
+
+		var graphics = new PIXI.Graphics();
+		
+		var arrowPoints = [arrowHead, arrowWing1, arrowWing2];
+		
+		graphics.lineStyle(2, 0x000000, 1);
+		graphics.moveTo(arrowHeadBack.x + 1, arrowHeadBack.y + 1);
+		graphics.lineTo(arrowTail.x + 1, arrowTail.y + 1);
+		graphics.lineStyle(0, 0x000000, 1);
+
+		graphics.beginFill(0x000000, 1);
+		graphics.drawPolygon(arrowPoints.map(function (vec) { return new PIXI.Point(vec.x + 1, vec.y + 1); }));
+		graphics.endFill();
+
+		graphics.lineStyle(2, 0xFFFFFF, 1);
+		graphics.moveTo(arrowHeadBack.x, arrowHeadBack.y);
+		graphics.lineTo(arrowTail.x, arrowTail.y);
+		graphics.lineStyle(0, 0x000000, 1);
+
+		graphics.beginFill(0xFFFFFF, 1);
+		graphics.drawPolygon(arrowPoints.map(function (vec) { return new PIXI.Point(vec.x, vec.y); }));
+		graphics.endFill();
+		
+		/*
+		graphics.beginFill(0x000000, 0.4);
+		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
+		graphics.endFill();
+
+		graphics.lineStyle(2, 0xFFFFFF, 1);
+
+		graphics.moveTo(arrowHead.x, arrowHead.y);
+		graphics.lineTo(arrowTail.x, arrowTail.y);
+
+		graphics.moveTo(arrowHead.x, arrowHead.y);
+		graphics.lineTo(arrowWing1.x, arrowWing1.y);
+
+		graphics.moveTo(arrowHead.x, arrowHead.y);
+		graphics.lineTo(arrowWing2.x, arrowWing2.y);
+*/
+		
+		return graphics;
+	};
+
+	MoveWidget.prototype.onDrag = function onDrag (mousePosition, mousePositionChange, affectedEntities) {
+		var rotatedRelativePosition = this.relativePosition.clone();
+		if (!this.globalCoordinates)
+			{ rotatedRelativePosition.rotate(this.component.Transform.angle); }
+		var moveVector = mousePositionChange.getProjectionOn(rotatedRelativePosition);
+		affectedEntities.forEach(function (entity) {
+			var Transform = entity.getComponent('Transform');
+			Transform.position = Transform.position.add(moveVector);
+		});
+	};
+
+	return MoveWidget;
 }(Widget));
 
 Component$1.register({
@@ -6258,32 +6394,89 @@ Component$1.register({
 		widgets: null, // All 5 widgets are always here
 		mouseOnWidget: null, // If mouse is hovering on a visible widget,
 		inSelectionArea: false,
-		
+
 		// Widgets
 		xScale: null,
 		yScale: null,
 		scale: null,
 		angle: null,
 		position: null,
-		
+
 		listeners: null,
 
 		positionHelper: null,
-		
+
 		constructor: function constructor() {
-			this.widgets = [
-				this.position = new PositionWidget(this),
-				this.xScale = new ScaleWidget(this, 1, 0),
-				this.yScale = new ScaleWidget(this, 0, 1),
-				this.scale = new ScaleWidget(this, 1, 1),
-				this.angle = new AngleWidget(this)
-			];
+			var this$1 = this;
+
+			// this.createWidgets();
+			
+			
+			// this.widgets = [
+			// 	this.position = new PositionWidget(this),
+			// 	this.xScale = new ScaleWidget(this, 1, 0),
+			// 	this.yScale = new ScaleWidget(this, 0, 1),
+			// 	this.scale = new ScaleWidget(this, 1, 1),
+			// 	this.angle = new AngleWidget(this)
+			// ];
+			// return;
+			
+			this.createWidgets();
+			events.listen('selectedToolChanged', function () {
+				this$1.createWidgets();
+			});
+		},
+		createWidgets: function createWidgets() {
+			var positionWasInited = this.position && this.position.graphics;
+			
+			if (this.widgets) {
+				this.widgets.forEach(function (widget) { return widget.delete(); });
+				this.widgets = null;
+				this.position = null;
+			}
+			
+			if (selectedToolName === 'multiTool') {
+				this.widgets = [
+					this.position = new PositionWidget(this),
+					new ScaleWidget(this, 1, 0),
+					new ScaleWidget(this, 0, 1),
+					new ScaleWidget(this, 1, 1),
+					new AngleWidget(this)
+				];
+			} else if (selectedToolName === 'globalMoveTool') {
+				this.widgets = [
+					this.position = new PositionWidget(this),
+					new MoveWidget(this, 1, 0, 1),
+					new MoveWidget(this, 0, 1, 1)
+				];
+			} else if (selectedToolName === 'localMoveTool') {
+				this.widgets = [
+					this.position = new PositionWidget(this),
+					new MoveWidget(this, 1, 0, 0),
+					new MoveWidget(this, 0, 1, 0),
+					new AngleWidget(this)
+				];
+			} else {
+				throw new Error('selectedToolName invalid: ' + selectedToolName);
+			}
+			
+			if (this.entity && !this.entity.sleeping) {
+				if (positionWasInited)
+					{ this.position.init(); }
+				
+				if (this.selected) {
+					this.deselect();
+					this.select();
+				}
+			}
 		},
 		select: function select() {
 			var this$1 = this;
 
 			if (!this.selected) {
 				this.selected = true;
+				
+				// Skip position widget
 				for (var i = 1; i < this.widgets.length; ++i) {
 					this$1.widgets[i].init();
 				}
@@ -6316,7 +6509,7 @@ Component$1.register({
 			var this$1 = this;
 
 			this.listeners = [];
-			
+
 			this.listenProperty(this.Transform, 'position', function (position) {
 				if (this$1.scene.playing) {
 					this$1.requiresWidgetUpdate = true;
@@ -6325,7 +6518,7 @@ Component$1.register({
 
 				this$1.positionHelper.x = position.x;
 				this$1.positionHelper.y = position.y;
-				
+
 				this$1.updateWidgets();
 			});
 			this.listenProperty(this.Transform, 'angle', function () {
@@ -6333,7 +6526,7 @@ Component$1.register({
 					this$1.requiresWidgetUpdate = true;
 					return;
 				}
-				
+
 				this$1.updateWidgets();
 			});
 
@@ -6346,11 +6539,12 @@ Component$1.register({
 				}
 			}));
 
-			
-			this.position.init();
-			
+
+			if (this.position)
+				{ this.position.init(); }
+
 			this.updateWidgets();
-			
+
 			this.positionHelper = new PIXI.Graphics();
 			this.positionHelper.beginFill(0xFFFFFF);
 			this.positionHelper.drawCircle(0, 0, 2.7);
@@ -6362,19 +6556,10 @@ Component$1.register({
 			this.positionHelper.y = this.Transform.position.y;
 			this.scene.positionHelperLayer.addChild(this.positionHelper);
 
-			// let gra = new PIXI.Graphics();
-			// // gra.lineStyle(4, 0xFF3300, 1);
-			// gra.beginFill(0x66CCFF);
-			// gra.drawRect(0, 0, 10, 10);
-			// gra.endFill();
-			// gra.x = 0;
-			// gra.y = 0;
-			// this.stage.addChild(gra);
-
 			this.listeners.push(this.scene.listen('zoomChange', function () { return this$1.updateZoomLevel(); }));
 			this.updateZoomLevel();
 		},
-		
+
 		updateZoomLevel: function updateZoomLevel() {
 			var invZoom = 1 / this.scene.cameraZoom;
 			this.positionHelper.scale.set(invZoom, invZoom);
@@ -6385,9 +6570,9 @@ Component$1.register({
 
 			this.updateWidgets();
 		},
-		
+
 		sleep: function sleep() {
-			this.selected = true;
+			// this.selected = true; // Didn't know why this should be set to true
 			this.widgets.forEach(function (widget) {
 				widget.sleep();
 			});
@@ -6403,10 +6588,6 @@ Component$1.register({
 				widget.delete();
 			});
 			this.widgets.length = 0;
-			this.xScale = null;
-			this.yScale = null;
-			this.scale = null;
-			this.angle = null;
 			this.position = null;
 		}
 	}
@@ -6426,14 +6607,14 @@ var SceneModule = (function (Module$$1) {
 			copyButton,
 			deleteButton,
 			sceneContextButtons;
-		
+
 		var disableMouseDown = function (e) {
 			e.returnValue = false;
 			e.preventDefault();
 			e.stopPropagation();
 			return false;
 		};
-		
+
 		Module$$1.call(
 			this, canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -6537,6 +6718,16 @@ var SceneModule = (function (Module$$1) {
 		this.deleteButton = deleteButton;
 		this.sceneContextButtons = sceneContextButtons;
 
+		events.listen('selectedToolChanged', function () {
+			if (this$1.widgetUnderMouse) {
+				this$1.widgetUnderMouse.unhover();
+				this$1.widgetUnderMouse = null;
+			}
+			setTimeout(function () {
+				this$1.draw();
+			}, 0);
+		});
+
 		var fixAspectRatio = function () { return this$1.fixAspectRatio(); };
 
 		window.addEventListener("resize", fixAspectRatio);
@@ -6577,7 +6768,7 @@ var SceneModule = (function (Module$$1) {
 		this.selectionEnd = null;
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
-		
+
 		events.listen('reset', function () {
 			setChangeOrigin$1(this$1);
 			this$1.stopAndReset();
@@ -6585,7 +6776,7 @@ var SceneModule = (function (Module$$1) {
 			if (scene.editorLayer)
 				{ scene.editorLayer.visible = true; }
 		});
-		
+
 		events.listen('play', function () {
 			if (!scene || !scene.level)
 				{ return; }
@@ -6595,7 +6786,7 @@ var SceneModule = (function (Module$$1) {
 
 			if (scene.isInInitialState())
 				{ scene.setZoom(1); }
-			
+
 			scene.editorLayer.visible = false;
 			scene.play();
 			this$1.playingModeChanged();
@@ -6614,53 +6805,53 @@ var SceneModule = (function (Module$$1) {
 
 			scene.editorLayer.visible = true;
 			scene.pause();
-			
+
 			this$1.draw();
 			this$1.playingModeChanged();
 			this$1.updatePropertyChangeCreationFilter();
 		});
-/*
-		this.primaryButton = new TopButton({
-			text: el('span', el('u', 'P'), 'lay'),
-			iconClass: 'fa-play',
-			callback: btn => {
-				if (!scene || !scene.level)
-					return;
-
-				setChangeOrigin(this);
-
-				// this.makeSureSceneHasEditorLayer();
-
-				this.clearState();
-				
-				if (scene.isInInitialState())
-					scene.setZoom(1);
-
-				if (scene.playing) {
-					scene.editorLayer.visible = true;
-					scene.pause();
-					this.draw();
-				} else {
-					scene.editorLayer.visible = false;
-					scene.play();
-				}
-				this.playingModeChanged();
-				this.updatePropertyChangeCreationFilter();
-			}
-		});
-		this.stopButton = new TopButton({
-			text: el('span', el('u', 'R'), 'eset'),
-			iconClass: 'fa-stop',
-			callback: btn => {
-				setChangeOrigin(this);
-				this.stopAndReset();
-
-				if (scene.editorLayer)
-					scene.editorLayer.visible = true;
-			}
-		});
+		/*
+				this.primaryButton = new TopButton({
+					text: el('span', el('u', 'P'), 'lay'),
+					iconClass: 'fa-play',
+					callback: btn => {
+						if (!scene || !scene.level)
+							return;
 		
-		*/
+						setChangeOrigin(this);
+		
+						// this.makeSureSceneHasEditorLayer();
+		
+						this.clearState();
+						
+						if (scene.isInInitialState())
+							scene.setZoom(1);
+		
+						if (scene.playing) {
+							scene.editorLayer.visible = true;
+							scene.pause();
+							this.draw();
+						} else {
+							scene.editorLayer.visible = false;
+							scene.play();
+						}
+						this.playingModeChanged();
+						this.updatePropertyChangeCreationFilter();
+					}
+				});
+				this.stopButton = new TopButton({
+					text: el('span', el('u', 'R'), 'eset'),
+					iconClass: 'fa-stop',
+					callback: btn => {
+						setChangeOrigin(this);
+						this.stopAndReset();
+		
+						if (scene.editorLayer)
+							scene.editorLayer.visible = true;
+					}
+				});
+				
+				*/
 
 		game.listen('levelCompleted', function () {
 			this$1.playingModeChanged();
@@ -6679,10 +6870,10 @@ var SceneModule = (function (Module$$1) {
 			this$1.clearState();
 			this$1.draw();
 		});
-		
+
 		events.listen('scene load level before entities', function (scene$$1, level) {
 			assert(!scene$$1.editorLayer, 'editorLayer should not be there');
-		
+
 			scene$$1.editorLayer = new PIXI$2.Container();
 			scene$$1.layers.move.addChild(scene$$1.editorLayer);
 
@@ -6801,7 +6992,7 @@ var SceneModule = (function (Module$$1) {
 			mousePos = scene.mouseToWorld(mousePos);
 
 			setChangeOrigin$1(this$1);
-			
+
 			if (this$1.newEntities.length > 0)
 				{ copyEntitiesToScene(this$1.newEntities); }
 			else if (this$1.widgetUnderMouse) {
@@ -6852,7 +7043,7 @@ var SceneModule = (function (Module$$1) {
 			this$1.draw();
 			var ref;
 		});
-		
+
 		events.listen('dragPrototypeStarted', function (prototypes) {
 			var entityPrototypes = prototypes.map(function (prototype) {
 				var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
@@ -6872,7 +7063,7 @@ var SceneModule = (function (Module$$1) {
 			this$1.selectedEntities = entitiesInSelection;
 			this$1.selectSelectedEntitiesInEditor();
 			this$1.updateSceneContextButtonVisibility();
-			
+
 			this$1.draw();
 		});
 		events.listen('dragPrototypeToNonCanvas', function () {
@@ -6962,15 +7153,15 @@ var SceneModule = (function (Module$$1) {
 		var this$1 = this;
 
 		window.cancelAnimationFrame(this.requestAnimationFrameId);
-		
+
 		var cameraPositionSpeed = 300;
 		var cameraZoomSpeed = 0.8;
 		var lastTime = performance.now();
-		
+
 		var update = function () {
 			if (!scene)
 				{ return; }
-			
+
 			var currentTime = performance.now();
 			var dt = (currentTime - lastTime) / 1000;
 			lastTime = currentTime;
@@ -7001,7 +7192,7 @@ var SceneModule = (function (Module$$1) {
 
 				if (dz !== 0) {
 					var zoomMultiplier = 1 + speed * cameraZoomSpeed * dt;
-					
+
 					if (dz > 0)
 						{ scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier)); }
 					else if (dz < 0)
@@ -7015,7 +7206,7 @@ var SceneModule = (function (Module$$1) {
 
 				this$1.draw();
 			}
-			
+
 			this$1.requestAnimationFrameId = requestAnimationFrame(update);
 		};
 
@@ -7023,7 +7214,7 @@ var SceneModule = (function (Module$$1) {
 			update();
 		}
 	};
-	
+
 	SceneModule.prototype.cameraPositionOrZoomUpdated = function cameraPositionOrZoomUpdated () {
 		if (scene && scene.isInInitialState()) {
 			this.editorCameraPosition = scene.cameraPosition.clone();
@@ -7208,14 +7399,14 @@ var SceneModule = (function (Module$$1) {
 			disableAllChanges();
 		}
 	};
-	
+
 	SceneModule.prototype.updateSceneContextButtonVisibility = function updateSceneContextButtonVisibility () {
 		if (this.selectedEntities.length > 0)
 			{ this.sceneContextButtons.classList.remove('hidden'); }
 		else
 			{ this.sceneContextButtons.classList.add('hidden'); }
 	};
-	
+
 	SceneModule.prototype.copyEntities = function copyEntities (entities) {
 		this.copiedEntities.forEach(function (entity) { return entity.delete(); });
 		this.copiedEntities.length = [];
@@ -7223,15 +7414,17 @@ var SceneModule = (function (Module$$1) {
 		this.copiedEntities.forEach(function (entity) { return entity.sleep(); });
 		var ref;
 	};
+
 	SceneModule.prototype.pasteEntities = function pasteEntities () {
 		this.deleteNewEntities();
 		(ref = this.newEntities).push.apply(ref, this.copiedEntities.map(function (entity) { return entity.clone(); }));
 		this.newEntities.forEach(function (entity) { return entity.wakeUp(); });
-		
+
 		if (this.previousMousePosInWorldCoordinates)
 			{ setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
 		var ref; }
 	};
+
 	SceneModule.prototype.destroySelectionArea = function destroySelectionArea () {
 		if (!this.selectionArea)
 			{ return; }
@@ -8066,11 +8259,6 @@ function parseTextAndNumber(textAndNumber) {
 	};
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -8144,19 +8332,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
@@ -8986,6 +9161,13 @@ var loaded = false;
 
 var modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
 var loadedPromise = events.getEventPromise('loaded');
+var selectedToolName = 'multiTool'; // in top bar
+function changeSelectedTool(newToolName) {
+	if (selectedToolName !== newToolName) {
+		selectedToolName = newToolName;
+		events.dispatch('selectedToolChanged', newToolName);
+	}
+}
 
 modulesRegisteredPromise.then(function () {
 	loaded = true;
@@ -9128,20 +9310,25 @@ function getOption(id) {
 	return options$1[id];
 }
 
-window.Property = Property;
+// import Property from '../core/property';
+// window.Property = Property;
 
-window.PropertyType = createPropertyType;
+// import PropertyType from '../core/propertyType';
+// window.PropertyType = PropertyType;
 
-window.Component = Component$1;
-window.Prop = createPropertyType;
+// import { Component, Prop } from '../core/component';
+// window.Component = Component;
+// window.Prop = Prop;
 
-window.Serializable = Serializable;
+// import Serializable from '../core/serializable';
+// window.Serializable = Serializable;
 
-window.getSerializable = getSerializable$1;
-window.serializables = serializables;
-window.setChangeOrigin = setChangeOrigin$1;
+// import { getSerializable, serializables, setChangeOrigin } from '../core/serializableManager';
+// window.getSerializable = getSerializable;
+// window.serializables = serializables;
+// window.setChangeOrigin = setChangeOrigin;
 
-window.Game = Game;
+// import { default as Game } from '../core/game';
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

@@ -26,28 +26,29 @@ export default class ScaleWidget extends Widget {
 	}
 
 	createGraphics() {
-		let arrowTail = this.relativePosition.clone().setLength(centerWidgetRadius);
-		let arrowHead = this.relativePosition.clone().setLength(this.relativePosition.length() + this.r);
-		let arrowWing = this.relativePosition.clone().setLength(this.r * 1.8).multiplyScalar(-1);
-		let arrowWing1 = arrowWing.clone().rotate(0.6).add(arrowHead);
-		let arrowWing2 = arrowWing.clone().rotate(-0.6).add(arrowHead);
+		const RECT_SIDE = this.r * 1.9;
+		let lineStart = this.relativePosition.clone().setLength(centerWidgetRadius);
+		let lineEnd = this.relativePosition.clone().setLength(this.relativePosition.length() * (1 - RECT_SIDE/2 / defaultWidgetDistance) * 1.01); // Yes, 1.01 looks better
 
 		let graphics = new PIXI.Graphics();
 
-		graphics.beginFill(0x000000, 0.4);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
+		graphics.lineStyle(2, 0x000000, 1);
+		graphics.moveTo(lineEnd.x + 1, lineEnd.y + 1);
+		graphics.lineTo(lineStart.x + 1, lineStart.y + 1);
+		graphics.lineStyle(0, 0x000000, 1);
+		
+		graphics.beginFill(0x000000, 1);
+		graphics.drawRect(this.relativePosition.x - RECT_SIDE/2 + 1, this.relativePosition.y - RECT_SIDE/2 + 1, RECT_SIDE, RECT_SIDE);
 		graphics.endFill();
-		
+
 		graphics.lineStyle(2, 0xFFFFFF, 1);
-		
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowTail.x, arrowTail.y);
+		graphics.moveTo(lineEnd.x, lineEnd.y);
+		graphics.lineTo(lineStart.x, lineStart.y);
+		graphics.lineStyle(0, 0x000000, 1);
 
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowWing1.x, arrowWing1.y);
-
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowWing2.x, arrowWing2.y);
+		graphics.beginFill(0xFFFFFF, 1);
+		graphics.drawRect(this.relativePosition.x - RECT_SIDE/2, this.relativePosition.y - RECT_SIDE/2, RECT_SIDE, RECT_SIDE);
+		graphics.endFill();
 		
 		return graphics;
 	}
@@ -70,7 +71,6 @@ export default class ScaleWidget extends Widget {
 		let changeDirection = this.relativePosition.clone().multiply(new Vector(1, -1)).normalize();
 
 		let changeVector = new Vector(1, 1).add(changeDirection.multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
-
 
 		affectedEntities.forEach(entity => {
 			let Transform = entity.getComponent('Transform');

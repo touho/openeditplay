@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import { editor, modulesRegisteredPromise } from '../editor';
+import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise } from '../editor';
 import events from '../../util/events';
 import { scene } from '../../core/scene';
 import {listenKeyDown, key} from "../../util/input";
@@ -10,19 +10,34 @@ export class TopBarModule extends Module {
 		super(
 			this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }),
 			this.buttons = el('div.buttonContainer.select-none'),
-			this.controlButtons = el('div.topSceneControlButtons')
+			this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'),
+			this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons')
 		);
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
-		
-		events.listen('addTopButtonToTopBar', topButton => {
-			mount(this.buttons, topButton);
-		});
+		this.keyboardShortcuts = {}; // key.x -> func
 
 		this.logo.onclick = () => {
 			location.href = '/';
 		};
+
+		listenKeyDown(keyCode => {
+			this.keyboardShortcuts[keyCode] && this.keyboardShortcuts[keyCode]();
+		});
 		
+		this.initControlButtons();
+		this.initToolSelectionButtons();
+	}
+	
+	addKeyboardShortcut(key, buttonOrCallback) {
+		if (typeof buttonOrCallback === 'function') {
+			this.keyboardShortcuts[key] = buttonOrCallback;
+		} else {
+			this.keyboardShortcuts[key] = () => buttonOrCallback.callback(buttonOrCallback.el);
+		}
+	}
+	
+	initControlButtons() {
 		let playButtonData = {
 			title: 'Play (P)',
 			icon: 'fa-play',
@@ -35,7 +50,7 @@ export class TopBarModule extends Module {
 			type: 'pause',
 			callback: () => events.dispatch('pause')
 		};
-		
+
 		let playButton = new SceneControlButton(playButtonData);
 		let stopButton = new SceneControlButton({
 			title: 'Reset (R)',
@@ -43,32 +58,74 @@ export class TopBarModule extends Module {
 			type: 'reset',
 			callback: () => events.dispatch('reset')
 		});
-		
+
 		const updateButtons = () => {
 			setTimeout(() => {
 				if (scene.playing)
 					playButton.update(pauseButtonData);
 				else
 					playButton.update(playButtonData);
-				
+
 				let paused = !scene.playing && !scene.isInInitialState();
 				this.controlButtons.classList.toggle('topSceneControlButtonsPaused', paused);
 			}, 0);
 		};
-		
+
+		this.addKeyboardShortcut(key.p, playButton);
+		this.addKeyboardShortcut(key.r, stopButton);
+
 		events.listen('reset', updateButtons);
 		events.listen('play', updateButtons);
 		events.listen('pause', updateButtons);
-		
-		listenKeyDown(keyCode => {
-			if (keyCode === key.p)
-				playButton.callback();
-			else if (keyCode === key.r)
-				stopButton.callback();
-		});
-		
+
 		mount(this.controlButtons, playButton);
 		mount(this.controlButtons, stopButton);
+	}
+	
+	initToolSelectionButtons() {
+		const createCallback = (callback) => {
+			return (element) => {
+				this.toolSelectionButtons.querySelectorAll('.topSceneControlButton').forEach(button => {
+					button.classList.remove('selected');
+				});
+				element.classList.add('selected');
+				callback && callback();
+			}
+		};
+		let tools = {
+			globalMoveTool: new SceneControlButton({
+				title: 'Global move tool (1)',
+				icon: 'fa-arrows',
+				callback: createCallback(() => {
+					changeSelectedTool('globalMoveTool');
+				})
+			}),
+			localMoveTool: new SceneControlButton({
+				title: 'Local move tool (2)',
+				icon: 'fa-arrows-alt',
+				callback: createCallback(() => {
+					changeSelectedTool('localMoveTool');
+				})
+			}),
+			multiTool: new SceneControlButton({
+				title: 'Multitool tool (3)',
+				icon: 'fa-dot-circle-o',
+				callback: createCallback(() => {
+					changeSelectedTool('multiTool');
+				})
+			})
+		};
+
+		this.addKeyboardShortcut(key[1], tools.globalMoveTool);
+		this.addKeyboardShortcut(key[2], tools.localMoveTool);
+		this.addKeyboardShortcut(key[3], tools.multiTool);
+		
+		mount(this.toolSelectionButtons, tools.globalMoveTool);
+		mount(this.toolSelectionButtons, tools.localMoveTool);
+		mount(this.toolSelectionButtons, tools.multiTool);
+
+		tools[selectedToolName].click();
+		// this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	}
 }
 Module.register(TopBarModule, 'top');
@@ -76,16 +133,19 @@ Module.register(TopBarModule, 'top');
 class SceneControlButton {
 	constructor(data) {
 		this.el = el('div.button.topSceneControlButton', {
-			onclick: () => this.callback && this.callback()
+			onclick: () => this.click()
 		});
 		this.update(data);
 	}
 	update(data) {
 		this.el.setAttribute('title', data.title || '');
-		this.el.setAttribute('controlButtonType', data.type);
+		this.el.setAttribute('controlButtonType', data.type || '');
 		this.el.innerHTML = '';
 		this.callback = data.callback;
 		mount(this.el, el(`i.fa.${data.icon}`));
+	}
+	click() {
+		this.callback && this.callback(this.el);
 	}
 }
 

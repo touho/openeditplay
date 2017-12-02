@@ -38,6 +38,13 @@ let loaded = false;
 
 export let modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
 export let loadedPromise = events.getEventPromise('loaded');
+export let selectedToolName = 'multiTool'; // in top bar
+export function changeSelectedTool(newToolName) {
+	if (selectedToolName !== newToolName) {
+		selectedToolName = newToolName;
+		events.dispatch('selectedToolChanged', newToolName);
+	}
+}
 
 modulesRegisteredPromise.then(() => {
 	loaded = true;

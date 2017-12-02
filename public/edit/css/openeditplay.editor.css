@@ -5,6 +5,7 @@
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.3s;
+  user-select: none;
 }
 .button:hover {
   opacity: 1;
@@ -287,18 +288,23 @@ img.logo:hover {
 .module-topbar {
   overflow: hidden;
 }
-div.topSceneControlButtons {
+div.topButtonGroup {
   display: inline-block;
   position: absolute;
-  top: 50%;
-  left: 50vw;
   transform: translateX(-50%) translateY(-50%);
 
   border: 1px solid black;
   box-shadow: inset 0 1px 3px 0px #e8e8e8, 0 0 2px black;
 
   border-radius: 4px;
-  
+}
+div.topSceneControlButtons {
+  top: 50%;
+  left: 50vw;
+}
+div.topToolSelectionButtons {
+  top: 50%;
+  left: 20vw;
 }
 @keyframes blinkPlayButton {
   0% { opacity: 1 }
@@ -322,13 +328,19 @@ div.topSceneControlButton {
 div.topSceneControlButton:hover {
   box-shadow: inset 0 1px 4px 0px #888888;
 }
+div.topSceneControlButton.selected, div.topSceneControlButton:active {
+  background: linear-gradient(to bottom, #383838, #6d6d6d);
+  color: white;
+  opacity: 0.9;
+  box-shadow: none;
+}
 div.topSceneControlButton:first-of-type {
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
 }
 div.topSceneControlButton:last-of-type {
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
 }
 .module-types .addTypeButton {
   transform: translateY(1px);

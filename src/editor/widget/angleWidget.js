@@ -19,16 +19,15 @@ export default class AngleWidget extends Widget {
 
 		let oldAngle = this.component.Transform.angle;
 		let newAngle = Math.PI + relativeMousePosition.horizontalAngle();
+		if (keyPressed(key.shift)) {
+			newAngle += Math.PI / SHIFT_STEPS;
+			newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
+		}
 		let angleDifference = newAngle - oldAngle;
 		
 		affectedEntities.forEach(entity => {
 			let Transform = entity.getComponent('Transform');
-			let newAngle = Transform.angle + angleDifference;
-			if (keyPressed(key.shift)) {
-				newAngle += Math.PI / SHIFT_STEPS;
-				newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
-			}
-			Transform.angle = newAngle;
+			Transform.angle = Transform.angle + angleDifference;
 		});
 	}
 
@@ -49,27 +48,25 @@ export default class AngleWidget extends Widget {
 		let tail = this.relativePosition.clone().setLength(centerWidgetRadius);
 		let head = this.relativePosition.clone().setLength(defaultWidgetDistance - this.r);
 		
-		/*
-		let arrowWing = this.relativePosition.clone().setLength(this.r * 1).multiplyScalar(-1);
-		let arrowWing1 = arrowWing.clone().rotate(Math.PI/2).add(arrowHead);
-		let arrowWing2 = arrowWing.clone().rotate(-Math.PI/2).add(arrowHead);
-
-*/
-		
 		let graphics = new PIXI.Graphics();
 
-		graphics.beginFill(0x000000, 0.4);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
-		graphics.endFill();
-
-		graphics.beginFill(0xFFFFFF, 1);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r);
+		graphics.lineStyle(2, 0x000000, 1);
+		graphics.moveTo(tail.x + 1, tail.y + 1);
+		graphics.lineTo(head.x + 1, head.y + 1);
+		graphics.lineStyle(0);
+		
+		graphics.beginFill(0x000000, 1);
+		graphics.drawCircle(this.relativePosition.x + 1, this.relativePosition.y + 1, this.r);
 		graphics.endFill();
 		
 		graphics.lineStyle(2, 0xFFFFFF, 1);
-
 		graphics.moveTo(tail.x, tail.y);
 		graphics.lineTo(head.x, head.y);
+		graphics.lineStyle(0);
+		
+		graphics.beginFill(0xFFFFFF, 1);
+		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r);
+		graphics.endFill();
 
 		return graphics;
 	}

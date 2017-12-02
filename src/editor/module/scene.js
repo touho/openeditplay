@@ -17,11 +17,9 @@ import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import {Component} from '../../core/component';
-import {TopButton} from './topBar';
 import {editor} from '../editor';
 import {changeType, setChangeOrigin} from '../../core/serializableManager';
 import * as sceneEdit from '../util/sceneEditUtil';
-import * as sceneDraw from '../util/sceneDrawUtil';
 import Vector from '../../util/vector';
 import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
 import {help} from '../help';
@@ -43,14 +41,14 @@ class SceneModule extends Module {
 			copyButton,
 			deleteButton,
 			sceneContextButtons;
-		
+
 		let disableMouseDown = e => {
 			e.returnValue = false;
 			e.preventDefault();
 			e.stopPropagation();
 			return false;
 		};
-		
+
 		super(
 			canvas = el('canvas.openEditPlayCanvas', {
 				// width and height will be fixed after loading
@@ -153,6 +151,16 @@ class SceneModule extends Module {
 		this.deleteButton = deleteButton;
 		this.sceneContextButtons = sceneContextButtons;
 
+		events.listen('selectedToolChanged', () => {
+			if (this.widgetUnderMouse) {
+				this.widgetUnderMouse.unhover();
+				this.widgetUnderMouse = null;
+			}
+			setTimeout(() => {
+				this.draw();
+			}, 0);
+		});
+
 		let fixAspectRatio = () => this.fixAspectRatio();
 
 		window.addEventListener("resize", fixAspectRatio);
@@ -193,7 +201,7 @@ class SceneModule extends Module {
 		this.selectionEnd = null;
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
-		
+
 		events.listen('reset', () => {
 			setChangeOrigin(this);
 			this.stopAndReset();
@@ -201,7 +209,7 @@ class SceneModule extends Module {
 			if (scene.editorLayer)
 				scene.editorLayer.visible = true;
 		});
-		
+
 		events.listen('play', () => {
 			if (!scene || !scene.level)
 				return;
@@ -211,7 +219,7 @@ class SceneModule extends Module {
 
 			if (scene.isInInitialState())
 				scene.setZoom(1);
-			
+
 			scene.editorLayer.visible = false;
 			scene.play();
 			this.playingModeChanged();
@@ -230,53 +238,53 @@ class SceneModule extends Module {
 
 			scene.editorLayer.visible = true;
 			scene.pause();
-			
+
 			this.draw();
 			this.playingModeChanged();
 			this.updatePropertyChangeCreationFilter();
 		});
-/*
-		this.primaryButton = new TopButton({
-			text: el('span', el('u', 'P'), 'lay'),
-			iconClass: 'fa-play',
-			callback: btn => {
-				if (!scene || !scene.level)
-					return;
-
-				setChangeOrigin(this);
-
-				// this.makeSureSceneHasEditorLayer();
-
-				this.clearState();
-				
-				if (scene.isInInitialState())
-					scene.setZoom(1);
-
-				if (scene.playing) {
-					scene.editorLayer.visible = true;
-					scene.pause();
-					this.draw();
-				} else {
-					scene.editorLayer.visible = false;
-					scene.play();
-				}
-				this.playingModeChanged();
-				this.updatePropertyChangeCreationFilter();
-			}
-		});
-		this.stopButton = new TopButton({
-			text: el('span', el('u', 'R'), 'eset'),
-			iconClass: 'fa-stop',
-			callback: btn => {
-				setChangeOrigin(this);
-				this.stopAndReset();
-
-				if (scene.editorLayer)
-					scene.editorLayer.visible = true;
-			}
-		});
+		/*
+				this.primaryButton = new TopButton({
+					text: el('span', el('u', 'P'), 'lay'),
+					iconClass: 'fa-play',
+					callback: btn => {
+						if (!scene || !scene.level)
+							return;
 		
-		*/
+						setChangeOrigin(this);
+		
+						// this.makeSureSceneHasEditorLayer();
+		
+						this.clearState();
+						
+						if (scene.isInInitialState())
+							scene.setZoom(1);
+		
+						if (scene.playing) {
+							scene.editorLayer.visible = true;
+							scene.pause();
+							this.draw();
+						} else {
+							scene.editorLayer.visible = false;
+							scene.play();
+						}
+						this.playingModeChanged();
+						this.updatePropertyChangeCreationFilter();
+					}
+				});
+				this.stopButton = new TopButton({
+					text: el('span', el('u', 'R'), 'eset'),
+					iconClass: 'fa-stop',
+					callback: btn => {
+						setChangeOrigin(this);
+						this.stopAndReset();
+		
+						if (scene.editorLayer)
+							scene.editorLayer.visible = true;
+					}
+				});
+				
+				*/
 
 		game.listen('levelCompleted', () => {
 			this.playingModeChanged();
@@ -295,10 +303,10 @@ class SceneModule extends Module {
 			this.clearState();
 			this.draw();
 		});
-		
+
 		events.listen('scene load level before entities', (scene, level) => {
 			assert(!scene.editorLayer, 'editorLayer should not be there');
-		
+
 			scene.editorLayer = new PIXI.Container();
 			scene.layers.move.addChild(scene.editorLayer);
 
@@ -417,7 +425,7 @@ class SceneModule extends Module {
 			mousePos = scene.mouseToWorld(mousePos);
 
 			setChangeOrigin(this);
-			
+
 			if (this.newEntities.length > 0)
 				sceneEdit.copyEntitiesToScene(this.newEntities);
 			else if (this.widgetUnderMouse) {
@@ -466,7 +474,7 @@ class SceneModule extends Module {
 
 			this.draw();
 		});
-		
+
 		events.listen('dragPrototypeStarted', prototypes => {
 			let entityPrototypes = prototypes.map(prototype => {
 				let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
@@ -486,7 +494,7 @@ class SceneModule extends Module {
 			this.selectedEntities = entitiesInSelection;
 			this.selectSelectedEntitiesInEditor();
 			this.updateSceneContextButtonVisibility();
-			
+
 			this.draw();
 		});
 		events.listen('dragPrototypeToNonCanvas', () => {
@@ -570,15 +578,15 @@ class SceneModule extends Module {
 
 	startListeningMovementInput() {
 		window.cancelAnimationFrame(this.requestAnimationFrameId);
-		
+
 		const cameraPositionSpeed = 300;
 		const cameraZoomSpeed = 0.8;
 		let lastTime = performance.now();
-		
+
 		const update = () => {
 			if (!scene)
 				return;
-			
+
 			let currentTime = performance.now();
 			let dt = (currentTime - lastTime) / 1000;
 			lastTime = currentTime;
@@ -609,7 +617,7 @@ class SceneModule extends Module {
 
 				if (dz !== 0) {
 					let zoomMultiplier = 1 + speed * cameraZoomSpeed * dt;
-					
+
 					if (dz > 0)
 						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * zoomMultiplier));
 					else if (dz < 0)
@@ -623,7 +631,7 @@ class SceneModule extends Module {
 
 				this.draw();
 			}
-			
+
 			this.requestAnimationFrameId = requestAnimationFrame(update);
 		};
 
@@ -631,7 +639,7 @@ class SceneModule extends Module {
 			update();
 		}
 	}
-	
+
 	cameraPositionOrZoomUpdated() {
 		if (scene && scene.isInInitialState()) {
 			this.editorCameraPosition = scene.cameraPosition.clone();
@@ -812,28 +820,30 @@ class SceneModule extends Module {
 			disableAllChanges();
 		}
 	}
-	
+
 	updateSceneContextButtonVisibility() {
 		if (this.selectedEntities.length > 0)
 			this.sceneContextButtons.classList.remove('hidden');
 		else
 			this.sceneContextButtons.classList.add('hidden');
 	}
-	
+
 	copyEntities(entities) {
 		this.copiedEntities.forEach(entity => entity.delete());
 		this.copiedEntities.length = [];
 		this.copiedEntities.push(...entities.map(entity => entity.clone()));
 		this.copiedEntities.forEach(entity => entity.sleep());
 	}
+
 	pasteEntities() {
 		this.deleteNewEntities();
 		this.newEntities.push(...this.copiedEntities.map(entity => entity.clone()));
 		this.newEntities.forEach(entity => entity.wakeUp());
-		
+
 		if (this.previousMousePosInWorldCoordinates)
 			sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
 	}
+
 	destroySelectionArea() {
 		if (!this.selectionArea)
 			return;

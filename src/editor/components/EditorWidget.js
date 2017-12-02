@@ -1,8 +1,11 @@
-import { Component, Prop } from '../../core/component';
+import {Component, Prop} from '../../core/component';
 import Widget from '../widget/widget';
 import AngleWidget from '../widget/angleWidget';
 import PositionWidget from '../widget/positionWidget';
 import ScaleWidget from '../widget/scaleWidget';
+import MoveWidget from '../widget/moveWidget';
+import events from "../../util/events";
+import {selectedToolName} from "../editor";
 
 let primaryColor = 'white';
 let hoverColor = 'yellow';
@@ -12,22 +15,6 @@ let smallR = 5;
 let widgetDistance = 30;
 let squared2 = Math.sqrt(2);
 let aabbSize = widgetDistance + smallR;
-
-function createWidget(component, radius) {
-	return {
-		x: 0,
-		y: 0,
-		r: radius,
-		component
-	};
-}
-
-function isMouseInPotentialWidgetArea(mousePosition, position) {
-	return mousePosition.x > position.x - aabbSize
-		&& mousePosition.x < position.x + aabbSize
-		&& mousePosition.y > position.y - aabbSize
-		&& mousePosition.y < position.y + radius;
-}
 
 /*
 How mouse interaction works?
@@ -43,7 +30,6 @@ Dragging:
 
  */
 
-
 // Export so that other components can have this component as parent
 export default Component.register({
 	name: 'EditorWidget',
@@ -58,30 +44,85 @@ export default Component.register({
 		widgets: null, // All 5 widgets are always here
 		mouseOnWidget: null, // If mouse is hovering on a visible widget,
 		inSelectionArea: false,
-		
+
 		// Widgets
 		xScale: null,
 		yScale: null,
 		scale: null,
 		angle: null,
 		position: null,
-		
+
 		listeners: null,
 
 		positionHelper: null,
-		
+
 		constructor() {
-			this.widgets = [
-				this.position = new PositionWidget(this),
-				this.xScale = new ScaleWidget(this, 1, 0),
-				this.yScale = new ScaleWidget(this, 0, 1),
-				this.scale = new ScaleWidget(this, 1, 1),
-				this.angle = new AngleWidget(this)
-			];
+			// this.createWidgets();
+			
+			
+			// this.widgets = [
+			// 	this.position = new PositionWidget(this),
+			// 	this.xScale = new ScaleWidget(this, 1, 0),
+			// 	this.yScale = new ScaleWidget(this, 0, 1),
+			// 	this.scale = new ScaleWidget(this, 1, 1),
+			// 	this.angle = new AngleWidget(this)
+			// ];
+			// return;
+			
+			this.createWidgets();
+			events.listen('selectedToolChanged', () => {
+				this.createWidgets();
+			});
+		},
+		createWidgets() {
+			let positionWasInited = this.position && this.position.graphics;
+			
+			if (this.widgets) {
+				this.widgets.forEach(widget => widget.delete());
+				this.widgets = null;
+				this.position = null;
+			}
+			
+			if (selectedToolName === 'multiTool') {
+				this.widgets = [
+					this.position = new PositionWidget(this),
+					new ScaleWidget(this, 1, 0),
+					new ScaleWidget(this, 0, 1),
+					new ScaleWidget(this, 1, 1),
+					new AngleWidget(this)
+				];
+			} else if (selectedToolName === 'globalMoveTool') {
+				this.widgets = [
+					this.position = new PositionWidget(this),
+					new MoveWidget(this, 1, 0, 1),
+					new MoveWidget(this, 0, 1, 1)
+				];
+			} else if (selectedToolName === 'localMoveTool') {
+				this.widgets = [
+					this.position = new PositionWidget(this),
+					new MoveWidget(this, 1, 0, 0),
+					new MoveWidget(this, 0, 1, 0),
+					new AngleWidget(this)
+				];
+			} else {
+				throw new Error('selectedToolName invalid: ' + selectedToolName);
+			}
+			
+			if (this.entity && !this.entity.sleeping) {
+				if (positionWasInited)
+					this.position.init();
+				
+				if (this.selected) {
+					this.deselect();
+					this.select();
+				}
+			}
 		},
 		select() {
 			if (!this.selected) {
 				this.selected = true;
+				
+				// Skip position widget
 				for (let i = 1; i < this.widgets.length; ++i) {
 					this.widgets[i].init();
 				}
@@ -108,7 +149,7 @@ export default Component.register({
 		},
 		init() {
 			this.listeners = [];
-			
+
 			this.listenProperty(this.Transform, 'position', position => {
 				if (this.scene.playing) {
 					this.requiresWidgetUpdate = true;
@@ -117,7 +158,7 @@ export default Component.register({
 
 				this.positionHelper.x = position.x;
 				this.positionHelper.y = position.y;
-				
+
 				this.updateWidgets();
 			});
 			this.listenProperty(this.Transform, 'angle', () => {
@@ -125,7 +166,7 @@ export default Component.register({
 					this.requiresWidgetUpdate = true;
 					return;
 				}
-				
+
 				this.updateWidgets();
 			});
 
@@ -138,11 +179,12 @@ export default Component.register({
 				}
 			}));
 
-			
-			this.position.init();
-			
+
+			if (this.position)
+				this.position.init();
+
 			this.updateWidgets();
-			
+
 			this.positionHelper = new PIXI.Graphics();
 			this.positionHelper.beginFill(0xFFFFFF);
 			this.positionHelper.drawCircle(0, 0, 2.7);
@@ -154,19 +196,10 @@ export default Component.register({
 			this.positionHelper.y = this.Transform.position.y;
 			this.scene.positionHelperLayer.addChild(this.positionHelper);
 
-			// let gra = new PIXI.Graphics();
-			// // gra.lineStyle(4, 0xFF3300, 1);
-			// gra.beginFill(0x66CCFF);
-			// gra.drawRect(0, 0, 10, 10);
-			// gra.endFill();
-			// gra.x = 0;
-			// gra.y = 0;
-			// this.stage.addChild(gra);
-
 			this.listeners.push(this.scene.listen('zoomChange', () => this.updateZoomLevel()))
 			this.updateZoomLevel();
 		},
-		
+
 		updateZoomLevel() {
 			let invZoom = 1 / this.scene.cameraZoom;
 			this.positionHelper.scale.set(invZoom, invZoom);
@@ -177,9 +210,9 @@ export default Component.register({
 
 			this.updateWidgets();
 		},
-		
+
 		sleep() {
-			this.selected = true;
+			// this.selected = true; // Didn't know why this should be set to true
 			this.widgets.forEach(widget => {
 				widget.sleep();
 			});
@@ -195,10 +228,6 @@ export default Component.register({
 				widget.delete();
 			});
 			this.widgets.length = 0;
-			this.xScale = null;
-			this.yScale = null;
-			this.scale = null;
-			this.angle = null;
 			this.position = null;
 		}
 	}

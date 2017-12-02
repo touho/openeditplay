@@ -14,6 +14,7 @@ export default class Widget {
 		this.hovering = false;
 		this.component = options.component;
 		this.relativePosition = options.relativePosition || new Vector(0, 0);
+		this.graphics = null;
 	}
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
 		console.log('Widget dragged');
@@ -46,30 +47,11 @@ export default class Widget {
 		return false;
 	}
 	
-	draw(context) {
-		let p = this.component.Transform.position;
-		
-		let relativePosition = Vector.fromObject(this).subtract(p);
-		
-		let lineStart = relativePosition.clone().setLength(centerWidgetRadius).add(p);
-		let lineEnd = relativePosition.clone().setLength(relativePosition.length() - this.r).add(p);
-
-		context.beginPath();
-		context.moveTo(lineStart.x, lineStart.y);
-		context.lineTo(lineEnd.x, lineEnd.y);
-		context.stroke();
-		
-		context.beginPath();
-		context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-		context.fill();
-		context.stroke();
-	}
-
 	createGraphics() {
 		let graphics = new PIXI.Graphics();
 		
-		graphics.lineStyle(4, 0x000000, 0.2);
-		graphics.drawCircle(0, 0, this.r);
+		graphics.lineStyle(2, 0x000000, 1);
+		graphics.drawCircle(1, 1, this.r);
 
 		graphics.lineStyle(2, 0xFFFFFF, 1);
 		graphics.drawCircle(0, 0, this.r);
@@ -105,7 +87,7 @@ export default class Widget {
 			if (this.hovering) {
 				this.graphics.alpha = 1;
 			} else {
-				this.graphics.alpha = 0.4;
+				this.graphics.alpha = 0.5;
 			}
 		}
 	}
