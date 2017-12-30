@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise } from '../editor';
 import events from '../../util/events';
-import { scene } from '../../core/scene';
+import {listenSceneCreation, scene} from '../../core/scene';
 import {listenKeyDown, key} from "../../util/input";
 
 export class TopBarModule extends Module {
@@ -73,10 +73,12 @@ export class TopBarModule extends Module {
 
 		this.addKeyboardShortcut(key.p, playButton);
 		this.addKeyboardShortcut(key.r, stopButton);
-
-		events.listen('reset', updateButtons);
-		events.listen('play', updateButtons);
-		events.listen('pause', updateButtons);
+		
+		listenSceneCreation(() => {
+			scene.listen('reset', updateButtons);
+			scene.listen('play', updateButtons);
+			scene.listen('pause', updateButtons);
+		});
 
 		mount(this.controlButtons, playButton);
 		mount(this.controlButtons, stopButton);

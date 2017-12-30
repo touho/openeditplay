@@ -16,17 +16,17 @@ Component.register({
 			this.initSprite();
 
 			this.listenProperty(this.Transform, 'position', position => {
-				this.sprite.x = position.x;
-				this.sprite.y = position.y;
+				// this.sprite.x = position.x;
+				// this.sprite.y = position.y;
 			});
 
 			this.listenProperty(this.Transform, 'angle', angle => {
-				this.sprite.rotation = angle;
+				// this.sprite.rotation = angle;
 			});
 
 			this.listenProperty(this.Transform, 'scale', scale => {
-				this.sprite.scale.x = scale.x;
-				this.sprite.scale.y = scale.y;
+				// this.sprite.scale.x = scale.x;
+				// this.sprite.scale.y = scale.y;
 			});
 		},
 		initSprite() {
@@ -35,11 +35,11 @@ Component.register({
 			
 			let T = this.Transform;
 
-			this.sprite.x = T.position.x;
-			this.sprite.y = T.position.y;
-			this.sprite.rotation = T.angle;
-			this.sprite.scale.x = T.scale.x;
-			this.sprite.scale.y = T.scale.y;
+			// this.sprite.x = T.position.x;
+			// this.sprite.y = T.position.y;
+			// this.sprite.rotation = T.angle;
+			// this.sprite.scale.x = T.scale.x;
+			// this.sprite.scale.y = T.scale.y;
 
 			this.scene.layers.main.addChild(this.sprite);
 		},

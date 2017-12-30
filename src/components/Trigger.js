@@ -38,7 +38,6 @@ Component.register({
 		// Note: check this return false logic. Looks weird.
 		launchTrigger(entity) {
 			if (this.action === 'win') {
-				console.log('will win');
 				this.scene.win();
 				return false;
 			}

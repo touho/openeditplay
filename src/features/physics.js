@@ -22,7 +22,8 @@ export function createWorld(owner, options) {
 // const MAX_PHYSICS_DT = 0.2;
 const PHYSICS_DT = 1 / 60;
 export function updateWorld(owner, dt) {
-	owner._p2World.step(PHYSICS_DT, dt, 10);
+	owner._p2World.step(PHYSICS_DT, dt, 5);
+	// owner._p2World.step(dt, dt, 10);
 }
 export function deleteWorld(owner) {
 	if (owner._p2World)

@@ -1,3 +1,7 @@
+/*
+Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
+ */
+
 import Vector from '../../util/vector';
 import PIXI from '../../features/graphics';
 import { scene } from '../../core/scene'
@@ -20,8 +24,8 @@ export default class Widget {
 		console.log('Widget dragged');
 	}
 	updatePosition() {
-		let Transform = this.component.Transform;
-		let pos = this.relativePosition.clone().rotate(Transform.angle).add(Transform.position);
+		let T = this.component.Transform;
+		let pos = this.relativePosition.clone().rotate(T.getGlobalAngle()).add(T.getGlobalPosition());
 		this.x = pos.x;
 		this.y = pos.y;
 		

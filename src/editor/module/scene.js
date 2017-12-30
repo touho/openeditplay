@@ -28,6 +28,8 @@ import * as performanceTool from '../../util/performance';
 import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
 
 import '../components/EditorWidget';
+import {filterChildren} from "../../core/serializable";
+import {limit} from "../../util/callLimiter";
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -50,7 +52,7 @@ class SceneModule extends Module {
 		};
 
 		super(
-			canvas = el('canvas.openEditPlayCanvas', {
+			canvas = el('canvas.openEditPlayCanvas.select-none', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -150,6 +152,18 @@ class SceneModule extends Module {
 		this.copyButton = copyButton;
 		this.deleteButton = deleteButton;
 		this.sceneContextButtons = sceneContextButtons;
+
+		events.listen('locate serializable', serializable => {
+			if (serializable.threeLetterType === 'epr') {
+				let entityPrototype = serializable;
+				if (entityPrototype.previouslyCreatedEntity) {
+					let globalPosition = entityPrototype.previouslyCreatedEntity.getComponent('Transform').getGlobalPosition();
+					this.goToLocation(globalPosition);
+				} else {
+					this.goToLocation(entityPrototype.position);
+				}
+			}
+		});
 
 		events.listen('selectedToolChanged', () => {
 			if (this.widgetUnderMouse) {
@@ -345,19 +359,34 @@ class SceneModule extends Module {
 
 			performanceTool.stop('Editor: Scene');
 		});
+		
+		events.listen('new entity created', entity => {
+			entity.addComponents([
+				Component.create('EditorWidget')
+			]);
+			entity.forEachChild('ent', ent => {
+				ent.addComponents([
+					Component.create('EditorWidget')
+				]);
+			}, true);
+		});
 
 		events.listen('change', change => {
 			performanceTool.start('Editor: Scene');
 
-			if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'ent') {
-				// Make sure the scene has the layers for EditorWidget
-				// this.makeSureSceneHasEditorLayer();
-
-				change.reference.addComponents([
-					Component.create('EditorWidget')
-				]);
-			} else if (change.type === 'editorSelection') {
+			if (change.type === 'editorSelection') {
 				this.updatePropertyChangeCreationFilter();
+				if (change.reference.type === 'epr') {
+					this.clearSelectedEntities();
+					let idSet = new Set(change.reference.items.map(item => item.id));
+					let entities = [];
+					scene.forEachChild('ent', ent => {
+						if (idSet.has(ent.prototype.id)) {
+							entities.push(ent);
+						}
+					}, true);
+					this.selectEntities(entities);
+				}
 			}
 
 			if (scene && scene.resetting)
@@ -461,10 +490,14 @@ class SceneModule extends Module {
 			this.entitiesToEdit.length = 0;
 
 			if (this.entitiesInSelection.length > 0) {
+				this.selectEntities(this.entitiesInSelection);
+				/*
 				this.selectedEntities.push(...this.entitiesInSelection);
 				this.entitiesInSelection.forEach(entity => {
 					entity.getComponent('EditorWidget').select();
 				});
+				*/
+
 				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, false);
 				this.entitiesInSelection.length = 0;
 				this.selectSelectedEntitiesInEditor();
@@ -488,10 +521,7 @@ class SceneModule extends Module {
 		events.listen('dragPrototypeToCanvas', prototypes => {
 			let entitiesInSelection = sceneEdit.copyEntitiesToScene(this.newEntities) || [];
 			this.clearState();
-			entitiesInSelection.forEach(entity => {
-				entity.getComponent('EditorWidget').select();
-			});
-			this.selectedEntities = entitiesInSelection;
+			this.selectEntities(entitiesInSelection);
 			this.selectSelectedEntitiesInEditor();
 			this.updateSceneContextButtonVisibility();
 
@@ -503,10 +533,10 @@ class SceneModule extends Module {
 		});
 	}
 
-	// mousePos is optional
+	// mousePos is optional. returns true if scene has been drawn
 	onMouseMove(mouseCoordinatePosition) {
 		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
-			return;
+			return false;
 
 		performanceTool.start('Editor: Scene');
 
@@ -521,7 +551,7 @@ class SceneModule extends Module {
 		let change = this.previousMousePosInWorldCoordinates ? mousePos.clone().subtract(this.previousMousePosInWorldCoordinates) : mousePos;
 		if (this.entitiesToEdit.length > 0 && this.widgetUnderMouse) {
 			// Editing entities with a widget
-			this.widgetUnderMouse.onDrag(mousePos, change, this.entitiesToEdit);
+			this.widgetUnderMouse.onDrag(mousePos, change, filterChildren(this.entitiesToEdit));
 			sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
 			needsDraw = true;
 		} else {
@@ -547,17 +577,7 @@ class SceneModule extends Module {
 
 		if (this.selectionEnd) {
 			this.selectionEnd.add(change);
-			this.selectionArea.clear();
-			this.selectionArea.lineStyle(2, 0xFFFF00, 0.7);
-			this.selectionArea.beginFill(0xFFFF00, 0.3);
-			this.selectionArea.drawRect(
-				this.selectionStart.x,
-				this.selectionStart.y,
-				this.selectionEnd.x - this.selectionStart.x,
-				this.selectionEnd.y - this.selectionStart.y
-			);
-
-			this.selectionArea.endFill();
+			this.redrawSelectionArea();
 
 			if (this.entitiesInSelection.length > 0) {
 				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, false);
@@ -574,9 +594,26 @@ class SceneModule extends Module {
 			this.draw();
 
 		performanceTool.stop('Editor: Scene');
+		
+		return needsDraw;
+	}
+
+	redrawSelectionArea() {
+		this.selectionArea.clear();
+		this.selectionArea.lineStyle(2, 0xFFFFFF, 0.7);
+		this.selectionArea.beginFill(0xFFFFFF, 0.3);
+		this.selectionArea.drawRect(
+			this.selectionStart.x,
+			this.selectionStart.y,
+			this.selectionEnd.x - this.selectionStart.x,
+			this.selectionEnd.y - this.selectionStart.y
+		);
+
+		this.selectionArea.endFill();
 	}
 
 	startListeningMovementInput() {
+		// clearTimeout(this.movementInputTimeout);
 		window.cancelAnimationFrame(this.requestAnimationFrameId);
 
 		const cameraPositionSpeed = 300;
@@ -627,17 +664,27 @@ class SceneModule extends Module {
 				this.cameraPositionOrZoomUpdated();
 				scene.updateCamera();
 
-				this.onMouseMove();
+				let drawHappened = this.onMouseMove();
 
-				this.draw();
+				if (!drawHappened)
+					this.draw();
 			}
 
 			this.requestAnimationFrameId = requestAnimationFrame(update);
+			// this.movementInputTimeout = setTimeout(update, 17);
 		};
 
 		if (scene && !scene.playing) {
 			update();
 		}
+	}
+
+	goToLocation(vector) {
+		scene.cameraPosition.set(vector);
+		this.cameraPositionOrZoomUpdated();
+		scene.updateCamera();
+		this.onMouseMove();
+		this.draw();
 	}
 
 	cameraPositionOrZoomUpdated() {
@@ -674,12 +721,24 @@ class SceneModule extends Module {
 	fixAspectRatio() {
 		if (scene && this.canvas) {
 			let change = false;
-			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth) {
-				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
-				change = true;
-			}
-			else if (this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
-				scene.renderer.resize(this.canvas.parentElement.offsetWidth, this.canvas.parentElement.offsetHeight);
+			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
+			|| this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
+				
+				// Here you can tweak the game resolution in editor.
+				// scene.renderer.resize(this.canvas.parentElement.offsetWidth / 2, this.canvas.parentElement.offsetHeight / 2);
+				let width = this.canvas.parentElement.offsetWidth;
+				let height = this.canvas.parentElement.offsetHeight;
+
+				// Here you can change the resolution of the canvas
+				let pixels = width * height;
+				let quality = 1;
+				const MAX_PIXELS = 1000 * 600;
+				if (pixels > MAX_PIXELS) {
+					quality = Math.sqrt(MAX_PIXELS / pixels);
+				}
+				
+				scene.renderer.resize(width * quality, height * quality);
+				
 				change = true;
 			}
 
@@ -696,16 +755,7 @@ class SceneModule extends Module {
 		if (scene) {
 			if (!scene.playing) {
 				this.filterDeadSelection();
-
-				scene.draw();
-
-				return; // PIXI refactor
-
-				scene.context.strokeStyle = 'white';
-
-				if (scene.level && scene.level.isEmpty()) {
-					this.drawEmptyLevel();
-				}
+				makeADrawRequest();
 			}
 		} else {
 			setTimeout(() => {
@@ -734,6 +784,14 @@ class SceneModule extends Module {
 		 context.fillStyle = 'white';
 		 context.fillText('Empty level. Click a type and place it here.', 20, 35);
 		 */
+	}
+
+	selectEntities(entities) {
+		this.clearSelectedEntities();
+		this.selectedEntities.push(...entities);
+		this.selectedEntities.forEach(entity => {
+			entity.getComponent('EditorWidget').select();
+		});
 	}
 
 	clearSelectedEntities() {
@@ -768,11 +826,13 @@ class SceneModule extends Module {
 	}
 
 	selectSelectedEntitiesInEditor() {
-		editor.select(this.selectedEntities, this);
-		if (sceneEdit.shouldSyncLevelAndScene())
+		if (sceneEdit.shouldSyncLevelAndScene()) {
+			editor.select(this.selectedEntities.map(ent => ent.prototype), this);
 			Module.activateOneOfModules(['type', 'object'], false);
-		else
+		} else {
+			editor.select(this.selectedEntities, this);
 			Module.activateOneOfModules(['object'], false);
+		}
 	}
 
 	stopAndReset() {
@@ -781,13 +841,13 @@ class SceneModule extends Module {
 			editor.select(editor.selection.items.map(ent => ent.prototype.prototype), this);
 		}
 		if (scene) {
-			scene.reset();
 			scene.cameraPosition = this.editorCameraPosition.clone();
 			scene.setZoom(this.editorCameraZoom);
-			scene.updateCamera();
+			scene.reset();
+			// scene.updateCamera(); // this is called before every scene.draw. no need to do it here.
 		}
 		this.playingModeChanged();
-		this.draw();
+		// this.draw(); // scene.reset() already does drawing.
 
 		this.updatePropertyChangeCreationFilter();
 	}
@@ -853,3 +913,5 @@ class SceneModule extends Module {
 }
 
 Module.register(SceneModule, 'center');
+
+let makeADrawRequest = limit(15, 'soon', () => scene && scene.draw());

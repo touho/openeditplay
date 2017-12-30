@@ -36,6 +36,9 @@ export default class Property extends Serializable {
 			this._initialValueIsJSON = true;
 		}
 	}
+	makeUpAName() {
+		return this.name;
+	}
 	setPropertyType(propertyType) {
 		this.propertyType = propertyType;
 		try {

@@ -23,6 +23,20 @@ Component.register({
 		init() {
 			this.initSprite();
 
+			this.Transform.listen('globalTransformChanged', transform => {
+				/*
+				this.sprite.x = transform.globalPosition.x;
+				this.sprite.y = transform.globalPosition.y;
+				
+				// rotation setter function has a function call. lets optimize.
+				if (this.sprite.rotation !== transform.globalAngle)
+					this.sprite.rotation = transform.globalAngle;
+				
+				this.sprite.scale.set(transform.globalScale.x, transform.globalScale.y);
+				*/
+			});
+			
+			/*
 			this.listenProperty(this.Transform, 'position', position => {
 				this.sprite.x = position.x;
 				this.sprite.y = position.y;
@@ -31,12 +45,13 @@ Component.register({
 			this.listenProperty(this.Transform, 'angle', angle => {
 				this.sprite.rotation = angle;
 			});
+			*/
 
 			let redrawGraphics = () => {
 				this.updateTexture();
 			};
 			
-			this.listenProperty(this.Transform, 'scale', redrawGraphics);
+			// this.listenProperty(this.Transform, 'scale', redrawGraphics);
 			
 			let propertiesThatRequireRedraw = [
 				'type',
@@ -58,13 +73,7 @@ Component.register({
 			this.sprite = new PIXI.Sprite(textureAndAnchor.texture);
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 
-			let T = this.Transform;
-
-			this.sprite.x = T.position.x;
-			this.sprite.y = T.position.y;
-			this.sprite.rotation = T.angle;
-
-			this.scene.layers.main.addChild(this.sprite);
+			this.Transform.container.addChild(this.sprite);
 		},
 		updateTexture() {
 			let textureAndAnchor = this.getTextureAndAnchor();
@@ -72,7 +81,7 @@ Component.register({
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 		},
 		getTextureAndAnchor() {
-			let hash = this.createPropertyHash() + this.Transform.scale;
+			let hash = this.createPropertyHash();// + this.Transform.scale;
 			let textureAndAnchor = getHashedTextureAndAnchor(hash);
 			
 			if (!textureAndAnchor) {
@@ -83,7 +92,7 @@ Component.register({
 			return textureAndAnchor;
 		},
 		createGraphics() {
-			let scale = this.Transform.scale;
+			let scale = new Vector(1, 1);// this.Transform.scale;
 			let graphics = new PIXI.Graphics();
 			
 			if (this.type === 'rectangle') {
@@ -105,7 +114,7 @@ Component.register({
 				graphics.drawCircle(0, 0, this.radius * averageScale);
 				graphics.endFill();
 			} else if (this.type === 'convex') {
-				let path = this.getConvexPoints(PIXI.Point);
+				let path = this.getConvexPoints(PIXI.Point, false);
 				path.push(path[0]); // Close the path
 				
 				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
@@ -116,7 +125,7 @@ Component.register({
 			
 			return graphics;
 		},
-		getConvexPoints(vectorClass = Vector) {
+		getConvexPoints(vectorClass = Vector, takeScaleIntoAccount = true) {
 			const centerAngle = Math.PI * 2 / this.points;
 			const isNotEventPolygon = this.topPointDistance !== 0.5 && this.points <= 8;
 			
@@ -163,12 +172,14 @@ Component.register({
 				path.forEach(p => p.y -= averageY);
 			}
 
-			const scale = this.Transform.scale;
-			if (scale.x !== 1 || scale.y !== 1) {
-				path.forEach(p => {
-					p.x *= scale.x;
-					p.y *= scale.y;
-				});
+			if (takeScaleIntoAccount) {
+				const scale = this.Transform.scale;
+				if (scale.x !== 1 || scale.y !== 1) {
+					path.forEach(p => {
+						p.x *= scale.x;
+						p.y *= scale.y;
+					});
+				}
 			}
 
 			return path;

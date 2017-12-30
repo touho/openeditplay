@@ -68,14 +68,14 @@ let editorUpdateLimited = limit(200, 'soon', () => {
 addChangeListener(change => {
 	performance.start('Editor: General');
 	events.dispatch('change', change);
-	if (change.type === changeType.addSerializableToTree && change.reference.threeLetterType === 'gam') {
+	if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 		let game = change.reference;
 		editor = new Editor(game);
 		events.dispatch('registerModules', editor);
 	}
 	if (editor) {
-		if (change.type === changeType.deleteSerializable && change.reference.threeLetterType === 'lvl') {
-			if (editor && editor.selectedLevel === change.reference) {
+		if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
+			if (editor.selectedLevel === change.reference) {
 				editor.setLevel(null);
 			}
 		}
@@ -128,6 +128,8 @@ class Editor {
 			this.selection.type = types[0];
 		else
 			this.selection.type = 'mixed';
+
+		console.log('selectedIds', this.selection)
 
 		events.dispatch('change', {
 			type: 'editorSelection',

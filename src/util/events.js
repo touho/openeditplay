@@ -9,11 +9,18 @@
 let listeners = {};
 
 let events = {
-	listen(event, callback) {
+	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	listen(event, callback, priority = 0) {
+		callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 		if (!listeners.hasOwnProperty(event)) {
 			listeners[event] = [];
 		}
-		listeners[event].push(callback);
+		// listeners[event].push(callback);
+		// if (!this._listeners.hasOwnProperty(event)) {
+		// 	this._listeners[event] = [];
+		// }
+		let index = indexOfListener(listeners[event], callback);
+		listeners[event].splice(index, 0, callback);
 		return () => {
 			var index = listeners[event].indexOf(callback);
 			listeners[event].splice(index, 1);
@@ -63,4 +70,20 @@ export function listen(view, type, handler) {
 		else
 			handler(event);
 	});
+}
+
+let listenerCounter = 0;
+const NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
+
+function indexOfListener(array, callback) {
+	let low = 0,
+		high = array.length,
+		priority = callback.priority;
+
+	while (low < high) {
+		let mid = low + high >>> 1;
+		if (array[mid].priority < priority) low = mid + 1;
+		else high = mid;
+	}
+	return low;
 }

@@ -8,7 +8,10 @@ export default class Module {
 		this.type = 'module';
 		this.name = this.name || 'Module';
 		this.id = this.id || 'module';
-		this.el = el('div.module', ...arguments);
+		if (arguments.length > 0)
+			this.el = el('div.module', ...arguments);
+		else
+			this.el = el('div.module');
 		this._selected = true;
 		this._enabled = true;
 		

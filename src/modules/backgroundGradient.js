@@ -10,8 +10,8 @@ function createCanvas() {
 	var gradient = ctx.createLinearGradient(0, 0, 0, RESOLUTION * 0.8);
 	// gradient.addColorStop(0, "#5886c8");
 	// gradient.addColorStop(1, "#9eb6d5");
-	gradient.addColorStop(0, "#94c4ff");
-	gradient.addColorStop(1, "#345a39");
+	gradient.addColorStop(0, "#5c77ff");
+	gradient.addColorStop(1, "#90c9f6");
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, 1, RESOLUTION);
 	return canvas;

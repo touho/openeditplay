@@ -13,3 +13,6 @@
   opacity: 0.0;
   visibility: hidden;
 }
+body.noEditAccess .module {
+  background: $noEditAccess-backround;
+}

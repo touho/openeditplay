@@ -336,8 +336,9 @@ class Container {
 		}
 	}
 	updateEntity() {
-		if (this.titleText.textContent !== this.item.prototype.name)
-			this.titleText.textContent = this.item.prototype.name;
+		let entityName = this.item.makeUpAName();
+		if (this.titleText.textContent !== entityName)
+			this.titleText.textContent = entityName;
 		this.containers.update(this.item.getListOfAllComponents());
 		// this.properties.update(this.item.getChildren('prp'));
 	}

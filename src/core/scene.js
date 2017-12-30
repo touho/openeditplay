@@ -43,6 +43,12 @@ export default class Scene extends Serializable {
 		
 		sceneCreateListeners.forEach(listener => listener());
 	}
+	makeUpAName() {
+		if (this.level)
+			return this.level.makeUpAName();
+		else
+			return 'Scene';
+	}
 	
 	loadLevel(level) {
 		this.level = level;
@@ -82,8 +88,7 @@ export default class Scene extends Serializable {
 
 		events.dispatch('scene load level before entities', scene, level);
 
-		let entities = this.level.getChildren('epr').map(epr => epr.createEntity());
-		this.addChildren(entities);
+		this.level.getChildren('epr').map(epr => epr.createEntity(this));
 
 		events.dispatch('scene load level', scene, level);
 
@@ -192,7 +197,7 @@ export default class Scene extends Serializable {
 		
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 		
-		this.renderer.render(this.stage, null, true);
+		this.renderer.render(this.stage, null, false);
 
 		events.dispatch('scene draw', scene);
 		performanceTool.eventHappened('Draws');

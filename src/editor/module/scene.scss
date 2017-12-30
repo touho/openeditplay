@@ -4,8 +4,8 @@
 }
 
 .module-scene canvas {
-  //width: 100% !important; /* PIXI tries to override by settings the actual resolution. That's why !important */
-  //height: 100% !important;
+  width: 100% !important; /* PIXI tries to override by settings the actual resolution. That's why !important */
+  height: 100% !important;
   margin: 0;
   padding: 0
 }

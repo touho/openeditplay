@@ -13,6 +13,9 @@ export default class ComponentData extends Serializable {
 			predefinedComponentId = '_' + componentClassName;
 		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
 	}
+	makeUpAName() {
+		return this.name;
+	}
 	addChild(child) {
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {

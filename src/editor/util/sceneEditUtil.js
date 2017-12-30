@@ -4,6 +4,7 @@ import { changeType } from '../../core/serializableManager';
 import assert from '../../util/assert';
 import Vector from '../../util/vector';
 import { centerWidgetRadius } from '../widget/widget'
+import {filterChildren} from "../../core/serializable";
 
 let radius = 10;
 
@@ -79,7 +80,7 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 		if (threeLetterType === 'epr') {
 			let epr = ref;
 			if (epr.findParent('lvl') === editor.selectedLevel)
-				scene.addChild(epr.createEntity());
+				epr.createEntity(scene);
 		} else if (threeLetterType === 'cda') {
 			let parent = ref.getParent();
 			let entities;
@@ -218,9 +219,7 @@ export function copyEntitiesToScene(entities) {
 				return epr;
 			});
 			editor.selectedLevel.addChildren(entityPrototypes);
-			let newEntities = entityPrototypes.map(epr => epr.createEntity());
-			scene.addChildren(newEntities);
-			return newEntities;
+			return entityPrototypes.map(epr => epr.createEntity(scene));
 		} else {
 			let newEntities = entities.map(e => e.clone());
 			scene.addChildren(newEntities);
@@ -256,19 +255,23 @@ export function getWidgetUnderMouse(mousePos) {
 	return nearestWidget;
 }
 export function getEntitiesInSelection(start, end) {
+	let entities = [];
+	
 	let minX = Math.min(start.x, end.x);
 	let maxX = Math.max(start.x, end.x);
 	let minY = Math.min(start.y, end.y);
 	let maxY = Math.max(start.y, end.y);
-
-	return scene.getChildren('ent').filter(ent => {
-		let p = ent.position;
-		if (p.x < minX) return false;
-		if (p.x > maxX) return false;
-		if (p.y < minY) return false;
-		if (p.y > maxY) return false;
-		return true;
-	});
+	
+	scene.forEachChild('ent', ent => {
+		let p = ent.getComponent('EditorWidget').positionHelper;
+		if (p.x < minX) return;
+		if (p.x > maxX) return;
+		if (p.y < minY) return;
+		if (p.y > maxY) return;
+		entities.push(ent);
+	}, true);
+	
+	return entities;
 }
 
 export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) {
@@ -322,6 +325,7 @@ export function setEntityPositions(entities, position) {
 }
 
 export function deleteEntities(entities) {
+	entities = filterChildren(entities);
 	if (shouldSyncLevelAndScene()) {
 		entities.forEach(e => e.prototype.delete());
 	}

@@ -11,30 +11,33 @@ export function limit(milliseconds, callbackLimitMode = 'soon', callback) {
 	if (!['instant', 'soon', 'next'].includes(callbackLimitMode))
 		throw new Error('Invalid callbackLimitMode');
 	
-	let callTimeout = null;
-	let lastTimeoutCall = 0;
+	let queueTimeout = null; // non-null when call is in queue
+	let lastCall = 0; // last time when callback was called
 	
-	function timeoutCallback() {
-		lastTimeoutCall = Date.now();
-		callTimeout = null;
-		
+	function callCallback() {
+		lastCall = Date.now();
+		queueTimeout = null;
 		callback();
 	}
+	function callCallbackWithDelay(delayMilliseconds) {
+		queueTimeout = setTimeout(callCallback, delayMilliseconds);
+	}
+	
 	return function(callLimitMode) {
-		if (callTimeout)
+		if (queueTimeout)
 			return;
 		
-		let timeToNextPossibleCall = lastTimeoutCall + milliseconds - Date.now();
+		let timeToNextPossibleCall = lastCall + milliseconds - Date.now();
 		if (timeToNextPossibleCall > 0) {
-			callTimeout = setTimeout(timeoutCallback, timeToNextPossibleCall);
+			callCallbackWithDelay(timeToNextPossibleCall);
 		} else {
-			callTimeout = setTimeout(timeoutCallback, milliseconds);
-
 			let mode = callLimitMode || callbackLimitMode;
 			if (mode === 'instant')
-				callback();
+				callCallback();
 			else if (mode === 'soon')
-				setTimeout(callback, 0);
+				callCallbackWithDelay(0)
+			else if (mode === 'next')
+				callCallbackWithDelay(milliseconds)
 		}
 	}
 }

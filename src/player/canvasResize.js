@@ -22,7 +22,15 @@ function resizeCanvas() {
 
 		screen.style.width = width + 'px';
 		screen.style.height = height + 'px';
-		scene.renderer.resize(width, height);
+		
+		// Here you can change the resolution of the canvas
+		let pixels = width * height;
+		let quality = 1;
+		if (pixels > MAX_PIXELS) {
+			quality = Math.sqrt(MAX_PIXELS / pixels);
+		}
+		
+		scene.renderer.resize(width * quality, height * quality);
 
 		window.scrollTo(0, 0);
 		
@@ -41,3 +49,5 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 listenSceneCreation(resizeCanvas);
+
+const MAX_PIXELS = 1000 * 600;

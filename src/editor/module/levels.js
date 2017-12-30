@@ -1,15 +1,16 @@
-import { el, list, mount } from 'redom';
+import {el, list, mount} from 'redom';
 import Module from './module';
-import { game } from '../../core/game';
-import { editor } from '../editor';
+import {game} from '../../core/game';
+import {editor} from '../editor';
 import Level from '../../core/level';
-import { Button } from '../views/popup/Popup';
-import { dispatch, listen } from '../../util/events';
+import {Button} from '../views/popup/Popup';
+import {dispatch, listen} from '../../util/events';
 import events from "../../util/events";
+import {setChangeOrigin} from "../../core/serializableManager";
 
 export function createNewLevel() {
 	let lvl = new Level();
-	
+
 	let levelNumber = 1;
 	let newLevelName;
 	while (true) {
@@ -19,13 +20,13 @@ export function createNewLevel() {
 		}
 		levelNumber++;
 	}
-	
+
 	lvl.initWithPropertyValues({
 		name: newLevelName
 	});
 	editor.game.addChild(lvl);
 	editor.setLevel(lvl);
-	
+
 	return lvl;
 }
 
@@ -61,15 +62,16 @@ class Levels extends Module {
 			editor.setLevel(level);
 			editor.select(level, this);
 		});
-/*
-		listen(this.el, 'deleteLevel', level => {
-			if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
-				setChangeOrigin(this);
-				level.delete();
-			}
-		});
-		*/
+		/*
+				listen(this.el, 'deleteLevel', level => {
+					if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
+						setChangeOrigin(this);
+						level.delete();
+					}
+				});
+				*/
 	}
+
 	update() {
 		this.buttons.update(game.getChildren('lvl'));
 	}
@@ -85,9 +87,11 @@ class LevelItem {
 			//,this.deleteButton = new Button
 		)
 	}
+
 	selectClicked() {
 		dispatch(this, 'selectLevel', this.level);
 	}
+
 	/*
 	deleteClicked() {
 		dispatch(this, 'deleteLevel', this.level);
@@ -95,7 +99,7 @@ class LevelItem {
 	*/
 	update(level, idx) {
 		this.level = level;
-		this.number.textContent = (idx+1) + '.';
+		this.number.textContent = (idx + 1) + '.';
 		this.selectButton.update({
 			text: level.name,
 			icon: 'fa-area-chart',

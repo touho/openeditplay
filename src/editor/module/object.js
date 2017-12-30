@@ -23,19 +23,14 @@ class ObjectModule extends Module {
 		if (editor.selection.items.length != 1)
 			return false; // multiedit not supported yet
 		
-		if (editor.selection.type === 'ent') {
+		if (editor.selection.type === 'ent' || editor.selection.type === 'epr') {
 			if (!this._selected || this.moduleContainer.isPacked()) {
 				return; // if the tab is not visible, do not waste CPU
 			}
-			
-			if (scene.isInInitialState()) {
-				this.propertyEditor.update(editor.selection.items.map(entity => entity.prototype), 'epr');
-			} else {
-				this.propertyEditor.update(editor.selection.items, editor.selection.type);
-			}
+
+			this.propertyEditor.update(editor.selection.items, editor.selection.type);
 		} else {
-			// console.log('hide', this.id);
-			return false; // hide module
+			return false;
 		}
 	}
 	activate(command, parameter) {

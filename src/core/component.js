@@ -24,6 +24,9 @@ export class Component extends PropertyOwner {
 		this._listenRemoveFunctions = [];
 		this.entity = null;
 	}
+	makeUpAName() {
+		return self.constructor.componentName;
+	}
 	delete() {
 		// Component.delete never returns false because entity doesn't have components as children
 		this._parent = null;
@@ -47,6 +50,8 @@ export class Component extends PropertyOwner {
 			// @endif
 		}));
 	}
+	// In preInit you can init the component with stuff that other components might want to use in init function
+	// In preInit you can not trust that other components have been inited in any way
 	_preInit() {
 		this.constructor.requirements.forEach(r => {
 			this[r] = this.entity.getComponent(r);
@@ -70,6 +75,7 @@ export class Component extends PropertyOwner {
 			console.error(this.entity, this.constructor.componentName, 'preInit', e);
 		}
 	}
+	// In preInit you can access other components and know that their preInit is done.
 	_init() {
 		this.forEachChild('com', c => c._init());
 		try {

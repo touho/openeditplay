@@ -19,7 +19,7 @@ export default class Entity extends Serializable {
 		if (this.prototype) {
 			return this.prototype.makeUpAName();
 		} else {
-			return 'Entity without a prototype';
+			return 'Entity';
 		}
 	}
 
@@ -61,12 +61,13 @@ export default class Entity extends Serializable {
 
 	/*
 	Adds multiple components as an array to this Entity.
-	Uses addComponent internally.
 	Initializes components after all components are added.
 	*/
-	addComponents(components) {
+	addComponents(components, { fullInit = true } = {}) {
 		assert(this._alive, ALIVE_ERROR);
 		assert(Array.isArray(components), 'Parameter is not an array.');
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('add components for', this.makeUpAName());
 
 		for (let i = 0; i < components.length; i++) {
 			let component = components[i];
@@ -77,14 +78,22 @@ export default class Entity extends Serializable {
 			component.setRootType(this._rootType);
 		}
 
-		if (!this.sleeping)
-			Entity.initComponents(components);
+		if (!this.sleeping) {
+			Entity.preInitComponents(components);
+			if (fullInit)
+				Entity.initComponents(components);
+		}
 		return this;
 	}
 
-	static initComponents(components) {
+	static preInitComponents(components) {
+		if (Entity.ENTITY_CREATION_DEBUGGING)  console.log('preInit components for', components[0].entity.makeUpAName());
 		for (let i = 0; i < components.length; i++)
 			components[i]._preInit();
+	}
+	
+	static initComponents(components) {
+		if (Entity.ENTITY_CREATION_DEBUGGING)  console.log(`init ${components.length} components for`, components[0].entity.makeUpAName());
 		for (let i = 0; i < components.length; i++)
 			components[i]._init();
 	}
@@ -112,7 +121,8 @@ export default class Entity extends Serializable {
 	wakeUp() {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) return false;
-
+		
+		this.components.forEach((value, key) => Entity.preInitComponents(value));
 		this.components.forEach((value, key) => Entity.initComponents(value));
 
 		this.sleeping = false;
@@ -146,8 +156,11 @@ export default class Entity extends Serializable {
 	setRootType(rootType) {
 		if (this._rootType === rootType)
 			return;
-		this._rootType = rootType;
 
+		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('entity added to tree', this.makeUpAName());
+		
+		super.setRootType(rootType);
+		
 		let i;
 		this.components.forEach((value, key) => {
 			for (i = 0; i < value.length; ++i) {
@@ -182,12 +195,14 @@ Object.defineProperty(Entity.prototype, 'position', {
 });
 
 Serializable.registerSerializable(Entity, 'ent', json => {
-	console.log('creating entity from json', json);
+	if (Entity.ENTITY_CREATION_DEBUGGING) console.log('creating entity from json', json);
 	let entity = new Entity(json.id);
 	entity.prototype = getSerializable(json.proto);
-	console.log('created entity from json', entity);
+	if (Entity.ENTITY_CREATION_DEBUGGING) console.log('created entity from json', entity);
 	if (json.comp) {
 		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
 	}
 	return entity;
 });
+
+Entity.ENTITY_CREATION_DEBUGGING = false;

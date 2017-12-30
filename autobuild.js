@@ -23,16 +23,20 @@ let targets = ['all', 'editor']; // TODO: add 'editorOnce' and 'allOnce' ... or 
 let target = process.argv[2];
 if (targets.indexOf(target) < 0)
 	target = targets[0];
-	
+
 if (!global.TARGET_NONE) {
-	console.log('Autobuilding', target);
-	
+	let helpMessage = '';
+	if (target === 'all') {
+		helpMessage = `(If you don't need to build everything, add parameter: ${targets.filter(t => t !== 'all').map(t => `${t}`).join(' or ')})`;
+	}
+	console.log('Autobuilding', target, helpMessage);
+
 	const editorCssDependencies = [
 		'src/external/font-awesome.min.css'
 	];
 	const editorJsDependencies = [
 		'node_modules/jquery/dist/jquery.min.js',
-		'src/external/jstree.min.js',
+		'src/external/jstree.js',
 		'src/external/p2.js',
 		'src/external/pixi.js',
 		'src/external/pixi-filters.js'
@@ -100,7 +104,7 @@ if (!global.TARGET_NONE) {
 				copy('builds/openeditplay.homepage.cs*', 'public/css/');
 			});
 		}, true);
-		
+
 		watch('src/player/player.css', () => {
 			copy('src/player/player.css', 'builds/openeditplay.player.css');
 			copy('src/player/player.css', 'public/play/css/openeditplay.player.css');
@@ -120,7 +124,7 @@ if (!global.TARGET_NONE) {
 		if (serverProcess && serverProcess.connected)
 			serverProcess.send('refreshOldBrowsers');
 	});
-	
+
 	if (target === 'all') {
 		// tests aren't used actively and they are not very overwhelming
 		// autobuildJs('src/testMain.js', 'builds/openeditplay.tests.js');
@@ -134,6 +138,7 @@ if (!global.TARGET_NONE) {
 			serverProcess = cp.fork(ROOT + 'src/server/main.js');
 		}, 200);
 	}
+
 	var serverProcess = null;
 	watch(['src/server/**/*'], args => {
 		if (serverProcess === 'wait')
@@ -150,6 +155,10 @@ if (!global.TARGET_NONE) {
 	let serverStartWatcher = watch('builds/openeditplay.editor.js', () => {
 		serverStartWatcher.close();
 		launchServer();
+	});
+	process.on('exit', function() {
+		if (serverProcess && serverProcess !== 'wait')
+			serverProcess.kill('SIGHUP');
 	});
 }
 
@@ -178,6 +187,7 @@ function watch(path, callback, runNow) {
 	.on('change', callback)
 	.on('unlink', callback);
 }
+
 module.exports.watch = watch;
 
 function buildCss(sourceEntry, destination, callback) {
@@ -208,7 +218,7 @@ function autobuildJs(entry, destination, options) {
 	}, options);
 
 	let plugins = [];
-	
+
 	plugins.push(rollupNodeResolve({
 		jsnext: true
 	}));
@@ -226,10 +236,10 @@ function autobuildJs(entry, destination, options) {
 			}
 		}));
 	}
-	
+
 	if (options.uglify)
 		plugins.push(rollupUglify());
-	
+
 	let rollupOptions = {
 		entry: ROOT + entry,
 		dest: ROOT + destination,
@@ -256,13 +266,13 @@ function autobuildJs(entry, destination, options) {
 
 			case 'ERROR':
 				var err = event.error;
-				
+
 			function syntaxError(filename, message) {
 				console.log(`Rollup error: ${message}`);
 				console.log(`Fix ${filename} to continue`);
 				setTimeout(() => {
 					let watcher = watch(filename, () => {
-							watcher.close();
+						watcher.close();
 						autobuildJs(entry, destination, options);
 					});
 				}, 200);
@@ -279,11 +289,15 @@ function autobuildJs(entry, destination, options) {
 					}
 				} else if (err.code === 'PARSE_ERROR') {
 					syntaxError(err.file, err.message);
+				} else if (err.message === 'Maximum call stack size exceeded') {
+					console.log('Autobuild stack exceeded. Please reboot.'); // This is horrible bug. Please fix.
+					
+					process.exit(1);
 				} else {
 					if (err.code) {
 						console.log('sendError code', err.code);
 					}
-					console.log('Some Rollup sendError', err);
+					console.log('Some Rollup sendError', err, err.code, err.message, 'OK');
 				}
 				break;
 
@@ -292,6 +306,7 @@ function autobuildJs(entry, destination, options) {
 		}
 	});
 }
+
 module.exports.autobuildJs = autobuildJs;
 process.on('uncaughtException', function (err) {
 	console.error("Node.js Exception. " + err + " - " + err.stack);

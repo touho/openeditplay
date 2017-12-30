@@ -7,6 +7,7 @@ import ComponentData from './componentData';
 import Entity from './entity';
 import { game } from './game';
 import { Component } from './component';
+import events from "../util/events";
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -20,11 +21,7 @@ export default class Prototype extends PropertyOwner {
 	}
 	
 	makeUpAName() {
-		let nameProperty = this.findChild('prp', property => property.name === 'name', true);
-		if (nameProperty)
-			return nameProperty.value;
-		else
-			return 'Prototype without a name';
+		return this.name || 'Prototype';
 	}
 	
 	addChild(child) {
@@ -137,14 +134,33 @@ export default class Prototype extends PropertyOwner {
 		return null;
 	}
 	
-	createEntity() {
+	// Parent is needed so that we can init children knowing who is the parent
+	createEntity(parent, _skipNewEntityEvent = false) {
 		let entity = new Entity();
+		
 		let inheritedComponentDatas = this.getInheritedComponentDatas();
 		let components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
+		entity.addComponents(components, { fullInit: false }); // Only do preInit
+		
 		entity.prototype = this;
-		entity.addComponents(components);
+		
+		if (parent)
+			parent.addChild(entity);
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('create entity', this.makeUpAName());
+		
+		this.forEachChild('epr', epr => epr.createEntity(entity, true));
+		// let childEntityPrototypes = this.getChildren('epr');
+		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
+		
+		// Components have only been preinited. Lets call the init now.
+		Entity.initComponents(components);
 		
 		this.previouslyCreatedEntity = entity;
+		
+		if (!_skipNewEntityEvent)
+			events.dispatch('new entity created', entity);
+		
 		return entity;
 	}
 	

@@ -14,16 +14,18 @@ export default class MoveWidget extends Widget {
 	}
 
 	updatePosition() {
-		let Transform = this.component.Transform;
-		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(this.globalCoordinates ? 0 : Transform.angle).add(Transform.position);
+		let T = this.component.Transform;
+		let globalAngle = T.getGlobalAngle();
+		let globalPosition = T.getGlobalPosition();
+		
+		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(this.globalCoordinates ? 0 : globalAngle).add(globalPosition);
 		this.x = pos.x;
 		this.y = pos.y;
 
 		if (this.graphics) {
-			this.graphics.x = Transform.position.x;
-			this.graphics.y = Transform.position.y;
+			this.graphics.position.copy(globalPosition);
 			if (!this.globalCoordinates)
-				this.graphics.rotation = Transform.angle;
+				this.graphics.rotation = globalAngle;
 		}
 	}
 
@@ -59,34 +61,28 @@ export default class MoveWidget extends Widget {
 		graphics.drawPolygon(arrowPoints.map(vec => new PIXI.Point(vec.x, vec.y)));
 		graphics.endFill();
 		
-		/*
-		graphics.beginFill(0x000000, 0.4);
-		graphics.drawCircle(this.relativePosition.x, this.relativePosition.y, this.r * 1.3);
-		graphics.endFill();
-
-		graphics.lineStyle(2, 0xFFFFFF, 1);
-
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowTail.x, arrowTail.y);
-
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowWing1.x, arrowWing1.y);
-
-		graphics.moveTo(arrowHead.x, arrowHead.y);
-		graphics.lineTo(arrowWing2.x, arrowWing2.y);
-*/
-		
 		return graphics;
 	}
 
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
+		// Master entity is the entity whose widget we are dragging.
+		// If parent and child entity are selected and we are dragging child widget, masterEntity is the parent.
+		let masterEntity = this.component.entity;
+		while (!affectedEntities.find(ent => ent === masterEntity)) {
+			masterEntity = masterEntity.getParent();
+			if (!masterEntity || masterEntity.threeLetterType !== 'ent') {
+				assert('Master entity not found when editing angle of entity.');
+			}
+		}
+		
 		let rotatedRelativePosition = this.relativePosition.clone();
 		if (!this.globalCoordinates)
-			rotatedRelativePosition.rotate(this.component.Transform.angle);
+			rotatedRelativePosition.rotate(masterEntity.getComponent('Transform').getGlobalAngle());
+		
 		let moveVector = mousePositionChange.getProjectionOn(rotatedRelativePosition);
 		affectedEntities.forEach(entity => {
 			let Transform = entity.getComponent('Transform');
-			Transform.position = Transform.position.add(moveVector);
+			Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
 		});
 	}
 }

@@ -9,6 +9,9 @@ export default class PropertyOwner extends Serializable {
 		assert(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 		this._properties = {};
 	}
+	makeUpAName() {
+		return this.name || 'PropertyOwner';
+	}
 	// Just a helper
 	initWithPropertyValues(values = {}) {
 		let children = [];

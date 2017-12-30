@@ -23,7 +23,7 @@ export default class EntityPrototype extends Prototype {
 		else if (this.prototype)
 			return this.prototype.makeUpAName();
 		else
-			return 'Entity prototype without a name';
+			return 'EntityPrototype';
 	}
 	
 	getTransform() {
@@ -128,8 +128,7 @@ export default class EntityPrototype extends Prototype {
 			this.getTransform().getPropertyOrCreate('position').value = position;
 		}
 		
-		let entity = this.createEntity();
-		scene.addChild(entity);
+		this.createEntity(scene);
 	}
 }
 Object.defineProperty(EntityPrototype.prototype, 'position', {

@@ -33,19 +33,19 @@ Component.register({
 	],
 	prototype: {
 		init() {
-			/* ParticleContainer does not work properly!
+			//ParticleContainer does not work properly!
 			
 			// maxSize < 40 will crash
 			// With many Particle-components with few particles, this is deadly-expensive.
 			// And also crashes now and then with low maxValue.
-			this.container = new PIXI.particles.ParticleContainer(15000, {
-				position: true,
-				alpha: false,
-				scale: false,
-				rotation: false,
-				uvs: false
-			});
-			*/
+			// this.container = new PIXI.particles.ParticleContainer(5000, {
+			// 	position: true,
+			// 	alpha: true,
+			// 	scale: false,
+			// 	rotation: false,
+			// 	uvs: false
+			// });
+			
 
 			// Use normal container instead
 			this.container = new PIXI.Container();

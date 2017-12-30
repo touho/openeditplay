@@ -204,11 +204,20 @@ if (isClient && isServer)
 var listeners$1 = {};
 
 var events = {
-	listen: function listen(event, callback) {
+	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	listen: function listen(event, callback, priority) {
+		if ( priority === void 0 ) priority = 0;
+
+		callback.priority = priority + (listenerCounter$1++ / NUMBER_BIGGER_THAN_LISTENER_COUNT$1);
 		if (!listeners$1.hasOwnProperty(event)) {
 			listeners$1[event] = [];
 		}
-		listeners$1[event].push(callback);
+		// listeners[event].push(callback);
+		// if (!this._listeners.hasOwnProperty(event)) {
+		// 	this._listeners[event] = [];
+		// }
+		var index = indexOfListener$1(listeners$1[event], callback);
+		listeners$1[event].splice(index, 0, callback);
 		return function () {
 			var index = listeners$1[event].indexOf(callback);
 			listeners$1[event].splice(index, 1);
@@ -241,6 +250,24 @@ var events = {
 		});
 	}
 };
+
+
+
+var listenerCounter$1 = 0;
+var NUMBER_BIGGER_THAN_LISTENER_COUNT$1 = 10000000000;
+
+function indexOfListener$1(array, callback) {
+	var low = 0,
+		high = array.length,
+		priority = callback.priority;
+
+	while (low < high) {
+		var mid = low + high >>> 1;
+		if (array[mid].priority < priority) { low = mid + 1; }
+		else { high = mid; }
+	}
+	return low;
+}
 
 var performance$1;
 performance$1 = isClient ? window.performance : { now: Date.now };
@@ -282,6 +309,13 @@ function createStringId(threeLetterPrefix, characters) {
 
 var serializableClasses = new Map();
 
+/*
+Serializable lifecycle:
+
+fromJSON()
+
+ */
+
 var Serializable = function Serializable(predefinedId, skipSerializableRegistering) {
 	if ( predefinedId === void 0 ) predefinedId = false;
 	if ( skipSerializableRegistering === void 0 ) skipSerializableRegistering = false;
@@ -301,6 +335,9 @@ var Serializable = function Serializable(predefinedId, skipSerializableRegisteri
 		throw new Error('?');
 		*/
 	addSerializable(this);
+};
+Serializable.prototype.makeUpAName = function makeUpAName () {
+	return 'Serializable';
 };
 Serializable.prototype.delete = function delete$1 () {
 	if (this._parent) {
@@ -500,13 +537,17 @@ Serializable.prototype.clone = function clone () {
 	this._state |= Serializable.STATE_CLONE;
 	return obj;
 };
-Serializable.prototype.listen = function listen (event, callback) {
+// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+Serializable.prototype.listen = function listen (event, callback, priority) {
 		var this$1 = this;
+		if ( priority === void 0 ) priority = 0;
 
+	callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 	if (!this._listeners.hasOwnProperty(event)) {
 		this._listeners[event] = [];
 	}
-	this._listeners[event].unshift(callback);
+	var index = indexOfListener(this._listeners[event], callback);
+	this._listeners[event].splice(index, 0, callback);
 	return function () {
 		if (!this$1._alive)
 			{ return; } // listeners already deleted
@@ -678,6 +719,25 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 	}
 });
 
+// If a serializable is a ancestor of another serializable, it is filtered out from the list
+
+
+var listenerCounter = 0;
+var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
+
+function indexOfListener(array, callback) {
+	var low = 0,
+		high = array.length, 
+		priority = callback.priority;
+
+	while (low < high) {
+		var mid = low + high >>> 1;
+		if (array[mid].priority < priority) { low = mid + 1; }
+		else { high = mid; }
+	}
+	return low;
+}
+
 var changesEnabled = true;
 var scenePropertyFilter = null;
 // true / false to enable / disable property value change sharing.
@@ -713,6 +773,9 @@ var Property = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Property.__proto__ = Serializable$$1;
 	Property.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Property.prototype.constructor = Property;
+	Property.prototype.makeUpAName = function makeUpAName () {
+		return this.name;
+	};
 	Property.prototype.setPropertyType = function setPropertyType (propertyType) {
 		this.propertyType = propertyType;
 		try {
@@ -1247,6 +1310,9 @@ var PropertyOwner = (function (Serializable$$1) {
 	if ( Serializable$$1 ) PropertyOwner.__proto__ = Serializable$$1;
 	PropertyOwner.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	PropertyOwner.prototype.constructor = PropertyOwner;
+	PropertyOwner.prototype.makeUpAName = function makeUpAName () {
+		return this.name || 'PropertyOwner';
+	};
 	// Just a helper
 	PropertyOwner.prototype.initWithPropertyValues = function initWithPropertyValues (values) {
 		var this$1 = this;
@@ -1375,6 +1441,9 @@ var ComponentData = (function (Serializable$$1) {
 	if ( Serializable$$1 ) ComponentData.__proto__ = Serializable$$1;
 	ComponentData.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	ComponentData.prototype.constructor = ComponentData;
+	ComponentData.prototype.makeUpAName = function makeUpAName () {
+		return this.name;
+	};
 	ComponentData.prototype.addChild = function addChild (child) {
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
@@ -1523,7 +1592,7 @@ var Entity = (function (Serializable$$1) {
 		if (this.prototype) {
 			return this.prototype.makeUpAName();
 		} else {
-			return 'Entity without a prototype';
+			return 'Entity';
 		}
 	};
 
@@ -1565,14 +1634,17 @@ var Entity = (function (Serializable$$1) {
 
 	/*
 	Adds multiple components as an array to this Entity.
-	Uses addComponent internally.
 	Initializes components after all components are added.
 	*/
-	Entity.prototype.addComponents = function addComponents (components) {
+	Entity.prototype.addComponents = function addComponents (components, ref) {
 		var this$1 = this;
+		if ( ref === void 0 ) ref = {};
+		var fullInit = ref.fullInit; if ( fullInit === void 0 ) fullInit = true;
 
 		assert(this._alive, ALIVE_ERROR);
 		assert(Array.isArray(components), 'Parameter is not an array.');
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('add components for', this.makeUpAName()); }
 
 		for (var i = 0; i < components.length; i++) {
 			var component = components[i];
@@ -1583,16 +1655,24 @@ var Entity = (function (Serializable$$1) {
 			component.setRootType(this$1._rootType);
 		}
 
-		if (!this.sleeping)
-			{ Entity.initComponents(components); }
+		if (!this.sleeping) {
+			Entity.preInitComponents(components);
+			if (fullInit)
+				{ Entity.initComponents(components); }
+		}
 		return this;
 	};
 
-	Entity.initComponents = function initComponents (components) {
+	Entity.preInitComponents = function preInitComponents (components) {
+		if (Entity.ENTITY_CREATION_DEBUGGING)  { console.log('preInit components for', components[0].entity.makeUpAName()); }
 		for (var i = 0; i < components.length; i++)
 			{ components[i]._preInit(); }
-		for (var i$1 = 0; i$1 < components.length; i$1++)
-			{ components[i$1]._init(); }
+	};
+	
+	Entity.initComponents = function initComponents (components) {
+		if (Entity.ENTITY_CREATION_DEBUGGING)  { console.log(("init " + (components.length) + " components for"), components[0].entity.makeUpAName()); }
+		for (var i = 0; i < components.length; i++)
+			{ components[i]._init(); }
 	};
 
 	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
@@ -1618,7 +1698,8 @@ var Entity = (function (Serializable$$1) {
 	Entity.prototype.wakeUp = function wakeUp () {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) { return false; }
-
+		
+		this.components.forEach(function (value, key) { return Entity.preInitComponents(value); });
 		this.components.forEach(function (value, key) { return Entity.initComponents(value); });
 
 		this.sleeping = false;
@@ -1652,8 +1733,11 @@ var Entity = (function (Serializable$$1) {
 	Entity.prototype.setRootType = function setRootType (rootType) {
 		if (this._rootType === rootType)
 			{ return; }
-		this._rootType = rootType;
 
+		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('entity added to tree', this.makeUpAName()); }
+		
+		Serializable$$1.prototype.setRootType.call(this, rootType);
+		
 		var i;
 		this.components.forEach(function (value, key) {
 			for (i = 0; i < value.length; ++i) {
@@ -1691,15 +1775,17 @@ Object.defineProperty(Entity.prototype, 'position', {
 });
 
 Serializable.registerSerializable(Entity, 'ent', function (json) {
-	console.log('creating entity from json', json);
+	if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('creating entity from json', json); }
 	var entity = new Entity(json.id);
 	entity.prototype = getSerializable(json.proto);
-	console.log('created entity from json', entity);
+	if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('created entity from json', entity); }
 	if (json.comp) {
 		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
 	}
 	return entity;
 });
+
+Entity.ENTITY_CREATION_DEBUGGING = false;
 
 var propertyTypes$1 = [
 	createPropertyType('name', 'No name', createPropertyType.string)
@@ -1717,11 +1803,7 @@ var Prototype = (function (PropertyOwner$$1) {
 	Prototype.prototype.constructor = Prototype;
 	
 	Prototype.prototype.makeUpAName = function makeUpAName () {
-		var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; }, true);
-		if (nameProperty)
-			{ return nameProperty.value; }
-		else
-			{ return 'Prototype without a name'; }
+		return this.name || 'Prototype';
 	};
 	
 	Prototype.prototype.addChild = function addChild (child) {
@@ -1838,14 +1920,35 @@ var Prototype = (function (PropertyOwner$$1) {
 		return null;
 	};
 	
-	Prototype.prototype.createEntity = function createEntity () {
+	// Parent is needed so that we can init children knowing who is the parent
+	Prototype.prototype.createEntity = function createEntity (parent, _skipNewEntityEvent) {
+		if ( _skipNewEntityEvent === void 0 ) _skipNewEntityEvent = false;
+
 		var entity = new Entity();
+		
 		var inheritedComponentDatas = this.getInheritedComponentDatas();
 		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
+		entity.addComponents(components, { fullInit: false }); // Only do preInit
+		
 		entity.prototype = this;
-		entity.addComponents(components);
+		
+		if (parent)
+			{ parent.addChild(entity); }
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('create entity', this.makeUpAName()); }
+		
+		this.forEachChild('epr', function (epr) { return epr.createEntity(entity, true); });
+		// let childEntityPrototypes = this.getChildren('epr');
+		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
+		
+		// Components have only been preinited. Lets call the init now.
+		Entity.initComponents(components);
 		
 		this.previouslyCreatedEntity = entity;
+		
+		if (!_skipNewEntityEvent)
+			{ events.dispatch('new entity created', entity); }
+		
 		return entity;
 	};
 	
@@ -2358,8 +2461,8 @@ function createCanvas() {
 	var gradient = ctx.createLinearGradient(0, 0, 0, RESOLUTION * 0.8);
 	// gradient.addColorStop(0, "#5886c8");
 	// gradient.addColorStop(1, "#9eb6d5");
-	gradient.addColorStop(0, "#94c4ff");
-	gradient.addColorStop(1, "#345a39");
+	gradient.addColorStop(0, "#5c77ff");
+	gradient.addColorStop(1, "#90c9f6");
 	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, 1, RESOLUTION);
 	return canvas;
@@ -2491,7 +2594,8 @@ function createWorld(owner, options) {
 // const MAX_PHYSICS_DT = 0.2;
 var PHYSICS_DT = 1 / 60;
 function updateWorld(owner, dt) {
-	owner._p2World.step(PHYSICS_DT, dt, 10);
+	owner._p2World.step(PHYSICS_DT, dt, 5);
+	// owner._p2World.step(dt, dt, 10);
 }
 function deleteWorld(owner) {
 	if (owner._p2World)
@@ -2752,8 +2856,16 @@ var Scene = (function (Serializable$$1) {
 	if ( Serializable$$1 ) Scene.__proto__ = Serializable$$1;
 	Scene.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
 	Scene.prototype.constructor = Scene;
+	Scene.prototype.makeUpAName = function makeUpAName () {
+		if (this.level)
+			{ return this.level.makeUpAName(); }
+		else
+			{ return 'Scene'; }
+	};
 	
 	Scene.prototype.loadLevel = function loadLevel (level) {
+		var this$1 = this;
+
 		this.level = level;
 		
 		this.stage = new PIXI$1.Container();
@@ -2793,8 +2905,7 @@ var Scene = (function (Serializable$$1) {
 
 		events.dispatch('scene load level before entities', scene, level);
 
-		var entities = this.level.getChildren('epr').map(function (epr) { return epr.createEntity(); });
-		this.addChildren(entities);
+		this.level.getChildren('epr').map(function (epr) { return epr.createEntity(this$1); });
 
 		events.dispatch('scene load level', scene, level);
 
@@ -2905,7 +3016,7 @@ var Scene = (function (Serializable$$1) {
 		
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 		
-		this.renderer.render(this.stage, null, true);
+		this.renderer.render(this.stage, null, false);
 
 		events.dispatch('scene draw', scene);
 		eventHappened('Draws');
@@ -3050,6 +3161,9 @@ var Component = (function (PropertyOwner$$1) {
 	if ( PropertyOwner$$1 ) Component.__proto__ = PropertyOwner$$1;
 	Component.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
 	Component.prototype.constructor = Component;
+	Component.prototype.makeUpAName = function makeUpAName () {
+		return self.constructor.componentName;
+	};
 	Component.prototype.delete = function delete$1 () {
 		// Component.delete never returns false because entity doesn't have components as children
 		this._parent = null;
@@ -3067,6 +3181,8 @@ var Component = (function (PropertyOwner$$1) {
 			
 		}));
 	};
+	// In preInit you can init the component with stuff that other components might want to use in init function
+	// In preInit you can not trust that other components have been inited in any way
 	Component.prototype._preInit = function _preInit () {
 		var this$1 = this;
 
@@ -3092,6 +3208,7 @@ var Component = (function (PropertyOwner$$1) {
 			console.error(this.entity, this.constructor.componentName, 'preInit', e);
 		}
 	};
+	// In preInit you can access other components and know that their preInit is done.
 	Component.prototype._init = function _init () {
 		this.forEachChild('com', function (c) { return c._init(); });
 		try {
@@ -3258,7 +3375,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		else if (this.prototype)
 			{ return this.prototype.makeUpAName(); }
 		else
-			{ return 'Entity prototype without a name'; }
+			{ return 'EntityPrototype'; }
 	};
 	
 	EntityPrototype.prototype.getTransform = function getTransform () {
@@ -3368,8 +3485,7 @@ var EntityPrototype = (function (Prototype$$1) {
 			this.getTransform().getPropertyOrCreate('position').value = position;
 		}
 		
-		var entity = this.createEntity();
-		scene.addChild(entity);
+		this.createEntity(scene);
 	};
 
 	return EntityPrototype;
@@ -3509,8 +3625,89 @@ Component.register({
 		createPropertyType('position', new Vector(0, 0), createPropertyType.vector),
 		createPropertyType('scale', new Vector(1, 1), createPropertyType.vector),
 		createPropertyType('angle', 0, createPropertyType.float, createPropertyType.float.modulo(0, Math.PI * 2), createPropertyType.flagDegreesInEditor)
-	]
+	],
+	prototype: {
+		constructor: function constructor() {
+			this.layer = this.scene.layers.main;
+		},
+		preInit: function preInit() {
+			this.container = new PIXI$1.Container();
+			this.container._debug = this.entity.makeUpAName() + ' ' + this.name;
+			this.container.position.set(this.position.x, this.position.y);
+			this.container.scale.set(this.scale.x, this.scale.y);
+			this.container.rotation = this.angle;
+		},
+		init: function init() {
+			var this$1 = this;
+
+			var parentTransform = this.getParentTransform();
+			if (parentTransform) {
+				parentTransform.container.addChild(this.container);
+				parentTransform.listen('globalTransformChanged', function () {
+					this$1.dispatch('globalTransformChanged', this$1);
+				});
+			} else {
+				this.layer.addChild(this.container);
+			}
+			
+			// Optimize this. Shouldn't be called multiple times per frame.
+			var change = function () {
+				this$1.dispatch('globalTransformChanged', this$1);
+			};
+
+			this.listenProperty(this, 'position', function (position) {
+				this$1.container.position.set(position.x, position.y);
+				change();
+			});
+			this.listenProperty(this, 'angle', function (angle) {
+				this$1.container.rotation = angle;
+				change();
+			});
+			this.listenProperty(this, 'scale', function (scale) {
+				this$1.container.scale.set(scale.x, scale.y);
+				change();
+			});
+			// change();
+		},
+		getParentTransform: function getParentTransform() {
+			if (this.parentTransform !== undefined)
+				{ return this.parentTransform; }
+			
+			var parentEntity = this.entity.getParent();
+			if (parentEntity && parentEntity.threeLetterType === 'ent')
+				{ this.parentTransform = parentEntity.getComponent('Transform'); }
+			else
+				{ this.parentTransform = null; }
+			
+			return this.parentTransform;
+		},
+		getGlobalPosition: function getGlobalPosition() {
+			return Vector.fromObject(this.layer.toLocal(zeroPoint, this.container, tempPoint));
+		},
+		getGlobalAngle: function getGlobalAngle() {
+			var angle = this.angle;
+			var parent = this.getParentTransform();
+			while (parent) {
+				angle += parent.angle;
+				parent = parent.getParentTransform();
+			}
+			return angle;
+		},
+		setGlobalPosition: function setGlobalPosition(position) {
+			this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+		},
+		sleep: function sleep() {
+			this.container.destroy();
+			this.container = null;
+			
+			delete this.parentTransform;
+		}
+		
+	}
 });
+
+var zeroPoint = new PIXI$1.Point();
+var tempPoint = new PIXI$1.Point();
 
 Component.register({
 	name: 'TransformVariance',
@@ -3558,20 +3755,35 @@ Component.register({
 
 			this.initSprite();
 
-			this.listenProperty(this.Transform, 'position', function (position) {
-				this$1.sprite.x = position.x;
-				this$1.sprite.y = position.y;
+			this.Transform.listen('globalTransformChanged', function (transform) {
+				/*
+				this.sprite.x = transform.globalPosition.x;
+				this.sprite.y = transform.globalPosition.y;
+				
+				// rotation setter function has a function call. lets optimize.
+				if (this.sprite.rotation !== transform.globalAngle)
+					this.sprite.rotation = transform.globalAngle;
+				
+				this.sprite.scale.set(transform.globalScale.x, transform.globalScale.y);
+				*/
+			});
+			
+			/*
+			this.listenProperty(this.Transform, 'position', position => {
+				this.sprite.x = position.x;
+				this.sprite.y = position.y;
 			});
 
-			this.listenProperty(this.Transform, 'angle', function (angle) {
-				this$1.sprite.rotation = angle;
+			this.listenProperty(this.Transform, 'angle', angle => {
+				this.sprite.rotation = angle;
 			});
+			*/
 
 			var redrawGraphics = function () {
 				this$1.updateTexture();
 			};
 			
-			this.listenProperty(this.Transform, 'scale', redrawGraphics);
+			// this.listenProperty(this.Transform, 'scale', redrawGraphics);
 			
 			var propertiesThatRequireRedraw = [
 				'type',
@@ -3593,13 +3805,7 @@ Component.register({
 			this.sprite = new PIXI$1.Sprite(textureAndAnchor.texture);
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 
-			var T = this.Transform;
-
-			this.sprite.x = T.position.x;
-			this.sprite.y = T.position.y;
-			this.sprite.rotation = T.angle;
-
-			this.scene.layers.main.addChild(this.sprite);
+			this.Transform.container.addChild(this.sprite);
 		},
 		updateTexture: function updateTexture() {
 			var textureAndAnchor = this.getTextureAndAnchor();
@@ -3607,7 +3813,7 @@ Component.register({
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 		},
 		getTextureAndAnchor: function getTextureAndAnchor() {
-			var hash = this.createPropertyHash() + this.Transform.scale;
+			var hash = this.createPropertyHash();// + this.Transform.scale;
 			var textureAndAnchor = getHashedTextureAndAnchor(hash);
 			
 			if (!textureAndAnchor) {
@@ -3618,7 +3824,7 @@ Component.register({
 			return textureAndAnchor;
 		},
 		createGraphics: function createGraphics() {
-			var scale = this.Transform.scale;
+			var scale = new Vector(1, 1);// this.Transform.scale;
 			var graphics = new PIXI$1.Graphics();
 			
 			if (this.type === 'rectangle') {
@@ -3640,7 +3846,7 @@ Component.register({
 				graphics.drawCircle(0, 0, this.radius * averageScale);
 				graphics.endFill();
 			} else if (this.type === 'convex') {
-				var path = this.getConvexPoints(PIXI$1.Point);
+				var path = this.getConvexPoints(PIXI$1.Point, false);
 				path.push(path[0]); // Close the path
 				
 				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
@@ -3651,9 +3857,10 @@ Component.register({
 			
 			return graphics;
 		},
-		getConvexPoints: function getConvexPoints(vectorClass) {
+		getConvexPoints: function getConvexPoints(vectorClass, takeScaleIntoAccount) {
 			var this$1 = this;
 			if ( vectorClass === void 0 ) vectorClass = Vector;
+			if ( takeScaleIntoAccount === void 0 ) takeScaleIntoAccount = true;
 
 			var centerAngle = Math.PI * 2 / this.points;
 			var isNotEventPolygon = this.topPointDistance !== 0.5 && this.points <= 8;
@@ -3701,12 +3908,14 @@ Component.register({
 				path.forEach(function (p) { return p.y -= averageY; });
 			}
 
-			var scale = this.Transform.scale;
-			if (scale.x !== 1 || scale.y !== 1) {
-				path.forEach(function (p) {
-					p.x *= scale.x;
-					p.y *= scale.y;
-				});
+			if (takeScaleIntoAccount) {
+				var scale = this.Transform.scale;
+				if (scale.x !== 1 || scale.y !== 1) {
+					path.forEach(function (p) {
+						p.x *= scale.x;
+						p.y *= scale.y;
+					});
+				}
 			}
 
 			return path;
@@ -3728,22 +3937,20 @@ Component.register({
 	],
 	prototype: {
 		init: function init() {
-			var this$1 = this;
-
 			this.initSprite();
 
 			this.listenProperty(this.Transform, 'position', function (position) {
-				this$1.sprite.x = position.x;
-				this$1.sprite.y = position.y;
+				// this.sprite.x = position.x;
+				// this.sprite.y = position.y;
 			});
 
 			this.listenProperty(this.Transform, 'angle', function (angle) {
-				this$1.sprite.rotation = angle;
+				// this.sprite.rotation = angle;
 			});
 
 			this.listenProperty(this.Transform, 'scale', function (scale) {
-				this$1.sprite.scale.x = scale.x;
-				this$1.sprite.scale.y = scale.y;
+				// this.sprite.scale.x = scale.x;
+				// this.sprite.scale.y = scale.y;
 			});
 		},
 		initSprite: function initSprite() {
@@ -3752,11 +3959,11 @@ Component.register({
 			
 			var T = this.Transform;
 
-			this.sprite.x = T.position.x;
-			this.sprite.y = T.position.y;
-			this.sprite.rotation = T.angle;
-			this.sprite.scale.x = T.scale.x;
-			this.sprite.scale.y = T.scale.y;
+			// this.sprite.x = T.position.x;
+			// this.sprite.y = T.position.y;
+			// this.sprite.rotation = T.angle;
+			// this.sprite.scale.x = T.scale.x;
+			// this.sprite.scale.y = T.scale.y;
 
 			this.scene.layers.main.addChild(this.sprite);
 		},
@@ -3862,7 +4069,6 @@ Component.register({
 		// Note: check this return false logic. Looks weird.
 		launchTrigger: function launchTrigger(entity) {
 			if (this.action === 'win') {
-				console.log('will win');
 				this.scene.win();
 				return false;
 			}
@@ -4146,19 +4352,19 @@ Component.register({
 		init: function init() {
 			var this$1 = this;
 
-			/* ParticleContainer does not work properly!
+			//ParticleContainer does not work properly!
 			
 			// maxSize < 40 will crash
 			// With many Particle-components with few particles, this is deadly-expensive.
 			// And also crashes now and then with low maxValue.
-			this.container = new PIXI.particles.ParticleContainer(15000, {
-				position: true,
-				alpha: false,
-				scale: false,
-				rotation: false,
-				uvs: false
-			});
-			*/
+			// this.container = new PIXI.particles.ParticleContainer(5000, {
+			// 	position: true,
+			// 	alpha: true,
+			// 	scale: false,
+			// 	rotation: false,
+			// 	uvs: false
+			// });
+			
 
 			// Use normal container instead
 			this.container = new PIXI$1.Container();
@@ -4693,30 +4899,33 @@ function limit(milliseconds, callbackLimitMode, callback) {
 	if (!['instant', 'soon', 'next'].includes(callbackLimitMode))
 		{ throw new Error('Invalid callbackLimitMode'); }
 	
-	var callTimeout = null;
-	var lastTimeoutCall = 0;
+	var queueTimeout = null; // non-null when call is in queue
+	var lastCall = 0; // last time when callback was called
 	
-	function timeoutCallback() {
-		lastTimeoutCall = Date.now();
-		callTimeout = null;
-		
+	function callCallback() {
+		lastCall = Date.now();
+		queueTimeout = null;
 		callback();
 	}
+	function callCallbackWithDelay(delayMilliseconds) {
+		queueTimeout = setTimeout(callCallback, delayMilliseconds);
+	}
+	
 	return function(callLimitMode) {
-		if (callTimeout)
+		if (queueTimeout)
 			{ return; }
 		
-		var timeToNextPossibleCall = lastTimeoutCall + milliseconds - Date.now();
+		var timeToNextPossibleCall = lastCall + milliseconds - Date.now();
 		if (timeToNextPossibleCall > 0) {
-			callTimeout = setTimeout(timeoutCallback, timeToNextPossibleCall);
+			callCallbackWithDelay(timeToNextPossibleCall);
 		} else {
-			callTimeout = setTimeout(timeoutCallback, milliseconds);
-
 			var mode = callLimitMode || callbackLimitMode;
 			if (mode === 'instant')
-				{ callback(); }
+				{ callCallback(); }
 			else if (mode === 'soon')
-				{ setTimeout(callback, 0); }
+				{ callCallbackWithDelay(0); }
+			else if (mode === 'next')
+				{ callCallbackWithDelay(milliseconds); }
 		}
 	}
 }
@@ -4905,7 +5114,15 @@ function resizeCanvas() {
 
 		screen.style.width = width + 'px';
 		screen.style.height = height + 'px';
-		scene.renderer.resize(width, height);
+		
+		// Here you can change the resolution of the canvas
+		var pixels = width * height;
+		var quality = 1;
+		if (pixels > MAX_PIXELS) {
+			quality = Math.sqrt(MAX_PIXELS / pixels);
+		}
+		
+		scene.renderer.resize(width * quality, height * quality);
 
 		window.scrollTo(0, 0);
 		
@@ -4924,6 +5141,8 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 listenSceneCreation(resizeCanvas);
+
+var MAX_PIXELS = 1000 * 600;
 
 var CONTROL_SIZE = 70; // pixels
 

@@ -185,12 +185,18 @@ class Types extends Module {
 	}
 }
 
+
 $(document).on('dnd_start.vakata', function (e, data) {
+	if (data.data.nodes.find(node => !node.startsWith('prt')))
+		return;
+	
 	let nodeObjects = data.data.nodes.map(getSerializable);
 	events.dispatch('dragPrototypeStarted', nodeObjects);
 });
 
+/*
 $(document).on('dnd_move.vakata', function (e, data) {
+	console.log('types.js data.event.target.nodeName', data.event.target.nodeName);
 	if (data.event.target.nodeName === 'CANVAS') {
 		data.helper.find('.jstree-icon').css({
 			visibility: 'hidden'
@@ -201,10 +207,18 @@ $(document).on('dnd_move.vakata', function (e, data) {
 		});
 	}
 });
+*/
 
 $(document).on('dnd_stop.vakata', function (e, data) {
+	if (data.data.nodes.find(node => !node.startsWith('prt')))
+		return;
+	
+	console.log('data', data);
+	console.log('e', e)
 	let jstree = $('#types-jstree').jstree(true);
 	// let typesModule = $('#types-jstree').data('typesModule');
+	
+	console.log('data.event.target.nodeName', data.event.target.nodeName)
 	
 	setTimeout(function () {
 		// Now the nodes have moved in the DOM.
@@ -217,6 +231,8 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 			// Drag prototype in types view
 			
 			let node = jstree.get_node(data.data.obj);
+			if (!node)
+				return;
 			let nodes = data.data.nodes; // these prototypes will move
 			let newParent;
 			if (node.parent === '#')
@@ -237,5 +253,6 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 		}
 	}, 0);
 });
+
 
 Module.register(Types, 'left');

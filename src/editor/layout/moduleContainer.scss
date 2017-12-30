@@ -20,7 +20,7 @@
   flex: 1;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 -1px 6px -2px black;
+  box-shadow: 0 -3px 7px -4px black;
 }
 
 .moduleTab {
@@ -51,4 +51,7 @@
 }
 .moduleTab:not(.moduleEnabled) {
   display: none;
+}
+body.noEditAccess .moduleTab.moduleSelected {
+  background: $noEditAccess-backround;
 }

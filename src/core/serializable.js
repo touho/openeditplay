@@ -16,6 +16,13 @@ export function createStringId(threeLetterPrefix = '???', characters = 16) {
 
 let serializableClasses = new Map();
 
+/*
+Serializable lifecycle:
+
+fromJSON()
+
+ */
+
 export default class Serializable {
 	constructor(predefinedId = false, skipSerializableRegistering = false) {
 // @ifndef OPTIMIZE
@@ -36,6 +43,9 @@ export default class Serializable {
 			throw new Error('?');
 			*/
 		addSerializable(this);
+	}
+	makeUpAName() {
+		return 'Serializable';
 	}
 	delete() {
 		if (this._parent) {
@@ -219,15 +229,18 @@ export default class Serializable {
 		this._state |= Serializable.STATE_CLONE;
 		return obj;
 	}
-	listen(event, callback) {
+	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	listen(event, callback, priority = 0) {
+		callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 		if (!this._listeners.hasOwnProperty(event)) {
 			this._listeners[event] = [];
 		}
-		this._listeners[event].unshift(callback);
+		let index = indexOfListener(this._listeners[event], callback);
+		this._listeners[event].splice(index, 0, callback);
 		return () => {
 			if (!this._alive)
 				return; // listeners already deleted
-			var index = this._listeners[event].indexOf(callback);
+			let index = this._listeners[event].indexOf(callback);
 			if (index >= 0)
 				this._listeners[event].splice(index, 1);
 		};
@@ -395,3 +408,33 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 		return children;
 	}
 });
+
+// If a serializable is a ancestor of another serializable, it is filtered out from the list
+export function filterChildren(serializables) {
+	let idSet = new Set(serializables.map(s => s.id));
+	return serializables.filter(serializable => {
+		let parent = serializable.getParent();
+		while (parent) {
+			if (idSet.has(parent.id))
+				return false;
+			parent = parent.getParent();
+		}
+		return true;
+	});
+}
+
+let listenerCounter = 0;
+const NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
+
+function indexOfListener(array, callback) {
+	let low = 0,
+		high = array.length, 
+		priority = callback.priority;
+
+	while (low < high) {
+		let mid = low + high >>> 1;
+		if (array[mid].priority < priority) low = mid + 1;
+		else high = mid;
+	}
+	return low;
+}

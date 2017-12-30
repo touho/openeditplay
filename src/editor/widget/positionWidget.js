@@ -7,16 +7,12 @@ export default class PositionWidget extends Widget {
 			component
 		});
 	}
-	draw(context) {
-		let p = this.component.Transform.position;
-		context.beginPath();
-		context.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
-		// context.fill();
-		context.stroke();
-	}
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
 		affectedEntities.forEach(entity => {
-			entity.position = entity.position.add(mousePositionChange);
+			let transform = entity.getComponent('Transform');
+			let globalPosition = transform.getGlobalPosition();
+			globalPosition.add(mousePositionChange);
+			transform.setGlobalPosition(globalPosition);
 		});
 	}
 

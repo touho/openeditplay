@@ -2,6 +2,7 @@ import { default as Widget, defaultWidgetDistance, centerWidgetRadius } from './
 import Vector from '../../util/vector';
 import { keyPressed, key } from '../../util/input';
 import { scene } from '../../core/scene'
+import assert from "../../util/assert";
 
 const SHIFT_STEPS = 16;
 
@@ -14,11 +15,30 @@ export default class AngleWidget extends Widget {
 	}
 
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
-		let entityPosition = this.component.Transform.position;
+		// Master entity is the entity whose widget we are dragging.
+		// If parent and child entity are selected and we are dragging child widget, masterEntity is the parent.
+		let masterEntity = this.component.entity;
+		while (!affectedEntities.find(ent => ent === masterEntity)) {
+			masterEntity = masterEntity.getParent();
+			if (!masterEntity || masterEntity.threeLetterType !== 'ent') {
+				assert('Master entity not found when editing angle of entity.');
+			}
+		}
+		
+		let T = masterEntity.getComponent('Transform');
+		let entityPosition = T.getGlobalPosition();
+		
 		let relativeMousePosition = mousePosition.clone().subtract(entityPosition);
+		let relativeWidgetPosition = new Vector(this.x, this.y).subtract(entityPosition);
 
-		let oldAngle = this.component.Transform.angle;
-		let newAngle = Math.PI + relativeMousePosition.horizontalAngle();
+		let oldAngle = T.getGlobalAngle();
+		let mouseAngle = Math.PI + relativeMousePosition.horizontalAngle();
+		let widgetAngle = Math.PI + relativeWidgetPosition.horizontalAngle();
+		
+		let newAngle = oldAngle + (mouseAngle - widgetAngle);
+		if (newAngle < 0)
+			newAngle += Math.PI * 2;
+		
 		if (keyPressed(key.shift)) {
 			newAngle += Math.PI / SHIFT_STEPS;
 			newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
@@ -32,15 +52,16 @@ export default class AngleWidget extends Widget {
 	}
 
 	updatePosition() {
-		let Transform = this.component.Transform;
-		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(Transform.angle).add(Transform.position);
+		let T = this.component.Transform;
+		let globalAngle = T.getGlobalAngle();
+		let globalPosition = T.getGlobalPosition();
+		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(globalAngle).add(globalPosition);
 		this.x = pos.x;
 		this.y = pos.y;
 
 		if (this.graphics) {
-			this.graphics.x = Transform.position.x;
-			this.graphics.y = Transform.position.y;
-			this.graphics.rotation = Transform.angle;
+			this.graphics.position.copy(globalPosition);
+			this.graphics.rotation = globalAngle;
 		}
 	}
 	

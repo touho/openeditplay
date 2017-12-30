@@ -149,41 +149,41 @@ export default Component.register({
 		},
 		init() {
 			this.listeners = [];
-
-			this.listenProperty(this.Transform, 'position', position => {
+			
+			let positionListener = () => {
 				if (this.scene.playing) {
 					this.requiresWidgetUpdate = true;
 					return;
 				}
 
-				this.positionHelper.x = position.x;
-				this.positionHelper.y = position.y;
+				this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 
 				this.updateWidgets();
-			});
-			this.listenProperty(this.Transform, 'angle', () => {
+			};
+			let angleListener = () => {
 				if (this.scene.playing) {
 					this.requiresWidgetUpdate = true;
 					return;
 				}
 
 				this.updateWidgets();
-			});
+			};
+
+			this.listenProperty(this.Transform, 'position', positionListener);
+			this.listenProperty(this.Transform, 'angle', angleListener);
+			this.listeners.push(this.Transform.listen('globalTransformChanged', positionListener));
 
 			this.listeners.push(this.scene.listen('pause', () => {
 				if (this.requiresWidgetUpdate) {
-					this.positionHelper.x = this.Transform.position.x;
-					this.positionHelper.y = this.Transform.position.y;
+					this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 					this.updateWidgets();
 					this.requiresWidgetUpdate = false;
 				}
 			}));
-
-
+			
+			
 			if (this.position)
 				this.position.init();
-
-			this.updateWidgets();
 
 			this.positionHelper = new PIXI.Graphics();
 			this.positionHelper.beginFill(0xFFFFFF);
@@ -192,12 +192,13 @@ export default Component.register({
 			this.positionHelper.beginFill(0x000000);
 			this.positionHelper.drawCircle(0, 0, 1.3);
 			this.positionHelper.endFill();
-			this.positionHelper.x = this.Transform.position.x;
-			this.positionHelper.y = this.Transform.position.y;
+			this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 			this.scene.positionHelperLayer.addChild(this.positionHelper);
 
-			this.listeners.push(this.scene.listen('zoomChange', () => this.updateZoomLevel()))
+			this.listeners.push(this.scene.listen('zoomChange', () => this.updateZoomLevel()));
 			this.updateZoomLevel();
+
+			this.updateWidgets();
 		},
 
 		updateZoomLevel() {

@@ -13,15 +13,17 @@ export default class ScaleWidget extends Widget {
 	}
 
 	updatePosition() {
-		let Transform = this.component.Transform;
-		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(Transform.angle).add(Transform.position);
+		let T = this.component.Transform;
+		let globalAngle = T.getGlobalAngle();
+		let globalPosition = T.getGlobalPosition();
+		
+		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(globalAngle).add(globalPosition);
 		this.x = pos.x;
 		this.y = pos.y;
 
 		if (this.graphics) {
-			this.graphics.x = Transform.position.x;
-			this.graphics.y = Transform.position.y;
-			this.graphics.rotation = Transform.angle;
+			this.graphics.position.copy(globalPosition);
+			this.graphics.rotation = globalAngle;
 		}
 	}
 
@@ -54,14 +56,24 @@ export default class ScaleWidget extends Widget {
 	}
 
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
+		// Master entity is the entity whose widget we are dragging.
+		// If parent and child entity are selected and we are dragging child widget, masterEntity is the parent.
+		let masterEntity = this.component.entity;
+		while (!affectedEntities.find(ent => ent === masterEntity)) {
+			masterEntity = masterEntity.getParent();
+			if (!masterEntity || masterEntity.threeLetterType !== 'ent') {
+				assert('Master entity not found when editing angle of entity.');
+			}
+		}
+
+		let entityGlobalPosition = masterEntity.getComponent('Transform').getGlobalPosition();
+		
 		let oldMousePosition = mousePosition.clone().subtract(mousePositionChange);
 		let widgetPosition = Vector.fromObject(this);
-		let entityPosition = this.component.Transform.position;
 
-		let relativeWidgetPosition = widgetPosition.clone().subtract(entityPosition);
-		let relativeMousePosition = mousePosition.clone().subtract(entityPosition);
-		let relativeOldMousePosition = oldMousePosition.subtract(entityPosition);
-
+		let relativeWidgetPosition = widgetPosition.clone().subtract(entityGlobalPosition);
+		let relativeMousePosition = mousePosition.clone().subtract(entityGlobalPosition);
+		let relativeOldMousePosition = oldMousePosition.subtract(entityGlobalPosition);
 
 		let mousePositionValue = relativeWidgetPosition.dot(relativeMousePosition) / relativeWidgetPosition.lengthSq();
 		let oldMousePositionValue = relativeWidgetPosition.dot(relativeOldMousePosition) / relativeWidgetPosition.lengthSq();
