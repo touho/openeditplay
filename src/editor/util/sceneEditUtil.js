@@ -5,6 +5,7 @@ import assert from '../../util/assert';
 import Vector from '../../util/vector';
 import { centerWidgetRadius } from '../widget/widget'
 import {filterChildren} from "../../core/serializable";
+import {Component} from "../../core/component";
 
 let radius = 10;
 

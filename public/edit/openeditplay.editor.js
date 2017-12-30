@@ -67,8 +67,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -889,8 +887,6 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
-// @endif
-
 function assert$1(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -1015,10 +1011,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
-
-// info about type, validator, validatorParameters, initialValue
-
-
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1750,7 +1742,7 @@ var ComponentData = (function (Serializable$$1) {
 		properties.forEach(function (prop) {
 			values[prop.name] = prop.value;
 		});
-		var component = Component$1.create(this.name, values);
+		var component = Component.create(this.name, values);
 		component._componentId = this.componentId;
 		return component;
 	};
@@ -2120,7 +2112,7 @@ var Prototype = (function (PropertyOwner$$1) {
 		var entity = new Entity();
 		
 		var inheritedComponentDatas = this.getInheritedComponentDatas();
-		var components = inheritedComponentDatas.map(Component$1.createWithInheritedComponentData);
+		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
 		entity.addComponents(components, { fullInit: false }); // Only do preInit
 		
 		entity.prototype = this;
@@ -3389,7 +3381,7 @@ var eventListeners = [
 ];
 
 // Object of a component, see _componentExample.js
-var Component$1 = (function (PropertyOwner$$1) {
+var Component = (function (PropertyOwner$$1) {
 	function Component(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
 
@@ -3510,7 +3502,7 @@ var Component$1 = (function (PropertyOwner$$1) {
 
 	return Component;
 }(PropertyOwner));
-Component$1.create = function(name, values) {
+Component.create = function(name, values) {
 	if ( values === void 0 ) values = {};
 
 	var componentClass = componentClasses.get(name);
@@ -3519,7 +3511,7 @@ Component$1.create = function(name, values) {
 	component.initWithPropertyValues(values);
 	return component;
 };
-Component$1.createWithInheritedComponentData = function(inheritedComponentData) {
+Component.createWithInheritedComponentData = function(inheritedComponentData) {
 	var component = new inheritedComponentData.componentClass;
 	component._componentId = inheritedComponentData.componentId;
 	var properties = inheritedComponentData.properties.map(function (p) { return p.clone(); });
@@ -3527,9 +3519,9 @@ Component$1.createWithInheritedComponentData = function(inheritedComponentData) 
 	return component;
 };
 
-Component$1.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
-Component$1.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
-Component$1.register = function(ref) {
+Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
+Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
+Component.register = function(ref) {
 	var name = ref.name; if ( name === void 0 ) name = '';
 	var description = ref.description; if ( description === void 0 ) description = '';
 	var category = ref.category; if ( category === void 0 ) category = 'Other';
@@ -3538,7 +3530,7 @@ Component$1.register = function(ref) {
 	var properties = ref.properties; if ( properties === void 0 ) properties = [];
 	var requirements = ref.requirements; if ( requirements === void 0 ) requirements = ['Transform'];
 	var children = ref.children; if ( children === void 0 ) children = [];
-	var parentClass = ref.parentClass; if ( parentClass === void 0 ) parentClass = Component$1;
+	var parentClass = ref.parentClass; if ( parentClass === void 0 ) parentClass = Component;
 	var prototype = ref.prototype; if ( prototype === void 0 ) prototype = {};
 	var allowMultiple = ref.allowMultiple; if ( allowMultiple === void 0 ) allowMultiple = true;
 	var requiesInitWhenEntityIsEdited = ref.requiesInitWhenEntityIsEdited; if ( requiesInitWhenEntityIsEdited === void 0 ) requiesInitWhenEntityIsEdited = false;
@@ -3547,7 +3539,7 @@ Component$1.register = function(ref) {
 	assert$1(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
 	assert$1(!componentClasses.has(name), 'Duplicate component class ' + name);
 	Object.keys(prototype).forEach(function (k) {
-		if (Component$1.reservedPrototypeMembers.has(k))
+		if (Component.reservedPrototypeMembers.has(k))
 			{ assert$1(false, 'Component prototype can not have a reserved member: ' + k); }
 	});
 	
@@ -3577,7 +3569,7 @@ Component$1.register = function(ref) {
 		return Com;
 	}(parentClass));
 	properties.forEach(function (p) {
-		assert$1(!Component$1.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
+		assert$1(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
 	});
 	PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
 	Com.componentName = name;
@@ -3598,14 +3590,12 @@ Component$1.register = function(ref) {
 	return Com;
 };
 
-Serializable.registerSerializable(Component$1, 'com', function (json) {
+Serializable.registerSerializable(Component, 'com', function (json) {
 	var component = new (componentClasses.get(json.n))(json.id);
 	component._componentId = json.cid || null;
 	return component;
 });
 
-// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
-// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3868,7 +3858,7 @@ PropertyOwner.defineProperties(Level, propertyTypes$2);
 
 Serializable.registerSerializable(Level, 'lvl');
 
-Component$1.register({
+Component.register({
 	name: 'Transform',
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
@@ -3960,7 +3950,7 @@ Component$1.register({
 var zeroPoint = new PIXI$2.Point();
 var tempPoint = new PIXI$2.Point();
 
-Component$1.register({
+Component.register({
 	name: 'TransformVariance',
 	description: "Adds random factor to object's transform/orientation.",
 	icon: 'fa-dot-circle-o',
@@ -3984,7 +3974,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Shape',
 	category: 'Common',
 	icon: 'fa-stop',
@@ -4178,7 +4168,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Sprite',
 	category: 'Common',
 	icon: 'fa-stop',
@@ -4225,7 +4215,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Spawner',
 	description: 'Spawns types to world.',
 	properties: [
@@ -4281,7 +4271,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Trigger',
 	description: 'When _ then _.',
 	category: 'Logic',
@@ -4342,7 +4332,7 @@ var type = {
 var SLEEPING = p2$1.Body.SLEEPING;
 var STATIC = p2$1.Body.STATIC;
 
-Component$1.register({
+Component.register({
 	name: 'Physics',
 	category: 'Common',
 	description: 'Forms physical rules for <span style="color: #84ce84;">Shapes</span>.',
@@ -4511,7 +4501,7 @@ Component$1.register({
 				if (this.inited)
 					{ this.createBody(); }
 			}
-			return Component$1.prototype.setRootType.call(this, rootType);
+			return Component.prototype.setRootType.call(this, rootType);
 		},
 		onUpdate: function onUpdate() {
 			var b = this.body;
@@ -4550,8 +4540,7 @@ Component$1.register({
 	}
 });
 
-// Export so that other components can have this component as parent
-Component$1.register({
+Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
 	category: 'Core', // You can also make up new categories.
@@ -4560,7 +4549,7 @@ Component$1.register({
 	properties: [
 		createPropertyType('lifetime', 3, createPropertyType.float, createPropertyType.float.range(0.01, 1000), 'Life time seconds')
 	],
-	parentClass: Component$1,
+	parentClass: Component,
 	prototype: {
 		onUpdate: function onUpdate() {
 			var lifetime = this.scene.time - this.startTime;
@@ -4575,7 +4564,7 @@ Component$1.register({
 	}
 });
 
-Component$1.register({
+Component.register({
 	name: 'Particles',
 	category: 'Graphics',
 	description: 'Particle engine gives eye candy.',
@@ -4924,7 +4913,7 @@ function absLimit(value, absMax) {
 
 var JUMP_SAFE_DELAY = 0.1; // seconds
 
-Component$1.register({
+Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the object.',
 	category: 'Common',
@@ -5599,7 +5588,6 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
-//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6655,22 +6643,7 @@ var MoveWidget = (function (Widget$$1) {
 	return MoveWidget;
 }(Widget));
 
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
-Dragging:
-- Scene module: entitiesToEdit.onDrag()
-
- */
-
-// Export so that other components can have this component as parent
-Component$1.register({
+Component.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
 	icon: 'fa-bars', // Font Awesome id
@@ -7217,11 +7190,11 @@ var SceneModule = (function (Module$$1) {
 		
 		events.listen('new entity created', function (entity) {
 			entity.addComponents([
-				Component$1.create('EditorWidget')
+				Component.create('EditorWidget')
 			]);
 			entity.forEachChild('ent', function (ent) {
 				ent.addComponents([
-					Component$1.create('EditorWidget')
+					Component.create('EditorWidget')
 				]);
 			}, true);
 		});
@@ -9159,11 +9132,6 @@ function parseTextAndNumber(textAndNumber) {
 	};
 }
 
-/*
-Reference: Unbounce
- https://cdn8.webmaster.net/pics/Unbounce2.jpg
- */
-
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -9237,19 +9205,6 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
-
-/*
-	// item gives you happy
-	   happy makes you jump
-	{
-		if (item)
-			[happy]
-			if happy [then]
-				[jump]
-			else
-		if (lahna)
-			}
-*/
 
 var Container = function Container() {
 	var this$1 = this;
