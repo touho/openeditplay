@@ -250,6 +250,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 
 
 
@@ -847,6 +849,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3017,7 +3023,7 @@ var Scene = (function (Serializable$$1) {
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 		
 		this.renderer.render(this.stage, null, false);
-
+		
 		events.dispatch('scene draw', scene);
 		eventHappened('Draws');
 	};
@@ -3038,7 +3044,9 @@ var Scene = (function (Serializable$$1) {
 		if (level)
 			{ this.loadLevel(level); }
 
-		this.draw();
+		// this.draw(); // we might be doing ok even without draw.
+		// player mode starts mainloop and editor may want to control the drawing more.
+		
 		delete this.resetting;
 		
 		this.dispatch('reset');
@@ -3355,6 +3363,8 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -4299,6 +4309,7 @@ Component.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',

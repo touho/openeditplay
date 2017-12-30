@@ -841,9 +841,9 @@ class SceneModule extends Module {
 			editor.select(editor.selection.items.map(ent => ent.prototype.prototype), this);
 		}
 		if (scene) {
+			scene.reset();
 			scene.cameraPosition = this.editorCameraPosition.clone();
 			scene.setZoom(this.editorCameraZoom);
-			scene.reset();
 			// scene.updateCamera(); // this is called before every scene.draw. no need to do it here.
 		}
 		this.playingModeChanged();

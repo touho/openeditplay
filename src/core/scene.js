@@ -198,7 +198,7 @@ export default class Scene extends Serializable {
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 		
 		this.renderer.render(this.stage, null, false);
-
+		
 		events.dispatch('scene draw', scene);
 		performanceTool.eventHappened('Draws');
 	}
@@ -219,7 +219,9 @@ export default class Scene extends Serializable {
 		if (level)
 			this.loadLevel(level);
 
-		this.draw();
+		// this.draw(); // we might be doing ok even without draw.
+		// player mode starts mainloop and editor may want to control the drawing more.
+		
 		delete this.resetting;
 		
 		this.dispatch('reset');
