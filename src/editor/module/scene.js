@@ -732,10 +732,14 @@ class SceneModule extends Module {
 				// Here you can change the resolution of the canvas
 				let pixels = width * height;
 				let quality = 1;
+				
+				/*
+				This doesn't work. Mouse position gets messed up.
 				const MAX_PIXELS = 1000 * 600;
 				if (pixels > MAX_PIXELS) {
 					quality = Math.sqrt(MAX_PIXELS / pixels);
 				}
+				*/
 				
 				scene.renderer.resize(width * quality, height * quality);
 				
