@@ -5,7 +5,7 @@ import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} fr
 
 Component.register({
 	name: 'Sprite',
-	category: 'Common',
+	category: 'Graphics',
 	icon: 'fa-stop',
 	allowMultiple: true,
 	description: 'Draws a sprite on the screen.',

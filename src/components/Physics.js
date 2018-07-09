@@ -20,7 +20,7 @@ const STATIC = p2.Body.STATIC;
 
 Component.register({
 	name: 'Physics',
-	category: 'Common',
+	category: 'Dynamics',
 	description: 'Forms physical rules for <span style="color: #84ce84;">Shapes</span>.',
 	icon: 'fa-stop',
 	allowMultiple: false,

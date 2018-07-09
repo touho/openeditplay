@@ -132,8 +132,6 @@ $(document).on('dnd_move.vakata', function (e, data) {
 $(document).on('dnd_stop.vakata', function (e, data) {
 	let idList = data.data.nodes;
 	let targetElement = data.event.target;
-	console.log('old', targetElement)
-	console.log('data', data)
 	let event = new DragAndDropStopEvent(idList, targetElement);
 	events.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 });

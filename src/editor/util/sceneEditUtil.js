@@ -10,7 +10,7 @@ import {Component} from "../../core/component";
 let radius = 10;
 
 export function shouldSyncLevelAndScene() {
-	return editor.selectedLevel && scene && scene.isInInitialState();
+	return scene && scene.isInInitialState() && editor.selectedLevel;
 }
 
 function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
@@ -281,9 +281,24 @@ export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) 
 			let entityPrototypeTransform = e.prototype.getTransform();
 			let entityTransform = e.getComponent('Transform');
 			
-			let position = entityPrototypeTransform.findChild('prp', prp => prp.name === 'position');
-			if (!position.value.isEqualTo(entityTransform.position))
-				position.value = entityTransform.position;
+			console.log('ny mentiin')
+
+			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'position', '_p', (a, b) => a.isEqualTo(b));
+			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'scale', '_s', (a, b) => a.isEqualTo(b));
+			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'angle', '_a', (a, b) => a === b);
+			
+			/*
+			let position = entityPrototypeTransform.getProperty('position');
+			if (position) {
+				if (!position.value.isEqualTo(entityTransform.position))
+					position.value = entityTransform.position;
+			} else {
+				position = transform.componentClass._propertyTypesByName.position.createProperty({
+					value: entityTransform.position,
+					predefinedId: entityPrototypeTransform.id + '_p'
+				});
+				entityPrototypeTransform.addChild(position);
+			}
 			
 			let scale = entityPrototypeTransform.findChild('prp', prp => prp.name === 'scale');
 			if (!scale.value.isEqualTo(entityTransform.scale))
@@ -292,7 +307,24 @@ export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) 
 			let angle = entityPrototypeTransform.findChild('prp', prp => prp.name === 'angle');
 			if (angle.value !== entityTransform.angle)
 				angle.value = entityTransform.angle;
+				*/
 		});
+	}
+}
+export function setOrCreateTransformDataPropertyValue(transformComponentData, transform, propertyName = 'position', idPostfix = '_p', valueCompareFunc = (a, b) => a === b) {
+	let property = transformComponentData.getProperty(propertyName);
+	if (property) {
+		if (!valueCompareFunc(property.value, transform[propertyName])) {
+			property.value = transform[propertyName];
+			console.log('updated', propertyName, 'to', transform[propertyName]);
+		}
+	} else {
+		property = transformComponentData.componentClass._propertyTypesByName[propertyName].createProperty({
+			value: transform[propertyName],
+			predefinedId: transformComponentData.getParent().id + idPostfix
+		});
+		transformComponentData.addChild(property);
+		console.log('created', propertyName, 'valued', transform[propertyName]);
 	}
 }
 

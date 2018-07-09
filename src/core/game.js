@@ -62,10 +62,12 @@ PropertyOwner.defineProperties(Game, propertyTypes);
 
 Game.prototype.isRoot = true;
 
+
+
 Serializable.registerSerializable(Game, 'gam', json => {
 	if (json.c) {
 		json.c.sort((a, b) => {
-			if (a.id.startsWith('prt'))
+			if (a.id.startsWith('prt') || a.id.startsWith('pfa'))
 				return -1;
 			else
 				return 1;

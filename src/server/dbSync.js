@@ -133,6 +133,9 @@ WHERE gameId = ? and id = ?
 			await gameUpdating.markDirty(gameId, optionalConnection);
 		}
 
+		console.log('addSerializableToTree', value);
+		
+
 		let serializables = ServerSerializable.getSerializables(value, parentId);
 
 		let valuesSQL = serializables.map(s => '(?,?,?,?,?,?)').join(',');

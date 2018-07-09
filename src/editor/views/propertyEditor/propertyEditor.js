@@ -168,6 +168,7 @@ class Container {
 		else if (this.item.threeLetterType === 'com') this.updateComponent();
 		else if (this.item.threeLetterType === 'prt') this.updatePrototype();
 		else if (this.item.threeLetterType === 'epr') this.updateEntityPrototype();
+		else if (this.item.threeLetterType === 'pfa') this.updatePrefab();
 		else if (this.item instanceof PropertyOwner) this.updatePropertyOwner();
 	}
 	clearControls() {
@@ -217,7 +218,21 @@ class Container {
 		this.containers.update(inheritedComponentDatas);
 		let properties = this.item.getChildren('prp');
 		properties.forEach(prop => {
-			prop._editorPlaceholder = this.item.prototype.findChild('prp', prp => prp.name === prop.name).value;
+			prop._editorPlaceholder = this.item.makeUpAName();//.prototype.findChild('prp', prp => prp.name === prop.name).value;
+		});
+		this.properties.update(properties);
+		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add Component', {
+			onclick: () => {
+				new ComponentAdder(this.item);
+			}
+		}));
+	}
+	updatePrefab() {
+		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
+		this.containers.update(inheritedComponentDatas);
+		let properties = this.item.getChildren('prp');
+		properties.forEach(prop => {
+			prop._editorPlaceholder = this.item.makeUpAName();//.prototype.findChild('prp', prp => prp.name === prop.name).value;
 		});
 		this.properties.update(properties);
 		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add Component', {

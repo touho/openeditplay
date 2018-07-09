@@ -80,17 +80,21 @@ class Types extends Module {
 				}
 			} else if (change.type === 'editorSelection') {
 				if (change.origin != this) {
+					let node;
+					
 					if (change.reference.type === 'prt') {
-						let node = jstree.get_node(change.reference.items[0].id);
-						jstree.deselect_all();
-						jstree.select_node(node);
+						node = jstree.get_node(change.reference.items[0].id);
 					} else if (change.reference.type === 'epr') {
-						let jstree = $(this.jstree).jstree(true);
-						let node = jstree.get_node(change.reference.items[0].getParentPrototype().id);
-						jstree.deselect_all();
-						jstree.select_node(node);
+						let possiblyPrototype = change.reference.items[0].getParentPrototype();
+						if (possiblyPrototype)
+							node = jstree.get_node(possiblyPrototype.id);
 					} else if (change.reference.type === 'ent') {
-						let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
+						let possiblyPrototype = change.reference.items[0].prototype.getParentPrototype();
+						if (possiblyPrototype)
+							node = jstree.get_node(possiblyPrototype.id);
+					}
+
+					if (node) {
 						jstree.deselect_all();
 						jstree.select_node(node);
 					}
@@ -194,20 +198,24 @@ $(document).on('dnd_start.vakata', function (e, data) {
 	events.dispatch('dragPrototypeStarted', nodeObjects);
 });
 
-/*
-$(document).on('dnd_move.vakata', function (e, data) {
-	console.log('types.js data.event.target.nodeName', data.event.target.nodeName);
-	if (data.event.target.nodeName === 'CANVAS') {
-		data.helper.find('.jstree-icon').css({
-			visibility: 'hidden'
-		});
-	} else {
-		data.helper.find('.jstree-icon').css({
-			visibility: 'visible'
-		});
-	}
-});
-*/
+
+// This doesn't work. types.js should use treeView.js instead. objects.js has done this the right way.
+// $(document).on('dnd_move.vakata', function (e, data) {
+// 	if (data.data.nodes.find(node => !node.startsWith('prt')))
+// 		return;
+//	
+// 	setTimeout(() => {
+// 		if (data.event.target.nodeName === 'CANVAS') {
+// 			data.helper.find('.jstree-icon').css({
+// 				visibility: 'hidden'
+// 			});
+// 		} else {
+// 			data.helper.find('.jstree-icon').css({
+// 				visibility: 'visible'
+// 			});
+// 		}
+// 	}, 5);
+// });
 
 $(document).on('dnd_stop.vakata', function (e, data) {
 	if (data.data.nodes.find(node => !node.startsWith('prt')))

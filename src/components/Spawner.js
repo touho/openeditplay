@@ -3,6 +3,7 @@ import EntityPrototype from '../core/entityPrototype';
 
 Component.register({
 	name: 'Spawner',
+	category: 'Logic',
 	description: 'Spawns types to world.',
 	properties: [
 		Prop('typeName', '', Prop.string),

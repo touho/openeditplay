@@ -11,7 +11,7 @@ const JUMP_SAFE_DELAY = 0.1; // seconds
 Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the object.',
-	category: 'Common',
+	category: 'Dynamics',
 	allowMultiple: false,
 	properties: [
 		Prop('type', 'player', Prop.enum, Prop.enum.values('player', 'AI')),

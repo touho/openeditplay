@@ -4,7 +4,7 @@ import { Component, Prop } from '../core/component';
 export default Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
-	category: 'Core', // You can also make up new categories.
+	category: 'Logic', // You can also make up new categories.
 	icon: 'fa-bars', // Font Awesome id
 	requirements: ['Transform'], // These shared components are autofilled. Error if component is not found.
 	properties: [

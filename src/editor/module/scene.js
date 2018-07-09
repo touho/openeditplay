@@ -361,14 +361,36 @@ class SceneModule extends Module {
 		});
 		
 		events.listen('new entity created', entity => {
-			entity.addComponents([
-				Component.create('EditorWidget')
-			]);
-			entity.forEachChild('ent', ent => {
-				ent.addComponents([
+			let handleEntity = entity => {
+				entity.addComponents([
 					Component.create('EditorWidget')
 				]);
-			}, true);
+				let transform = entity.getComponent('Transform');
+				transform._properties.position.listen('change', position => {
+					if (sceneEdit.shouldSyncLevelAndScene()) {
+						let entityPrototype = entity.prototype;
+						let entityPrototypeTransform = entityPrototype.getTransform();
+						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'position', '_p', (a, b) => a.isEqualTo(b));
+					}
+				});
+				transform._properties.scale.listen('change', scale => {
+					if (sceneEdit.shouldSyncLevelAndScene()) {
+						let entityPrototype = entity.prototype;
+						let entityPrototypeTransform = entityPrototype.getTransform();
+						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'scale', '_s', (a, b) => a.isEqualTo(b));
+					}
+				});
+				transform._properties.angle.listen('change', angle => {
+					if (sceneEdit.shouldSyncLevelAndScene()) {
+						let entityPrototype = entity.prototype;
+						let entityPrototypeTransform = entityPrototype.getTransform();
+						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'angle', '_a', (a, b) => a === b);
+					}
+				});
+			};
+
+			handleEntity(entity);
+			entity.forEachChild('ent', handleEntity, true);
 		});
 
 		events.listen('change', change => {
@@ -508,6 +530,9 @@ class SceneModule extends Module {
 			this.draw();
 		});
 
+		events.listen('dragPrefabsStarted', prefabs => {
+			this.newEntities = prefabs.map(pfa => pfa.createEntity());
+		});
 		events.listen('dragPrototypeStarted', prototypes => {
 			let entityPrototypes = prototypes.map(prototype => {
 				let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
@@ -518,7 +543,7 @@ class SceneModule extends Module {
 			// editor.selectedLevel.addChildren(entityPrototypes);
 			this.newEntities = entityPrototypes.map(epr => epr.createEntity());
 		});
-		events.listen('dragPrototypeToCanvas', prototypes => {
+		let entityDragEnd = () => {
 			let entitiesInSelection = sceneEdit.copyEntitiesToScene(this.newEntities) || [];
 			this.clearState();
 			this.selectEntities(entitiesInSelection);
@@ -526,10 +551,15 @@ class SceneModule extends Module {
 			this.updateSceneContextButtonVisibility();
 
 			this.draw();
-		});
+		};
+		events.listen('dragPrototypeToCanvas', entityDragEnd);
+		events.listen('dragPrefabsToScene', entityDragEnd);
+		
 		events.listen('dragPrototypeToNonCanvas', () => {
 			this.clearState();
-			// this.draw();
+		});
+		events.listen('dragPrefabsToNonScene', () => {
+			this.clearState();
 		});
 	}
 
@@ -552,7 +582,8 @@ class SceneModule extends Module {
 		if (this.entitiesToEdit.length > 0 && this.widgetUnderMouse) {
 			// Editing entities with a widget
 			this.widgetUnderMouse.onDrag(mousePos, change, filterChildren(this.entitiesToEdit));
-			sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
+			// Sync is done with listeners now
+			// sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
 			needsDraw = true;
 		} else {
 			if (this.widgetUnderMouse) {
@@ -861,7 +892,8 @@ class SceneModule extends Module {
 		removeTheDeadFromArray(this.entitiesToEdit);
 
 		for (let i = this.newEntities.length - 1; i >= 0; --i) {
-			if (this.newEntities[i].prototype.prototype._alive === false) {
+			let prototypeOfEntityPrototype = this.newEntities[i].prototype.prototype;
+			if (prototypeOfEntityPrototype && prototypeOfEntityPrototype.threeLetterType === 'prt' && prototypeOfEntityPrototype._alive === false) {
 				let entity = this.newEntities.splice(i, 1)[0];
 				entity.prototype.delete();
 				entity.delete();

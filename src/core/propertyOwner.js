@@ -46,13 +46,14 @@ export default class PropertyOwner extends Serializable {
 		
 		// Make sure Properties have a PropertyType. They don't work without it.
 		propChildren.filter(prop => !prop.propertyType).forEach(prop => {
-			if (!this.constructor._propertyTypesByName[prop.name]) {
+			let propertyType = this.constructor._propertyTypesByName[prop.name];
+			if (!propertyType) {
 				console.log('Property of that name not defined', this.id, prop.name, this);
 				invalidPropertiesCount++;
 				prop.isInvalid = true;
 				return;
 			}
-			prop.setPropertyType(this.constructor._propertyTypesByName[prop.name]);
+			prop.setPropertyType(propertyType);
 		});
 		if (invalidPropertiesCount)
 			propChildren = propChildren.filter(p => !p.isInvalid);
@@ -66,6 +67,7 @@ export default class PropertyOwner extends Serializable {
 		});
 		
 		super.addChildren(propChildren);
+		return this;
 	}
 	addChild(child) {
 		assert(this._state & Serializable.STATE_INIT, this.constructor.componentName || this.constructor + ' requires that initWithChildren will be called before addChild');
@@ -81,6 +83,7 @@ export default class PropertyOwner extends Serializable {
 			assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
 			this._properties[child.propertyType.name] = child;
 		}
+		return this;
 	}
 	createPropertyHash() {
 		return this.getChildren('prp').map(property => '' + property._value).join(',');
@@ -94,6 +97,7 @@ export default class PropertyOwner extends Serializable {
 	deleteChild(child, idx) {
 		assert(child.threeLetterType !== 'prp', 'Can not delete just one Property child.');
 		super.deleteChild(child, idx);
+		return this;
 	}
 }
 

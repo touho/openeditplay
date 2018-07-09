@@ -154,7 +154,7 @@ let sendChanges = limit(200, 'soon', () => {
 	let packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
-	console.log('send change');
+	console.log('send change', packedChanges);
 	sendSocketMessage('', packedChanges);
 });
 

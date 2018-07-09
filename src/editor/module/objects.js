@@ -9,6 +9,8 @@ import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import {game} from "../../core/game";
 import TaskRunner from "../../util/taskRunner";
+import Prefab from "../../core/prefab";
+import Serializable from "../../core/serializable";
 
 class Objects extends Module {
 	constructor() {
@@ -26,7 +28,7 @@ class Objects extends Module {
 		this.treeView = new TreeView({
 			id: 'objects-tree',
 			selectionChangedCallback: selectedIds => {
-				let serializables = selectedIds.map(getSerializable);
+				let serializables = selectedIds.map(getSerializable).filter(Boolean);
 				editor.select(serializables, this);
 				Module.activateModule('object', false);
 			},
@@ -36,7 +38,6 @@ class Objects extends Module {
 					let parent = parentId === '#' ? editor.selectedLevel : getSerializable(parentId);
 					serializable.move(parent);
 					/*
-					
 					let target = event.targetElement;
 					while (!target.classList.contains('jstree-node')) {
 						target = target.parentElement;
@@ -77,11 +78,21 @@ class Objects extends Module {
 		
 		events.listen('treeView drag start objects-tree', event => {
 		});
-		events.listen('treeView drag move objects-tree', event => {	
+		events.listen('treeView drag move objects-tree', event => {
+			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs')
+				event.hideValidationIndicator();
 			// if (event.targetElement.classList.contains('openEditPlayCanvas'))
 			// 	event.hideValidationIndicator();
 		});
 		events.listen('treeView drag stop objects-tree', event => {
+			console.log('event', event)
+			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
+				let entityPrototypes = event.idList.map(getSerializable);
+				entityPrototypes.forEach(epr => {
+					let prefab = Prefab.createFromPrototype(epr);
+					game.addChild(prefab);
+				});
+			}
 			return;
 			if (event.type === 'epr') {
 				let target = event.targetElement;

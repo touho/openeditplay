@@ -5,10 +5,12 @@ import './module/topBar';
 import './module/scene';
 
 import './module/types';
+import './module/prefabs';
 import './module/objects';
 import './module/levels';
 
 import './module/type';
+import './module/prefab';
 import './module/object';
 import './module/level';
 import './module/game';
@@ -129,7 +131,7 @@ class Editor {
 		else
 			this.selection.type = 'mixed';
 
-		console.log('selectedIds', this.selection)
+		// console.log('selectedIds', this.selection)
 
 		events.dispatch('change', {
 			type: 'editorSelection',

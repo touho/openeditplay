@@ -155,6 +155,8 @@ class ModuleTab {
 		if (this.module === module && this._sel === module._selected && this._ena === module._enabled)
 			return;
 		
+		this.el.setAttribute('moduleid', module.id);
+		
 		this.module = module;
 		if (this.el.innerHTML !== module.name)
 			this.el.innerHTML = module.name;

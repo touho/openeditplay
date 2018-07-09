@@ -34,6 +34,8 @@ export default class Prototype extends PropertyOwner {
 	}
 	
 	/*
+	filter filters component datas
+	
 	Returns JSON:
 	[
 		{

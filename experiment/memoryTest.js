@@ -47,22 +47,40 @@ function shuffle(a) {
 	}
 }
 
+console.log('array2');
 console.log(check(array2));
+console.log(check(array2));
+
+console.log('array1');
 console.log(check(array1));
+console.log(check(array1));
+console.log(check(array1));
+
+console.log('array2');
 console.log(check(array2));
+console.log(check(array2));
+console.log(check(array2));
+
+console.log('sorting...');
 array2.sort((a, b) => {
 	if (a.order < b.order)
 		return -1;
 	else
 		return 1;
 });
-console.log(check(array2));
 
+console.log('array2');
+console.log(check(array2));
+console.log(check(array2));
+console.log(check(array2));
+console.log(check(array2));
+console.log(check(array2));
 
 	
 
 ///////////
 
+/*
 N = 5000000;
 
 order = 0;
@@ -93,3 +111,5 @@ st = performance.now();
 for (let i = N - 1; i >= 0; i--) {
 }
 console.log(performance.now() - st);
+
+*/

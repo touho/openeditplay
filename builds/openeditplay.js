@@ -250,8 +250,6 @@ var events = {
 		});
 	}
 };
-// DOM / ReDom event system
-
 
 
 
@@ -850,10 +848,6 @@ Object.defineProperty(Property.prototype, 'debug', {
 	}
 });
 
-// info about type, validator, validatorParameters, initialValue
-
-
-
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
 	if ( flags === void 0 ) flags = [];
@@ -1359,13 +1353,14 @@ var PropertyOwner = (function (Serializable$$1) {
 		
 		// Make sure Properties have a PropertyType. They don't work without it.
 		propChildren.filter(function (prop) { return !prop.propertyType; }).forEach(function (prop) {
-			if (!this$1.constructor._propertyTypesByName[prop.name]) {
+			var propertyType = this$1.constructor._propertyTypesByName[prop.name];
+			if (!propertyType) {
 				console.log('Property of that name not defined', this$1.id, prop.name, this$1);
 				invalidPropertiesCount++;
 				prop.isInvalid = true;
 				return;
 			}
-			prop.setPropertyType(this$1.constructor._propertyTypesByName[prop.name]);
+			prop.setPropertyType(propertyType);
 		});
 		if (invalidPropertiesCount)
 			{ propChildren = propChildren.filter(function (p) { return !p.isInvalid; }); }
@@ -1379,6 +1374,7 @@ var PropertyOwner = (function (Serializable$$1) {
 		});
 		
 		Serializable$$1.prototype.addChildren.call(this, propChildren);
+		return this;
 	};
 	PropertyOwner.prototype.addChild = function addChild (child) {
 		assert(this._state & Serializable$$1.STATE_INIT, this.constructor.componentName || this.constructor + ' requires that initWithChildren will be called before addChild');
@@ -1394,6 +1390,7 @@ var PropertyOwner = (function (Serializable$$1) {
 			assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
 			this._properties[child.propertyType.name] = child;
 		}
+		return this;
 	};
 	PropertyOwner.prototype.createPropertyHash = function createPropertyHash () {
 		return this.getChildren('prp').map(function (property) { return '' + property._value; }).join(',');
@@ -1407,6 +1404,7 @@ var PropertyOwner = (function (Serializable$$1) {
 	PropertyOwner.prototype.deleteChild = function deleteChild (child, idx) {
 		assert(child.threeLetterType !== 'prp', 'Can not delete just one Property child.');
 		Serializable$$1.prototype.deleteChild.call(this, child, idx);
+		return this;
 	};
 
 	return PropertyOwner;
@@ -1822,6 +1820,8 @@ var Prototype = (function (PropertyOwner$$1) {
 	};
 	
 	/*
+	filter filters component datas
+	
 	Returns JSON:
 	[
 		{
@@ -2559,10 +2559,12 @@ PropertyOwner.defineProperties(Game, propertyTypes);
 
 Game.prototype.isRoot = true;
 
+
+
 Serializable.registerSerializable(Game, 'gam', function (json) {
 	if (json.c) {
 		json.c.sort(function (a, b) {
-			if (a.id.startsWith('prt'))
+			if (a.id.startsWith('prt') || a.id.startsWith('pfa'))
 				{ return -1; }
 			else
 				{ return 1; }
@@ -3392,7 +3394,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		return this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	};
 	EntityPrototype.prototype.getParentPrototype = function getParentPrototype () {
-		return this.prototype;
+		return this.prototype || null;
 	};
 	EntityPrototype.prototype.clone = function clone () {
 		var this$1 = this;
@@ -3413,23 +3415,30 @@ var EntityPrototype = (function (Prototype$$1) {
 			} else if (child.threeLetterType === 'cda' && child.name === 'Transform') {
 				var transform = new ComponentData('Transform', id + '_t');
 
+				// Transform component data always has a position
 				var position = transform.componentClass._propertyTypesByName.position.createProperty({
 					value: child.findChild('prp', function (prp) { return prp.name === 'position'; }).value,
 					predefinedId: id + '_p'
 				});
 				transform.addChild(position);
 
-				var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-					value: child.findChild('prp', function (prp) { return prp.name === 'scale'; }).value,
-					predefinedId: id + '_s'
-				});
-				transform.addChild(scale);
+				var oldScaleProperty = child.findChild('prp', function (prp) { return prp.name === 'scale'; });
+				if (oldScaleProperty) {
+					var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+						value: oldScaleProperty.value,
+						predefinedId: id + '_s'
+					});
+					transform.addChild(scale);
+				}
 
-				var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
-					value: child.findChild('prp', function (prp) { return prp.name === 'angle'; }).value,
-					predefinedId: id + '_a'
-				});
-				transform.addChild(angle);
+				var oldAngleProperty = child.findChild('prp', function (prp) { return prp.name === 'angle'; });
+				if (oldAngleProperty) {
+					var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+						value: oldAngleProperty.value,
+						predefinedId: id + '_a'
+					});
+					transform.addChild(angle);
+				}
 				
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
@@ -3442,18 +3451,24 @@ var EntityPrototype = (function (Prototype$$1) {
 		this._state |= Serializable.STATE_CLONE;
 		return obj;
 	};
+
 	EntityPrototype.prototype.toJSON = function toJSON () {
 		var this$1 = this;
 
-		// return super.toJSON();
-		
-		// Below optimization reduces size 88%. id's have to be generated based on this.id
+		/*
+		let json = super.toJSON();
+		json.t = this.prototype.id;
+		return json;
+		*/
+
+		// Below optimization reduces size 88%. child id's have to be generated based on this.id
 		
 		var Transform = this.getTransform();
 		var json = {
-			id: this.id,
-			t: this.prototype.id // t as in protoType
+			id: this.id
 		};
+		if (this.prototype)
+			{ json.t = this.prototype.id; } // might be prototype or prefab or may not exist. .t as in type
 		
 		var childArrays = [];
 		this._children.forEach(function (child) {
@@ -3511,51 +3526,56 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 });
 
 // If Transform or Transform.position is missing, they are added.
-EntityPrototype.createFromPrototype = function(prototype, componentDatas) {
-	if ( componentDatas === void 0 ) componentDatas = [];
-
-
+EntityPrototype.createFromPrototype = function(prototype) {
 	var entityPrototype = new EntityPrototype();
 	entityPrototype.prototype = prototype;
 	var id = entityPrototype.id;
+
+	var prototypeHasATransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
+	var fromPrefab = prototype.threeLetterType === 'pfa';
 	
-	assert(!componentDatas.find(function (cda) { return cda.name === 'Transform'; }), 'Prototype (prt) can not have a Transform component');
+	if (!fromPrefab && prototypeHasATransform)
+		{ assert(false, 'Prototype (prt) can not have a Transform component'); }
 	
 	var transform = new ComponentData('Transform', id + '_t');
-	componentDatas.push(transform);
 	
 	var position = transform.componentClass._propertyTypesByName.position.createProperty({
 		value: new Vector(0, 0),
 		predefinedId: id + '_p'
 	});
 	transform.addChild(position);
+	
+	if (!fromPrefab) {
+		var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+			value: new Vector(1, 1),
+			predefinedId: id + '_s'
+		});
+		transform.addChild(scale);
 
-	var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-		value: new Vector(1, 1),
-		predefinedId: id + '_s'
-	});
-	transform.addChild(scale);
-
-	var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
-		value: 0,
-		predefinedId: id + '_a'
-	});
-	transform.addChild(angle);
+		var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+			value: 0,
+			predefinedId: id + '_a'
+		});
+		transform.addChild(angle);
+	}
 
 	var name = EntityPrototype._propertyTypesByName.name.createProperty({
 		value: '',
 		predefinedId: id + '_n'
 	});
 	
-	entityPrototype.initWithChildren([name ].concat( componentDatas));
+	entityPrototype.initWithChildren([name, transform]);
 
 	return entityPrototype;
 };
 
 Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var entityPrototype = new EntityPrototype(json.id);
-	entityPrototype.prototype = getSerializable$1(json.t || json.p);
-	assert(entityPrototype.prototype, ("Prototype " + (json.t || json.p) + " not found"));
+	entityPrototype.prototype = json.t ? getSerializable$1(json.t) : null;
+	
+	// assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
+	if (json.t && !entityPrototype.prototype)
+		{ console.warn(("EntityPrototype thougt it had a prototype or prefab " + (json.t) + " but it was not found.")); }
 	
 	var nameId = json.id + '_n';
 	var transformId = json.id + '_t';
@@ -3572,13 +3592,13 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var transformClass = componentClasses.get('Transform');
 	
 	var position = transformClass._propertyTypesByName.position.createProperty({
-		value: json.x !== undefined ? new Vector(json.x, json.y) : Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
+		value: Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
 	});
 	transformData.addChild(position);
 
 	var scale = transformClass._propertyTypesByName.scale.createProperty({
-		value: json.s && Vector.fromObject(json.s) || new Vector(json.w === undefined ? 1 : json.w, json.h === undefined ? 1 : json.h) || new Vector(1, 1), // future is .s
+		value: json.s && Vector.fromObject(json.s) || new Vector(1, 1),
 		predefinedId: scaleId
 	});
 	transformData.addChild(scale);
@@ -3588,9 +3608,9 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 		predefinedId: angleId
 	});
 	transformData.addChild(angle);
-	
-	
+
 	entityPrototype.initWithChildren([name, transformData]);
+	
 	return entityPrototype;
 });
 
@@ -3721,6 +3741,7 @@ var tempPoint = new PIXI$1.Point();
 
 Component.register({
 	name: 'TransformVariance',
+	category: 'Logic',
 	description: "Adds random factor to object's transform/orientation.",
 	icon: 'fa-dot-circle-o',
 	allowMultiple: false,
@@ -3745,7 +3766,7 @@ Component.register({
 
 Component.register({
 	name: 'Shape',
-	category: 'Common',
+	category: 'Graphics',
 	icon: 'fa-stop',
 	allowMultiple: true,
 	description: 'Draws shape on the screen.',
@@ -3939,7 +3960,7 @@ Component.register({
 
 Component.register({
 	name: 'Sprite',
-	category: 'Common',
+	category: 'Graphics',
 	icon: 'fa-stop',
 	allowMultiple: true,
 	description: 'Draws a sprite on the screen.',
@@ -3986,6 +4007,7 @@ Component.register({
 
 Component.register({
 	name: 'Spawner',
+	category: 'Logic',
 	description: 'Spawns types to world.',
 	properties: [
 		createPropertyType('typeName', '', createPropertyType.string),
@@ -4103,7 +4125,7 @@ var STATIC = p2$1.Body.STATIC;
 
 Component.register({
 	name: 'Physics',
-	category: 'Common',
+	category: 'Dynamics',
 	description: 'Forms physical rules for <span style="color: #84ce84;">Shapes</span>.',
 	icon: 'fa-stop',
 	allowMultiple: false,
@@ -4309,11 +4331,10 @@ Component.register({
 	}
 });
 
-// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
-	category: 'Core', // You can also make up new categories.
+	category: 'Logic', // You can also make up new categories.
 	icon: 'fa-bars', // Font Awesome id
 	requirements: ['Transform'], // These shared components are autofilled. Error if component is not found.
 	properties: [
@@ -4679,7 +4700,7 @@ var JUMP_SAFE_DELAY = 0.1; // seconds
 Component.register({
 	name: 'CharacterController',
 	description: 'Lets user control the object.',
-	category: 'Common',
+	category: 'Dynamics',
 	allowMultiple: false,
 	properties: [
 		createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
@@ -5073,7 +5094,7 @@ var sendChanges = limit(200, 'soon', function () {
 	var packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
-	console.log('send change');
+	console.log('send change', packedChanges);
 	sendSocketMessage('', packedChanges);
 });
 
