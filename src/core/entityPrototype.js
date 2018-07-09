@@ -173,7 +173,7 @@ EntityPrototype.createFromPrototype = function(prototype) {
 	});
 	transform.addChild(position);
 	
-	if (!fromPrefab) {
+	// if (!fromPrefab) {
 		let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
 			value: new Vector(1, 1),
 			predefinedId: id + '_s'
@@ -185,7 +185,7 @@ EntityPrototype.createFromPrototype = function(prototype) {
 			predefinedId: id + '_a'
 		});
 		transform.addChild(angle);
-	}
+	// }
 
 	let name = EntityPrototype._propertyTypesByName.name.createProperty({
 		value: '',

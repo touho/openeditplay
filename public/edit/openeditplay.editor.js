@@ -67,6 +67,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 function dispatch(view, type, data) {
 	var el = view === window ? view : view.el || view;
 	var debug = 'Debug info ' + new Error().stack;
@@ -614,6 +616,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 			if (type === 'epr') { return new function EntityPrototype(){}; }
 			if (type === 'ent') { return new function Entity(){}; }
 			if (type === 'lvl') { return new function Level(){}; }
+			if (type === 'pfa') { return new function Prefab(){}; }
 			return new function Other(){};
 		}
 
@@ -887,6 +890,8 @@ function executeChange(change) {
 }
 
 // @ifndef OPTIMIZE
+// @endif
+
 function assert$1(condition, message) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
@@ -1012,6 +1017,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -3091,7 +3100,7 @@ var Scene = (function (Serializable$$1) {
 		];
 
 		addChange(changeType.addSerializableToTree, this);
-		
+
 		sceneCreateListeners.forEach(function (listener) { return listener(); });
 	}
 
@@ -3104,12 +3113,12 @@ var Scene = (function (Serializable$$1) {
 		else
 			{ return 'Scene'; }
 	};
-	
+
 	Scene.prototype.loadLevel = function loadLevel (level) {
 		var this$1 = this;
 
 		this.level = level;
-		
+
 		this.stage = new PIXI$2.Container();
 		this.cameraPosition = new Vector(0, 0);
 		this.cameraZoom = 1;
@@ -3142,7 +3151,7 @@ var Scene = (function (Serializable$$1) {
 		this.playing = false;
 		this.time = 0;
 		this.won = false;
-		
+
 		createWorld(this, physicsOptions);
 
 		events.dispatch('scene load level before entities', scene, level);
@@ -3170,10 +3179,10 @@ var Scene = (function (Serializable$$1) {
 		this.components.clear();
 
 		deleteWorld(this);
-		
+
 		events.dispatch('scene unload level', scene, level);
 	};
-	
+
 	Scene.prototype.setCameraPositionToPlayer = function setCameraPositionToPlayer () {
 		var pos = new Vector(0, 0);
 		var count = 0;
@@ -3187,7 +3196,7 @@ var Scene = (function (Serializable$$1) {
 			this.cameraPosition.set(pos.divideScalar(count));
 		}
 	};
-	
+
 	Scene.prototype.updateCamera = function updateCamera () {
 		if (this.playing) {
 			this.setCameraPositionToPlayer();
@@ -3208,9 +3217,9 @@ var Scene = (function (Serializable$$1) {
 		var timeInMilliseconds = performance.now();
 		var t = 0.001 * timeInMilliseconds;
 		var dt = t - this._prevUpdate;
-		
+
 		setFrameTime(dt);
-		
+
 		if (dt > 0.05)
 			{ dt = 0.05; }
 		this._prevUpdate = t;
@@ -3255,11 +3264,11 @@ var Scene = (function (Serializable$$1) {
 
 	Scene.prototype.draw = function draw () {
 		this.updateCamera();
-		
+
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
-		
+
 		this.renderer.render(this.stage, null, false);
-		
+
 		events.dispatch('scene draw', scene);
 		eventHappened('Draws');
 	};
@@ -3273,18 +3282,18 @@ var Scene = (function (Serializable$$1) {
 			{ return; } // scene has been replaced by another one
 
 		this.resetting = true;
-		
+
 		var level = this.level;
 		this.unloadLevel();
-		
+
 		if (level)
 			{ this.loadLevel(level); }
 
 		// this.draw(); // we might be doing ok even without draw.
 		// player mode starts mainloop and editor may want to control the drawing more.
-		
+
 		delete this.resetting;
-		
+
 		this.dispatch('reset');
 	};
 
@@ -3313,15 +3322,15 @@ var Scene = (function (Serializable$$1) {
 
 		if (this.time === 0)
 			{ this.dispatch('onStart'); }
-		
+
 		this.dispatch('play');
 	};
 
 	Scene.prototype.delete = function delete$1 () {
 		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
-		
+
 		this.unloadLevel();
-		
+
 		if (scene === this)
 			{ scene = null; }
 
@@ -3329,7 +3338,7 @@ var Scene = (function (Serializable$$1) {
 			this.mouseListeners.forEach(function (listener) { return listener(); });
 			this.mouseListeners = null;
 		}
-		
+
 		this.renderer = null; // Do not call renderer.destroy(). Same renderer is used by all scenes for now.
 
 		return true;
@@ -3354,14 +3363,14 @@ var Scene = (function (Serializable$$1) {
 	Scene.prototype.getComponents = function getComponents (componentName) {
 		return this.components.get(componentName) || new Set;
 	};
-	
+
 	Scene.prototype.mouseToWorld = function mouseToWorld (mousePosition) {
 		return new Vector(
 			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom,
 			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom
 		);
 	};
-	
+
 	Scene.prototype.setZoom = function setZoom (zoomLevel) {
 		if (zoomLevel)
 			{ this.cameraZoom = zoomLevel; }
@@ -3785,7 +3794,7 @@ EntityPrototype.createFromPrototype = function(prototype) {
 	});
 	transform.addChild(position);
 	
-	if (!fromPrefab) {
+	// if (!fromPrefab) {
 		var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
 			value: new Vector(1, 1),
 			predefinedId: id + '_s'
@@ -3797,7 +3806,7 @@ EntityPrototype.createFromPrototype = function(prototype) {
 			predefinedId: id + '_a'
 		});
 		transform.addChild(angle);
-	}
+	// }
 
 	var name = EntityPrototype._propertyTypesByName.name.createProperty({
 		value: '',
@@ -4571,6 +4580,7 @@ Component.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -5621,6 +5631,7 @@ Module.prototype._hide = function _hide () {
 	this._selected = false;
 };
 
+//arguments: moduleName, unpackModuleView=true, ...args 
 Module.activateModule = function(moduleId, unpackModuleView) {
 	var args = [], len = arguments.length - 2;
 	while ( len-- > 0 ) args[ len ] = arguments[ len + 2 ];
@@ -6677,6 +6688,21 @@ var MoveWidget = (function (Widget$$1) {
 	return MoveWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+
+// Export so that other components can have this component as parent
 Component.register({
 	name: 'EditorWidget',
 	category: 'Editor', // You can also make up new categories.
@@ -8507,6 +8533,7 @@ TaskRunner.prototype.clear = function clear () {
 	this.timeout = null;
 };
 
+// Prefab is an EntityPrototype that has been saved to a prefab.
 var Prefab = (function (Prototype$$1) {
 	function Prefab(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -8534,6 +8561,38 @@ var Prefab = (function (Prototype$$1) {
 	return Prefab;
 }(Prototype));
 
+/*
+filter filters component datas
+
+Returns JSON:
+[
+	{
+		ownComponent: false, // component of a parent prototype
+		componentClass: [object Object],
+		componentId: <componentId>,
+		threeLetterType: 'icd',
+		 generatedForPrototype: <this>,
+		properties: [
+			{ id missing }
+		]
+	},
+	{
+		 ownComponentData: <ComponentData> || null, // null if this prototype has 0 properties defined
+		 componentClass: [object Object],
+		 componentId: <componentId>,
+		 threeLetterType: 'icd',
+		 generatedForPrototype: <this>,
+		 properties: [
+			 { id found if own property } // some properties might be from parent prototypes and thus missing id
+		 ]
+	 }
+]
+ */
+
+
+
+
+// Meant for entityPrototypes, but works theoretically for prototypes
 Prefab.createFromPrototype = function(prototype) {
 	var inheritedComponentDatas = prototype.getInheritedComponentDatas();
 	var children = inheritedComponentDatas.map(function (icd) {
@@ -9332,6 +9391,11 @@ function parseTextAndNumber(textAndNumber) {
 	};
 }
 
+/*
+Reference: Unbounce
+ https://cdn8.webmaster.net/pics/Unbounce2.jpg
+ */
+
 var PropertyEditor = function PropertyEditor() {
 	var this$1 = this;
 
@@ -9405,6 +9469,19 @@ PropertyEditor.prototype.update = function update (items, threeLetterType) {
 		
 	this.dirty = false;
 };
+
+/*
+	// item gives you happy
+	   happy makes you jump
+	{
+		if (item)
+			[happy]
+			if happy [then]
+				[jump]
+			else
+		if (lahna)
+			}
+*/
 
 var Container = function Container() {
 	var this$1 = this;

@@ -1,12 +1,13 @@
 
 const propertiesStoredInValueField = [
 	'cid', // componentId
-	// 's', // scale
-	// 'a', // angle
+	's', // scale
+	'a', // angle
 	't', // prototypeId
-	// 'p' // position
+	'p' // position
 ];
 
+// Class instances are only used for converting game json to database format
 class ServerSerializable {
 	constructor(json, parentId) {
 		this.id = json.id;

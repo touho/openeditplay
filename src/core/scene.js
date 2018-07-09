@@ -1,16 +1,16 @@
 import Serializable from './serializable';
 import assert from '../util/assert';
-import {game} from './game';
-import {addChange, changeType, setChangeOrigin} from './serializableManager';
-import {createWorld, deleteWorld, updateWorld} from '../features/physics';
-import {listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed} from '../util/input';
-import {default as PIXI, getRenderer, sortDisplayObjects} from '../features/graphics';
+import { game } from './game';
+import { addChange, changeType, setChangeOrigin } from './serializableManager';
+import { createWorld, deleteWorld, updateWorld } from '../features/physics';
+import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed } from '../util/input';
+import { default as PIXI, getRenderer, sortDisplayObjects } from '../features/graphics';
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
 import events from "../util/events";
 
 let scene = null;
-export {scene};
+export { scene };
 
 const physicsOptions = {
 	enableSleeping: true
@@ -40,7 +40,7 @@ export default class Scene extends Serializable {
 		];
 
 		addChange(changeType.addSerializableToTree, this);
-		
+
 		sceneCreateListeners.forEach(listener => listener());
 	}
 	makeUpAName() {
@@ -49,10 +49,10 @@ export default class Scene extends Serializable {
 		else
 			return 'Scene';
 	}
-	
+
 	loadLevel(level) {
 		this.level = level;
-		
+
 		this.stage = new PIXI.Container();
 		this.cameraPosition = new Vector(0, 0);
 		this.cameraZoom = 1;
@@ -83,7 +83,7 @@ export default class Scene extends Serializable {
 		this.playing = false;
 		this.time = 0;
 		this.won = false;
-		
+
 		createWorld(this, physicsOptions);
 
 		events.dispatch('scene load level before entities', scene, level);
@@ -111,10 +111,10 @@ export default class Scene extends Serializable {
 		this.components.clear();
 
 		deleteWorld(this);
-		
+
 		events.dispatch('scene unload level', scene, level);
 	}
-	
+
 	setCameraPositionToPlayer() {
 		let pos = new Vector(0, 0);
 		let count = 0;
@@ -128,7 +128,7 @@ export default class Scene extends Serializable {
 			this.cameraPosition.set(pos.divideScalar(count));
 		}
 	}
-	
+
 	updateCamera() {
 		if (this.playing) {
 			this.setCameraPositionToPlayer();
@@ -149,9 +149,9 @@ export default class Scene extends Serializable {
 		let timeInMilliseconds = performance.now();
 		let t = 0.001 * timeInMilliseconds;
 		let dt = t - this._prevUpdate;
-		
+
 		performanceTool.setFrameTime(dt);
-		
+
 		if (dt > 0.05)
 			dt = 0.05;
 		this._prevUpdate = t;
@@ -194,11 +194,11 @@ export default class Scene extends Serializable {
 
 	draw() {
 		this.updateCamera();
-		
+
 		[this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
-		
+
 		this.renderer.render(this.stage, null, false);
-		
+
 		events.dispatch('scene draw', scene);
 		performanceTool.eventHappened('Draws');
 	}
@@ -212,18 +212,18 @@ export default class Scene extends Serializable {
 			return; // scene has been replaced by another one
 
 		this.resetting = true;
-		
+
 		let level = this.level;
 		this.unloadLevel();
-		
+
 		if (level)
 			this.loadLevel(level);
 
 		// this.draw(); // we might be doing ok even without draw.
 		// player mode starts mainloop and editor may want to control the drawing more.
-		
+
 		delete this.resetting;
-		
+
 		this.dispatch('reset');
 	}
 
@@ -252,15 +252,15 @@ export default class Scene extends Serializable {
 
 		if (this.time === 0)
 			this.dispatch('onStart');
-		
+
 		this.dispatch('play');
 	}
 
 	delete() {
 		if (!super.delete()) return false;
-		
+
 		this.unloadLevel();
-		
+
 		if (scene === this)
 			scene = null;
 
@@ -268,7 +268,7 @@ export default class Scene extends Serializable {
 			this.mouseListeners.forEach(listener => listener());
 			this.mouseListeners = null;
 		}
-		
+
 		this.renderer = null; // Do not call renderer.destroy(). Same renderer is used by all scenes for now.
 
 		return true;
@@ -293,14 +293,14 @@ export default class Scene extends Serializable {
 	getComponents(componentName) {
 		return this.components.get(componentName) || new Set;
 	}
-	
+
 	mouseToWorld(mousePosition) {
 		return new Vector(
 			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom,
 			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom
 		);
 	}
-	
+
 	setZoom(zoomLevel) {
 		if (zoomLevel)
 			this.cameraZoom = zoomLevel;

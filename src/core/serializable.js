@@ -391,6 +391,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 			if (type === 'epr') return new function EntityPrototype(){};
 			if (type === 'ent') return new function Entity(){};
 			if (type === 'lvl') return new function Level(){};
+			if (type === 'pfa') return new function Prefab(){};
 			return new function Other(){};
 		}
 
