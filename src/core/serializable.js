@@ -344,6 +344,9 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 	get() {
 		let info = this.threeLetterType;
 
+		if (this.threeLetterType === 'cda')
+			info += '|' + this.name;
+
 		this._children.forEach((value, key) => {
 			info += '|';
 			if (key === 'prp')
@@ -400,6 +403,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 			
 			obj.debug = child.debug;
 			obj.ref = child;
+			obj.debugChildren = child.debugChildren;
 			let c = child.debugChildArray;
 			if (c && c.length > 0)
 				obj.children = c;

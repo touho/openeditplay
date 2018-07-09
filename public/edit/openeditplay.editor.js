@@ -569,6 +569,9 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 
 		var info = this.threeLetterType;
 
+		if (this.threeLetterType === 'cda')
+			{ info += '|' + this.name; }
+
 		this._children.forEach(function (value, key) {
 			info += '|';
 			if (key === 'prp')
@@ -625,6 +628,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 			
 			obj.debug = child.debug;
 			obj.ref = child;
+			obj.debugChildren = child.debugChildren;
 			var c = child.debugChildArray;
 			if (c && c.length > 0)
 				{ obj.children = c; }
@@ -3638,7 +3642,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		else
 			{ return 'EntityPrototype'; }
 	};
-	
+
 	EntityPrototype.prototype.getTransform = function getTransform () {
 		return this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	};
@@ -3688,7 +3692,7 @@ var EntityPrototype = (function (Prototype$$1) {
 					});
 					transform.addChild(angle);
 				}
-				
+
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
 				children.push(child.clone({ cloneComponentId: true }));
@@ -3711,14 +3715,14 @@ var EntityPrototype = (function (Prototype$$1) {
 		*/
 
 		// Below optimization reduces size 88%. child id's have to be generated based on this.id
-		
+
 		var Transform = this.getTransform();
 		var json = {
 			id: this.id
 		};
 		if (this.prototype)
 			{ json.t = this.prototype.id; } // might be prototype or prefab or may not exist. .t as in type
-		
+
 		var childArrays = [];
 		this._children.forEach(function (child) {
 			childArrays.push(child);
@@ -3728,7 +3732,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		});
 		if (children.length > 0)
 			{ json.c = children.map(function (child) { return child.toJSON(); }); }
-		
+
 		var floatToJSON = createPropertyType.float().toJSON;
 		var handleProperty = function (prp) {
 			if (prp.name === 'name') {
@@ -3754,12 +3758,19 @@ var EntityPrototype = (function (Prototype$$1) {
 	EntityPrototype.prototype.spawnEntityToScene = function spawnEntityToScene (scene, position) {
 		if (!scene)
 			{ return; }
-		
+
 		if (position) {
 			this.getTransform().getPropertyOrCreate('position').value = position;
 		}
-		
+
 		this.createEntity(scene);
+	};
+	// @ifndef OPTIMIZE
+	EntityPrototype.prototype.setRootType = function setRootType (rootType) {
+		if (this._rootType === rootType)
+			{ return; }
+		assert$1(this.getTransform(), 'EntityPrototype must have a Transform');
+		Prototype$$1.prototype.setRootType.call(this, rootType);
 	};
 
 	return EntityPrototype;
@@ -3775,71 +3786,108 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 });
 
 // If Transform or Transform.position is missing, they are added.
-EntityPrototype.createFromPrototype = function(prototype) {
+EntityPrototype.createFromPrototype = function (prototype) {
 	var entityPrototype = new EntityPrototype();
 	entityPrototype.prototype = prototype;
 	var id = entityPrototype.id;
 
-	var prototypeHasATransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
+	var prototypeTransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	var fromPrefab = prototype.threeLetterType === 'pfa';
-	
-	if (!fromPrefab && prototypeHasATransform)
+
+	if (!fromPrefab && prototypeTransform)
 		{ assert$1(false, 'Prototype (prt) can not have a Transform component'); }
-	
-	var transform = new ComponentData('Transform', id + '_t');
-	
-	var position = transform.componentClass._propertyTypesByName.position.createProperty({
-		value: new Vector(0, 0),
-		predefinedId: id + '_p'
-	});
-	transform.addChild(position);
-	
-	// if (!fromPrefab) {
-		var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-			value: new Vector(1, 1),
-			predefinedId: id + '_s'
-		});
-		transform.addChild(scale);
 
-		var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
-			value: 0,
-			predefinedId: id + '_a'
-		});
-		transform.addChild(angle);
-	// }
+	if (fromPrefab && !prototypeTransform)
+		{ assert$1(false, 'Prefab (pfa) must have a Transform component'); }
 
-	var name = EntityPrototype._propertyTypesByName.name.createProperty({
-		value: '',
-		predefinedId: id + '_n'
-	});
-	
+	var name = createEntityPrototypeNameProperty(id);
+	var transform = createEntityPrototypeTransform(id);
+
+	if (fromPrefab && prototypeTransform) {
+		// No point to copy the position
+		// transform.setValue('position', prototypeTransform.getValue('position'));
+		transform.setValue('scale', prototypeTransform.getValue('scale'));
+		transform.setValue('angle', prototypeTransform.getValue('angle'));
+	}
+
 	entityPrototype.initWithChildren([name, transform]);
 
+	// @ifndef OPTIMIZE
+	assert$1(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+	// @endif
+
+	return entityPrototype;
+};
+
+function createEntityPrototypeNameProperty(entityPrototypeId, name) {
+	if ( name === void 0 ) name = '';
+
+	return EntityPrototype._propertyTypesByName.name.createProperty({
+		value: name,
+		predefinedId: entityPrototypeId + '_n'
+	});
+}
+
+function createEntityPrototypeTransform(entityPrototypeId) {
+	var transform = new ComponentData('Transform', entityPrototypeId + '_t');
+
+	var position = transform.componentClass._propertyTypesByName.position.createProperty({
+		value: new Vector(0, 0),
+		predefinedId: entityPrototypeId + '_p'
+	});
+	transform.addChild(position);
+
+	var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+		value: new Vector(1, 1),
+		predefinedId: entityPrototypeId + '_s'
+	});
+	transform.addChild(scale);
+
+	var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+		value: 0,
+		predefinedId: entityPrototypeId + '_a'
+	});
+	transform.addChild(angle);
+
+	return transform;
+}
+
+EntityPrototype.create = function (name, position) {
+	if ( name === void 0 ) name = 'Empty';
+	if ( position === void 0 ) position = new Vector(0, 0);
+
+	var entityPrototype = new EntityPrototype();
+	var transform = createEntityPrototypeTransform(entityPrototype.id);
+	transform.setValue('position', position);
+
+	var nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
+
+	entityPrototype.initWithChildren([nameProperty, transform]);
 	return entityPrototype;
 };
 
 Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var entityPrototype = new EntityPrototype(json.id);
 	entityPrototype.prototype = json.t ? getSerializable$1(json.t) : null;
-	
+
 	// assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
 	if (json.t && !entityPrototype.prototype)
 		{ console.warn(("EntityPrototype thougt it had a prototype or prefab " + (json.t) + " but it was not found.")); }
-	
+
 	var nameId = json.id + '_n';
 	var transformId = json.id + '_t';
 	var positionId = json.id + '_p';
 	var scaleId = json.id + '_s';
 	var angleId = json.id + '_a';
-	
-	var name = Prototype._propertyTypesByName.name.createProperty({ 
+
+	var name = Prototype._propertyTypesByName.name.createProperty({
 		value: json.n === undefined ? '' : json.n,
-		predefinedId: nameId 
+		predefinedId: nameId
 	});
-	
+
 	var transformData = new ComponentData('Transform', transformId);
 	var transformClass = componentClasses.get('Transform');
-	
+
 	var position = transformClass._propertyTypesByName.position.createProperty({
 		value: Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
@@ -3859,7 +3907,7 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	transformData.addChild(angle);
 
 	entityPrototype.initWithChildren([name, transformData]);
-	
+
 	return entityPrototype;
 });
 
@@ -8476,6 +8524,8 @@ var Layer = function Layer(popup) {
 
 var CreateObject = (function (Popup$$1) {
 	function CreateObject() {
+		var this$1 = this;
+
 		Popup$$1.call(this, {
 			title: 'Create Object',
 			width: '500px',
@@ -8485,8 +8535,11 @@ var CreateObject = (function (Popup$$1) {
 		this.content.update([{
 			text: 'Empty Object',
 			callback: function () {
-				// let entity = new Entity();
-				// scene.addChild();
+				var entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
+				var entity = entityPrototype.createEntity(null, true);
+				copyEntitiesToScene([entity]);
+
+				this$1.remove();
 			}
 		}]);
 	}
@@ -9629,7 +9682,7 @@ Container.prototype.updateInheritedComponentData = function updateInheritedCompo
 
 	this.updateComponentKindOfThing(this.item.componentClass);
 		
-	var packId = 'pack' + this.item.generatedForPrototype.id + this.item.componentId;
+	var packId = 'pack' + this.item.componentClass.componentName;
 	var packedStatus = getOption(packId);
 	if (packedStatus === 'true') {
 		this.el.classList.add('packed');

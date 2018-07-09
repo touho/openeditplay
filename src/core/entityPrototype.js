@@ -25,7 +25,7 @@ export default class EntityPrototype extends Prototype {
 		else
 			return 'EntityPrototype';
 	}
-	
+
 	getTransform() {
 		return this.findChild('cda', cda => cda.name === 'Transform');
 	}
@@ -73,7 +73,7 @@ export default class EntityPrototype extends Prototype {
 					});
 					transform.addChild(angle);
 				}
-				
+
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
 				children.push(child.clone({ cloneComponentId: true }));
@@ -94,14 +94,14 @@ export default class EntityPrototype extends Prototype {
 		*/
 
 		// Below optimization reduces size 88%. child id's have to be generated based on this.id
-		
+
 		let Transform = this.getTransform();
 		let json = {
 			id: this.id
 		};
 		if (this.prototype)
 			json.t = this.prototype.id; // might be prototype or prefab or may not exist. .t as in type
-		
+
 		let childArrays = [];
 		this._children.forEach(child => {
 			childArrays.push(child);
@@ -111,7 +111,7 @@ export default class EntityPrototype extends Prototype {
 		});
 		if (children.length > 0)
 			json.c = children.map(child => child.toJSON());
-		
+
 		let floatToJSON = Prop.float().toJSON;
 		let handleProperty = prp => {
 			if (prp.name === 'name') {
@@ -136,13 +136,21 @@ export default class EntityPrototype extends Prototype {
 	spawnEntityToScene(scene, position) {
 		if (!scene)
 			return;
-		
+
 		if (position) {
 			this.getTransform().getPropertyOrCreate('position').value = position;
 		}
-		
+
 		this.createEntity(scene);
 	}
+	// @ifndef OPTIMIZE
+	setRootType(rootType) {
+		if (this._rootType === rootType)
+			return;
+		assert(this.getTransform(), 'EntityPrototype must have a Transform');
+		super.setRootType(rootType);
+	}
+	// @endif
 }
 Object.defineProperty(EntityPrototype.prototype, 'position', {
 	get() {
@@ -154,71 +162,103 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 });
 
 // If Transform or Transform.position is missing, they are added.
-EntityPrototype.createFromPrototype = function(prototype) {
+EntityPrototype.createFromPrototype = function (prototype) {
 	let entityPrototype = new EntityPrototype();
 	entityPrototype.prototype = prototype;
 	let id = entityPrototype.id;
 
-	let prototypeHasATransform = prototype.findChild('cda', cda => cda.name === 'Transform');
+	let prototypeTransform = prototype.findChild('cda', cda => cda.name === 'Transform');
 	let fromPrefab = prototype.threeLetterType === 'pfa';
-	
-	if (!fromPrefab && prototypeHasATransform)
+
+	if (!fromPrefab && prototypeTransform)
 		assert(false, 'Prototype (prt) can not have a Transform component');
-	
-	let transform = new ComponentData('Transform', id + '_t');
-	
-	let position = transform.componentClass._propertyTypesByName.position.createProperty({
-		value: new Vector(0, 0),
-		predefinedId: id + '_p'
-	});
-	transform.addChild(position);
-	
-	// if (!fromPrefab) {
-		let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-			value: new Vector(1, 1),
-			predefinedId: id + '_s'
-		});
-		transform.addChild(scale);
 
-		let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
-			value: 0,
-			predefinedId: id + '_a'
-		});
-		transform.addChild(angle);
-	// }
+	if (fromPrefab && !prototypeTransform)
+		assert(false, 'Prefab (pfa) must have a Transform component');
 
-	let name = EntityPrototype._propertyTypesByName.name.createProperty({
-		value: '',
-		predefinedId: id + '_n'
-	});
-	
+	let name = createEntityPrototypeNameProperty(id);
+	let transform = createEntityPrototypeTransform(id);
+
+	if (fromPrefab && prototypeTransform) {
+		// No point to copy the position
+		// transform.setValue('position', prototypeTransform.getValue('position'));
+		transform.setValue('scale', prototypeTransform.getValue('scale'));
+		transform.setValue('angle', prototypeTransform.getValue('angle'));
+	}
+
 	entityPrototype.initWithChildren([name, transform]);
+
+	// @ifndef OPTIMIZE
+	assert(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+	// @endif
 
 	return entityPrototype;
 };
 
+function createEntityPrototypeNameProperty(entityPrototypeId, name = '') {
+	return EntityPrototype._propertyTypesByName.name.createProperty({
+		value: name,
+		predefinedId: entityPrototypeId + '_n'
+	});
+}
+
+function createEntityPrototypeTransform(entityPrototypeId) {
+	let transform = new ComponentData('Transform', entityPrototypeId + '_t');
+
+	let position = transform.componentClass._propertyTypesByName.position.createProperty({
+		value: new Vector(0, 0),
+		predefinedId: entityPrototypeId + '_p'
+	});
+	transform.addChild(position);
+
+	let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+		value: new Vector(1, 1),
+		predefinedId: entityPrototypeId + '_s'
+	});
+	transform.addChild(scale);
+
+	let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+		value: 0,
+		predefinedId: entityPrototypeId + '_a'
+	});
+	transform.addChild(angle);
+
+	return transform;
+}
+
+EntityPrototype.create = function (name = 'Empty', position = new Vector(0, 0)) {
+	let entityPrototype = new EntityPrototype();
+	let transform = createEntityPrototypeTransform(entityPrototype.id);
+	transform.setValue('position', position);
+
+	let nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
+
+	entityPrototype.initWithChildren([nameProperty, transform]);
+	return entityPrototype;
+}
+
 Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	let entityPrototype = new EntityPrototype(json.id);
 	entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
-	
+
 	// assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
 	if (json.t && !entityPrototype.prototype)
 		console.warn(`EntityPrototype thougt it had a prototype or prefab ${json.t} but it was not found.`);
-	
+
 	let nameId = json.id + '_n';
 	let transformId = json.id + '_t';
 	let positionId = json.id + '_p';
 	let scaleId = json.id + '_s';
 	let angleId = json.id + '_a';
-	
-	let name = Prototype._propertyTypesByName.name.createProperty({ 
+
+	let name = Prototype._propertyTypesByName.name.createProperty({
 		value: json.n === undefined ? '' : json.n,
-		predefinedId: nameId 
+		predefinedId: nameId
 	});
-	
+
 	let transformData = new ComponentData('Transform', transformId);
 	let transformClass = componentClasses.get('Transform');
-	
+
 	let position = transformClass._propertyTypesByName.position.createProperty({
 		value: Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
@@ -238,6 +278,6 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	transformData.addChild(angle);
 
 	entityPrototype.initWithChildren([name, transformData]);
-	
+
 	return entityPrototype;
 });

@@ -244,7 +244,7 @@ class Container {
 	updateInheritedComponentData() {
 		this.updateComponentKindOfThing(this.item.componentClass);
 		
-		let packId = 'pack' + this.item.generatedForPrototype.id + this.item.componentId;
+		let packId = 'pack' + this.item.componentClass.componentName;
 		let packedStatus = getOption(packId);
 		if (packedStatus === 'true') {
 			this.el.classList.add('packed');
