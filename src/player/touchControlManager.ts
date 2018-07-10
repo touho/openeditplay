@@ -71,9 +71,8 @@ function positionControls() {
 
 	let characterControllers = scene.getComponents('CharacterController');
 	characterControllers.forEach(characterController => {
-		if (characterController.type === 'play') {
+		if (characterController.type === 'player') {
 			playerFound = true;
-
 			if (characterController.controlType === 'jumper') {
 				jumperFound = true;
 				if (characterController.jumpSpeed !== 0) {
@@ -84,8 +83,6 @@ function positionControls() {
 			}
 		}
 	});
-
-	debugger;
 
 	controls.touchUp.setVisible(topDownFound);
 	controls.touchLeft.setVisible(playerFound);

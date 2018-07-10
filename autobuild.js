@@ -81,21 +81,21 @@ if (!global.TARGET_NONE) {
 
 	// Game engine JS and CSS
 	if (target === 'all') {
-		autobuildJs('src/player/main.js', 'builds/openeditplay.js', {
+		autobuildJs('src/player/main.ts', 'builds/openeditplay.js', {
 			copyTo: 'public/play/',
 			optimize: true
 		});
-		autobuildJs('src/player/main.js', 'builds/openeditplay.min.js', {
+		autobuildJs('src/player/main.ts', 'builds/openeditplay.min.js', {
 			uglify: true,
 			copyTo: 'public/play/',
 			optimize: true
 		});
 
-		autobuildJs('src/homepage/main.js', 'builds/openeditplay.homepage.js', {
+		autobuildJs('src/homepage/main.ts', 'builds/openeditplay.homepage.js', {
 			copyTo: 'public/js/',
 			optimize: true
 		});
-		autobuildJs('src/homepage/main.js', 'builds/openeditplay.homepage.min.js', {
+		autobuildJs('src/homepage/main.ts', 'builds/openeditplay.homepage.min.js', {
 			uglify: true,
 			copyTo: 'public/js/',
 			optimize: true
@@ -113,7 +113,7 @@ if (!global.TARGET_NONE) {
 	}
 
 	// Editor JS
-	autobuildJs('src/editor/main.js', 'builds/openeditplay.editor.js', {
+	autobuildJs('src/editor/main.ts', 'builds/openeditplay.editor.js', {
 		copyTo: 'public/edit/'
 	});
 	// autobuildJs('src/main.js', 'builds/openeditplay.editor.min.js', {
@@ -219,7 +219,8 @@ function autobuildJs(entry, destination, options) {
 	}, options);
 
 	let plugins = [rollupTypeScript({
-		module: 'es6'
+		module: 'es6',
+		// outDir: 'marko'
 	})];
 
 	plugins.push(rollupNodeResolve({

@@ -1,15 +1,5 @@
 {
     "compilerOptions": {
-        "module": "system",
-        "allowJs": true,
-        "outFile": "marko.js",
-        "outDir": "test",
-        "sourceMap": true
-    },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "src/server/**"
-    ]
+        //"outDir": "markotest"
+    }
 }

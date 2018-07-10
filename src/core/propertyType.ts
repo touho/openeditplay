@@ -114,9 +114,9 @@ export function createDataType({
 }
 
 function createValidator(name, validatorFunction) {
-	let validator = function() {
-		let parameters = [...arguments];
-		let validatorArgs = [null, ...arguments];
+	let validator = function(...args) {
+		let parameters = args;
+		let validatorArgs = [null, ...args];
 		return {
 			validatorName: name,
 			validate: function(x) {
