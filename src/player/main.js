@@ -11,6 +11,7 @@ import './touchControlManager'
 
 
 import * as fullscreen from '../util/fullscreen';
+
 disableAllChanges();
 
 configureNetSync({
@@ -36,7 +37,6 @@ listenGameCreation(game => {
 		play();
 	});
 });
-
 
 listenKeyDown(keyValue => {
 	if (keyValue === key.space && scene)

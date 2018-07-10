@@ -1,8 +1,10 @@
+// @flow
+
 import Serializable from './serializable'
 import { addChange, changeType, setChangeOrigin } from './serializableManager';
-import Prototype from '../core/prototype'
+import Prototype from './prototype'
 import assert from '../util/assert'
-import PropertyOwner, { Prop } from '../core/propertyOwner';
+import PropertyOwner, { Prop } from './propertyOwner';
 import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
 
@@ -77,9 +79,16 @@ Serializable.registerSerializable(Game, 'gam', json => {
 });
 
 let gameCreateListeners = [];
-export function listenGameCreation(listener) {
+export function listenGameCreation(listener: (object) => void) {
 	gameCreateListeners.push(listener);
 	
+	console.log('real ts');
+
 	if (game)
 		listener(game);
 }
+
+
+// jee
+
+

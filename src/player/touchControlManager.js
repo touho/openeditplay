@@ -85,6 +85,8 @@ function positionControls() {
 		}
 	});
 
+	debugger;
+
 	controls.touchUp.setVisible(topDownFound);
 	controls.touchLeft.setVisible(playerFound);
 	controls.touchRight.setVisible(playerFound);

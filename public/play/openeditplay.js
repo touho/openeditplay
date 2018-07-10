@@ -250,6 +250,8 @@ var events = {
 		});
 	}
 };
+// DOM / ReDom event system
+
 
 
 
@@ -654,6 +656,9 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 
 		var info = this.threeLetterType;
 
+		if (this.threeLetterType === 'cda')
+			{ info += '|' + this.name; }
+
 		this._children.forEach(function (value, key) {
 			info += '|';
 			if (key === 'prp')
@@ -710,6 +715,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 			
 			obj.debug = child.debug;
 			obj.ref = child;
+			obj.debugChildren = child.debugChildren;
 			var c = child.debugChildArray;
 			if (c && c.length > 0)
 				{ obj.children = c; }
@@ -848,6 +854,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 		return ("prp " + (this.name) + "=" + (this.value));
 	}
 });
+
+// info about type, validator, validatorParameters, initialValue
+
+
 
 var PropertyType = function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	var this$1 = this;
@@ -1429,650 +1439,6 @@ PropertyOwner.defineProperties = function(Class, propertyTypes) {
 	});
 };
 
-var ComponentData = (function (Serializable$$1) {
-	function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
-		if ( predefinedId === void 0 ) predefinedId = false;
-		if ( predefinedComponentId === void 0 ) predefinedComponentId = false;
-
-		Serializable$$1.call(this, predefinedId);
-		this.name = componentClassName;
-		this.componentClass = componentClasses.get(this.name);
-		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
-		if (!this.componentClass.allowMultiple)
-			{ predefinedComponentId = '_' + componentClassName; }
-		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
-	}
-
-	if ( Serializable$$1 ) ComponentData.__proto__ = Serializable$$1;
-	ComponentData.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
-	ComponentData.prototype.constructor = ComponentData;
-	ComponentData.prototype.makeUpAName = function makeUpAName () {
-		return this.name;
-	};
-	ComponentData.prototype.addChild = function addChild (child) {
-		if (child.threeLetterType === 'prp') {
-			if (!child.propertyType) {
-				if (!this.componentClass._propertyTypesByName[child.name]) {
-					if (isClient)
-						{ console.log('Property of that name not defined', this.id, child, this); }
-					else
-						{ console.log('Property of that name not defined', this.id, this.name, child.name); }
-					return;
-				}
-				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
-			}
-		}
-		Serializable$$1.prototype.addChild.call(this, child);
-		return this;
-	};
-	ComponentData.prototype.clone = function clone (options) {
-		var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
-		var obj = new ComponentData(this.name, false, newComponentId);
-		var children = [];
-		this.forEachChild(null, function (child) {
-			children.push(child.clone());
-		});
-		obj.initWithChildren(children);
-		this._state |= Serializable$$1.STATE_CLONE;
-		return obj;
-	};
-	ComponentData.prototype.toJSON = function toJSON () {
-		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
-			cid: this.componentId,
-			n: this.name
-		});
-	};
-	/*
-	Returns a list of Properties.
-	Those which don't have an id are temporary properties generated from parents.
-	Don't set _depth.
-	 */
-	ComponentData.prototype.getInheritedProperties = function getInheritedProperties (_depth) {
-		if ( _depth === void 0 ) _depth = 0;
-
-		var properties = {};
-
-		// properties from parent
-		var parentComponentData = this.getParentComponentData();
-		if (parentComponentData)
-			{ parentComponentData.getInheritedProperties(_depth + 1).forEach(function (prop) { return properties[prop.name] = prop; }); }
-		
-		// properties from this. override properties of parents
-		this.getChildren('prp').forEach(function (prop) {
-			if (_depth === 0)
-				{ properties[prop.name] = prop; }
-			else
-				{ properties[prop.name] = prop.clone(true); }
-		});
-		
-		// fill from propertyType
-		if (_depth === 0) {
-			return this.componentClass._propertyTypes.map(function (propertyType) {
-				return properties[propertyType.name] || propertyType.createProperty({
-					skipSerializableRegistering: true
-				});
-			});
-		} else {
-			return Object.keys(properties).map(function (key) { return properties[key]; });
-		}
-	};
-	ComponentData.prototype.getParentComponentData = function getParentComponentData () {
-		var this$1 = this;
-
-		if (!this._parent) { return null; }
-		var parentPrototype = this._parent.getParentPrototype();
-		while (parentPrototype) {
-			var parentComponentData = parentPrototype.findChild('cda', function (componentData) { return componentData.componentId === this$1.componentId; });
-			if (parentComponentData)
-				{ return parentComponentData; }
-			else
-				{ parentPrototype = parentPrototype.getParentPrototype(); }
-		}
-		return null;
-	};
-	ComponentData.prototype.getPropertyOrCreate = function getPropertyOrCreate (name) {
-		var property = this.findChild('prp', function (prp) { return prp.name === name; });
-		if (!property) {
-			property = this.componentClass._propertyTypesByName[name].createProperty();
-			this.addChild(property);
-		}
-		return property;
-	};
-	ComponentData.prototype.getProperty = function getProperty (name) {
-		return this.findChild('prp', function (prp) { return prp.name === name; });
-	};
-	ComponentData.prototype.setValue = function setValue (propertyName, value) {
-		this.getPropertyOrCreate(propertyName).value = value;
-		return this;
-	};
-	ComponentData.prototype.getValue = function getValue (name) {
-		var property = this.getProperty(name);
-		if (property)
-			{ return property.value; }
-		var parent = this.getParentComponentData();
-		
-		if (parent)
-			{ return parent.getValue(name); }
-		
-		return this.componentClass._propertyTypesByName[name].initialValue;
-	};
-	ComponentData.prototype.createComponent = function createComponent () {
-		var properties = this.getInheritedProperties();
-		var values = {};
-		properties.forEach(function (prop) {
-			values[prop.name] = prop.value;
-		});
-		var component = Component.create(this.name, values);
-		component._componentId = this.componentId;
-		return component;
-	};
-
-	return ComponentData;
-}(Serializable));
-
-Serializable.registerSerializable(ComponentData, 'cda', function (json) {
-	return new ComponentData(json.n, json.id, json.cid);
-});
-
-var ALIVE_ERROR = 'entity is already dead';
-
-var Entity = (function (Serializable$$1) {
-	function Entity(predefinedId) {
-		if ( predefinedId === void 0 ) predefinedId = false;
-
-		Serializable$$1.call(this, predefinedId);
-		this.components = new Map(); // name -> array
-		this.sleeping = false;
-		this.prototype = null; // should be set immediately after constructor
-		this.localMaster = true; // set false if entity is controlled over the net
-
-		eventHappened('Create object');
-	}
-
-	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
-	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
-	Entity.prototype.constructor = Entity;
-
-	Entity.prototype.makeUpAName = function makeUpAName () {
-		if (this.prototype) {
-			return this.prototype.makeUpAName();
-		} else {
-			return 'Entity';
-		}
-	};
-
-	// Get the first component of given name
-	Entity.prototype.getComponent = function getComponent (name) {
-		assert(this._alive, ALIVE_ERROR);
-		var components = this.components.get(name);
-		if (components !== undefined)
-			{ return components[0]; }
-		else
-			{ return null; }
-	};
-
-	// Get all components with given name
-	Entity.prototype.getComponents = function getComponents (name) {
-		assert(this._alive, ALIVE_ERROR);
-		return this.components.get(name) || [];
-	};
-
-	Entity.prototype.getListOfAllComponents = function getListOfAllComponents () {
-		var components = [];
-		this.components.forEach(function (value, key) {
-			components.push.apply(components, value);
-		});
-		return components;
-	};
-
-	Entity.prototype.clone = function clone () {
-		var entity = new Entity();
-		entity.prototype = this.prototype.clone();
-		entity.sleeping = this.sleeping;
-		var components = [];
-		this.components.forEach(function (value, key) {
-			components.push.apply(components, value.map(function (c) { return c.clone(); }));
-		});
-		entity.addComponents(components);
-		return entity;
-	};
-
-	/*
-	Adds multiple components as an array to this Entity.
-	Initializes components after all components are added.
-	*/
-	Entity.prototype.addComponents = function addComponents (components, ref) {
-		var this$1 = this;
-		if ( ref === void 0 ) ref = {};
-		var fullInit = ref.fullInit; if ( fullInit === void 0 ) fullInit = true;
-
-		assert(this._alive, ALIVE_ERROR);
-		assert(Array.isArray(components), 'Parameter is not an array.');
-
-		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('add components for', this.makeUpAName()); }
-
-		for (var i = 0; i < components.length; i++) {
-			var component = components[i];
-			var componentList = this$1.components.get(component._name) || this$1.components.set(component._name, []).get(component._name);
-			componentList.push(component);
-			component.entity = this$1;
-			component._parent = this$1;
-			component.setRootType(this$1._rootType);
-		}
-
-		if (!this.sleeping) {
-			Entity.preInitComponents(components);
-			if (fullInit)
-				{ Entity.initComponents(components); }
-		}
-		return this;
-	};
-
-	Entity.preInitComponents = function preInitComponents (components) {
-		if (Entity.ENTITY_CREATION_DEBUGGING)  { console.log('preInit components for', components[0].entity.makeUpAName()); }
-		for (var i = 0; i < components.length; i++)
-			{ components[i]._preInit(); }
-	};
-	
-	Entity.initComponents = function initComponents (components) {
-		if (Entity.ENTITY_CREATION_DEBUGGING)  { console.log(("init " + (components.length) + " components for"), components[0].entity.makeUpAName()); }
-		for (var i = 0; i < components.length; i++)
-			{ components[i]._init(); }
-	};
-
-	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
-		for (var i = 0; i < components.length; i++)
-			{ components[i]._sleep(); }
-	};
-
-	Entity.deleteComponents = function deleteComponents (components) {
-		for (var i = 0; i < components.length; i++)
-			{ components[i].delete(); }
-	};
-
-	Entity.prototype.sleep = function sleep () {
-		assert(this._alive, ALIVE_ERROR);
-		if (this.sleeping) { return false; }
-
-		this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
-
-		this.sleeping = true;
-		return true;
-	};
-
-	Entity.prototype.wakeUp = function wakeUp () {
-		assert(this._alive, ALIVE_ERROR);
-		if (!this.sleeping) { return false; }
-		
-		this.components.forEach(function (value, key) { return Entity.preInitComponents(value); });
-		this.components.forEach(function (value, key) { return Entity.initComponents(value); });
-
-		this.sleeping = false;
-		return true;
-	};
-
-	Entity.prototype.delete = function delete$1 () {
-		assert(this._alive, ALIVE_ERROR);
-		this.sleep();
-		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
-
-		this.components.forEach(function (value, key) { return Entity.deleteComponents(value); });
-		this.components.clear();
-
-		eventHappened('Destroy object');
-
-		return true;
-	};
-
-	Entity.prototype.deleteComponent = function deleteComponent (component) {
-		var array = this.getComponents(component.constructor.componentName);
-		var idx = array.indexOf(component);
-		assert(idx >= 0);
-		if (!this.sleeping)
-			{ component._sleep(); }
-		component.delete();
-		array.splice(idx, 1);
-		return this;
-	};
-
-	Entity.prototype.setRootType = function setRootType (rootType) {
-		if (this._rootType === rootType)
-			{ return; }
-
-		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('entity added to tree', this.makeUpAName()); }
-		
-		Serializable$$1.prototype.setRootType.call(this, rootType);
-		
-		var i;
-		this.components.forEach(function (value, key) {
-			for (i = 0; i < value.length; ++i) {
-				value[i].setRootType(rootType);
-			}
-		});
-	};
-
-	Entity.prototype.toJSON = function toJSON () {
-		assert(this._alive, ALIVE_ERROR);
-
-		var components = [];
-		this.components.forEach(function (compArray) {
-			compArray.forEach(function (comp) {
-				components.push(comp.toJSON());
-			});
-		});
-
-		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
-			c: components, // overwrite children. earlier this was named 'comp'
-			proto: this.prototype.id
-		});
-	};
-
-	return Entity;
-}(Serializable));
-
-Object.defineProperty(Entity.prototype, 'position', {
-	get: function get() {
-		return this.getComponent('Transform').position;
-	},
-	set: function set(position) {
-		this.getComponent('Transform').position = position;
-	}
-});
-
-Serializable.registerSerializable(Entity, 'ent', function (json) {
-	if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('creating entity from json', json); }
-	var entity = new Entity(json.id);
-	entity.prototype = getSerializable(json.proto);
-	if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('created entity from json', entity); }
-	if (json.comp) {
-		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
-	}
-	return entity;
-});
-
-Entity.ENTITY_CREATION_DEBUGGING = false;
-
-var propertyTypes$1 = [
-	createPropertyType('name', 'No name', createPropertyType.string)
-];
-
-var Prototype = (function (PropertyOwner$$1) {
-	function Prototype() {
-		PropertyOwner$$1.apply(this, arguments);
-		
-		this.previouslyCreatedEntity = null;
-	}
-
-	if ( PropertyOwner$$1 ) Prototype.__proto__ = PropertyOwner$$1;
-	Prototype.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
-	Prototype.prototype.constructor = Prototype;
-	
-	Prototype.prototype.makeUpAName = function makeUpAName () {
-		return this.name || 'Prototype';
-	};
-	
-	Prototype.prototype.addChild = function addChild (child) {
-		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
-			{ assert(this.findChild('cda', function (cda) { return cda.componentId === child.componentId; }) === null, ("Can't have multiple " + (child.name) + " components. See Component.allowMultiple")); }
-		PropertyOwner$$1.prototype.addChild.call(this, child);
-	};
-	Prototype.prototype.getParentPrototype = function getParentPrototype () {
-		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
-	};
-	
-	/*
-	filter filters component datas
-	
-	Returns JSON:
-	[
-		{
-			ownComponent: false, // component of a parent prototype
-			componentClass: [object Object],
-			componentId: <componentId>,
-			threeLetterType: 'icd',
-	 		generatedForPrototype: <this>,
-			properties: [
-				{ id missing }
-			]
-		},
-		{
-			 ownComponentData: <ComponentData> || null, // null if this prototype has 0 properties defined
-			 componentClass: [object Object],
-			 componentId: <componentId>,
-			 threeLetterType: 'icd',
-			 generatedForPrototype: <this>,
-			 properties: [
-			 	{ id found if own property } // some properties might be from parent prototypes and thus missing id
-			 ]
-		 }
-	]
-	 */
-	Prototype.prototype.getInheritedComponentDatas = function getInheritedComponentDatas (filter) {
-		if ( filter === void 0 ) filter = null;
-
-		var data = getDataFromPrototype(this, this, filter);
-		var array = Object.keys(data).map(function (key) { return data[key]; });
-		var inheritedComponentData;
-		for (var i = 0; i < array.length; ++i) {
-			inheritedComponentData = array[i];
-			inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(function (propertyType) {
-				return inheritedComponentData.propertyHash[propertyType.name]
-					|| propertyType.createProperty({ skipSerializableRegistering: true });
-			});
-			delete inheritedComponentData.propertyHash;
-		}
-
-		return array.sort(sortInheritedComponentDatas);
-	};
-	
-	Prototype.prototype.createAndAddPropertyForComponentData = function createAndAddPropertyForComponentData (inheritedComponentData, propertyName, propertyValue) {
-		var propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
-		assert(propertyType, 'Invalid propertyName', propertyName, inheritedComponentData);
-		var componentData = this.findChild('cda', function (componentData) { return componentData.componentId === inheritedComponentData.componentId; });
-		var componentDataIsNew = false;
-		if (!componentData) {
-			console.log('no component data. create one', this, inheritedComponentData);
-			componentData = new ComponentData(inheritedComponentData.componentClass.componentName, false, inheritedComponentData.componentId);
-			componentDataIsNew = true;
-		}
-		var property = componentData.findChild('prp', function (property) { return property.name === propertyName; });
-		if (property) {
-			property.value = propertyValue;
-			return property;
-		}
-
-		property = propertyType.createProperty({
-			value: propertyValue,
-		});
-		componentData.addChild(property);
-		
-		if (componentDataIsNew)
-			{ this.addChild(componentData); }
-		
-		return property;
-	};
-	
-	Prototype.prototype.findComponentDataByComponentId = function findComponentDataByComponentId (componentId, alsoFindFromParents) {
-		if ( alsoFindFromParents === void 0 ) alsoFindFromParents = false;
-
-		var child = this.findChild('cda', function (componentData) { return componentData.componentId === componentId; });
-		if (child)
-			{ return child; }
-		if (alsoFindFromParents) {
-			var parent = this.getParentPrototype();
-			if (parent)
-				{ return parent.findComponentDataByComponentId(componentId, alsoFindFromParents); }
-		}
-		return null;
-	};
-	
-	Prototype.prototype.getOwnComponentDataOrInherit = function getOwnComponentDataOrInherit (componentId) {
-		var componentData = this.findComponentDataByComponentId(componentId, false);
-		if (!componentData) {
-			var inheritedComponentData = this.findComponentDataByComponentId(componentId, true);
-			if (!inheritedComponentData)
-				{ return null; }
-			
-			componentData = new ComponentData(inheritedComponentData.name, false, componentId);
-			this.addChild(componentData);
-		}
-		return componentData
-	};
-	
-	Prototype.prototype.findOwnProperty = function findOwnProperty (componentId, propertyName) {
-		var componentData = this.findComponentDataByComponentId(componentId);
-		if (componentData) {
-			return componentData.getProperty(propertyName);
-		}
-		return null;
-	};
-	
-	// Parent is needed so that we can init children knowing who is the parent
-	Prototype.prototype.createEntity = function createEntity (parent, _skipNewEntityEvent) {
-		if ( _skipNewEntityEvent === void 0 ) _skipNewEntityEvent = false;
-
-		var entity = new Entity();
-		
-		var inheritedComponentDatas = this.getInheritedComponentDatas();
-		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
-		entity.addComponents(components, { fullInit: false }); // Only do preInit
-		
-		entity.prototype = this;
-		
-		if (parent)
-			{ parent.addChild(entity); }
-
-		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('create entity', this.makeUpAName()); }
-		
-		this.forEachChild('epr', function (epr) { return epr.createEntity(entity, true); });
-		// let childEntityPrototypes = this.getChildren('epr');
-		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
-		
-		// Components have only been preinited. Lets call the init now.
-		Entity.initComponents(components);
-		
-		this.previouslyCreatedEntity = entity;
-		
-		if (!_skipNewEntityEvent)
-			{ events.dispatch('new entity created', entity); }
-		
-		return entity;
-	};
-	
-	Prototype.prototype.getValue = function getValue (componentId, propertyName) {
-		var componentData = this.findComponentDataByComponentId(componentId, true);
-		if (componentData)
-			{ return componentData.getValue(propertyName); }
-		else
-			{ return undefined; }
-	};
-	
-	Prototype.prototype.countEntityPrototypes = function countEntityPrototypes (findParents) {
-		var this$1 = this;
-		if ( findParents === void 0 ) findParents = false;
-
-		if (this.threeLetterType !== 'prt')
-			{ return 0; }
-		
-		var count = 0;
-		var levels = game.getChildren('lvl');
-		for (var i = levels.length-1; i >= 0; i--) {
-			var entityPrototypes = levels[i].getChildren('epr');
-			for (var j = entityPrototypes.length-1; j >= 0; j--) {
-				if (entityPrototypes[j].prototype === this$1)
-					{ count++; }
-			}
-		}
-		
-		if (findParents)
-			{ this.forEachChild('prt', function (prt) { return count += prt.countEntityPrototypes(true); }); }
-		
-		return count;
-	};
-	
-	Prototype.prototype.delete = function delete$1 () {
-		var this$1 = this;
-
-		this._gameRoot = this._gameRoot || this.getRoot();
-		if (!PropertyOwner$$1.prototype.delete.call(this)) { return false; }
-		if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
-			this._gameRoot.forEachChild('lvl', function (lvl) {
-				var items = lvl.getChildren('epr');
-				for (var i = items.length-1; i >= 0; i--) {
-					if (items[i].prototype === this$1) {
-						lvl.deleteChild(items[i], i);
-					}
-				}
-			});
-		}
-		this.previouslyCreatedEntity = null;
-		return true;
-	};
-
-	return Prototype;
-}(PropertyOwner));
-
-PropertyOwner.defineProperties(Prototype, propertyTypes$1);
-
-Prototype.create = function(name) {
-	return new Prototype().initWithPropertyValues({ name: name });
-};
-
-Serializable.registerSerializable(Prototype, 'prt');
-
-function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
-	if ( _depth === void 0 ) _depth = 0;
-
-	var data;
-
-	var parentPrototype = prototype.getParentPrototype();
-	if (parentPrototype)
-		{ data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1); }
-	else
-		{ data = {}; } // Top level
-	
-	var componentDatas = prototype.getChildren('cda');
-	if (filter)
-		{ componentDatas = componentDatas.filter(filter); }
-	var componentData;
-	for (var i = 0; i < componentDatas.length; ++i) {
-		componentData = componentDatas[i];
-
-		if (!data[componentData.componentId]) {
-			// Most parent version of this componentId
-			data[componentData.componentId] = {
-				// ownComponent = true if the original prototype is the first one introducing this componentId
-				ownComponentData: null, // will be given value if the original prototype has this componentId
-				componentClass: componentData.componentClass,
-				componentId: componentData.componentId,
-				propertyHash: {},
-				threeLetterType: 'icd',
-				generatedForPrototype: originalPrototype,
-			};
-		}
-		
-		if (_depth === 0) {
-			data[componentData.componentId].ownComponentData = componentData;
-		}
-		
-		var propertyHash = data[componentData.componentId].propertyHash;
-		
-		var properties = componentData.getChildren('prp');
-		var property = (void 0);
-		for (var j = 0; j < properties.length; ++j) {
-			property = properties[j];
-			// Newest version of a property always overrides old property
-			propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
-		}
-	}
-
-	return data;
-}
-
-function sortInheritedComponentDatas(a, b) {
-	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
-}
-
 var text = function (str) { return doc.createTextNode(str); };
 
 function mount (parent, child, before) {
@@ -2499,87 +1865,76 @@ function updateSceneBackgroundGradient(scene) {
 	scene.backgroundGradient.height = scene.canvas.height;
 }
 
-var propertyTypes = [
-	createPropertyType('name', 'No name', createPropertyType.string)
-];
+function __extends(d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+}
 
+// @flow
+var propertyTypes = [
+    createPropertyType('name', 'No name', createPropertyType.string)
+];
 var game = null; // only one game at the time
 var isClient$1 = typeof window !== 'undefined';
-
-var Game = (function (PropertyOwner$$1) {
-	function Game(predefinedId) {
-		if (game)
-			{ console.error('Only one game allowed.'); }
-		
-		/*
-		if (isClient) {
-			if (game) {
-				try {
-					game.delete();
-				} catch (e) {
-					console.warn('Deleting old game failed', e);
-				}
-			}
-		}
-		*/
-		
-		PropertyOwner$$1.apply(this, arguments);
-		
-		if (isClient$1) {
-			game = this;
-		}
-
-		setTimeout(function () {
-			gameCreateListeners.forEach(function (listener) { return listener(game); });
-		}, 1);
-	}
-
-	if ( PropertyOwner$$1 ) Game.__proto__ = PropertyOwner$$1;
-	Game.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
-	Game.prototype.constructor = Game;
-	Game.prototype.initWithChildren = function initWithChildren () {
-		PropertyOwner$$1.prototype.initWithChildren.apply(this, arguments);
-		addChange(changeType.addSerializableToTree, this);
-	};
-	Game.prototype.delete = function delete$1 () {
-		addChange(changeType.deleteSerializable, this);
-		if (!PropertyOwner$$1.prototype.delete.call(this)) { return false; }
-		
-		if (game === this)
-			{ game = null; }
-
-		stickyNonModalErrorPopup('Game deleted');
-		
-		return true;
-	};
-
-	return Game;
+var Game = (function (_super) {
+    __extends(Game, _super);
+    function Game(predefinedId) {
+        if (game)
+            { console.error('Only one game allowed.'); }
+        /*
+        if (isClient) {
+            if (game) {
+                try {
+                    game.delete();
+                } catch (e) {
+                    console.warn('Deleting old game failed', e);
+                }
+            }
+        }
+        */
+        _super.apply(this, arguments);
+        if (isClient$1) {
+            game = this;
+        }
+        setTimeout(function () {
+            gameCreateListeners.forEach(function (listener) { return listener(game); });
+        }, 1);
+    }
+    Game.prototype.initWithChildren = function () {
+        _super.prototype.initWithChildren.apply(this, arguments);
+        addChange(changeType.addSerializableToTree, this);
+    };
+    Game.prototype.delete = function () {
+        addChange(changeType.deleteSerializable, this);
+        if (!_super.prototype.delete.call(this))
+            { return false; }
+        if (game === this)
+            { game = null; }
+        stickyNonModalErrorPopup('Game deleted');
+        return true;
+    };
+    return Game;
 }(PropertyOwner));
-
 PropertyOwner.defineProperties(Game, propertyTypes);
-
 Game.prototype.isRoot = true;
-
-
-
 Serializable.registerSerializable(Game, 'gam', function (json) {
-	if (json.c) {
-		json.c.sort(function (a, b) {
-			if (a.id.startsWith('prt') || a.id.startsWith('pfa'))
-				{ return -1; }
-			else
-				{ return 1; }
-		});
-	}
-	return new Game(json.id);
+    if (json.c) {
+        json.c.sort(function (a, b) {
+            if (a.id.startsWith('prt') || a.id.startsWith('pfa'))
+                { return -1; }
+            else
+                { return 1; }
+        });
+    }
+    return new Game(json.id);
 });
-
 var gameCreateListeners = [];
 function listenGameCreation(listener) {
-	gameCreateListeners.push(listener);
-	
-	if (game)
-		{ listener(game); }
+    gameCreateListeners.push(listener);
+    console.log('real ts');
+    if (game)
+        { listener(game); }
 }
 
 var p2;
@@ -3150,6 +2505,151 @@ function listenSceneCreation(listener) {
 		{ listener(); }
 }
 
+var ComponentData = (function (Serializable$$1) {
+	function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
+		if ( predefinedId === void 0 ) predefinedId = false;
+		if ( predefinedComponentId === void 0 ) predefinedComponentId = false;
+
+		Serializable$$1.call(this, predefinedId);
+		this.name = componentClassName;
+		this.componentClass = componentClasses.get(this.name);
+		assert(this.componentClass, 'Component class not defined: ' + componentClassName);
+		if (!this.componentClass.allowMultiple)
+			{ predefinedComponentId = '_' + componentClassName; }
+		this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
+	}
+
+	if ( Serializable$$1 ) ComponentData.__proto__ = Serializable$$1;
+	ComponentData.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	ComponentData.prototype.constructor = ComponentData;
+	ComponentData.prototype.makeUpAName = function makeUpAName () {
+		return this.name;
+	};
+	ComponentData.prototype.addChild = function addChild (child) {
+		if (child.threeLetterType === 'prp') {
+			if (!child.propertyType) {
+				if (!this.componentClass._propertyTypesByName[child.name]) {
+					if (isClient)
+						{ console.log('Property of that name not defined', this.id, child, this); }
+					else
+						{ console.log('Property of that name not defined', this.id, this.name, child.name); }
+					return;
+				}
+				child.setPropertyType(this.componentClass._propertyTypesByName[child.name]);
+			}
+		}
+		Serializable$$1.prototype.addChild.call(this, child);
+		return this;
+	};
+	ComponentData.prototype.clone = function clone (options) {
+		var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+		var obj = new ComponentData(this.name, false, newComponentId);
+		var children = [];
+		this.forEachChild(null, function (child) {
+			children.push(child.clone());
+		});
+		obj.initWithChildren(children);
+		this._state |= Serializable$$1.STATE_CLONE;
+		return obj;
+	};
+	ComponentData.prototype.toJSON = function toJSON () {
+		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
+			cid: this.componentId,
+			n: this.name
+		});
+	};
+	/*
+	Returns a list of Properties.
+	Those which don't have an id are temporary properties generated from parents.
+	Don't set _depth.
+	 */
+	ComponentData.prototype.getInheritedProperties = function getInheritedProperties (_depth) {
+		if ( _depth === void 0 ) _depth = 0;
+
+		var properties = {};
+
+		// properties from parent
+		var parentComponentData = this.getParentComponentData();
+		if (parentComponentData)
+			{ parentComponentData.getInheritedProperties(_depth + 1).forEach(function (prop) { return properties[prop.name] = prop; }); }
+		
+		// properties from this. override properties of parents
+		this.getChildren('prp').forEach(function (prop) {
+			if (_depth === 0)
+				{ properties[prop.name] = prop; }
+			else
+				{ properties[prop.name] = prop.clone(true); }
+		});
+		
+		// fill from propertyType
+		if (_depth === 0) {
+			return this.componentClass._propertyTypes.map(function (propertyType) {
+				return properties[propertyType.name] || propertyType.createProperty({
+					skipSerializableRegistering: true
+				});
+			});
+		} else {
+			return Object.keys(properties).map(function (key) { return properties[key]; });
+		}
+	};
+	ComponentData.prototype.getParentComponentData = function getParentComponentData () {
+		var this$1 = this;
+
+		if (!this._parent) { return null; }
+		var parentPrototype = this._parent.getParentPrototype();
+		while (parentPrototype) {
+			var parentComponentData = parentPrototype.findChild('cda', function (componentData) { return componentData.componentId === this$1.componentId; });
+			if (parentComponentData)
+				{ return parentComponentData; }
+			else
+				{ parentPrototype = parentPrototype.getParentPrototype(); }
+		}
+		return null;
+	};
+	ComponentData.prototype.getPropertyOrCreate = function getPropertyOrCreate (name) {
+		var property = this.findChild('prp', function (prp) { return prp.name === name; });
+		if (!property) {
+			property = this.componentClass._propertyTypesByName[name].createProperty();
+			this.addChild(property);
+		}
+		return property;
+	};
+	ComponentData.prototype.getProperty = function getProperty (name) {
+		return this.findChild('prp', function (prp) { return prp.name === name; });
+	};
+	ComponentData.prototype.setValue = function setValue (propertyName, value) {
+		this.getPropertyOrCreate(propertyName).value = value;
+		return this;
+	};
+	ComponentData.prototype.getValue = function getValue (name) {
+		var property = this.getProperty(name);
+		if (property)
+			{ return property.value; }
+		var parent = this.getParentComponentData();
+		
+		if (parent)
+			{ return parent.getValue(name); }
+		
+		return this.componentClass._propertyTypesByName[name].initialValue;
+	};
+	ComponentData.prototype.createComponent = function createComponent () {
+		var properties = this.getInheritedProperties();
+		var values = {};
+		properties.forEach(function (prop) {
+			values[prop.name] = prop.value;
+		});
+		var component = Component.create(this.name, values);
+		component._componentId = this.componentId;
+		return component;
+	};
+
+	return ComponentData;
+}(Serializable));
+
+Serializable.registerSerializable(ComponentData, 'cda', function (json) {
+	return new ComponentData(json.n, json.id, json.cid);
+});
+
 var componentClasses = new Map();
 var eventListeners = [
 	'onUpdate'
@@ -3366,6 +2866,507 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 	return component;
 });
 
+var ALIVE_ERROR = 'entity is already dead';
+
+var Entity = (function (Serializable$$1) {
+	function Entity(predefinedId) {
+		if ( predefinedId === void 0 ) predefinedId = false;
+
+		Serializable$$1.call(this, predefinedId);
+		this.components = new Map(); // name -> array
+		this.sleeping = false;
+		this.prototype = null; // should be set immediately after constructor
+		this.localMaster = true; // set false if entity is controlled over the net
+
+		eventHappened('Create object');
+	}
+
+	if ( Serializable$$1 ) Entity.__proto__ = Serializable$$1;
+	Entity.prototype = Object.create( Serializable$$1 && Serializable$$1.prototype );
+	Entity.prototype.constructor = Entity;
+
+	Entity.prototype.makeUpAName = function makeUpAName () {
+		if (this.prototype) {
+			return this.prototype.makeUpAName();
+		} else {
+			return 'Entity';
+		}
+	};
+
+	// Get the first component of given name
+	Entity.prototype.getComponent = function getComponent (name) {
+		assert(this._alive, ALIVE_ERROR);
+		var components = this.components.get(name);
+		if (components !== undefined)
+			{ return components[0]; }
+		else
+			{ return null; }
+	};
+
+	// Get all components with given name
+	Entity.prototype.getComponents = function getComponents (name) {
+		assert(this._alive, ALIVE_ERROR);
+		return this.components.get(name) || [];
+	};
+
+	Entity.prototype.getListOfAllComponents = function getListOfAllComponents () {
+		var components = [];
+		this.components.forEach(function (value, key) {
+			components.push.apply(components, value);
+		});
+		return components;
+	};
+
+	Entity.prototype.clone = function clone () {
+		var entity = new Entity();
+		entity.prototype = this.prototype.clone();
+		entity.sleeping = this.sleeping;
+		var components = [];
+		this.components.forEach(function (value, key) {
+			components.push.apply(components, value.map(function (c) { return c.clone(); }));
+		});
+		entity.addComponents(components);
+		return entity;
+	};
+
+	/*
+	Adds multiple components as an array to this Entity.
+	Initializes components after all components are added.
+	*/
+	Entity.prototype.addComponents = function addComponents (components, ref) {
+		var this$1 = this;
+		if ( ref === void 0 ) ref = {};
+		var fullInit = ref.fullInit; if ( fullInit === void 0 ) fullInit = true;
+
+		assert(this._alive, ALIVE_ERROR);
+		assert(Array.isArray(components), 'Parameter is not an array.');
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('add components for', this.makeUpAName()); }
+
+		for (var i = 0; i < components.length; i++) {
+			var component = components[i];
+			var componentList = this$1.components.get(component._name) || this$1.components.set(component._name, []).get(component._name);
+			componentList.push(component);
+			component.entity = this$1;
+			component._parent = this$1;
+			component.setRootType(this$1._rootType);
+		}
+
+		if (!this.sleeping) {
+			Entity.preInitComponents(components);
+			if (fullInit)
+				{ Entity.initComponents(components); }
+		}
+		return this;
+	};
+
+	Entity.preInitComponents = function preInitComponents (components) {
+		if (Entity.ENTITY_CREATION_DEBUGGING)  { console.log('preInit components for', components[0].entity.makeUpAName()); }
+		for (var i = 0; i < components.length; i++)
+			{ components[i]._preInit(); }
+	};
+	
+	Entity.initComponents = function initComponents (components) {
+		if (Entity.ENTITY_CREATION_DEBUGGING)  { console.log(("init " + (components.length) + " components for"), components[0].entity.makeUpAName()); }
+		for (var i = 0; i < components.length; i++)
+			{ components[i]._init(); }
+	};
+
+	Entity.makeComponentsSleep = function makeComponentsSleep (components) {
+		for (var i = 0; i < components.length; i++)
+			{ components[i]._sleep(); }
+	};
+
+	Entity.deleteComponents = function deleteComponents (components) {
+		for (var i = 0; i < components.length; i++)
+			{ components[i].delete(); }
+	};
+
+	Entity.prototype.sleep = function sleep () {
+		assert(this._alive, ALIVE_ERROR);
+		if (this.sleeping) { return false; }
+
+		this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
+
+		this.sleeping = true;
+		return true;
+	};
+
+	Entity.prototype.wakeUp = function wakeUp () {
+		assert(this._alive, ALIVE_ERROR);
+		if (!this.sleeping) { return false; }
+		
+		this.components.forEach(function (value, key) { return Entity.preInitComponents(value); });
+		this.components.forEach(function (value, key) { return Entity.initComponents(value); });
+
+		this.sleeping = false;
+		return true;
+	};
+
+	Entity.prototype.delete = function delete$1 () {
+		assert(this._alive, ALIVE_ERROR);
+		this.sleep();
+		if (!Serializable$$1.prototype.delete.call(this)) { return false; }
+
+		this.components.forEach(function (value, key) { return Entity.deleteComponents(value); });
+		this.components.clear();
+
+		eventHappened('Destroy object');
+
+		return true;
+	};
+
+	Entity.prototype.deleteComponent = function deleteComponent (component) {
+		var array = this.getComponents(component.constructor.componentName);
+		var idx = array.indexOf(component);
+		assert(idx >= 0);
+		if (!this.sleeping)
+			{ component._sleep(); }
+		component.delete();
+		array.splice(idx, 1);
+		return this;
+	};
+
+	Entity.prototype.setRootType = function setRootType (rootType) {
+		if (this._rootType === rootType)
+			{ return; }
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('entity added to tree', this.makeUpAName()); }
+		
+		Serializable$$1.prototype.setRootType.call(this, rootType);
+		
+		var i;
+		this.components.forEach(function (value, key) {
+			for (i = 0; i < value.length; ++i) {
+				value[i].setRootType(rootType);
+			}
+		});
+	};
+
+	Entity.prototype.toJSON = function toJSON () {
+		assert(this._alive, ALIVE_ERROR);
+
+		var components = [];
+		this.components.forEach(function (compArray) {
+			compArray.forEach(function (comp) {
+				components.push(comp.toJSON());
+			});
+		});
+
+		return Object.assign(Serializable$$1.prototype.toJSON.call(this), {
+			c: components, // overwrite children. earlier this was named 'comp'
+			proto: this.prototype.id
+		});
+	};
+
+	return Entity;
+}(Serializable));
+
+Object.defineProperty(Entity.prototype, 'position', {
+	get: function get() {
+		return this.getComponent('Transform').position;
+	},
+	set: function set(position) {
+		this.getComponent('Transform').position = position;
+	}
+});
+
+Serializable.registerSerializable(Entity, 'ent', function (json) {
+	if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('creating entity from json', json); }
+	var entity = new Entity(json.id);
+	entity.prototype = getSerializable(json.proto);
+	if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('created entity from json', entity); }
+	if (json.comp) {
+		entity.addComponents((json.c || json.comp).map(Serializable.fromJSON));
+	}
+	return entity;
+});
+
+Entity.ENTITY_CREATION_DEBUGGING = false;
+
+var propertyTypes$1 = [
+	createPropertyType('name', 'No name', createPropertyType.string)
+];
+
+var Prototype = (function (PropertyOwner$$1) {
+	function Prototype() {
+		PropertyOwner$$1.apply(this, arguments);
+		
+		this.previouslyCreatedEntity = null;
+	}
+
+	if ( PropertyOwner$$1 ) Prototype.__proto__ = PropertyOwner$$1;
+	Prototype.prototype = Object.create( PropertyOwner$$1 && PropertyOwner$$1.prototype );
+	Prototype.prototype.constructor = Prototype;
+	
+	Prototype.prototype.makeUpAName = function makeUpAName () {
+		return this.name || 'Prototype';
+	};
+	
+	Prototype.prototype.addChild = function addChild (child) {
+		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
+			{ assert(this.findChild('cda', function (cda) { return cda.componentId === child.componentId; }) === null, ("Can't have multiple " + (child.name) + " components. See Component.allowMultiple")); }
+		PropertyOwner$$1.prototype.addChild.call(this, child);
+	};
+	Prototype.prototype.getParentPrototype = function getParentPrototype () {
+		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
+	};
+	
+	/*
+	filter filters component datas
+	
+	Returns JSON:
+	[
+		{
+			ownComponent: false, // component of a parent prototype
+			componentClass: [object Object],
+			componentId: <componentId>,
+			threeLetterType: 'icd',
+	 		generatedForPrototype: <this>,
+			properties: [
+				{ id missing }
+			]
+		},
+		{
+			 ownComponentData: <ComponentData> || null, // null if this prototype has 0 properties defined
+			 componentClass: [object Object],
+			 componentId: <componentId>,
+			 threeLetterType: 'icd',
+			 generatedForPrototype: <this>,
+			 properties: [
+			 	{ id found if own property } // some properties might be from parent prototypes and thus missing id
+			 ]
+		 }
+	]
+	 */
+	Prototype.prototype.getInheritedComponentDatas = function getInheritedComponentDatas (filter) {
+		if ( filter === void 0 ) filter = null;
+
+		var data = getDataFromPrototype(this, this, filter);
+		var array = Object.keys(data).map(function (key) { return data[key]; });
+		var inheritedComponentData;
+		for (var i = 0; i < array.length; ++i) {
+			inheritedComponentData = array[i];
+			inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(function (propertyType) {
+				return inheritedComponentData.propertyHash[propertyType.name]
+					|| propertyType.createProperty({ skipSerializableRegistering: true });
+			});
+			delete inheritedComponentData.propertyHash;
+		}
+
+		return array.sort(sortInheritedComponentDatas);
+	};
+	
+	Prototype.prototype.createAndAddPropertyForComponentData = function createAndAddPropertyForComponentData (inheritedComponentData, propertyName, propertyValue) {
+		var propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
+		assert(propertyType, 'Invalid propertyName', propertyName, inheritedComponentData);
+		var componentData = this.findChild('cda', function (componentData) { return componentData.componentId === inheritedComponentData.componentId; });
+		var componentDataIsNew = false;
+		if (!componentData) {
+			console.log('no component data. create one', this, inheritedComponentData);
+			componentData = new ComponentData(inheritedComponentData.componentClass.componentName, false, inheritedComponentData.componentId);
+			componentDataIsNew = true;
+		}
+		var property = componentData.findChild('prp', function (property) { return property.name === propertyName; });
+		if (property) {
+			property.value = propertyValue;
+			return property;
+		}
+
+		property = propertyType.createProperty({
+			value: propertyValue,
+		});
+		componentData.addChild(property);
+		
+		if (componentDataIsNew)
+			{ this.addChild(componentData); }
+		
+		return property;
+	};
+	
+	Prototype.prototype.findComponentDataByComponentId = function findComponentDataByComponentId (componentId, alsoFindFromParents) {
+		if ( alsoFindFromParents === void 0 ) alsoFindFromParents = false;
+
+		var child = this.findChild('cda', function (componentData) { return componentData.componentId === componentId; });
+		if (child)
+			{ return child; }
+		if (alsoFindFromParents) {
+			var parent = this.getParentPrototype();
+			if (parent)
+				{ return parent.findComponentDataByComponentId(componentId, alsoFindFromParents); }
+		}
+		return null;
+	};
+	
+	Prototype.prototype.getOwnComponentDataOrInherit = function getOwnComponentDataOrInherit (componentId) {
+		var componentData = this.findComponentDataByComponentId(componentId, false);
+		if (!componentData) {
+			var inheritedComponentData = this.findComponentDataByComponentId(componentId, true);
+			if (!inheritedComponentData)
+				{ return null; }
+			
+			componentData = new ComponentData(inheritedComponentData.name, false, componentId);
+			this.addChild(componentData);
+		}
+		return componentData
+	};
+	
+	Prototype.prototype.findOwnProperty = function findOwnProperty (componentId, propertyName) {
+		var componentData = this.findComponentDataByComponentId(componentId);
+		if (componentData) {
+			return componentData.getProperty(propertyName);
+		}
+		return null;
+	};
+	
+	// Parent is needed so that we can init children knowing who is the parent
+	Prototype.prototype.createEntity = function createEntity (parent, _skipNewEntityEvent) {
+		if ( _skipNewEntityEvent === void 0 ) _skipNewEntityEvent = false;
+
+		var entity = new Entity();
+		
+		var inheritedComponentDatas = this.getInheritedComponentDatas();
+		var components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
+		entity.addComponents(components, { fullInit: false }); // Only do preInit
+		
+		entity.prototype = this;
+		
+		if (parent)
+			{ parent.addChild(entity); }
+
+		if (Entity.ENTITY_CREATION_DEBUGGING) { console.log('create entity', this.makeUpAName()); }
+		
+		this.forEachChild('epr', function (epr) { return epr.createEntity(entity, true); });
+		// let childEntityPrototypes = this.getChildren('epr');
+		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
+		
+		// Components have only been preinited. Lets call the init now.
+		Entity.initComponents(components);
+		
+		this.previouslyCreatedEntity = entity;
+		
+		if (!_skipNewEntityEvent)
+			{ events.dispatch('new entity created', entity); }
+		
+		return entity;
+	};
+	
+	Prototype.prototype.getValue = function getValue (componentId, propertyName) {
+		var componentData = this.findComponentDataByComponentId(componentId, true);
+		if (componentData)
+			{ return componentData.getValue(propertyName); }
+		else
+			{ return undefined; }
+	};
+	
+	Prototype.prototype.countEntityPrototypes = function countEntityPrototypes (findParents) {
+		var this$1 = this;
+		if ( findParents === void 0 ) findParents = false;
+
+		if (this.threeLetterType !== 'prt')
+			{ return 0; }
+		
+		var count = 0;
+		var levels = game.getChildren('lvl');
+		for (var i = levels.length-1; i >= 0; i--) {
+			var entityPrototypes = levels[i].getChildren('epr');
+			for (var j = entityPrototypes.length-1; j >= 0; j--) {
+				if (entityPrototypes[j].prototype === this$1)
+					{ count++; }
+			}
+		}
+		
+		if (findParents)
+			{ this.forEachChild('prt', function (prt) { return count += prt.countEntityPrototypes(true); }); }
+		
+		return count;
+	};
+	
+	Prototype.prototype.delete = function delete$1 () {
+		var this$1 = this;
+
+		this._gameRoot = this._gameRoot || this.getRoot();
+		if (!PropertyOwner$$1.prototype.delete.call(this)) { return false; }
+		if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
+			this._gameRoot.forEachChild('lvl', function (lvl) {
+				var items = lvl.getChildren('epr');
+				for (var i = items.length-1; i >= 0; i--) {
+					if (items[i].prototype === this$1) {
+						lvl.deleteChild(items[i], i);
+					}
+				}
+			});
+		}
+		this.previouslyCreatedEntity = null;
+		return true;
+	};
+
+	return Prototype;
+}(PropertyOwner));
+
+PropertyOwner.defineProperties(Prototype, propertyTypes$1);
+
+Prototype.create = function(name) {
+	return new Prototype().initWithPropertyValues({ name: name });
+};
+
+Serializable.registerSerializable(Prototype, 'prt');
+
+function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
+	if ( _depth === void 0 ) _depth = 0;
+
+	var data;
+
+	var parentPrototype = prototype.getParentPrototype();
+	if (parentPrototype)
+		{ data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1); }
+	else
+		{ data = {}; } // Top level
+	
+	var componentDatas = prototype.getChildren('cda');
+	if (filter)
+		{ componentDatas = componentDatas.filter(filter); }
+	var componentData;
+	for (var i = 0; i < componentDatas.length; ++i) {
+		componentData = componentDatas[i];
+
+		if (!data[componentData.componentId]) {
+			// Most parent version of this componentId
+			data[componentData.componentId] = {
+				// ownComponent = true if the original prototype is the first one introducing this componentId
+				ownComponentData: null, // will be given value if the original prototype has this componentId
+				componentClass: componentData.componentClass,
+				componentId: componentData.componentId,
+				propertyHash: {},
+				threeLetterType: 'icd',
+				generatedForPrototype: originalPrototype,
+			};
+		}
+		
+		if (_depth === 0) {
+			data[componentData.componentId].ownComponentData = componentData;
+		}
+		
+		var propertyHash = data[componentData.componentId].propertyHash;
+		
+		var properties = componentData.getChildren('prp');
+		var property = (void 0);
+		for (var j = 0; j < properties.length; ++j) {
+			property = properties[j];
+			// Newest version of a property always overrides old property
+			propertyHash[property.name] = _depth === 0 ? property : property.clone(true);
+		}
+	}
+
+	return data;
+}
+
+function sortInheritedComponentDatas(a, b) {
+	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
+}
+
+// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
+// Entities are created based on EntityPrototypes
 var EntityPrototype = (function (Prototype$$1) {
 	function EntityPrototype(predefinedId) {
 		if ( predefinedId === void 0 ) predefinedId = false;
@@ -3388,7 +3389,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		else
 			{ return 'EntityPrototype'; }
 	};
-	
+
 	EntityPrototype.prototype.getTransform = function getTransform () {
 		return this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	};
@@ -3438,7 +3439,7 @@ var EntityPrototype = (function (Prototype$$1) {
 					});
 					transform.addChild(angle);
 				}
-				
+
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
 				children.push(child.clone({ cloneComponentId: true }));
@@ -3461,14 +3462,14 @@ var EntityPrototype = (function (Prototype$$1) {
 		*/
 
 		// Below optimization reduces size 88%. child id's have to be generated based on this.id
-		
+
 		var Transform = this.getTransform();
 		var json = {
 			id: this.id
 		};
 		if (this.prototype)
 			{ json.t = this.prototype.id; } // might be prototype or prefab or may not exist. .t as in type
-		
+
 		var childArrays = [];
 		this._children.forEach(function (child) {
 			childArrays.push(child);
@@ -3478,7 +3479,7 @@ var EntityPrototype = (function (Prototype$$1) {
 		});
 		if (children.length > 0)
 			{ json.c = children.map(function (child) { return child.toJSON(); }); }
-		
+
 		var floatToJSON = createPropertyType.float().toJSON;
 		var handleProperty = function (prp) {
 			if (prp.name === 'name') {
@@ -3504,12 +3505,20 @@ var EntityPrototype = (function (Prototype$$1) {
 	EntityPrototype.prototype.spawnEntityToScene = function spawnEntityToScene (scene, position) {
 		if (!scene)
 			{ return; }
-		
+
 		if (position) {
 			this.getTransform().getPropertyOrCreate('position').value = position;
 		}
-		
+
 		this.createEntity(scene);
+	};
+
+	// Optimize this away
+	EntityPrototype.prototype.setRootType = function setRootType (rootType) {
+		if (this._rootType === rootType)
+			{ return; }
+		assert(this.getTransform(), 'EntityPrototype must have a Transform');
+		Prototype$$1.prototype.setRootType.call(this, rootType);
 	};
 
 	return EntityPrototype;
@@ -3525,71 +3534,105 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 });
 
 // If Transform or Transform.position is missing, they are added.
-EntityPrototype.createFromPrototype = function(prototype) {
+EntityPrototype.createFromPrototype = function (prototype) {
 	var entityPrototype = new EntityPrototype();
 	entityPrototype.prototype = prototype;
 	var id = entityPrototype.id;
 
-	var prototypeHasATransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
+	var prototypeTransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
 	var fromPrefab = prototype.threeLetterType === 'pfa';
-	
-	if (!fromPrefab && prototypeHasATransform)
+
+	if (!fromPrefab && prototypeTransform)
 		{ assert(false, 'Prototype (prt) can not have a Transform component'); }
-	
-	var transform = new ComponentData('Transform', id + '_t');
-	
-	var position = transform.componentClass._propertyTypesByName.position.createProperty({
-		value: new Vector(0, 0),
-		predefinedId: id + '_p'
-	});
-	transform.addChild(position);
-	
-	// if (!fromPrefab) {
-		var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
-			value: new Vector(1, 1),
-			predefinedId: id + '_s'
-		});
-		transform.addChild(scale);
 
-		var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
-			value: 0,
-			predefinedId: id + '_a'
-		});
-		transform.addChild(angle);
-	// }
+	if (fromPrefab && !prototypeTransform)
+		{ assert(false, 'Prefab (pfa) must have a Transform component'); }
 
-	var name = EntityPrototype._propertyTypesByName.name.createProperty({
-		value: '',
-		predefinedId: id + '_n'
-	});
-	
+	var name = createEntityPrototypeNameProperty(id);
+	var transform = createEntityPrototypeTransform(id);
+
+	if (fromPrefab && prototypeTransform) {
+		// No point to copy the position
+		// transform.setValue('position', prototypeTransform.getValue('position'));
+		transform.setValue('scale', prototypeTransform.getValue('scale'));
+		transform.setValue('angle', prototypeTransform.getValue('angle'));
+	}
+
 	entityPrototype.initWithChildren([name, transform]);
 
+
+	return entityPrototype;
+};
+
+function createEntityPrototypeNameProperty(entityPrototypeId, name) {
+	if ( name === void 0 ) name = '';
+
+	return EntityPrototype._propertyTypesByName.name.createProperty({
+		value: name,
+		predefinedId: entityPrototypeId + '_n'
+	});
+}
+
+function createEntityPrototypeTransform(entityPrototypeId) {
+	var transform = new ComponentData('Transform', entityPrototypeId + '_t');
+
+	var position = transform.componentClass._propertyTypesByName.position.createProperty({
+		value: new Vector(0, 0),
+		predefinedId: entityPrototypeId + '_p'
+	});
+	transform.addChild(position);
+
+	var scale = transform.componentClass._propertyTypesByName.scale.createProperty({
+		value: new Vector(1, 1),
+		predefinedId: entityPrototypeId + '_s'
+	});
+	transform.addChild(scale);
+
+	var angle = transform.componentClass._propertyTypesByName.angle.createProperty({
+		value: 0,
+		predefinedId: entityPrototypeId + '_a'
+	});
+	transform.addChild(angle);
+
+	return transform;
+}
+
+EntityPrototype.create = function (name, position) {
+	if ( name === void 0 ) name = 'Empty';
+	if ( position === void 0 ) position = new Vector(0, 0);
+
+	var entityPrototype = new EntityPrototype();
+	var transform = createEntityPrototypeTransform(entityPrototype.id);
+	transform.setValue('position', position);
+
+	var nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
+
+	entityPrototype.initWithChildren([nameProperty, transform]);
 	return entityPrototype;
 };
 
 Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	var entityPrototype = new EntityPrototype(json.id);
 	entityPrototype.prototype = json.t ? getSerializable$1(json.t) : null;
-	
+
 	// assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
 	if (json.t && !entityPrototype.prototype)
 		{ console.warn(("EntityPrototype thougt it had a prototype or prefab " + (json.t) + " but it was not found.")); }
-	
+
 	var nameId = json.id + '_n';
 	var transformId = json.id + '_t';
 	var positionId = json.id + '_p';
 	var scaleId = json.id + '_s';
 	var angleId = json.id + '_a';
-	
-	var name = Prototype._propertyTypesByName.name.createProperty({ 
+
+	var name = Prototype._propertyTypesByName.name.createProperty({
 		value: json.n === undefined ? '' : json.n,
-		predefinedId: nameId 
+		predefinedId: nameId
 	});
-	
+
 	var transformData = new ComponentData('Transform', transformId);
 	var transformClass = componentClasses.get('Transform');
-	
+
 	var position = transformClass._propertyTypesByName.position.createProperty({
 		value: Vector.fromObject(json.p), // in the future, everything will be using p instead of x and y.
 		predefinedId: positionId
@@ -3609,9 +3652,87 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	transformData.addChild(angle);
 
 	entityPrototype.initWithChildren([name, transformData]);
-	
+
 	return entityPrototype;
 });
+
+// Prefab is an EntityPrototype that has been saved to a prefab.
+var Prefab = (function (Prototype$$1) {
+	function Prefab(predefinedId) {
+		if ( predefinedId === void 0 ) predefinedId = false;
+
+		Prototype$$1.apply(this, arguments);
+	}
+
+	if ( Prototype$$1 ) Prefab.__proto__ = Prototype$$1;
+	Prefab.prototype = Object.create( Prototype$$1 && Prototype$$1.prototype );
+	Prefab.prototype.constructor = Prefab;
+
+	Prefab.prototype.makeUpAName = function makeUpAName () {
+		var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
+		return nameProperty && nameProperty.value || 'Prefab';
+	};
+
+	Prefab.prototype.createEntity = function createEntity () {
+		return EntityPrototype.createFromPrototype(this).createEntity();
+	};
+
+	Prefab.prototype.getParentPrototype = function getParentPrototype () {
+		return null;
+	};
+
+	return Prefab;
+}(Prototype));
+
+/*
+filter filters component datas
+
+Returns JSON:
+[
+	{
+		ownComponent: false, // component of a parent prototype
+		componentClass: [object Object],
+		componentId: <componentId>,
+		threeLetterType: 'icd',
+		 generatedForPrototype: <this>,
+		properties: [
+			{ id missing }
+		]
+	},
+	{
+		 ownComponentData: <ComponentData> || null, // null if this prototype has 0 properties defined
+		 componentClass: [object Object],
+		 componentId: <componentId>,
+		 threeLetterType: 'icd',
+		 generatedForPrototype: <this>,
+		 properties: [
+			 { id found if own property } // some properties might be from parent prototypes and thus missing id
+		 ]
+	 }
+]
+ */
+
+
+
+
+// Meant for entityPrototypes, but works theoretically for prototypes
+Prefab.createFromPrototype = function(prototype) {
+	var inheritedComponentDatas = prototype.getInheritedComponentDatas();
+	var children = inheritedComponentDatas.map(function (icd) {
+		return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+			.initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
+	});
+	
+	children.push(prototype._properties.name.clone());
+	
+	var prefab = new Prefab().initWithChildren(children);
+	
+	// Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
+	prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
+	return prefab;
+};
+
+Serializable.registerSerializable(Prefab, 'pfa');
 
 var propertyTypes$2 = [
 	createPropertyType('name', 'No name', createPropertyType.string)
@@ -4330,6 +4451,7 @@ Component.register({
 	}
 });
 
+// Export so that other components can have this component as parent
 Component.register({
 	name: 'Lifetime',
 	description: 'Set the object to be destroyed after a time period',
@@ -5341,6 +5463,8 @@ function positionControls() {
 		}
 	});
 
+	debugger;
+
 	controls.touchUp.setVisible(topDownFound);
 	controls.touchLeft.setVisible(playerFound);
 	controls.touchRight.setVisible(playerFound);
@@ -5445,7 +5569,6 @@ listenGameCreation(function (game$$1) {
 		play();
 	});
 });
-
 
 listenKeyDown(function (keyValue) {
 	if (keyValue === key.space && scene)

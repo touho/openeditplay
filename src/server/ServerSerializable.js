@@ -18,7 +18,7 @@ class ServerSerializable {
 		if (this.type === 'epr') {
 			console.log('jsonnnn', json);
 		}
-		
+
 		// console.log('reger', this.name);
 		if (this.id[this.id.length - 2] === '_') {
 			console.log('SS', this.id, json);

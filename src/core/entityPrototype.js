@@ -143,14 +143,14 @@ export default class EntityPrototype extends Prototype {
 
 		this.createEntity(scene);
 	}
-	// @ifndef OPTIMIZE
+
+	// Optimize this away
 	setRootType(rootType) {
 		if (this._rootType === rootType)
 			return;
 		assert(this.getTransform(), 'EntityPrototype must have a Transform');
 		super.setRootType(rootType);
 	}
-	// @endif
 }
 Object.defineProperty(EntityPrototype.prototype, 'position', {
 	get() {

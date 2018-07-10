@@ -6,6 +6,7 @@ const rollupWatch = require('rollup-watch');
 const rollupBuble = require('rollup-plugin-buble');
 const rollupNodeResolve = require('rollup-plugin-node-resolve');
 const rollupUglify = require('rollup-plugin-uglify');
+const rollupTypeScript = require('rollup-plugin-typescript');
 const glob = require('glob');
 const kexec = require('kexec');
 const postcss = require('postcss');
@@ -217,7 +218,9 @@ function autobuildJs(entry, destination, options) {
 		optimize: false
 	}, options);
 
-	let plugins = [];
+	let plugins = [rollupTypeScript({
+		module: 'es6'
+	})];
 
 	plugins.push(rollupNodeResolve({
 		jsnext: true
