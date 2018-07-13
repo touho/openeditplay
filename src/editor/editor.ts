@@ -19,7 +19,7 @@ import './module/performance';
 import './module/perSecond';
 
 import {el, list, mount} from 'redom';
-import {game} from '../core/game';
+import {default as Game, game} from '../core/game';
 import Serializable from '../core/serializable';
 import {
 	addChangeListener,
@@ -89,6 +89,9 @@ addChangeListener(change => {
 export let editor = null;
 
 class Editor {
+	layout: Layout;
+	game: Game;
+	selection: {type: string, items: Array<any>, dirty: boolean};
 	constructor(game) {
 		assert(game);
 
@@ -116,7 +119,7 @@ class Editor {
 		events.dispatch('setLevel', this.selectedLevel);
 	}
 
-	select(items, origin) {
+	select(items: Array<Serializable>, origin) {
 		if (!items)
 			items = [];
 		else if (!Array.isArray(items))

@@ -4,6 +4,12 @@ import events from '../../util/events';
 let moduleIdToModule = {};
 
 export default class Module {
+	id: string;
+	type: string;
+	name: string;
+	_selected: boolean;
+	_enabled: boolean;
+
 	constructor() {
 		this.type = 'module';
 		this.name = this.name || 'Module';
@@ -14,7 +20,7 @@ export default class Module {
 			this.el = el('div.module');
 		this._selected = true;
 		this._enabled = true;
-		
+
 		// Timeout so that module constructor has time to set this.id after calling super.
 		setTimeout(() => {
 			moduleIdToModule[this.id] = this;
@@ -36,7 +42,7 @@ export default class Module {
 		this._selected = false;
 	}
 }
-//arguments: moduleName, unpackModuleView=true, ...args 
+//arguments: moduleName, unpackModuleView=true, ...args
 Module.activateModule = function(moduleId, unpackModuleView=true, ...args) {
 	moduleIdToModule[moduleId].moduleContainer.activateModule(moduleIdToModule[moduleId], unpackModuleView, ...args);
 };

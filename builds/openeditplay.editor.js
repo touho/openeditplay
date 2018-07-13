@@ -1,15 +1,3 @@
-(function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (factory());
-}(this, (function () { 'use strict';
-
-function __extends(d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-}
-
 var isClient = typeof window !== 'undefined';
 var isServer = typeof module !== 'undefined';
 if (isClient && isServer)
@@ -53,6 +41,15 @@ var events = {
             var listener = listeners$1[event];
             for (var i = 0; i < listener.length; ++i) {
                 listener[i].apply(null, args);
+                /*
+                try {
+                    listeners[event][i].apply(null, args);
+                } catch (e) {
+                    if (console && console.sendError) {
+                        console.sendError(e);
+                    }
+                }
+                */
             }
         }
     },
@@ -195,9 +192,9 @@ Serializable lifecycle:
 fromJSON()
 
  */
-var Serializable = (function () {
+var Serializable = /** @class */ (function () {
     function Serializable(predefinedId, skipSerializableRegistering) {
-        if (predefinedId === void 0) { predefinedId = false; }
+        if (predefinedId === void 0) { predefinedId = ''; }
         if (skipSerializableRegistering === void 0) { skipSerializableRegistering = false; }
         // @ifndef OPTIMIZE
         assert$1(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
@@ -282,7 +279,7 @@ var Serializable = (function () {
         array.push(child);
         child._parent = this;
         child._state |= Serializable.STATE_ADDPARENT;
-        if (child._rootType !== this._rootType)
+        if (child._rootType !== this._rootType) // tiny optimization
             { child.setRootType(this._rootType); }
         return this;
     };
@@ -391,10 +388,9 @@ var Serializable = (function () {
             // prototypes must come before a level
             Array.from(this._children.keys()).sort(function (a, b) { return a === 'prt' ? -1 : 1; })
                 .forEach(function (key) { return arrays_1.push(_this._children.get(key)); });
-            json.c = (_a = []).concat.apply(_a, arrays_1).map(function (child) { return child.toJSON(); });
+            json.c = [].concat.apply([], arrays_1).map(function (child) { return child.toJSON(); });
         }
         return json;
-        var _a;
     };
     Serializable.prototype.toString = function () {
         return JSON.stringify(this.toJSON(), null, 4);
@@ -439,10 +435,12 @@ var Serializable = (function () {
             try {
                 // @endif
                 listeners[i](a, b, c);
+                // @ifndef OPTIMIZE
             }
             catch (e) {
                 console.error("Event " + event + " listener crashed.", this$1._listeners[event][i], e);
             }
+            // @endif
         }
     };
     Serializable.prototype.hasDescendant = function (child) {
@@ -509,18 +507,18 @@ var Serializable = (function () {
             { fromJSON = function (json) { return new Class(json.id); }; }
         serializableClasses.set(threeLetterType, fromJSON);
     };
+    Serializable.STATE_INIT = 2;
+    Serializable.STATE_ADDCHILD = 4;
+    Serializable.STATE_ADDPARENT = 8;
+    Serializable.STATE_CLONE = 16;
+    Serializable.STATE_DESTROY = 32;
+    Serializable.STATE_FROMJSON = 64;
     return Serializable;
 }());
 Serializable.prototype._parent = null;
 Serializable.prototype._alive = true;
 Serializable.prototype._state = 0;
 Serializable.prototype._rootType = null;
-Serializable.STATE_INIT = 2;
-Serializable.STATE_ADDCHILD = 4;
-Serializable.STATE_ADDPARENT = 8;
-Serializable.STATE_CLONE = 16;
-Serializable.STATE_DESTROY = 32;
-Serializable.STATE_FROMJSON = 64;
 Serializable.prototype.isRoot = false; // If this should be a root node
 Object.defineProperty(Serializable.prototype, 'debug', {
     get: function () {
@@ -531,7 +529,7 @@ Object.defineProperty(Serializable.prototype, 'debug', {
         this._children.forEach(function (value, key) {
             info += '|';
             if (key === 'prp')
-                { info += _this.getChildren('prp').map(function (p) { return (p.name + "=" + p._value); }).join(', '); }
+                { info += _this.getChildren('prp').map(function (p) { return p.name + "=" + p._value; }).join(', '); }
             else
                 { info += key + "(" + value.length + ")"; }
         });
@@ -648,7 +646,7 @@ var changeType = {
     setPropertyValue: 's',
     deleteSerializable: 'd',
     move: 'm',
-    deleteAllChildren: 'c'
+    deleteAllChildren: 'c',
 };
 var keyToShortKey = {
     id: 'i',
@@ -830,6 +828,7 @@ function executeChange(change) {
         { newScene.play(); }
 }
 
+// @ifndef OPTIMIZE
 // @endif
 function assert$1(condition, message) {
     // @ifndef OPTIMIZE
@@ -840,6 +839,32 @@ function assert$1(condition, message) {
             { throw new Error(message); }
     }
     // @endif
+}
+
+/*! *****************************************************************************
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+/* global Reflect, Promise */
+
+var extendStatics = Object.setPrototypeOf ||
+    ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+    function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+
+function __extends(d, b) {
+    extendStatics(d, b);
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 }
 
 var changesEnabled = true;
@@ -857,22 +882,24 @@ function enableAllChanges() {
     changesEnabled = true;
 }
 // Object of a property
-var Property = (function (_super) {
+var Property = /** @class */ (function (_super) {
     __extends(Property, _super);
     // set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
     // if you give propertyType, value in real value form
     // if you don't give propertyType (give it later), value as JSON form
     function Property(_a) {
         var value = _a.value, predefinedId = _a.predefinedId, name = _a.name, propertyType = _a.propertyType, _b = _a.skipSerializableRegistering, skipSerializableRegistering = _b === void 0 ? false : _b;
+        var _this = this;
         assert$1(name, 'Property without a name can not exist');
-        _super.call(this, predefinedId, skipSerializableRegistering);
-        this._initialValue = value;
+        _this = _super.call(this, predefinedId, skipSerializableRegistering) || this;
+        _this._initialValue = value;
         if (propertyType)
-            { this.setPropertyType(propertyType); }
+            { _this.setPropertyType(propertyType); }
         else {
-            this.name = name;
-            this._initialValueIsJSON = true;
+            _this.name = name;
+            _this._initialValueIsJSON = true;
         }
+        return _this;
     }
     Property.prototype.makeUpAName = function () {
         return this.name;
@@ -918,7 +945,7 @@ Object.defineProperty(Property.prototype, 'value', {
     set: function (newValue) {
         this._value = this.propertyType.validator.validate(newValue);
         this.dispatch('change', this._value);
-        if (changesEnabled && this._rootType) {
+        if (changesEnabled && this._rootType) { // not scene or empty
             if (scenePropertyFilter === null
                 || this._rootType !== 'sce'
                 || scenePropertyFilter(this)) {
@@ -944,10 +971,10 @@ Object.defineProperty(Property.prototype, 'debug', {
 });
 
 // info about type, validator, validatorParameters, initialValue
-var PropertyType = (function () {
+var PropertyType = /** @class */ (function () {
     function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
-        var _this = this;
         if (flags === void 0) { flags = []; }
+        var _this = this;
         assert$1(typeof name === 'string');
         assert$1(name[0] >= 'a' && name[0] <= 'z', 'Name of a property must start with lower case letter.');
         assert$1(type && typeof type.name === 'string');
@@ -1030,7 +1057,9 @@ function createFlag(type, func) {
 }
 createPropertyType.flagDegreesInEditor = createFlag('degreesInEditor');
 function createDataType(_a) {
-    var _b = _a.name, name = _b === void 0 ? '' : _b, _c = _a.validators, validators = _c === void 0 ? { default: function (x) { return x; } } : _c, _d = _a.toJSON, toJSON = _d === void 0 ? function (x) { return x; } : _d, _e = _a.fromJSON, fromJSON = _e === void 0 ? function (x) { return x; } : _e, _f = _a.clone, clone = _f === void 0 ? function (x) { return x; } : _f;
+    var _b = _a.name, name = _b === void 0 ? '' : _b, _c = _a.validators, validators = _c === void 0 ? { default: function (x) { return x; } } : _c, // default must exist. if value is a reference(object), validator should copy the value.
+    _d = _a.toJSON, // default must exist. if value is a reference(object), validator should copy the value.
+    toJSON = _d === void 0 ? function (x) { return x; } : _d, _e = _a.fromJSON, fromJSON = _e === void 0 ? function (x) { return x; } : _e, _f = _a.clone, clone = _f === void 0 ? function (x) { return x; } : _f;
     assert$1(name, 'name missing from property type');
     assert$1(typeof validators.default === 'function', 'default validator missing from property type: ' + name);
     assert$1(typeof toJSON === 'function', 'invalid toJSON for property type: ' + name);
@@ -1055,7 +1084,7 @@ function createValidator(name, validatorFunction) {
 
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i - 0] = arguments$1[_i];
+            args[_i] = arguments$1[_i];
         }
         var parameters = args;
         var validatorArgs = [null].concat(args);
@@ -1073,7 +1102,7 @@ function createValidator(name, validatorFunction) {
     return validator;
 }
 
-var Vector = (function () {
+var Vector = /** @class */ (function () {
     function Vector(x, y) {
         this.x = x || 0;
         this.y = y || 0;
@@ -1205,7 +1234,7 @@ Vector.fromArray = function (obj) {
     return new Vector(obj[0], obj[1]);
 };
 
-var Color = (function () {
+var Color = /** @class */ (function () {
     function Color(r, g, b) {
         if (r && r.constructor === Color) {
             this.r = r.r;
@@ -1400,13 +1429,14 @@ dataType.color = createDataType({
     fromJSON: function (x) { return new Color(x); }
 });
 
-var PropertyOwner = (function (_super) {
+var PropertyOwner = /** @class */ (function (_super) {
     __extends(PropertyOwner, _super);
     function PropertyOwner(predefinedId) {
         if (predefinedId === void 0) { predefinedId = false; }
-        _super.call(this, predefinedId);
-        assert$1(Array.isArray(this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
-        this._properties = {};
+        var _this = _super.call(this, predefinedId) || this;
+        assert$1(Array.isArray(_this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
+        _this._properties = {};
+        return _this;
     }
     PropertyOwner.prototype.makeUpAName = function () {
         return this.name || 'PropertyOwner';
@@ -2203,7 +2233,7 @@ function getRenderer(canvas) {
             antialias: true
         });
         // Interaction plugin uses ticker that runs in the background. Destroy it to save CPU.
-        if (renderer.plugins.interaction)
+        if (renderer.plugins.interaction) // if interaction is left out from pixi build, interaction is no defined
             { renderer.plugins.interaction.destroy(); }
     }
     return renderer;
@@ -2280,9 +2310,10 @@ var propertyTypes = [
 ];
 var game = null; // only one game at the time
 var isClient$1 = typeof window !== 'undefined';
-var Game = (function (_super) {
+var Game = /** @class */ (function (_super) {
     __extends(Game, _super);
     function Game(predefinedId) {
+        var _this = this;
         if (game)
             { console.error('Only one game allowed.'); }
         /*
@@ -2296,13 +2327,14 @@ var Game = (function (_super) {
             }
         }
         */
-        _super.apply(this, arguments);
+        _this = _super.apply(this, arguments) || this;
         if (isClient$1) {
-            game = this;
+            game = _this;
         }
         setTimeout(function () {
             gameCreateListeners.forEach(function (listener) { return listener(game); });
         }, 1);
+        return _this;
     }
     Game.prototype.initWithChildren = function () {
         _super.prototype.initWithChildren.apply(this, arguments);
@@ -2334,6 +2366,8 @@ Serializable.registerSerializable(Game, 'gam', function (json) {
 });
 var gameCreateListeners = [];
 
+// jee
+
 var p2;
 if (isClient)
     { p2 = window.p2; }
@@ -2344,6 +2378,7 @@ function createWorld(owner, options) {
     assert$1(!owner._p2World);
     owner._p2World = new p2.World({
         gravity: [0, 9.81]
+        // gravity: [0, 0]
     });
     // Stress test says that Body sleeping performs better than Island sleeping when idling.
     owner._p2World.sleepMode = p2.World.BODY_SLEEPING;
@@ -2548,12 +2583,11 @@ var scene = null;
 var physicsOptions = {
     enableSleeping: true
 };
-var Scene = (function (_super) {
+var Scene = /** @class */ (function (_super) {
     __extends(Scene, _super);
     function Scene(predefinedId) {
-        var _this = this;
         if (predefinedId === void 0) { predefinedId = false; }
-        _super.call(this, predefinedId);
+        var _this = _super.call(this, predefinedId) || this;
         if (scene) {
             try {
                 scene.delete();
@@ -2562,17 +2596,18 @@ var Scene = (function (_super) {
                 console.warn('Deleting old scene failed', e);
             }
         }
-        scene = this;
-        window.scene = this;
-        this.canvas = document.querySelector('canvas.openEditPlayCanvas');
-        this.renderer = getRenderer(this.canvas);
-        this.mouseListeners = [
-            listenMouseMove(this.canvas, function (mousePosition) { return _this.dispatch('onMouseMove', mousePosition); }),
-            listenMouseDown(this.canvas, function (mousePosition) { return _this.dispatch('onMouseDown', mousePosition); }),
-            listenMouseUp(this.canvas, function (mousePosition) { return _this.dispatch('onMouseUp', mousePosition); })
+        scene = _this;
+        window.scene = _this;
+        _this.canvas = document.querySelector('canvas.openEditPlayCanvas');
+        _this.renderer = getRenderer(_this.canvas);
+        _this.mouseListeners = [
+            listenMouseMove(_this.canvas, function (mousePosition) { return _this.dispatch('onMouseMove', mousePosition); }),
+            listenMouseDown(_this.canvas, function (mousePosition) { return _this.dispatch('onMouseDown', mousePosition); }),
+            listenMouseUp(_this.canvas, function (mousePosition) { return _this.dispatch('onMouseUp', mousePosition); })
         ];
-        addChange(changeType.addSerializableToTree, this);
+        addChange(changeType.addSerializableToTree, _this);
         sceneCreateListeners.forEach(function (listener) { return listener(); });
+        return _this;
     }
     Scene.prototype.makeUpAName = function () {
         if (this.level)
@@ -2789,18 +2824,19 @@ function listenSceneCreation(listener) {
         { listener(); }
 }
 
-var ComponentData = (function (_super) {
+var ComponentData = /** @class */ (function (_super) {
     __extends(ComponentData, _super);
     function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
         if (predefinedId === void 0) { predefinedId = false; }
-        if (predefinedComponentId === void 0) { predefinedComponentId = false; }
-        _super.call(this, predefinedId);
-        this.name = componentClassName;
-        this.componentClass = componentClasses.get(this.name);
-        assert$1(this.componentClass, 'Component class not defined: ' + componentClassName);
-        if (!this.componentClass.allowMultiple)
+        if (predefinedComponentId === void 0) { predefinedComponentId = ''; }
+        var _this = _super.call(this, predefinedId) || this;
+        _this.name = componentClassName;
+        _this.componentClass = componentClasses.get(_this.name);
+        assert$1(_this.componentClass, 'Component class not defined: ' + componentClassName);
+        if (!_this.componentClass.allowMultiple)
             { predefinedComponentId = '_' + componentClassName; }
-        this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
+        _this.componentId = predefinedComponentId || createStringId('cid', 10); // what will be the id of component created from this componentData
+        return _this;
     }
     ComponentData.prototype.makeUpAName = function () {
         return this.name;
@@ -2821,9 +2857,8 @@ var ComponentData = (function (_super) {
         _super.prototype.addChild.call(this, child);
         return this;
     };
-    
     ComponentData.prototype.clone = function (options) {
-        var newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+        var newComponentId = (options && options.cloneComponentId) ? this.componentId : '';
         var obj = new ComponentData(this.name, false, newComponentId);
         var children = [];
         this.forEachChild(null, function (child) {
@@ -2930,16 +2965,17 @@ var eventListeners = [
     'onStart'
 ];
 // Object of a component, see _componentExample.js
-var Component = (function (_super) {
+var Component = /** @class */ (function (_super) {
     __extends(Component, _super);
     function Component(predefinedId) {
         if (predefinedId === void 0) { predefinedId = false; }
-        _super.call(this, predefinedId);
-        this._componentId = null; // Creator will fill this
-        this.scene = scene;
-        this.game = game;
-        this._listenRemoveFunctions = [];
-        this.entity = null;
+        var _this = _super.call(this, predefinedId) || this;
+        _this._componentId = null; // Creator will fill this
+        _this.scene = scene;
+        _this.game = game;
+        _this._listenRemoveFunctions = [];
+        _this.entity = null;
+        return _this;
     }
     Component.prototype.makeUpAName = function () {
         return self.constructor.componentName;
@@ -3058,7 +3094,13 @@ Component.createWithInheritedComponentData = function (inheritedComponentData) {
 Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
 Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
 Component.register = function (_a) {
-    var _b = _a.name, name = _b === void 0 ? '' : _b, _c = _a.description, description = _c === void 0 ? '' : _c, _d = _a.category, category = _d === void 0 ? 'Other' : _d, _e = _a.icon, icon = _e === void 0 ? 'fa-puzzle-piece' : _e, _f = _a.color, color = _f === void 0 ? '' : _f, _g = _a.properties, properties = _g === void 0 ? [] : _g, _h = _a.requirements, requirements = _h === void 0 ? ['Transform'] : _h, _j = _a.children, children = _j === void 0 ? [] : _j, _k = _a.parentClass, parentClass = _k === void 0 ? Component : _k, _l = _a.prototype, prototype = _l === void 0 ? {} : _l, _m = _a.allowMultiple, allowMultiple = _m === void 0 ? true : _m, _o = _a.requiesInitWhenEntityIsEdited, requiesInitWhenEntityIsEdited = _o === void 0 ? false : _o;
+    var _b = _a.name, name = _b === void 0 ? '' : _b, // required
+    _c = _a.description, // required
+    description = _c === void 0 ? '' : _c, _d = _a.category, category = _d === void 0 ? 'Other' : _d, _e = _a.icon, icon = _e === void 0 ? 'fa-puzzle-piece' : _e, // in editor
+    _f = _a.color, // in editor
+    color = _f === void 0 ? '' : _f, // in editor
+    _g = _a.properties, // in editor
+    properties = _g === void 0 ? [] : _g, _h = _a.requirements, requirements = _h === void 0 ? ['Transform'] : _h, _j = _a.children, children = _j === void 0 ? [] : _j, _k = _a.parentClass, parentClass = _k === void 0 ? Component : _k, _l = _a.prototype, prototype = _l === void 0 ? {} : _l, _m = _a.allowMultiple, allowMultiple = _m === void 0 ? true : _m, _o = _a.requiesInitWhenEntityIsEdited, requiesInitWhenEntityIsEdited = _o === void 0 ? false : _o;
     assert$1(name, 'Component must have a name.');
     assert$1(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
     assert$1(!componentClasses.has(name), 'Duplicate component class ' + name);
@@ -3070,12 +3112,13 @@ Component.register = function (_a) {
     var deleteFunction = prototype.delete;
     delete prototype.constructor;
     delete prototype.delete;
-    var Com = (function (_super) {
+    var Com = /** @class */ (function (_super) {
         __extends(Com, _super);
         function Com() {
-            _super.apply(this, arguments);
+            var _this = _super.apply(this, arguments) || this;
             if (constructorFunction)
-                { constructorFunction.call(this); }
+                { constructorFunction.call(_this); }
+            return _this;
         }
         Com.prototype.delete = function () {
             if (!_super.prototype.delete.call(this))
@@ -3113,16 +3156,17 @@ Serializable.registerSerializable(Component, 'com', function (json) {
 });
 
 var ALIVE_ERROR = 'entity is already dead';
-var Entity = (function (_super) {
+var Entity = /** @class */ (function (_super) {
     __extends(Entity, _super);
     function Entity(predefinedId) {
         if (predefinedId === void 0) { predefinedId = false; }
-        _super.call(this, predefinedId);
-        this.components = new Map(); // name -> array
-        this.sleeping = false;
-        this.prototype = null; // should be set immediately after constructor
-        this.localMaster = true; // set false if entity is controlled over the net
+        var _this = _super.call(this, predefinedId) || this;
+        _this.components = new Map(); // name -> array
+        _this.sleeping = false;
+        _this.prototype = null; // should be set immediately after constructor
+        _this.localMaster = true; // set false if entity is controlled over the net
         eventHappened('Create object');
+        return _this;
     }
     Entity.prototype.makeUpAName = function () {
         if (this.prototype) {
@@ -3301,11 +3345,12 @@ Entity.ENTITY_CREATION_DEBUGGING = false;
 var propertyTypes$1 = [
     createPropertyType('name', 'No name', createPropertyType.string)
 ];
-var Prototype = (function (_super) {
+var Prototype = /** @class */ (function (_super) {
     __extends(Prototype, _super);
     function Prototype() {
-        _super.apply(this, arguments);
-        this.previouslyCreatedEntity = null;
+        var _this = _super.apply(this, arguments) || this;
+        _this.previouslyCreatedEntity = null;
+        return _this;
     }
     Prototype.prototype.makeUpAName = function () {
         return this.name || 'Prototype';
@@ -3376,7 +3421,7 @@ var Prototype = (function (_super) {
             return property;
         }
         property = propertyType.createProperty({
-            value: propertyValue
+            value: propertyValue,
         });
         componentData.addChild(property);
         if (componentDataIsNew)
@@ -3389,9 +3434,9 @@ var Prototype = (function (_super) {
         if (child)
             { return child; }
         if (alsoFindFromParents) {
-            var parent = this.getParentPrototype();
-            if (parent)
-                { return parent.findComponentDataByComponentId(componentId, alsoFindFromParents); }
+            var parent_1 = this.getParentPrototype();
+            if (parent_1)
+                { return parent_1.findComponentDataByComponentId(componentId, alsoFindFromParents); }
         }
         return null;
     };
@@ -3509,7 +3554,7 @@ function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
                 componentId: componentData.componentId,
                 propertyHash: {},
                 threeLetterType: 'icd',
-                generatedForPrototype: originalPrototype
+                generatedForPrototype: originalPrototype,
             };
         }
         if (_depth === 0) {
@@ -3533,13 +3578,14 @@ function sortInheritedComponentDatas(a, b) {
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
-var EntityPrototype = (function (_super) {
+var EntityPrototype = /** @class */ (function (_super) {
     __extends(EntityPrototype, _super);
     function EntityPrototype(predefinedId) {
         if (predefinedId === void 0) { predefinedId = false; }
-        _super.apply(this, arguments);
+        var _this = _super.apply(this, arguments) || this;
         // this._parent is level, not prototype. We need a link to parent-prototype.
-        this.prototype = null;
+        _this.prototype = null;
+        return _this;
     }
     EntityPrototype.prototype.makeUpAName = function () {
         var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
@@ -3627,7 +3673,7 @@ var EntityPrototype = (function (_super) {
         this._children.forEach(function (child) {
             childArrays.push(child);
         });
-        var children = (_a = []).concat.apply(_a, childArrays).filter(function (child) {
+        var children = [].concat.apply([], childArrays).filter(function (child) {
             return child !== Transform && child !== _this._properties.name;
         });
         if (children.length > 0)
@@ -3654,7 +3700,6 @@ var EntityPrototype = (function (_super) {
         handleProperty(this._properties.name);
         Transform.getChildren('prp').forEach(handleProperty);
         return json;
-        var _a;
     };
     EntityPrototype.prototype.spawnEntityToScene = function (scene, position) {
         if (!scene)
@@ -3779,11 +3824,11 @@ Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 });
 
 // Prefab is an EntityPrototype that has been saved to a prefab.
-var Prefab = (function (_super) {
+var Prefab = /** @class */ (function (_super) {
     __extends(Prefab, _super);
     function Prefab(predefinedId) {
         if (predefinedId === void 0) { predefinedId = false; }
-        _super.apply(this, arguments);
+        return _super.apply(this, arguments) || this;
     }
     Prefab.prototype.makeUpAName = function () {
         var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
@@ -3842,10 +3887,10 @@ Serializable.registerSerializable(Prefab, 'pfa');
 var propertyTypes$2 = [
     createPropertyType('name', 'No name', createPropertyType.string)
 ];
-var Level = (function (_super) {
+var Level = /** @class */ (function (_super) {
     __extends(Level, _super);
     function Level(predefinedId) {
-        _super.apply(this, arguments);
+        return _super.apply(this, arguments) || this;
     }
     Level.prototype.createScene = function (predefinedSceneObject) {
         if (predefinedSceneObject === void 0) { predefinedSceneObject = false; }
@@ -4330,7 +4375,7 @@ Component.register({
                 'points',
                 'topPointDistance'
             ];
-            var _loop_1 = function(i) {
+            var _loop_1 = function (i) {
                 shapePropertiesThatShouldUpdateShape.forEach(function (property) {
                     _this.listenProperty(Shapes[i], property, update(function () { return _this.updateShape(); }));
                 });
@@ -4428,7 +4473,7 @@ Component.register({
         updateMaterial: function () {
             var material = createMaterial(this.scene, {
                 friction: this.friction,
-                restitution: this.bounciness
+                restitution: this.bounciness,
             });
             this.body.shapes.forEach(function (s) { return s.material = material; });
         },
@@ -4476,6 +4521,7 @@ Component.register({
     }
 });
 
+// Export so that other components can have this component as parent
 Component.register({
     name: 'Lifetime',
     description: 'Set the object to be destroyed after a time period',
@@ -4973,8 +5019,10 @@ Component.register({
         calculateNewVelocity: function (velocity, input, dt) {
             if (input !== 0) {
                 if (velocity >= this.speed && input > 0) {
+                    // don't do anything
                 }
                 else if (velocity <= -this.speed && input < 0) {
+                    // don't do anything
                 }
                 else {
                     // do something
@@ -5098,7 +5146,7 @@ function gameReceivedOverNet(gameData) {
 addChangeListener(function (change) {
     if (change.external || !options.clientToServerEnabled)
         { return; } // Don't send a change that you have received.
-    if (isInSceneTree(change))
+    if (isInSceneTree(change)) // Don't sync scene
         { return; }
     if (change.type === changeType.setPropertyValue) {
         var duplicateChange = valueChanges[change.id];
@@ -5145,6 +5193,7 @@ var listeners$2 = {
         console.error("Server sent " + (isFatal ? 'FATAL ERROR' : 'error') + ":", message, data);
         if (isFatal) {
             stickyNonModalErrorPopup(message);
+            // document.body.textContent = message;
         }
     }
 };
@@ -5185,11 +5234,11 @@ function connect() {
 }
 window.addEventListener('load', connect);
 
-var ModuleContainer = (function () {
+var ModuleContainer = /** @class */ (function () {
     function ModuleContainer(moduleContainerName, packButtonIcon) {
-        var _this = this;
         if (moduleContainerName === void 0) { moduleContainerName = 'unknownClass.anotherClass'; }
         if (packButtonIcon === void 0) { packButtonIcon = 'fa-chevron-left'; }
+        var _this = this;
         this.modules = [];
         this.packButtonEnabled = !!packButtonIcon;
         this.el = el("div.moduleContainer.packable." + moduleContainerName, this.packButton = packButtonIcon && el("i.packButton.button.iconButton.fa." + packButtonIcon), this.tabs = list('div.tabs.select-none', ModuleTab), this.moduleElements = el('div.moduleElements'));
@@ -5332,7 +5381,7 @@ var ModuleContainer = (function () {
     };
     return ModuleContainer;
 }());
-var ModuleTab = (function () {
+var ModuleTab = /** @class */ (function () {
     function ModuleTab() {
         var _this = this;
         this.el = el('span.moduleTab.button');
@@ -5356,7 +5405,7 @@ var ModuleTab = (function () {
     return ModuleTab;
 }());
 
-var Layout = (function () {
+var Layout = /** @class */ (function () {
     function Layout() {
         var _this = this;
         this.moduleContainers = [];
@@ -5365,9 +5414,9 @@ var Layout = (function () {
 
             var args = [];
             for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i - 0] = arguments$1[_i];
+                args[_i] = arguments$1[_i];
             }
-            var container = new (Function.prototype.bind.apply( ModuleContainer, [ null ].concat( args) ));
+            var container = new (ModuleContainer.bind.apply(ModuleContainer, [void 0].concat(args)))();
             _this.moduleContainers.push(container);
             return container;
         };
@@ -5380,7 +5429,7 @@ var Layout = (function () {
 }());
 
 var moduleIdToModule = {};
-var Module = (function () {
+var Module = /** @class */ (function () {
     function Module() {
         var _this = this;
         this.type = 'module';
@@ -5414,7 +5463,7 @@ var Module = (function () {
     };
     return Module;
 }());
-//arguments: moduleName, unpackModuleView=true, ...args 
+//arguments: moduleName, unpackModuleView=true, ...args
 Module.activateModule = function (moduleId, unpackModuleView) {
     var arguments$1 = arguments;
 
@@ -5423,8 +5472,8 @@ Module.activateModule = function (moduleId, unpackModuleView) {
     for (var _i = 2; _i < arguments.length; _i++) {
         args[_i - 2] = arguments$1[_i];
     }
-    (_a = moduleIdToModule[moduleId].moduleContainer).activateModule.apply(_a, [moduleIdToModule[moduleId], unpackModuleView].concat(args));
     var _a;
+    (_a = moduleIdToModule[moduleId].moduleContainer).activateModule.apply(_a, [moduleIdToModule[moduleId], unpackModuleView].concat(args));
 };
 // Modules must be in same moduleContainer
 Module.activateOneOfModules = function (moduleIds, unpackModuleView) {
@@ -5435,8 +5484,8 @@ Module.activateOneOfModules = function (moduleIds, unpackModuleView) {
     for (var _i = 2; _i < arguments.length; _i++) {
         args[_i - 2] = arguments$1[_i];
     }
-    (_a = moduleIdToModule[moduleIds[0]].moduleContainer).activateOneOfModules.apply(_a, [moduleIds.map(function (mId) { return moduleIdToModule[mId]; }), unpackModuleView].concat(args));
     var _a;
+    (_a = moduleIdToModule[moduleIds[0]].moduleContainer).activateOneOfModules.apply(_a, [moduleIds.map(function (mId) { return moduleIdToModule[mId]; }), unpackModuleView].concat(args));
 };
 Module.packModuleContainer = function (moduleContainerName) {
     document.querySelectorAll(".moduleContainer." + moduleContainerName)[0].classList.add('packed');
@@ -5459,22 +5508,22 @@ var registerPromise = new Promise(function (resolve) {
     });
 });
 
-var TopBarModule = (function (_super) {
+var TopBarModule = /** @class */ (function (_super) {
     __extends(TopBarModule, _super);
     function TopBarModule() {
-        var _this = this;
-        _super.call(this, this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), this.buttons = el('div.buttonContainer.select-none'), this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'));
-        this.id = 'topbar';
-        this.name = 'TopBar'; // not visible
-        this.keyboardShortcuts = {}; // key.x -> func
-        this.logo.onclick = function () {
+        var _this = _super.call(this, _this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), _this.buttons = el('div.buttonContainer.select-none'), _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons')) || this;
+        _this.id = 'topbar';
+        _this.name = 'TopBar'; // not visible
+        _this.keyboardShortcuts = {}; // key.x -> func
+        _this.logo.onclick = function () {
             location.href = '/';
         };
         listenKeyDown(function (keyCode) {
             _this.keyboardShortcuts[keyCode] && _this.keyboardShortcuts[keyCode]();
         });
-        this.initControlButtons();
-        this.initToolSelectionButtons();
+        _this.initControlButtons();
+        _this.initToolSelectionButtons();
+        return _this;
     }
     TopBarModule.prototype.addKeyboardShortcut = function (key$$1, buttonOrCallback) {
         if (typeof buttonOrCallback === 'function') {
@@ -5571,7 +5620,7 @@ var TopBarModule = (function (_super) {
     return TopBarModule;
 }(Module));
 Module.register(TopBarModule, 'top');
-var SceneControlButton = (function () {
+var SceneControlButton = /** @class */ (function () {
     function SceneControlButton(data) {
         var _this = this;
         this.el = el('div.button.topSceneControlButton', {
@@ -5655,14 +5704,14 @@ function syncAChangeBetweenSceneAndLevel(change) {
                 { epr.createEntity(scene); }
         }
         else if (threeLetterType === 'cda') {
-            var parent = ref.getParent();
+            var parent_1 = ref.getParent();
             var entities = void 0;
-            if (parent.threeLetterType === 'prt') {
-                entities = getAffectedEntities(parent);
+            if (parent_1.threeLetterType === 'prt') {
+                entities = getAffectedEntities(parent_1);
             }
             else {
                 // epr
-                entities = [parent.previouslyCreatedEntity].filter(function (ent) { return ent && ent._alive; });
+                entities = [parent_1.previouslyCreatedEntity].filter(function (ent) { return ent && ent._alive; });
             }
             entities.forEach(function (entity) {
                 var oldComponent = entity.getComponents(ref.name).find(function (com) { return com._componentId === ref.componentId; });
@@ -5778,6 +5827,7 @@ function syncAChangeBetweenSceneAndLevel(change) {
                 }
             });
         }
+        // If Prototype is deleted, all entity prototypes are also deleted so we can ignore Prototype here
     }
     else if (change.type === changeType.move) {
     }
@@ -5912,7 +5962,7 @@ function setEntitiesInSelectionArea(entities, inSelectionArea) {
     });
 }
 
-var Help = (function () {
+var Help = /** @class */ (function () {
     function Help() {
     }
     Object.defineProperty(Help.prototype, "game", {
@@ -6008,7 +6058,7 @@ Widget is the smallest little thing in editor scene that user can interact and e
 var defaultWidgetRadius = 5;
 var centerWidgetRadius = 10;
 var defaultWidgetDistance = 30;
-var Widget = (function () {
+var Widget = /** @class */ (function () {
     function Widget(options) {
         this.x = options.x || 0;
         this.y = options.y || 0;
@@ -6087,20 +6137,20 @@ var Widget = (function () {
     };
     Widget.prototype.unhover = function () {
         this.hovering = false;
-        if (this.component)
+        if (this.component) // if alive
             { this.updateVisibility(); }
     };
     return Widget;
 }());
 
 var SHIFT_STEPS = 16;
-var AngleWidget = (function (_super) {
+var AngleWidget = /** @class */ (function (_super) {
     __extends(AngleWidget, _super);
     function AngleWidget(component) {
-        _super.call(this, {
+        return _super.call(this, {
             component: component,
             relativePosition: new Vector(-defaultWidgetDistance, 0)
-        });
+        }) || this;
     }
     AngleWidget.prototype.onDrag = function (mousePosition, mousePositionChange, affectedEntities) {
         // Master entity is the entity whose widget we are dragging.
@@ -6167,13 +6217,13 @@ var AngleWidget = (function (_super) {
     return AngleWidget;
 }(Widget));
 
-var PositionWidget = (function (_super) {
+var PositionWidget = /** @class */ (function (_super) {
     __extends(PositionWidget, _super);
     function PositionWidget(component) {
-        _super.call(this, {
+        return _super.call(this, {
             r: centerWidgetRadius,
             component: component
-        });
+        }) || this;
     }
     PositionWidget.prototype.onDrag = function (mousePosition, mousePositionChange, affectedEntities) {
         affectedEntities.forEach(function (entity) {
@@ -6205,13 +6255,13 @@ var PositionWidget = (function (_super) {
 }(Widget));
 
 var MIN_SCALE = 0.1;
-var ScaleWidget = (function (_super) {
+var ScaleWidget = /** @class */ (function (_super) {
     __extends(ScaleWidget, _super);
     function ScaleWidget(component, scaleX, scaleY) {
-        _super.call(this, {
+        return _super.call(this, {
             component: component,
             relativePosition: new Vector(scaleX, -scaleY).multiplyScalar(defaultWidgetDistance)
-        });
+        }) || this;
     }
     ScaleWidget.prototype.updatePosition = function () {
         var T = this.component.Transform;
@@ -6280,14 +6330,15 @@ var ScaleWidget = (function (_super) {
     return ScaleWidget;
 }(Widget));
 
-var MoveWidget = (function (_super) {
+var MoveWidget = /** @class */ (function (_super) {
     __extends(MoveWidget, _super);
     function MoveWidget(component, directionX, directionY, globalCoordinates) {
-        _super.call(this, {
+        var _this = _super.call(this, {
             component: component,
             relativePosition: new Vector(directionX, -directionY).multiplyScalar(defaultWidgetDistance)
-        });
-        this.globalCoordinates = globalCoordinates;
+        }) || this;
+        _this.globalCoordinates = globalCoordinates;
+        return _this;
     }
     MoveWidget.prototype.updatePosition = function () {
         var T = this.component.Transform;
@@ -6350,11 +6401,27 @@ var MoveWidget = (function (_super) {
     return MoveWidget;
 }(Widget));
 
+/*
+How mouse interaction works?
+
+Hovering:
+- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
+
+Selection:
+- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
+
+Dragging:
+- Scene module: entitiesToEdit.onDrag()
+
+ */
+// Export so that other components can have this component as parent
 Component.register({
     name: 'EditorWidget',
     category: 'Editor',
     icon: 'fa-bars',
-    properties: [],
+    properties: [
+    // Prop('selected', false, Prop.bool)
+    ],
     prototype: {
         selected: false,
         activeWidget: null,
@@ -6536,7 +6603,7 @@ Component.register({
 var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 var MIN_ZOOM = 0.1;
 var MAX_ZOOM = 10;
-var SceneModule = (function (_super) {
+var SceneModule = /** @class */ (function (_super) {
     __extends(SceneModule, _super);
     function SceneModule() {
         var _this = this;
@@ -6547,7 +6614,7 @@ var SceneModule = (function (_super) {
             e.stopPropagation();
             return false;
         };
-        _super.call(this, canvas = el('canvas.openEditPlayCanvas.select-none', {
+        _this = _super.call(this, canvas = el('canvas.openEditPlayCanvas.select-none', {
             // width and height will be fixed after loading
             width: 0,
             height: 0
@@ -6600,6 +6667,7 @@ var SceneModule = (function (_super) {
             title: 'Go home to player or to default start position (H)'
         }), sceneContextButtons = el('div.sceneContextButtons', copyButton = el('i.fa.fa-copy.iconButton.button', {
             onclick: function () {
+                var _a;
                 if (_this.selectedEntities.length > 0) {
                     _this.deleteNewEntities();
                     (_a = _this.newEntities).push.apply(_a, _this.selectedEntities.map(function (e) { return e.clone(); }));
@@ -6608,7 +6676,6 @@ var SceneModule = (function (_super) {
                     setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
                     _this.draw();
                 }
-                var _a;
             },
             onmousedown: disableMouseDown,
             title: 'Copy selected objects (C)'
@@ -6620,14 +6687,14 @@ var SceneModule = (function (_super) {
             },
             onmousedown: disableMouseDown,
             title: 'Delete selected objects (Backspace)'
-        }))));
-        this.el.classList.add('hideScenePauseInformation');
-        this.canvas = canvas;
-        this.homeButton = homeButton;
-        this.globeButton = globeButton;
-        this.copyButton = copyButton;
-        this.deleteButton = deleteButton;
-        this.sceneContextButtons = sceneContextButtons;
+        })))) || this;
+        _this.el.classList.add('hideScenePauseInformation');
+        _this.canvas = canvas;
+        _this.homeButton = homeButton;
+        _this.globeButton = globeButton;
+        _this.copyButton = copyButton;
+        _this.deleteButton = deleteButton;
+        _this.sceneContextButtons = sceneContextButtons;
         events.listen('locate serializable', function (serializable) {
             if (serializable.threeLetterType === 'epr') {
                 var entityPrototype = serializable;
@@ -6655,8 +6722,8 @@ var SceneModule = (function (_super) {
             setTimeout(fixAspectRatio, 500);
         });
         setTimeout(fixAspectRatio, 0);
-        this.id = 'scene';
-        this.name = 'Scene';
+        _this.id = 'scene';
+        _this.name = 'Scene';
         Object.defineProperty(help, 'sceneModule', {
             get: function () { return _this; }
         });
@@ -6668,19 +6735,19 @@ var SceneModule = (function (_super) {
          this.drawNoLevel();
          });
          */
-        this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
-        this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
-        this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
-        this.previousMousePosInWorldCoordinates = null;
-        this.previousMousePosInMouseCoordinates = null;
-        this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
-        this.selectedEntities = [];
-        this.editorCameraPosition = new Vector(0, 0);
-        this.editorCameraZoom = 1;
-        this.selectionStart = null;
-        this.selectionEnd = null;
-        this.selectionArea = null;
-        this.entitiesInSelection = [];
+        _this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
+        _this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
+        _this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
+        _this.previousMousePosInWorldCoordinates = null;
+        _this.previousMousePosInMouseCoordinates = null;
+        _this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
+        _this.selectedEntities = [];
+        _this.editorCameraPosition = new Vector(0, 0);
+        _this.editorCameraZoom = 1;
+        _this.selectionStart = null;
+        _this.selectionEnd = null;
+        _this.selectionArea = null;
+        _this.entitiesInSelection = [];
         events.listen('reset', function () {
             setChangeOrigin(_this);
             _this.stopAndReset();
@@ -6853,7 +6920,7 @@ var SceneModule = (function (_super) {
             }
             stop('Editor: Scene');
         });
-        this.zoomInButtonPressed = false;
+        _this.zoomInButtonPressed = false;
         listenKeyDown(function (k) {
             if (!scene)
                 { return; }
@@ -6898,9 +6965,10 @@ var SceneModule = (function (_super) {
             if (k === key.plus || k === key.questionMark || k === key.e)
                 { _this.zoomInButtonPressed = false; }
         });
-        listenMouseMove(this.el, this.onMouseMove.bind(this));
-        listenMouseDown(this.el, function (mousePos) {
-            if (!scene || !mousePos || scene.playing)
+        listenMouseMove(_this.el, _this.onMouseMove.bind(_this));
+        listenMouseDown(_this.el, function (mousePos) {
+            var _a;
+            if (!scene || !mousePos || scene.playing) // !mousePos if mouse has not moved since refresh
                 { return; }
             // this.makeSureSceneHasEditorLayer();
             mousePos = scene.mouseToWorld(mousePos);
@@ -6927,9 +6995,8 @@ var SceneModule = (function (_super) {
             }
             _this.updateSceneContextButtonVisibility();
             _this.draw();
-            var _a;
         });
-        listenMouseUp(this.el, function () {
+        listenMouseUp(_this.el, function ( /*mousePos*/) {
             if (!scene)
                 { return; }
             // mousePos = scene.mouseToWorld(mousePos);
@@ -6980,6 +7047,7 @@ var SceneModule = (function (_super) {
         events.listen('dragPrefabsToNonScene', function () {
             _this.clearState();
         });
+        return _this;
     }
     // mousePos is optional. returns true if scene has been drawn
     SceneModule.prototype.onMouseMove = function (mouseCoordinatePosition) {
@@ -7196,12 +7264,12 @@ var SceneModule = (function (_super) {
          */
     };
     SceneModule.prototype.selectEntities = function (entities) {
+        var _a;
         this.clearSelectedEntities();
         (_a = this.selectedEntities).push.apply(_a, entities);
         this.selectedEntities.forEach(function (entity) {
             entity.getComponent('EditorWidget').select();
         });
-        var _a;
     };
     SceneModule.prototype.clearSelectedEntities = function () {
         this.selectedEntities.forEach(function (entity) {
@@ -7247,6 +7315,7 @@ var SceneModule = (function (_super) {
             scene.reset();
             scene.cameraPosition = this.editorCameraPosition.clone();
             scene.setZoom(this.editorCameraZoom);
+            // scene.updateCamera(); // this is called before every scene.draw. no need to do it here.
         }
         this.playingModeChanged();
         // this.draw(); // scene.reset() already does drawing.
@@ -7289,19 +7358,19 @@ var SceneModule = (function (_super) {
             { this.sceneContextButtons.classList.add('hidden'); }
     };
     SceneModule.prototype.copyEntities = function (entities) {
+        var _a;
         this.copiedEntities.forEach(function (entity) { return entity.delete(); });
         this.copiedEntities.length = [];
         (_a = this.copiedEntities).push.apply(_a, entities.map(function (entity) { return entity.clone(); }));
         this.copiedEntities.forEach(function (entity) { return entity.sleep(); });
-        var _a;
     };
     SceneModule.prototype.pasteEntities = function () {
+        var _a;
         this.deleteNewEntities();
         (_a = this.newEntities).push.apply(_a, this.copiedEntities.map(function (entity) { return entity.clone(); }));
         this.newEntities.forEach(function (entity) { return entity.wakeUp(); });
         if (this.previousMousePosInWorldCoordinates)
             { setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates); }
-        var _a;
     };
     SceneModule.prototype.destroySelectionArea = function () {
         if (!this.selectionArea)
@@ -7314,14 +7383,13 @@ var SceneModule = (function (_super) {
 Module.register(SceneModule, 'center');
 var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
 
-var Types = (function (_super) {
+var Types = /** @class */ (function (_super) {
     __extends(Types, _super);
     function Types() {
-        var _this = this;
-        _super.call(this, this.addButton = el('span.addTypeButton.button.fa.fa-plus'), this.search = el('input'), this.searchIcon = el('i.fa.fa-search.searchIcon'), this.jstree = el('div'), this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right')));
-        this.id = 'types';
-        this.name = 'Types';
-        this.addButton.onclick = function () {
+        var _this = _super.call(this, _this.addButton = el('span.addTypeButton.button.fa.fa-plus'), _this.search = el('input'), _this.searchIcon = el('i.fa.fa-search.searchIcon'), _this.jstree = el('div'), _this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right'))) || this;
+        _this.id = 'types';
+        _this.name = 'Types';
+        _this.addButton.onclick = function () {
             setChangeOrigin(_this);
             var prototype = Prototype.create(' New type');
             editor.game.addChild(prototype);
@@ -7331,14 +7399,14 @@ var Types = (function (_super) {
             }, 100);
         };
         var searchTimeout = false;
-        this.search.addEventListener('keyup', function () {
+        _this.search.addEventListener('keyup', function () {
             if (searchTimeout)
                 { clearTimeout(searchTimeout); }
             searchTimeout = setTimeout(function () {
                 $(_this.jstree).jstree().search(_this.search.value.trim());
             }, 200);
         });
-        this.externalChange = false;
+        _this.externalChange = false;
         events.listen('change', function (change) {
             if (change.reference._rootType === 'sce')
                 { return; }
@@ -7349,12 +7417,12 @@ var Types = (function (_super) {
             _this.externalChange = true;
             if (change.reference.threeLetterType === 'prt') {
                 if (change.type === changeType.addSerializableToTree) {
-                    var parent = change.parent;
+                    var parent_1 = change.parent;
                     var parentNode = void 0;
-                    if (parent.threeLetterType === 'gam')
+                    if (parent_1.threeLetterType === 'gam')
                         { parentNode = '#'; }
                     else
-                        { parentNode = jstree.get_node(parent.id); }
+                        { parentNode = jstree.get_node(parent_1.id); }
                     jstree.create_node(parentNode, {
                         text: change.reference.getChildren('prp')[0].value,
                         id: change.reference.id
@@ -7395,6 +7463,7 @@ var Types = (function (_super) {
             _this.externalChange = false;
             stop('Editor: Types');
         });
+        return _this;
     }
     Types.prototype.update = function () {
         var _this = this;
@@ -7433,8 +7502,10 @@ var Types = (function (_super) {
                 // let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
                 // console.log(jstree, selNode);
                 if (editor.selection.type === 'none') {
+                    //jstree.select_node();
                 }
                 if (editor.selection.type === 'prt') {
+                    // jstree.select_node(editor.selection.items.map(i => i.id));
                 }
             }).jstree({
                 core: {
@@ -7528,12 +7599,13 @@ $(document).on('dnd_stop.vakata', function (e, data) {
                 prototype.move(newParent_1);
             });
             events.dispatch('dragPrototypeToNonCanvas', nodeObjects);
+            // console.log('dnd stopped from', nodes, 'to', newParent);
         }
     }, 0);
 });
 Module.register(Types, 'left');
 
-var DragAndDropEvent = (function () {
+var DragAndDropEvent = /** @class */ (function () {
     function DragAndDropEvent(idList, targetElement, state) {
         this.state = state;
         this.idList = idList;
@@ -7549,18 +7621,19 @@ var DragAndDropEvent = (function () {
     }
     return DragAndDropEvent;
 }());
-var DragAndDropStartEvent = (function (_super) {
+var DragAndDropStartEvent = /** @class */ (function (_super) {
     __extends(DragAndDropStartEvent, _super);
     function DragAndDropStartEvent(idList, targetElement) {
-        _super.call(this, idList, targetElement, 'start');
+        return _super.call(this, idList, targetElement, 'start') || this;
     }
     return DragAndDropStartEvent;
 }(DragAndDropEvent));
-var DragAndDropMoveEvent = (function (_super) {
+var DragAndDropMoveEvent = /** @class */ (function (_super) {
     __extends(DragAndDropMoveEvent, _super);
     function DragAndDropMoveEvent(idList, targetElement, helper) {
-        _super.call(this, idList, targetElement, 'move');
-        this.helper = helper;
+        var _this = _super.call(this, idList, targetElement, 'move') || this;
+        _this.helper = helper;
+        return _this;
     }
     DragAndDropMoveEvent.prototype.hideValidationIndicator = function () {
         this.helper.find('.jstree-icon').css({
@@ -7569,15 +7642,15 @@ var DragAndDropMoveEvent = (function (_super) {
     };
     return DragAndDropMoveEvent;
 }(DragAndDropEvent));
-var DragAndDropStopEvent = (function (_super) {
+var DragAndDropStopEvent = /** @class */ (function (_super) {
     __extends(DragAndDropStopEvent, _super);
     function DragAndDropStopEvent(idList, targetElement) {
-        _super.call(this, idList, targetElement, 'stop');
+        return _super.call(this, idList, targetElement, 'stop') || this;
     }
     return DragAndDropStopEvent;
 }(DragAndDropEvent));
 
-var TreeView = (function () {
+var TreeView = /** @class */ (function () {
     function TreeView(options) {
         var _this = this;
         this.options = Object.assign({
@@ -7649,18 +7722,18 @@ var TreeView = (function () {
             var node = document.getElementById(idOrList[0]);
             if (!node)
                 { return console.warn("id " + idOrList[0] + " not found from the tree"); }
-            var module = this.el.parentNode;
-            while (module && !module.classList.contains('module')) {
-                module = module.parentNode;
+            var module_1 = this.el.parentNode;
+            while (module_1 && !module_1.classList.contains('module')) {
+                module_1 = module_1.parentNode;
             }
             var NODE_HEIGHT = 24;
             var SAFETY_MARGIN = 15;
-            var minScroll = node.offsetTop - module.offsetHeight + NODE_HEIGHT + SAFETY_MARGIN;
+            var minScroll = node.offsetTop - module_1.offsetHeight + NODE_HEIGHT + SAFETY_MARGIN;
             var maxScroll = node.offsetTop - SAFETY_MARGIN;
-            if (module.scrollTop < minScroll)
-                { module.scrollTop = minScroll; }
-            else if (module.scrollTop > maxScroll)
-                { module.scrollTop = maxScroll; }
+            if (module_1.scrollTop < minScroll)
+                { module_1.scrollTop = minScroll; }
+            else if (module_1.scrollTop > maxScroll)
+                { module_1.scrollTop = maxScroll; }
         }
     };
     TreeView.prototype.search = function (query) {
@@ -7695,22 +7768,21 @@ $(document).on('dnd_stop.vakata', function (e, data) {
     events.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 });
 
-var Prefabs = (function (_super) {
+var Prefabs = /** @class */ (function (_super) {
     __extends(Prefabs, _super);
     function Prefabs() {
-        var _this = this;
-        _super.call(this);
-        this.name = 'Prefabs';
-        this.id = 'prefabs';
-        this.treeView = new TreeView({
+        var _this = _super.call(this) || this;
+        _this.name = 'Prefabs';
+        _this.id = 'prefabs';
+        _this.treeView = new TreeView({
             id: 'prefabs-tree',
             selectionChangedCallback: function (selectedIds) {
                 var serializables$$1 = selectedIds.map(getSerializable$1).filter(Boolean);
                 editor.select(serializables$$1, _this);
                 Module.activateModule('prefab', false);
-            }
+            },
         });
-        mount(this.el, this.treeView);
+        mount(_this.el, _this.treeView);
         events.listen('treeView drag start prefabs-tree', function (event) {
             var prefabs = event.idList.map(getSerializable$1);
             events.dispatch('dragPrefabsStarted', prefabs);
@@ -7726,7 +7798,8 @@ var Prefabs = (function (_super) {
             else
                 { events.dispatch('dragPrefabsToNonScene', prefabs); }
         });
-        this.dirty = true;
+        _this.dirty = true;
+        return _this;
     }
     Prefabs.prototype.activate = function () {
         this.dirty = true;
@@ -7753,10 +7826,10 @@ var Prefabs = (function (_super) {
 Module.register(Prefabs, 'left');
 
 var popupDepth = 0;
-var Popup = (function () {
+var Popup = /** @class */ (function () {
     function Popup(_a) {
-        var _this = this;
         var _b = _a.title, title = _b === void 0 ? 'Undefined popup' : _b, _c = _a.cancelCallback, cancelCallback = _c === void 0 ? null : _c, _d = _a.width, width = _d === void 0 ? null : _d, _e = _a.content, content = _e === void 0 ? el('div.genericCustomContent', 'Undefined content') : _e;
+        var _this = this;
         this.el = el('div.popup', {
             style: {
                 'z-index': 1000 + popupDepth++
@@ -7784,7 +7857,7 @@ var Popup = (function () {
     };
     return Popup;
 }());
-var Button = (function () {
+var Button = /** @class */ (function () {
     function Button() {
         var _this = this;
         this.el = el('button.button', { onclick: function () {
@@ -7812,11 +7885,12 @@ var Button = (function () {
         if (button.color) {
             this.el.style['border-color'] = button.color;
             this.el.style['color'] = button.color;
+            // this.el.style['background'] = button.color;
         }
     };
     return Button;
 }());
-var Layer = (function () {
+var Layer = /** @class */ (function () {
     function Layer(popup) {
         this.el = el('div.popupLayer', { onclick: function () {
                 popup.remove();
@@ -7826,7 +7900,7 @@ var Layer = (function () {
     return Layer;
 }());
 
-var CreateObject = (function (_super) {
+var CreateObject = /** @class */ (function (_super) {
     __extends(CreateObject, _super);
     /*
     buttonOptions:
@@ -7835,13 +7909,12 @@ var CreateObject = (function (_super) {
     - icon (fa-plus)
      */
     function CreateObject() {
-        var _this = this;
-        _super.call(this, {
+        var _this = _super.call(this, {
             title: 'Create Object',
             width: '500px',
             content: list('div.confirmationButtons', Button)
-        });
-        this.content.update([{
+        }) || this;
+        _this.content.update([{
                 text: 'Empty Object',
                 callback: function () {
                     var entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
@@ -7850,24 +7923,24 @@ var CreateObject = (function (_super) {
                     _this.remove();
                 }
             }]);
+        return _this;
     }
     return CreateObject;
 }(Popup));
 
-var Objects = (function (_super) {
+var Objects = /** @class */ (function (_super) {
     __extends(Objects, _super);
     function Objects() {
-        var _this = this;
-        _super.call(this);
-        this.name = 'Objects';
-        this.id = 'objects';
+        var _this = _super.call(this) || this;
+        _this.name = 'Objects';
+        _this.id = 'objects';
         var createButton = el('button.button', 'Create', {
             onclick: function () {
                 new CreateObject();
             }
         });
-        mount(this.el, createButton);
-        this.treeView = new TreeView({
+        mount(_this.el, createButton);
+        _this.treeView = new TreeView({
             id: 'objects-tree',
             selectionChangedCallback: function (selectedIds) {
                 var serializables$$1 = selectedIds.map(getSerializable$1).filter(Boolean);
@@ -7877,8 +7950,35 @@ var Objects = (function (_super) {
             moveCallback: function (serializableId, parentId) {
                 if (serializableId.substring(0, 3) === 'epr') {
                     var serializable = getSerializable$1(serializableId);
-                    var parent = parentId === '#' ? editor.selectedLevel : getSerializable$1(parentId);
-                    serializable.move(parent);
+                    var parent_1 = parentId === '#' ? editor.selectedLevel : getSerializable$1(parentId);
+                    serializable.move(parent_1);
+                    /*
+                    let target = event.targetElement;
+                    while (!target.classList.contains('jstree-node')) {
+                        target = target.parentElement;
+                        if (!target)
+                            throw new Error('Invalid target', event.targetElement);
+                    }
+                    console.log('target.id', target.id)
+                    let targetSerializable = getSerializable(target.id);
+
+                    let idSet = new Set(event.idList);
+                    let serializables = event.idList.map(getSerializable).filter(serializable => {
+                        let parent = serializable.getParent();
+                        while (parent) {
+                            if (idSet.has(parent.id))
+                                return false;
+                            parent = parent.getParent();
+                        }
+                        return true;
+                    });
+
+                    console.log('move serializables', serializables, 'to', targetSerializable);
+                    serializables.forEach(serializable => {
+                        serializable.move(targetSerializable);
+                    });
+                    console.log('Done!')
+                    */
                 }
             },
             doubleClickCallback: function (serializableId) {
@@ -7889,7 +7989,7 @@ var Objects = (function (_super) {
                     { throw new Error("Locate serializable " + serializableId + " not found"); }
             }
         });
-        mount(this.el, this.treeView);
+        mount(_this.el, _this.treeView);
         events.listen('treeView drag start objects-tree', function (event) {
         });
         events.listen('treeView drag move objects-tree', function (event) {
@@ -7934,8 +8034,8 @@ var Objects = (function (_super) {
                 console.log('Done!');
             }
         });
-        this.dirty = true;
-        this.treeType = null;
+        _this.dirty = true;
+        _this.treeType = null;
         // This will be called when play and reset has already happened. After all the 
         var update = function () {
             _this.dirty = true;
@@ -8059,6 +8159,7 @@ var Objects = (function (_super) {
             _this.externalChange = false;
             stop('Editor: Objects');
         });
+        return _this;
     }
     Objects.prototype.activate = function () {
         this.dirty = true;
@@ -8126,14 +8227,13 @@ function createNewLevel() {
     return lvl;
 }
 events.listen('createBlankLevel', createNewLevel);
-var Levels = (function (_super) {
+var Levels = /** @class */ (function (_super) {
     __extends(Levels, _super);
     function Levels() {
-        var _this = this;
-        _super.call(this, this.content = el('div', this.buttons = list('div.levelSelectorButtons', LevelItem), 'Create: ', this.createButton = new Button));
-        this.name = 'Levels';
-        this.id = 'levels';
-        this.createButton.update({
+        var _this = _super.call(this, _this.content = el('div', _this.buttons = list('div.levelSelectorButtons', LevelItem), 'Create: ', _this.createButton = new Button)) || this;
+        _this.name = 'Levels';
+        _this.id = 'levels';
+        _this.createButton.update({
             text: 'New level',
             icon: 'fa-area-chart',
             callback: function () {
@@ -8145,10 +8245,11 @@ var Levels = (function (_super) {
                 }, 100);
             }
         });
-        listen(this.el, 'selectLevel', function (level) {
+        listen(_this.el, 'selectLevel', function (level) {
             editor.setLevel(level);
             editor.select(level, _this);
         });
+        return _this;
         /*
                 listen(this.el, 'deleteLevel', level => {
                     if (level.isEmpty() || confirm('Are you sure you want to delete level: ' + level.name)) {
@@ -8164,9 +8265,11 @@ var Levels = (function (_super) {
     return Levels;
 }(Module));
 Module.register(Levels, 'left');
-var LevelItem = (function () {
+var LevelItem = /** @class */ (function () {
     function LevelItem() {
-        this.el = el('div.levelItem', this.number = el('span'), this.selectButton = new Button);
+        this.el = el('div.levelItem', this.number = el('span'), this.selectButton = new Button
+        //,this.deleteButton = new Button
+        );
     }
     LevelItem.prototype.selectClicked = function () {
         dispatch(this, 'selectLevel', this.level);
@@ -8273,7 +8376,7 @@ editors.color = function (container, oninput, onchange) {
     return function (val) { return input.value = val.toHexString(); };
 };
 
-var Confirmation = (function (_super) {
+var Confirmation = /** @class */ (function (_super) {
     __extends(Confirmation, _super);
     /*
     buttonOptions:
@@ -8282,13 +8385,12 @@ var Confirmation = (function (_super) {
     - icon (fa-plus)
      */
     function Confirmation(question, buttonOptions, callback) {
-        var _this = this;
-        _super.call(this, {
+        var _this = _super.call(this, {
             title: question,
             width: '500px',
             content: list('div.confirmationButtons', Button)
-        });
-        this.content.update([{
+        }) || this;
+        _this.content.update([{
                 text: 'Cancel',
                 callback: function () { return _this.remove(); }
             }, Object.assign({
@@ -8299,8 +8401,9 @@ var Confirmation = (function (_super) {
                     _this.remove();
                 }
             })]);
-        var confirmButton = this.content.views[1];
+        var confirmButton = _this.content.views[1];
         confirmButton.el.focus();
+        return _this;
     }
     Confirmation.prototype.remove = function () {
         _super.prototype.remove.call(this);
@@ -8314,20 +8417,19 @@ var CATEGORY_ORDER = [
     'Graphics'
 ];
 var HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
-var ComponentAdder = (function (_super) {
+var ComponentAdder = /** @class */ (function (_super) {
     __extends(ComponentAdder, _super);
     function ComponentAdder(parent) {
-        var _this = this;
-        _super.call(this, {
+        var _this = _super.call(this, {
             title: 'Add Component',
             content: list('div.componentAdderContent', Category, undefined, parent)
-        });
+        }) || this;
         var componentClassArray = Array.from(componentClasses.values())
             .filter(function (cl) { return !HIDDEN_COMPONENTS.includes(cl.componentName); })
             .sort(function (a, b) { return a.componentName.localeCompare(b.componentName); });
         console.log('before set', componentClassArray.map(function (c) { return c.category; }));
         console.log('set', new Set(componentClassArray.map(function (c) { return c.category; })));
-        console.log('set array', (new Set(componentClassArray.map(function (c) { return c.category; }))).slice());
+        console.log('set array', new Set(componentClassArray.map(function (c) { return c.category; })).slice());
         var categories = Array.from(new Set(componentClassArray.map(function (c) { return c.category; }))).map(function (categoryName) { return ({
             categoryName: categoryName,
             components: componentClassArray.filter(function (c) { return c.category === categoryName; })
@@ -8344,17 +8446,18 @@ var ComponentAdder = (function (_super) {
             else
                 { return 1; }
         });
-        this.update(categories);
-        listen(this, 'refresh', function () {
+        _this.update(categories);
+        listen(_this, 'refresh', function () {
             _this.update(categories);
         });
+        return _this;
     }
     ComponentAdder.prototype.update = function (categories) {
         this.content.update(categories);
     };
     return ComponentAdder;
 }(Popup));
-var Category = (function () {
+var Category = /** @class */ (function () {
     function Category(parent) {
         this.el = el('div.categoryItem', this.name = el('div.categoryName'), this.list = list('div.categoryButtons', ButtonWithDescription));
         this.parent = parent;
@@ -8417,7 +8520,7 @@ var Category = (function () {
     };
     return Category;
 }());
-var ButtonWithDescription = (function () {
+var ButtonWithDescription = /** @class */ (function () {
     function ButtonWithDescription() {
         this.el = el('div.buttonWithDescription', this.button = new Button(), this.description = el('span.description'));
     }
@@ -8437,15 +8540,14 @@ function getMissingRequirements(parent, requirements) {
     return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 }
 
-var ObjectMoreButtonContextMenu = (function (_super) {
+var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
     __extends(ObjectMoreButtonContextMenu, _super);
     function ObjectMoreButtonContextMenu(property) {
-        var _this = this;
-        _super.call(this, {
+        var _this = _super.call(this, {
             title: 'Object Property: ' + property.name,
             width: '500px',
-            content: this.buttons = list('div', Button)
-        });
+            content: _this.buttons = list('div', Button)
+        }) || this;
         var value = property.value;
         var component = property.getParent();
         var componentId = component._componentId;
@@ -8483,7 +8585,8 @@ var ObjectMoreButtonContextMenu = (function (_super) {
                 }
             }
         ];
-        this.update(actions);
+        _this.update(actions);
+        return _this;
     }
     ObjectMoreButtonContextMenu.prototype.update = function (data) {
         this.buttons.update(data);
@@ -8512,7 +8615,7 @@ function parseTextAndNumber(textAndNumber) {
 Reference: Unbounce
  https://cdn8.webmaster.net/pics/Unbounce2.jpg
  */
-var PropertyEditor = (function () {
+var PropertyEditor = /** @class */ (function () {
     function PropertyEditor() {
         var _this = this;
         this.el = el('div.propertyEditor', this.list = list('div.propertyEditorList', Container));
@@ -8598,10 +8701,10 @@ var PropertyEditor = (function () {
         if (lahna)
             }
 */
-var Container = (function () {
+var Container = /** @class */ (function () {
     function Container() {
         var _this = this;
-        this.el = el('div.container', this.title = el('div.containerTitle', this.titleText = el('span.containerTitleText'), this.titleIcon = el('i.icon.fa')), this.content = el('div.containerContent', this.properties = list('div.propertyEditorProperties', Property$1, null, this.propertyEditor), this.containers = list('div', Container, null, this.propertyEditor), this.controls = el('div'), el('i.button.logButton.fa.fa-eye', {
+        this.el = el('div.container', this.title = el('div.containerTitle', this.titleText = el('span.containerTitleText'), this.titleIcon = el('i.icon.fa')), this.content = el('div.containerContent', this.properties = list('div.propertyEditorProperties', Property$2, null, this.propertyEditor), this.containers = list('div', Container, null, this.propertyEditor), this.controls = el('div'), el('i.button.logButton.fa.fa-eye', {
             onclick: function () {
                 console.log(_this.item);
                 window.item = _this.item;
@@ -8864,7 +8967,7 @@ var Container = (function () {
     };
     return Container;
 }());
-var Property$1 = (function () {
+var Property$2 = /** @class */ (function () {
     function Property() {
         this.el = el('div.property', { name: '' }, this.name = el('div.nameCell'), this.content = el('div.propertyContent'));
     }
@@ -8959,12 +9062,12 @@ var Property$1 = (function () {
             this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
             this.el.classList.toggle('ownProperty', !!this.property.id);
             if (this.property.id) {
-                var parent = this.property.getParent();
-                if (parent.threeLetterType === 'cda'
-                    && (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr')) 
+                var parent_1 = this.property.getParent();
+                if (parent_1.threeLetterType === 'cda'
+                    && (parent_1.name !== 'Transform' || parent_1.getParent().threeLetterType !== 'epr')) 
                 // Can not delete anything from entity prototype transform 
                 {
-                    this.name.style.color = parent.componentClass.color;
+                    this.name.style.color = parent_1.componentClass.color;
                     mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
                         onclick: function () {
                             dispatch(_this, 'makingChanges');
@@ -8972,8 +9075,8 @@ var Property$1 = (function () {
                         }
                     }));
                 }
-                else if (parent.threeLetterType === 'com') {
-                    this.name.style.color = parent.constructor.color;
+                else if (parent_1.threeLetterType === 'com') {
+                    this.name.style.color = parent_1.constructor.color;
                     mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
                         onclick: function () {
                             new ObjectMoreButtonContextMenu(_this.property);
@@ -9007,18 +9110,18 @@ function variableNameToPresentableName(propertyName) {
     return name[0].toUpperCase() + name.substring(1);
 }
 
-var Type = (function (_super) {
+var Type = /** @class */ (function (_super) {
     __extends(Type, _super);
     function Type() {
-        var _this = this;
-        _super.call(this, this.propertyEditor = new PropertyEditor());
-        this.id = 'type';
-        this.name = '<u>T</u>ype';
+        var _this = _super.call(this, _this.propertyEditor = new PropertyEditor()) || this;
+        _this.id = 'type';
+        _this.name = '<u>T</u>ype';
         listenKeyDown(function (k) {
             if (k === key.t && _this._enabled) {
                 Module.activateModule('type', true);
             }
         });
+        return _this;
     }
     Type.prototype.update = function () {
         if (editor.selection.items.length != 1)
@@ -9042,26 +9145,28 @@ var Type = (function (_super) {
     Type.prototype.activate = function (command, parameter) {
         if (command === 'focusOnProperty') {
             this.propertyEditor.el.querySelector(".property[name='" + parameter + "'] input").select();
+            // console.log(nameProp);
         }
     };
     return Type;
 }(Module));
 Module.register(Type, 'right');
 
-var PrefabModule = (function (_super) {
+var PrefabModule = /** @class */ (function (_super) {
     __extends(PrefabModule, _super);
     function PrefabModule() {
         var _this = this;
         var propertyEditor = new PropertyEditor();
-        _super.call(this, propertyEditor);
-        this.propertyEditor = propertyEditor;
-        this.id = 'prefab';
-        this.name = 'Pre<u>f</u>ab';
+        _this = _super.call(this, propertyEditor) || this;
+        _this.propertyEditor = propertyEditor;
+        _this.id = 'prefab';
+        _this.name = 'Pre<u>f</u>ab';
         listenKeyDown(function (k) {
             if (k === key.f && _this._enabled) {
                 Module.activateModule('prefab', true);
             }
         });
+        return _this;
     }
     PrefabModule.prototype.update = function () {
         // return true;
@@ -9083,20 +9188,21 @@ var PrefabModule = (function (_super) {
 }(Module));
 Module.register(PrefabModule, 'right');
 
-var ObjectModule = (function (_super) {
+var ObjectModule = /** @class */ (function (_super) {
     __extends(ObjectModule, _super);
     function ObjectModule() {
         var _this = this;
         var propertyEditor = new PropertyEditor();
-        _super.call(this, propertyEditor);
-        this.propertyEditor = propertyEditor;
-        this.id = 'object';
-        this.name = '<u>O</u>bject';
+        _this = _super.call(this, propertyEditor) || this;
+        _this.propertyEditor = propertyEditor;
+        _this.id = 'object';
+        _this.name = '<u>O</u>bject';
         listenKeyDown(function (k) {
             if (k === key.o && _this._enabled) {
                 Module.activateModule('object', true);
             }
         });
+        return _this;
     }
     ObjectModule.prototype.update = function () {
         if (editor.selection.items.length != 1)
@@ -9117,20 +9223,20 @@ var ObjectModule = (function (_super) {
 }(Module));
 Module.register(ObjectModule, 'right');
 
-var Level$1 = (function (_super) {
+var Level$2 = /** @class */ (function (_super) {
     __extends(Level, _super);
     function Level() {
-        var _this = this;
-        _super.call(this, this.propertyEditor = new PropertyEditor(), this.deleteButton = el('button.button.dangerButton', 'Delete', {
+        var _this = _super.call(this, _this.propertyEditor = new PropertyEditor(), _this.deleteButton = el('button.button.dangerButton', 'Delete', {
             onclick: function () {
                 if (_this.level.isEmpty() || confirm('Are you sure you want to delete level: ' + _this.level.name)) {
                     setChangeOrigin(_this);
                     _this.level.delete();
                 }
             }
-        }));
-        this.id = 'level';
-        this.name = 'Level';
+        })) || this;
+        _this.id = 'level';
+        _this.name = 'Level';
+        return _this;
     }
     Level.prototype.update = function () {
         this.level = null;
@@ -9148,18 +9254,19 @@ var Level$1 = (function (_super) {
     };
     return Level;
 }(Module));
-Module.register(Level$1, 'right');
+Module.register(Level$2, 'right');
 
-var Game$1 = (function (_super) {
+var Game$2 = /** @class */ (function (_super) {
     __extends(Game, _super);
     function Game() {
-        _super.call(this, this.propertyEditor = new PropertyEditor(), el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
+        var _this = _super.call(this, _this.propertyEditor = new PropertyEditor(), el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
                 if (confirm("Delete game '" + game.name + "'? (Cannot be undone)")) {
                     game.delete();
                 }
-            } }));
-        this.id = 'game';
-        this.name = 'Game';
+            } })) || this;
+        _this.id = 'game';
+        _this.name = 'Game';
+        return _this;
     }
     Game.prototype.update = function () {
         if (game)
@@ -9174,17 +9281,17 @@ var Game$1 = (function (_super) {
     };
     return Game;
 }(Module));
-Module.register(Game$1, 'right');
+Module.register(Game$2, 'right');
 
-var PerformanceModule = (function (_super) {
+var PerformanceModule = /** @class */ (function (_super) {
     __extends(PerformanceModule, _super);
     function PerformanceModule() {
         var _this = this;
         var performanceList;
         var fpsMeter;
-        _super.call(this, el('div.performanceCPU', new PerformanceItem({ name: 'Name', value: 'CPU %' }), performanceList = list('div.performanceList', PerformanceItem, 'name')), fpsMeter = new FPSMeter());
-        this.name = 'Performance';
-        this.id = 'performance';
+        _this = _super.call(this, el('div.performanceCPU', new PerformanceItem({ name: 'Name', value: 'CPU %' }), performanceList = list('div.performanceList', PerformanceItem, 'name')), fpsMeter = new FPSMeter()) || this;
+        _this.name = 'Performance';
+        _this.id = 'performance';
         startPerformanceUpdates();
         events.listen('performance snapshot', function (snapshot) {
             if (_this.moduleContainer.isPacked())
@@ -9200,11 +9307,12 @@ var PerformanceModule = (function (_super) {
             fpsMeter.update(getFrameTimes());
             stop('Editor: Performance');
         }, 50);
+        return _this;
     }
     return PerformanceModule;
 }(Module));
 Module.register(PerformanceModule, 'bottom');
-var PerformanceItem = (function () {
+var PerformanceItem = /** @class */ (function () {
     function PerformanceItem(initItem) {
         this.el = el('div.performanceItem', this.name = el('span.performanceItemName'), this.value = el('span.performanceItemValue'));
         if (initItem) {
@@ -9228,7 +9336,7 @@ var PerformanceItem = (function () {
     };
     return PerformanceItem;
 }());
-var FPSMeter = (function () {
+var FPSMeter = /** @class */ (function () {
     function FPSMeter() {
         this.el = el('canvas.fpsMeterCanvas', { width: FRAME_MEMORY_LENGTH, height: 100 });
         this.context = this.el.getContext('2d');
@@ -9284,21 +9392,23 @@ var FPSMeter = (function () {
     return FPSMeter;
 }());
 
-var PerSecond = (function (_super) {
+var PerSecond = /** @class */ (function (_super) {
     __extends(PerSecond, _super);
     function PerSecond() {
+        var _this = this;
         var counterList;
-        _super.call(this, el('div.perSecond', new PerSecondItem({ name: 'Name', count: '/ sec' }), counterList = list('div.perSecondList', PerSecondItem)));
-        this.name = 'Per second';
-        this.id = 'perSecond';
+        _this = _super.call(this, el('div.perSecond', new PerSecondItem({ name: 'Name', count: '/ sec' }), counterList = list('div.perSecondList', PerSecondItem))) || this;
+        _this.name = 'Per second';
+        _this.id = 'perSecond';
         events.listen('perSecond snapshot', function (snapshot) {
             counterList.update(snapshot);
         });
+        return _this;
     }
     return PerSecond;
 }(Module));
 Module.register(PerSecond, 'bottom');
-var PerSecondItem = (function () {
+var PerSecondItem = /** @class */ (function () {
     function PerSecondItem(initItem) {
         this.el = el('div.perSecondItem', this.name = el('span.perSecondItemName'), this.value = el('span.perSecondItemValue'));
         if (initItem) {
@@ -9326,7 +9436,7 @@ var PerSecondItem = (function () {
 window.test = function () {
 };
 
-var OKPopup = (function (_super) {
+var OKPopup = /** @class */ (function (_super) {
     __extends(OKPopup, _super);
     /*
     buttonOptions:
@@ -9337,12 +9447,12 @@ var OKPopup = (function (_super) {
     function OKPopup(title, textContent, buttonOptions, callback) {
         var _this = this;
         var listView;
-        _super.call(this, {
+        _this = _super.call(this, {
             title: title,
             width: '500px',
             content: el('div', el('div.genericCustomContent', textContent), listView = list('div.confirmationButtons', Button)),
             cancelCallback: callback
-        });
+        }) || this;
         listView.update([Object.assign({
                 text: 'OK'
             }, buttonOptions, {
@@ -9353,6 +9463,7 @@ var OKPopup = (function (_super) {
             })]);
         var okButton = listView.views[0];
         okButton.el.focus();
+        return _this;
     }
     OKPopup.prototype.remove = function () {
         _super.prototype.remove.call(this);
@@ -9404,7 +9515,7 @@ addChangeListener(function (change) {
     stop('Editor: General');
 });
 var editor = null;
-var Editor = (function () {
+var Editor = /** @class */ (function () {
     function Editor(game$$1) {
         assert$1(game$$1);
         this.layout = new Layout();
@@ -9507,6 +9618,3 @@ function getOption(id) {
 // window.serializables = serializables;
 // window.setChangeOrigin = setChangeOrigin;
 // import { default as Game } from '../core/game';
-
-})));
-//# sourceMappingURL=openeditplay.editor.js.map
