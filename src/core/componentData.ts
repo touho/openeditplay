@@ -4,7 +4,11 @@ import { componentClasses, Component } from './component';
 import { isClient } from '../util/environment';
 
 export default class ComponentData extends Serializable {
-	constructor(componentClassName, predefinedId = false, predefinedComponentId = false) {
+	name: string;
+	componentClass: object;
+	componentId: string;
+
+	constructor(componentClassName, predefinedId = false, predefinedComponentId: string = '') {
 		super(predefinedId);
 		this.name = componentClassName;
 		this.componentClass = componentClasses.get(this.name);
@@ -31,9 +35,9 @@ export default class ComponentData extends Serializable {
 		}
 		super.addChild(child);
 		return this;
-	};
+	}
 	clone(options) {
-		let newComponentId = (options && options.cloneComponentId) ? this.componentId : false;
+		let newComponentId = (options && options.cloneComponentId) ? this.componentId : '';
 		let obj = new ComponentData(this.name, false, newComponentId);
 		let children = [];
 		this.forEachChild(null, child => {

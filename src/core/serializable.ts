@@ -24,7 +24,20 @@ fromJSON()
  */
 
 export default class Serializable {
-	constructor(predefinedId = false, skipSerializableRegistering = false) {
+	id: string;
+	threeLetterType: string;
+	isRoot: boolean;
+
+	hello: Map;
+
+	_children: Map<string, Array<Serializable>>;
+	_listeners: object;
+	_rootType: string;
+	_parent: Serializable;
+	_alive: boolean;
+	_state: number;
+
+	constructor(predefinedId: string = '', skipSerializableRegistering = false) {
 // @ifndef OPTIMIZE
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 // @endif
@@ -90,16 +103,16 @@ export default class Serializable {
 	}
 	addChild(child) {
 		this._addChild(child);
-		
+
 		this._state |= Serializable.STATE_ADDCHILD;
-		
+
 		if (this._rootType)
 			addChange(changeType.addSerializableToTree, child);
 		return this;
 	}
 	_addChild(child) {
 		assert(child._parent === null);
-		
+
 		let array = this._children.get(child.threeLetterType);
 		if (array === undefined) {
 			array = [];
@@ -108,10 +121,10 @@ export default class Serializable {
 		array.push(child);
 		child._parent = this;
 		child._state |= Serializable.STATE_ADDPARENT;
-		
+
 		if (child._rootType !== this._rootType) // tiny optimization
 			child.setRootType(this._rootType);
-		
+
 		return this;
 	}
 	findChild(threeLetterType, filterFunction, deep = false) {
@@ -151,7 +164,7 @@ export default class Serializable {
 		return element;
 	}
 	// idx is optional
-	deleteChild(child, idx) {
+	deleteChild(child: Serializable, idx?) {
 		addChange(changeType.deleteSerializable, child);
 		this._detachChild(child, idx);
 		child.delete();
@@ -169,7 +182,7 @@ export default class Serializable {
 			this._children.delete(child.threeLetterType);
 		child._parent = null;
 		child.setRootType(null);
-		
+
 		return this;
 	}
 	forEachChild(threeLetterType = null, callback, deep = false) {
@@ -187,10 +200,10 @@ export default class Serializable {
 		return this;
 	}
 	move(newParent) {
-		
+
 		newParent._addChild(this._detach());
 		addChange(changeType.move, this);
-		
+
 		return this;
 	}
 	_detach() {
@@ -249,9 +262,9 @@ export default class Serializable {
 		let listeners = this._listeners[event];
 		if (!listeners)
 			return;
-		
+
 		performanceTool.eventHappened('Event ' + event, listeners.length);
-		
+
 		for (let i = 0; i < listeners.length; i++) {
 // @ifndef OPTIMIZE
 			try {
@@ -279,7 +292,7 @@ export default class Serializable {
 		if (this._rootType === rootType)
 			return;
 		this._rootType = rootType;
-		
+
 		// Optimized
 		let i;
 		this._children.forEach(childArray => {
@@ -325,19 +338,19 @@ export default class Serializable {
 			fromJSON = json => new Class(json.id);
 		serializableClasses.set(threeLetterType, fromJSON);
 	}
+
+	static STATE_INIT: number = 2;
+	static STATE_ADDCHILD: number = 4;
+	static STATE_ADDPARENT: number = 8;
+	static STATE_CLONE: number = 16;
+	static STATE_DESTROY: number = 32;
+	static STATE_FROMJSON: number = 64;
 }
 
 Serializable.prototype._parent = null;
 Serializable.prototype._alive = true;
 Serializable.prototype._state = 0;
 Serializable.prototype._rootType = null;
-
-Serializable.STATE_INIT = 2;
-Serializable.STATE_ADDCHILD = 4;
-Serializable.STATE_ADDPARENT = 8;
-Serializable.STATE_CLONE = 16;
-Serializable.STATE_DESTROY = 32;
-Serializable.STATE_FROMJSON = 64;
 
 Serializable.prototype.isRoot = false; // If this should be a root node
 Object.defineProperty(Serializable.prototype, 'debug', {
@@ -354,24 +367,24 @@ Object.defineProperty(Serializable.prototype, 'debug', {
 			else
 				info += `${key}(${value.length})`;
 		});
-		
+
 		info += '|state: ';
-		
+
 		let states = [];
 		let logState = (state, stateString) => {
 			if (this._state & state)
 				states.push(stateString);
 		};
-		
+
 		logState(Serializable.STATE_INIT, 'init');
 		logState(Serializable.STATE_ADDCHILD, 'add child');
 		logState(Serializable.STATE_ADDPARENT, 'add parent');
 		logState(Serializable.STATE_CLONE, 'clone');
 		logState(Serializable.STATE_DESTROY, 'destroy');
 		logState(Serializable.STATE_FROMJSON, 'from json');
-		
+
 		info += states.join(', ');
-		
+
 		return info;
 	}
 });
@@ -381,9 +394,9 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 		this._children.forEach((value, key) => {
 			c = c.concat(value);
 		});
-		
+
 		let children = [];
-		
+
 		function createDebugObject(type) {
 			if (type === 'gam') return new function Game(){};
 			if (type === 'sce') return new function Scene(){};
@@ -400,7 +413,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 
 		c.forEach(child => {
 			let obj = createDebugObject(child.threeLetterType);
-			
+
 			obj.debug = child.debug;
 			obj.ref = child;
 			obj.debugChildren = child.debugChildren;
@@ -433,7 +446,7 @@ const NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
 
 function indexOfListener(array, callback) {
 	let low = 0,
-		high = array.length, 
+		high = array.length,
 		priority = callback.priority;
 
 	while (low < high) {

@@ -6,7 +6,7 @@ const rollupWatch = require('rollup-watch');
 const rollupBuble = require('rollup-plugin-buble');
 const rollupNodeResolve = require('rollup-plugin-node-resolve');
 const rollupUglify = require('rollup-plugin-uglify');
-const rollupTypeScript = require('rollup-plugin-typescript');
+const rollupTypeScript = require('rollup-plugin-typescript2');
 const glob = require('glob');
 const kexec = require('kexec');
 const postcss = require('postcss');
@@ -218,10 +218,13 @@ function autobuildJs(entry, destination, options) {
 		optimize: false
 	}, options);
 
-	let plugins = [rollupTypeScript({
+	let plugins = [];
+
+	plugins.push(rollupTypeScript({
 		module: 'es6',
+		strictNullChecks: true
 		// outDir: 'marko'
-	})];
+	}));
 
 	plugins.push(rollupNodeResolve({
 		jsnext: true
@@ -245,10 +248,12 @@ function autobuildJs(entry, destination, options) {
 		plugins.push(rollupUglify());
 
 	let rollupOptions = {
-		entry: ROOT + entry,
-		dest: ROOT + destination,
-		sourceMap: true,
-		format: options.format,
+		input: ROOT + entry,
+		output: {
+			file: ROOT + destination,
+			sourcemap: true,
+			format: options.format
+		},
 		plugins,
 		external: options.externalDependencies
 	};
@@ -295,7 +300,7 @@ function autobuildJs(entry, destination, options) {
 					syntaxError(err.file, err.message);
 				} else if (err.message === 'Maximum call stack size exceeded') {
 					console.log('Autobuild stack exceeded. Please reboot.'); // This is horrible bug. Please fix.
-					
+
 					process.exit(1);
 				} else {
 					if (err.code) {

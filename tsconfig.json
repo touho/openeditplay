@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        // "module": "es2015",
+        //"noEmitOnError": false,
+        "module": "ES6",
+
+        "target": "es5",
+        "allowJs": true,
+        "outDir": "./testDist/",
+        //"strictNullChecks": true
+        "lib": ["es5", "es6", "dom"],
+        "sourceMap": true,
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}
