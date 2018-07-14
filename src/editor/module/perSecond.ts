@@ -1,4 +1,4 @@
-import { el, list, mount } from 'redom';
+import { el, list, mount, RedomComponent } from 'redom';
 import Module from './module';
 import events, { dispatch, listen } from '../../util/events';
 import * as performance from '../../util/performance';
@@ -16,7 +16,7 @@ class PerSecond extends Module {
 
 		this.name = 'Per second';
 		this.id = 'perSecond';
-		
+
 		events.listen('perSecond snapshot', snapshot => {
 			counterList.update(snapshot);
 		});
@@ -24,13 +24,16 @@ class PerSecond extends Module {
 }
 Module.register(PerSecond, 'bottom');
 
-class PerSecondItem {
+class PerSecondItem implements RedomComponent {
+	name: HTMLElement;
+	value: HTMLElement;
+	el: HTMLElement;
 	constructor(initItem) {
 		this.el = el('div.perSecondItem',
 			this.name = el('span.perSecondItemName'),
 			this.value = el('span.perSecondItemValue')
 		);
-		
+
 		if (initItem) {
 			this.update(initItem);
 			this.el.classList.add('perSecondHeader');

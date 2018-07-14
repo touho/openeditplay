@@ -5431,12 +5431,18 @@ var Layout = /** @class */ (function () {
 var moduleIdToModule = {};
 var Module = /** @class */ (function () {
     function Module() {
+        var arguments$1 = arguments;
+
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments$1[_i];
+        }
         var _this = this;
         this.type = 'module';
         this.name = this.name || 'Module';
         this.id = this.id || 'module';
         if (arguments.length > 0)
-            { this.el = el.apply(void 0, ['div.module'].concat(arguments)); }
+            { this.el = el.apply(void 0, ['div.module'].concat(args)); }
         else
             { this.el = el('div.module'); }
         this._selected = true;
@@ -5461,44 +5467,49 @@ var Module = /** @class */ (function () {
         this.el.classList.add('hidden');
         this._selected = false;
     };
+    //arguments: moduleName, unpackModuleView=true, ...args
+    Module.activateModule = function (moduleId, unpackModuleView) {
+        var arguments$1 = arguments;
+
+        if (unpackModuleView === void 0) { unpackModuleView = true; }
+        var args = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            args[_i - 2] = arguments$1[_i];
+        }
+        var _a;
+        (_a = moduleIdToModule[moduleId].moduleContainer).activateModule.apply(_a, [moduleIdToModule[moduleId], unpackModuleView].concat(args));
+    };
+    
+    // Modules must be in same moduleContainer
+    Module.activateOneOfModules = function (moduleIds, unpackModuleView) {
+        var arguments$1 = arguments;
+
+        if (unpackModuleView === void 0) { unpackModuleView = true; }
+        var args = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            args[_i - 2] = arguments$1[_i];
+        }
+        var _a;
+        (_a = moduleIdToModule[moduleIds[0]].moduleContainer).activateOneOfModules.apply(_a, [moduleIds.map(function (mId) { return moduleIdToModule[mId]; }), unpackModuleView].concat(args));
+    };
+    
+    Module.packModuleContainer = function (moduleContainerName) {
+        document.querySelectorAll(".moduleContainer." + moduleContainerName)[0].classList.add('packed');
+    };
+    
+    Module.unpackModuleContainer = function (moduleContainerName) {
+        document.querySelectorAll(".moduleContainer." + moduleContainerName)[0].classList.remove('packed');
+    };
+    
+    // moduleContainerName = left | middle | right | bottom
+    Module.register = function (moduleClass, moduleContainerName) {
+        registerPromise = registerPromise.then(function () {
+            events.dispatch('registerModule_' + moduleContainerName, moduleClass);
+        });
+    };
+    
     return Module;
 }());
-//arguments: moduleName, unpackModuleView=true, ...args
-Module.activateModule = function (moduleId, unpackModuleView) {
-    var arguments$1 = arguments;
-
-    if (unpackModuleView === void 0) { unpackModuleView = true; }
-    var args = [];
-    for (var _i = 2; _i < arguments.length; _i++) {
-        args[_i - 2] = arguments$1[_i];
-    }
-    var _a;
-    (_a = moduleIdToModule[moduleId].moduleContainer).activateModule.apply(_a, [moduleIdToModule[moduleId], unpackModuleView].concat(args));
-};
-// Modules must be in same moduleContainer
-Module.activateOneOfModules = function (moduleIds, unpackModuleView) {
-    var arguments$1 = arguments;
-
-    if (unpackModuleView === void 0) { unpackModuleView = true; }
-    var args = [];
-    for (var _i = 2; _i < arguments.length; _i++) {
-        args[_i - 2] = arguments$1[_i];
-    }
-    var _a;
-    (_a = moduleIdToModule[moduleIds[0]].moduleContainer).activateOneOfModules.apply(_a, [moduleIds.map(function (mId) { return moduleIdToModule[mId]; }), unpackModuleView].concat(args));
-};
-Module.packModuleContainer = function (moduleContainerName) {
-    document.querySelectorAll(".moduleContainer." + moduleContainerName)[0].classList.add('packed');
-};
-Module.unpackModuleContainer = function (moduleContainerName) {
-    document.querySelectorAll(".moduleContainer." + moduleContainerName)[0].classList.remove('packed');
-};
-// moduleContainerName = left | middle | right | bottom
-Module.register = function (moduleClass, moduleContainerName) {
-    registerPromise = registerPromise.then(function () {
-        events.dispatch('registerModule_' + moduleContainerName, moduleClass);
-    });
-};
 var registerPromise = new Promise(function (resolve) {
     events.listen('registerModules', function () {
         registerPromise.then(function () {

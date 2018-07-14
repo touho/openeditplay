@@ -9,13 +9,14 @@ export default class Module {
 	name: string;
 	_selected: boolean;
 	_enabled: boolean;
+	el: HTMLElement;
 
-	constructor() {
+	constructor(...args) {
 		this.type = 'module';
 		this.name = this.name || 'Module';
 		this.id = this.id || 'module';
 		if (arguments.length > 0)
-			this.el = el('div.module', ...arguments);
+			this.el = el('div.module', ...args);
 		else
 			this.el = el('div.module');
 		this._selected = true;
@@ -41,28 +42,30 @@ export default class Module {
 		this.el.classList.add('hidden');
 		this._selected = false;
 	}
-}
-//arguments: moduleName, unpackModuleView=true, ...args
-Module.activateModule = function(moduleId, unpackModuleView=true, ...args) {
-	moduleIdToModule[moduleId].moduleContainer.activateModule(moduleIdToModule[moduleId], unpackModuleView, ...args);
-};
-// Modules must be in same moduleContainer
-Module.activateOneOfModules = function(moduleIds, unpackModuleView=true, ...args) {
-	moduleIdToModule[moduleIds[0]].moduleContainer.activateOneOfModules(moduleIds.map(mId => moduleIdToModule[mId]), unpackModuleView, ...args);
-};
-Module.packModuleContainer = function(moduleContainerName) {
-	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.add('packed');
-};
-Module.unpackModuleContainer = function(moduleContainerName) {
-	document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.remove('packed');
-};
 
-// moduleContainerName = left | middle | right | bottom
-Module.register = function(moduleClass, moduleContainerName) {
-	registerPromise = registerPromise.then(() => {
-		events.dispatch('registerModule_' + moduleContainerName, moduleClass);
-	});
-};
+	//arguments: moduleName, unpackModuleView=true, ...args
+	static activateModule(moduleId, unpackModuleView=true, ...args) {
+		moduleIdToModule[moduleId].moduleContainer.activateModule(moduleIdToModule[moduleId], unpackModuleView, ...args);
+	};
+	// Modules must be in same moduleContainer
+	static activateOneOfModules(moduleIds, unpackModuleView=true, ...args) {
+		moduleIdToModule[moduleIds[0]].moduleContainer.activateOneOfModules(moduleIds.map(mId => moduleIdToModule[mId]), unpackModuleView, ...args);
+	};
+	static packModuleContainer(moduleContainerName) {
+		document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.add('packed');
+	};
+	static unpackModuleContainer(moduleContainerName) {
+		document.querySelectorAll(`.moduleContainer.${moduleContainerName}`)[0].classList.remove('packed');
+	};
+
+	// moduleContainerName = left | middle | right | bottom
+	static register(moduleClass, moduleContainerName) {
+		registerPromise = registerPromise.then(() => {
+			events.dispatch('registerModule_' + moduleContainerName, moduleClass);
+		});
+	};
+}
+
 
 
 let registerPromise = new Promise(function(resolve) {
