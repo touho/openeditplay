@@ -5,6 +5,9 @@ import {DragAndDropMoveEvent, DragAndDropStartEvent, DragAndDropStopEvent} from 
 declare var $: any;
 
 export default class TreeView {
+	options: any;
+	el: HTMLElement;
+
 	constructor(options) {
 		this.options = Object.assign({
 			id: '',
@@ -125,7 +128,6 @@ $(document).on('dnd_move.vakata', function (e, data) {
 	data.helper.find('.jstree-icon').css({
 		visibility: 'visible'
 	});
-	debugger;
 	let idList = data.data.nodes;
 	let targetElement = data.event.target;
 	let event = new DragAndDropMoveEvent(idList, targetElement, data.helper);

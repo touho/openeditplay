@@ -41,6 +41,8 @@ export function setButtonContainer(container) {
 }
 
 class ProfileButton {
+	el: HTMLElement;
+
 	constructor() {
 		this.el = el('img.profileButton', {
 			src: '/img/profile.png',
@@ -53,6 +55,9 @@ class ProfileButton {
 }
 
 class ProfileMenu {
+	el: HTMLElement;
+	gamesCreated: HTMLElement;
+
 	constructor() {
 		this.el = el('div.profileMenu',
 			el('div.profileMenuContent',

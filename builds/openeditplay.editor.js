@@ -19,7 +19,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -219,13 +218,11 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -315,7 +312,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=events.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -398,7 +394,6 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -848,7 +843,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -952,7 +946,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -1084,7 +1077,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1217,7 +1209,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1267,7 +1258,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1414,7 +1404,6 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1534,7 +1523,6 @@
 	        });
 	    });
 	};
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -2087,7 +2075,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI$1;
 	if (isClient) {
@@ -2144,7 +2131,6 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2180,9 +2166,6 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -2246,7 +2229,6 @@
 	});
 	var gameCreateListeners = [];
 	// jee
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2334,7 +2316,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2459,7 +2440,6 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
-	//# sourceMappingURL=input.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2705,7 +2685,6 @@
 	    if (scene)
 	        { listener(); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2841,7 +2820,6 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
-	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var eventListeners = [
@@ -3038,7 +3016,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3226,7 +3203,6 @@
 	    return entity;
 	});
 	Entity.ENTITY_CREATION_DEBUGGING = false;
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    createPropertyType('name', 'No name', createPropertyType.string)
@@ -3460,7 +3436,6 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3482,7 +3457,6 @@
 	    delete serializables[id];
 	}
 	changeDispacher.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3730,7 +3704,6 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3792,7 +3765,6 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    createPropertyType('name', 'No name', createPropertyType.string)
@@ -3816,9 +3788,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3904,7 +3873,6 @@
 	});
 	var zeroPoint = new PIXI$2.Point();
 	var tempPoint = new PIXI$2.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3928,7 +3896,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4102,7 +4069,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4143,7 +4109,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4194,7 +4159,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4242,7 +4206,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4439,7 +4402,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4465,7 +4427,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4750,7 +4711,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -4766,7 +4726,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4968,9 +4927,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5013,7 +4969,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5156,7 +5111,6 @@
 	    });
 	}
 	window.addEventListener('load', connect);
-	//# sourceMappingURL=net.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -5328,7 +5282,6 @@
 	    };
 	    return ModuleTab;
 	}());
-	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -5352,7 +5305,6 @@
 	    };
 	    return Layout;
 	}());
-	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -5443,7 +5395,6 @@
 	        resolve();
 	    });
 	});
-	//# sourceMappingURL=module.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -5578,7 +5529,6 @@
 	    };
 	    return SceneControlButton;
 	}());
-	//# sourceMappingURL=topBar.js.map
 
 	function shouldSyncLevelAndScene() {
 	    return scene && scene.isInInitialState() && editor.selectedLevel;
@@ -5897,7 +5847,6 @@
 	        editorWidget.position.updateVisibility();
 	    });
 	}
-	//# sourceMappingURL=sceneEditUtil.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -5988,7 +5937,6 @@
 	}());
 	var help = new Help;
 	window.help = help;
-	//# sourceMappingURL=help.js.map
 
 	/*
 	Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
@@ -6080,7 +6028,6 @@
 	    };
 	    return Widget;
 	}());
-	//# sourceMappingURL=widget.js.map
 
 	var SHIFT_STEPS = 16;
 	var AngleWidget = /** @class */ (function (_super) {
@@ -6155,7 +6102,6 @@
 	    };
 	    return AngleWidget;
 	}(Widget));
-	//# sourceMappingURL=angleWidget.js.map
 
 	var PositionWidget = /** @class */ (function (_super) {
 	    __extends(PositionWidget, _super);
@@ -6193,7 +6139,6 @@
 	    };
 	    return PositionWidget;
 	}(Widget));
-	//# sourceMappingURL=positionWidget.js.map
 
 	var MIN_SCALE = 0.1;
 	var ScaleWidget = /** @class */ (function (_super) {
@@ -6270,7 +6215,6 @@
 	    };
 	    return ScaleWidget;
 	}(Widget));
-	//# sourceMappingURL=scaleWidget.js.map
 
 	var MoveWidget = /** @class */ (function (_super) {
 	    __extends(MoveWidget, _super);
@@ -6342,7 +6286,6 @@
 	    };
 	    return MoveWidget;
 	}(Widget));
-	//# sourceMappingURL=moveWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -6542,7 +6485,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=EditorWidget.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -7324,7 +7266,6 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
-	//# sourceMappingURL=scene.js.map
 
 	var Types = /** @class */ (function (_super) {
 	    __extends(Types, _super);
@@ -7544,7 +7485,6 @@
 	    }, 0);
 	});
 	Module.register(Types, 'left');
-	//# sourceMappingURL=types.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -7697,7 +7637,6 @@
 	    data.helper.find('.jstree-icon').css({
 	        visibility: 'visible'
 	    });
-	    debugger;
 	    var idList = data.data.nodes;
 	    var targetElement = data.event.target;
 	    var event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
@@ -7709,7 +7648,6 @@
 	    var event = new DragAndDropStopEvent(idList, targetElement);
 	    events.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
-	//# sourceMappingURL=treeView.js.map
 
 	var Prefabs = /** @class */ (function (_super) {
 	    __extends(Prefabs, _super);
@@ -7767,7 +7705,6 @@
 	    return Prefabs;
 	}(Module));
 	Module.register(Prefabs, 'left');
-	//# sourceMappingURL=prefabs.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7843,7 +7780,6 @@
 	    }
 	    return Layer;
 	}());
-	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7872,7 +7808,6 @@
 	    }
 	    return CreateObject;
 	}(Popup));
-	//# sourceMappingURL=createObject.js.map
 
 	var Objects = /** @class */ (function (_super) {
 	    __extends(Objects, _super);
@@ -8153,7 +8088,6 @@
 	    return Objects;
 	}(Module));
 	Module.register(Objects, 'left');
-	//# sourceMappingURL=objects.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -8247,7 +8181,6 @@
 	    };
 	    return LevelItem;
 	}());
-	//# sourceMappingURL=levels.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -8324,7 +8257,6 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
-	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -8360,7 +8292,6 @@
 	    };
 	    return Confirmation;
 	}(Popup));
-	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -8490,7 +8421,6 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
-	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -8545,7 +8475,6 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
-	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -8563,7 +8492,6 @@
 	        number: num
 	    };
 	}
-	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -8726,7 +8654,8 @@
 	        }));
 	        if (inheritedComponentDatas.length === 0)
 	            { addButton.classList.add('clickMeEffect'); }
-	        mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: function () {
+	        mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
+	            onclick: function () {
 	                dispatch(_this, 'makingChanges');
 	                var clone = _this.item.clone();
 	                var _a = parseTextAndNumber(clone.name), text$$1 = _a.text, number = _a.number;
@@ -8737,8 +8666,10 @@
 	                clone.name = nameSuggestion;
 	                _this.item.getParent().addChild(clone);
 	                dispatch(_this, 'propertyEditorSelect', clone);
-	            } }));
-	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', { onclick: function () {
+	            }
+	        }));
+	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', {
+	            onclick: function () {
 	                dispatch(_this, 'makingChanges');
 	                var entityPrototypeCount = _this.item.countEntityPrototypes(true);
 	                if (entityPrototypeCount) {
@@ -8749,7 +8680,8 @@
 	                    _this.item.delete();
 	                }
 	                editor.select();
-	            } }));
+	            }
+	        }));
 	    };
 	    Container.prototype.updateEntityPrototype = function () {
 	        var _this = this;
@@ -9058,7 +8990,6 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
-	//# sourceMappingURL=propertyEditor.js.map
 
 	var Type = /** @class */ (function (_super) {
 	    __extends(Type, _super);
@@ -9102,7 +9033,6 @@
 	    return Type;
 	}(Module));
 	Module.register(Type, 'right');
-	//# sourceMappingURL=type.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -9137,7 +9067,6 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
-	//# sourceMappingURL=prefab.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -9171,7 +9100,6 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
-	//# sourceMappingURL=object.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -9206,7 +9134,6 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
-	//# sourceMappingURL=level.js.map
 
 	var Game$1 = /** @class */ (function (_super) {
 	    __extends(Game$$1, _super);
@@ -9235,7 +9162,6 @@
 	    return Game$$1;
 	}(Module));
 	Module.register(Game$1, 'right');
-	//# sourceMappingURL=game.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -9345,7 +9271,6 @@
 	    };
 	    return FPSMeter;
 	}());
-	//# sourceMappingURL=performance.js.map
 
 	var PerSecond = /** @class */ (function (_super) {
 	    __extends(PerSecond, _super);
@@ -9387,11 +9312,9 @@
 	    };
 	    return PerSecondItem;
 	}());
-	//# sourceMappingURL=perSecond.js.map
 
 	window.test = function () {
 	};
-	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -9427,7 +9350,6 @@
 	    };
 	    return OKPopup;
 	}(Popup));
-	//# sourceMappingURL=OKPopup.js.map
 
 	var modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
 	var loadedPromise = events.getEventPromise('loaded');
@@ -9559,7 +9481,6 @@
 	    loadOptions();
 	    return options$1[id];
 	}
-	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -9575,7 +9496,6 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

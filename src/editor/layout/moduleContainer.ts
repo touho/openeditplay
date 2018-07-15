@@ -1,9 +1,17 @@
-import { el, list, mount } from 'redom';
+import { el, list, mount, List, RedomComponent } from 'redom';
 import events, { dispatch, listen } from '../../util/events';
 import { setOption, getOption } from '../editor';
 import * as performance from '../../util/performance';
+import Module from '../module/module';
 
 export default class ModuleContainer {
+	el: HTMLElement;
+	packButtonEnabled: boolean;
+	packButton: HTMLElement;
+	tabs: List;
+	moduleElements: HTMLElement;
+	modules: Array<Module>;
+
 	constructor(moduleContainerName = 'unknownClass.anotherClass', packButtonIcon = 'fa-chevron-left') {
 		this.modules = [];
 		this.packButtonEnabled = !!packButtonIcon;
@@ -143,7 +151,12 @@ export default class ModuleContainer {
 	}
 }
 
-class ModuleTab {
+class ModuleTab implements RedomComponent {
+	el: HTMLElement;
+	module: Module;
+	_sel: boolean;
+	_ena: boolean;
+
 	constructor() {
 		this.el = el('span.moduleTab.button');
 		this.module = null;

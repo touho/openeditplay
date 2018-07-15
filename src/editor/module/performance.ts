@@ -79,8 +79,11 @@ class PerformanceItem {
 }
 
 class FPSMeter {
+	el: HTMLCanvasElement;
+	context: CanvasRenderingContext2D;
+
 	constructor() {
-		this.el = el('canvas.fpsMeterCanvas', { width: performance.FRAME_MEMORY_LENGTH, height: 100 });
+		this.el = <HTMLCanvasElement> el('canvas.fpsMeterCanvas', { width: performance.FRAME_MEMORY_LENGTH, height: 100 });
 		this.context = this.el.getContext('2d');
 	}
 	update(fpsData) {

@@ -1,8 +1,12 @@
 
-import {el, mount, list} from 'redom';
+import {el, mount, list, List, RedomComponent} from 'redom';
 
 // item: {label, callback}
 export class ContextMenu {
+	el: HTMLElement;
+	list: List;
+
+
 	constructor(triggerElement, items) {
 		let triggerBounds = triggerElement.getBoundingClientRect();
 
@@ -34,7 +38,10 @@ export class ContextMenu {
 	}
 }
 
-class ContextMenuItem {
+class ContextMenuItem implements RedomComponent {
+	el: HTMLElement;
+	callback: () => void;
+
 	constructor() {
 		this.el = el('div.contextMenuItem',
 			{

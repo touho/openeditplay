@@ -4,6 +4,11 @@ import { listenKeyDown, key } from '../../../util/input';
 export let popupDepth = 0;
 
 export default class Popup {
+	el: HTMLElement;
+	text: HTMLElement;
+	content: HTMLElement;
+	depth: number;
+
 	constructor({
 		title = 'Undefined popup',
 		cancelCallback = null,
@@ -48,6 +53,10 @@ export default class Popup {
 }
 
 export class Button {
+	el: HTMLElement;
+	callback: () => void;
+	_prevIcon: string;
+
 	constructor() {
 		this.el = el('button.button', {onclick: () => {
 			this.callback();
@@ -85,6 +94,8 @@ export class Button {
 }
 
 class Layer {
+	el: HTMLElement;
+
 	constructor(popup) {
 		this.el = el('div.popupLayer', { onclick: () => {
 			popup.remove();

@@ -1,7 +1,7 @@
 import Popup, {Button} from './Popup';
 import {componentClasses} from '../../../core/component';
 import ComponentData from '../../../core/componentData';
-import {list, el} from 'redom';
+import {list, el, List} from 'redom';
 import assert from '../../../util/assert';
 import {setChangeOrigin} from '../../../core/change';
 import Confirmation from './Confirmation';
@@ -60,6 +60,10 @@ export default class ComponentAdder extends Popup {
 }
 
 class Category {
+	el: HTMLElement;
+	name: HTMLElement;
+	list: List;
+
 	constructor(parent) {
 		this.el = el('div.categoryItem',
 			this.name = el('div.categoryName'),
@@ -132,6 +136,10 @@ class Category {
 }
 
 class ButtonWithDescription {
+	el: HTMLElement;
+	button: Button;
+	description: HTMLElement;
+
 	constructor() {
 		this.el = el('div.buttonWithDescription',
 			this.button = new Button(),

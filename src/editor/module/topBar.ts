@@ -140,6 +140,9 @@ export class TopBarModule extends Module {
 Module.register(TopBarModule, 'top');
 
 class SceneControlButton {
+	el: HTMLElement;
+	callback: (HTMLElement) => void;
+
 	constructor(data) {
 		this.el = el('div.button.topSceneControlButton', {
 			onclick: () => this.click()
@@ -159,6 +162,13 @@ class SceneControlButton {
 }
 
 export class TopButton {
+	priority: number;
+	callback: (TopButton) => void;
+	icon: HTMLElement;
+	text: HTMLElement;
+	el: HTMLElement;
+
+
 	constructor({
 		text = 'Button',
 		callback,

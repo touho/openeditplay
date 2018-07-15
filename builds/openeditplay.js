@@ -4890,12 +4890,13 @@
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
 	    function TouchControl(elementId, keyBinding, requireTouchStart) {
+	        if (requireTouchStart === void 0) { requireTouchStart = false; }
 	        this.elementId = elementId;
-	        this.element = null; // document not loaded yet.
 	        this.keyBinding = keyBinding;
+	        this.requireTouchStart = requireTouchStart;
+	        this.element = null; // document not loaded yet.
 	        this.state = false; // is key binding simulated?
 	        this.visible = false;
-	        this.requireTouchStart = requireTouchStart;
 	        this.containsFunc = null;
 	    }
 	    TouchControl.prototype.initElement = function () {

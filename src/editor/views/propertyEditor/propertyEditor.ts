@@ -1,4 +1,4 @@
-import { el, list, mount } from 'redom';
+import { el, list, mount, List } from 'redom';
 import events, { listen, dispatch } from '../../../util/events';
 import showPopup from '../popup/Popup';
 import ComponentData from '../../../core/componentData';
@@ -15,7 +15,7 @@ import * as performance from '../../../util/performance'
 import ObjectMoreButtonContextMenu from '../popup/objectMoreButtonContextMenu'
 import Confirmation from "../popup/Confirmation";
 import { listenKeyDown, key } from '../../../util/input';
-import {parseTextAndNumber, skipTransitions} from './util';
+import { parseTextAndNumber, skipTransitions } from './util';
 
 /*
 Reference: Unbounce
@@ -23,6 +23,11 @@ Reference: Unbounce
  */
 
 export default class PropertyEditor {
+	el: HTMLElement;
+	list: List;
+	dirty: boolean;
+	editingProperty: boolean;
+
 	constructor() {
 		this.el = el('div.propertyEditor',
 			this.list = list('div.propertyEditorList', Container)
@@ -85,7 +90,7 @@ export default class PropertyEditor {
 		if (!items) return;
 
 		if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
-		|| items.length === 1 && items[0] instanceof PropertyOwner) {
+			|| items.length === 1 && items[0] instanceof PropertyOwner) {
 			this.item = items[0];
 			this.list.update([this.item]);
 		} else {
@@ -110,6 +115,15 @@ export default class PropertyEditor {
 */
 
 class Container {
+	el: HTMLElement;
+	title: HTMLElement;
+	titleText: HTMLElement;
+	titleIcon: HTMLElement;
+	content: HTMLElement;
+	controls: HTMLElement;
+	properties: List;
+	containers: List;
+
 	constructor() {
 		this.el = el('div.container',
 			this.title = el('div.containerTitle',
@@ -189,29 +203,33 @@ class Container {
 		if (inheritedComponentDatas.length === 0)
 			addButton.classList.add('clickMeEffect');
 
-		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: () => {
-			dispatch(this, 'makingChanges');
-			let clone = this.item.clone();
-			let { text, number } = parseTextAndNumber(clone.name);
-			let nameSuggestion = text + number++;
-			while (this.item.getParent().findChild('prt', prt => prt.name === nameSuggestion)) {
-				nameSuggestion = text + number++;
+		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
+			onclick: () => {
+				dispatch(this, 'makingChanges');
+				let clone = this.item.clone();
+				let { text, number } = parseTextAndNumber(clone.name);
+				let nameSuggestion = text + number++;
+				while (this.item.getParent().findChild('prt', prt => prt.name === nameSuggestion)) {
+					nameSuggestion = text + number++;
+				}
+				clone.name = nameSuggestion;
+				this.item.getParent().addChild(clone);
+				dispatch(this, 'propertyEditorSelect', clone);
 			}
-			clone.name = nameSuggestion;
-			this.item.getParent().addChild(clone);
-			dispatch(this, 'propertyEditorSelect', clone);
-		} }));
-		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', { onclick: () => {
-			dispatch(this, 'makingChanges');
-			let entityPrototypeCount = this.item.countEntityPrototypes(true);
-			if (entityPrototypeCount) {
-				if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} objects that are using it?`))
+		}));
+		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', {
+			onclick: () => {
+				dispatch(this, 'makingChanges');
+				let entityPrototypeCount = this.item.countEntityPrototypes(true);
+				if (entityPrototypeCount) {
+					if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} objects that are using it?`))
+						this.item.delete();
+				} else {
 					this.item.delete();
-			} else {
-				this.item.delete();
+				}
+				editor.select();
 			}
-			editor.select();
-		} }));
+		}));
 	}
 	updateEntityPrototype() {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
@@ -391,6 +409,10 @@ class Container {
 }
 
 class Property {
+	el: HTMLElement;
+	name: HTMLElement;
+	content: HTMLElement;
+
 	constructor() {
 		this.el = el('div.property', { name: '' },
 			this.name = el('div.nameCell'),
@@ -414,7 +436,7 @@ class Property {
 		try {
 			this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
 			this.el.removeAttribute('error');
-		} catch(e) {
+		} catch (e) {
 			this.el.setAttribute('error', 'true');
 		}
 	}
@@ -426,7 +448,7 @@ class Property {
 			if (!this.property.id) {
 				dispatch(this, 'propertyInherited', this.property);
 			}
-		} catch(e) {
+		} catch (e) {
 			// console.log('Error while changing property value', this.property, this.input.value);
 			this.property.value = originalValue;
 		}
