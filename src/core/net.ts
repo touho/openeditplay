@@ -5,7 +5,7 @@ import {
 	executeChange,
 	executeExternal,
 	changeType
-} from './serializableManager'
+} from './change'
 import Serializable from './serializable';
 import {game} from './game';
 import {limit} from '../util/callLimiter';
@@ -15,7 +15,7 @@ import events from '../util/events';
 let options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
 	serverToClientEnabled: true,
-	clientToServerEnabled: false 
+	clientToServerEnabled: false
 };
 
 export function configureNetSync(_options) {
@@ -83,7 +83,7 @@ addChangeListener(change => {
 		valueChanges[change.id] = change;
 	}
 	changes.push(change);
-	
+
 	if (sendChanges)
 		sendChanges();
 });
@@ -95,7 +95,7 @@ function parseSocketMessage(message) {
 		body = JSON.parse(body);
 
 	console.log('parseSocketMessage', type, body);
-	
+
 	return {
 		type,
 		body
@@ -105,7 +105,7 @@ function parseSocketMessage(message) {
 function sendSocketMessage(eventName, data) {
 	if (!socket)
 		return console.log('Could not send', eventName);
-	
+
 	if (eventName)
 		socket.emit(eventName, data);
 	else
@@ -117,18 +117,18 @@ let listeners = {
 		let {profile, gameData, editAccess} = result;
 		localStorage.openEditPlayUserId = profile.id;
 		localStorage.openEditPlayUserToken = profile.userToken;
-		
+
 		if (!editAccess) {
 			events.dispatch('noEditAccess');
 		}
-		
+
 		delete profile.userToken;
 		window.user = profile;
-		
+
 		gameReceivedOverNet(gameData);
 	},
 	identifyYourself() {
-		if (game) 
+		if (game)
 			return location.reload();
 
 		let gameId = getQueryVariable('gameId') || localStorage.openEditPlayGameId;
@@ -150,7 +150,7 @@ let listeners = {
 let sendChanges = limit(200, 'soon', () => {
 	if (!socket || changes.length === 0 || !options.clientToServerEnabled)
 		return;
-	
+
 	let packedChanges = changes.map(packChange);
 	changes.length = 0;
 	valueChanges = {};
@@ -163,7 +163,7 @@ function connect() {
 	if (!window.io) {
 		return console.error('socket.io not defined after window load.');
 	}
-	
+
 	socket = new io();
 	window.s = socket;
 	socket.on('connect', () => {

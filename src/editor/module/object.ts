@@ -22,7 +22,7 @@ class ObjectModule extends Module {
 	update() {
 		if (editor.selection.items.length != 1)
 			return false; // multiedit not supported yet
-		
+
 		if (editor.selection.type === 'ent' || editor.selection.type === 'epr') {
 			if (!this._selected || this.moduleContainer.isPacked()) {
 				return; // if the tab is not visible, do not waste CPU

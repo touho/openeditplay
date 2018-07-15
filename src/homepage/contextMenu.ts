@@ -4,7 +4,7 @@ import {el, mount, list} from 'redom';
 export class ContextMenu {
 	constructor(triggerElement, items) {
 		let triggerBounds = triggerElement.getBoundingClientRect();
-		
+
 
 		this.el = el('div.contextMenu', {
 			style: {
@@ -14,20 +14,20 @@ export class ContextMenu {
 		});
 		this.list = list(this.el, ContextMenuItem);
 		this.list.update(items);
-		
+
 		setTimeout(() => {
 			this.eventListener = window.addEventListener('click', () => {
 				this.remove();
 			});
 		}, 0);
-		
+
 		mount(document.body, this.el);
 	}
-	
+
 	remove() {
-		if (this.eventListener) 
+		if (this.eventListener)
 			window.removeEventListener('click', this.eventListener);
-		
+
 		if (this.el.parentNode)
 			this.el.parentNode.removeChild(this.el);
 	}

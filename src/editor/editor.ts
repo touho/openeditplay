@@ -18,22 +18,22 @@ import './module/game';
 import './module/performance';
 import './module/perSecond';
 
-import {el, list, mount} from 'redom';
-import {default as Game, game} from '../core/game';
+import { el, list, mount } from 'redom';
+import { default as Game, game } from '../core/game';
 import Serializable from '../core/serializable';
 import {
 	addChangeListener,
-	serializables,
 	executeExternal,
 	setChangeOrigin,
 	changeType
-} from '../core/serializableManager';
+} from '../core/change';
+import { serializables } from '../core/serializableManager';
 import assert from '../util/assert';
-import {configureNetSync} from '../core/net';
+import { configureNetSync } from '../core/net';
 import './help';
 import './test';
 import * as performance from '../util/performance'
-import {limit} from '../util/callLimiter';
+import { limit } from '../util/callLimiter';
 import OKPopup from "./views/popup/OKPopup";
 
 let loaded = false;
@@ -91,7 +91,7 @@ export let editor = null;
 class Editor {
 	layout: Layout;
 	game: Game;
-	selection: {type: string, items: Array<any>, dirty: boolean};
+	selection: { type: string, items: Array<any>, dirty: boolean };
 	constructor(game) {
 		assert(game);
 

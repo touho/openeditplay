@@ -24,11 +24,11 @@ export class TopBarModule extends Module {
 		listenKeyDown(keyCode => {
 			this.keyboardShortcuts[keyCode] && this.keyboardShortcuts[keyCode]();
 		});
-		
+
 		this.initControlButtons();
 		this.initToolSelectionButtons();
 	}
-	
+
 	addKeyboardShortcut(key, buttonOrCallback) {
 		if (typeof buttonOrCallback === 'function') {
 			this.keyboardShortcuts[key] = buttonOrCallback;
@@ -36,7 +36,7 @@ export class TopBarModule extends Module {
 			this.keyboardShortcuts[key] = () => buttonOrCallback.callback(buttonOrCallback.el);
 		}
 	}
-	
+
 	initControlButtons() {
 		let playButtonData = {
 			title: 'Play (P)',
@@ -73,7 +73,7 @@ export class TopBarModule extends Module {
 
 		this.addKeyboardShortcut(key.p, playButton);
 		this.addKeyboardShortcut(key.r, stopButton);
-		
+
 		listenSceneCreation(() => {
 			scene.listen('reset', updateButtons);
 			scene.listen('play', updateButtons);
@@ -83,7 +83,7 @@ export class TopBarModule extends Module {
 		mount(this.controlButtons, playButton);
 		mount(this.controlButtons, stopButton);
 	}
-	
+
 	initToolSelectionButtons() {
 		const createCallback = (callback) => {
 			return (element) => {
@@ -121,7 +121,7 @@ export class TopBarModule extends Module {
 		this.addKeyboardShortcut(key[1], tools.globalMoveTool);
 		this.addKeyboardShortcut(key[2], tools.localMoveTool);
 		this.addKeyboardShortcut(key[3], tools.multiTool);
-		
+
 		mount(this.toolSelectionButtons, tools.globalMoveTool);
 		mount(this.toolSelectionButtons, tools.localMoveTool);
 		mount(this.toolSelectionButtons, tools.multiTool);

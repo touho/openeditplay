@@ -4,10 +4,228 @@
 	(factory());
 }(this, (function () { 'use strict';
 
+	// @ifndef OPTIMIZE
+	var changeGetter = {
+	    get: function () { return null; } // override this
+	};
+	// @endif
+	function assert(condition, message) {
+	    // @ifndef OPTIMIZE
+	    if (!condition) {
+	        console.log('Assert', message, new Error().stack, '\norigin', changeGetter.get());
+	        debugger;
+	        if (!window.force)
+	            { throw new Error(message); }
+	    }
+	    // @endif
+	}
+	//# sourceMappingURL=assert.js.map
+
+	/*! *****************************************************************************
+	Copyright (c) Microsoft Corporation. All rights reserved.
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at http://www.apache.org/licenses/LICENSE-2.0
+
+	THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+	KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+	WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+	MERCHANTABLITY OR NON-INFRINGEMENT.
+
+	See the Apache Version 2.0 License for specific language governing permissions
+	and limitations under the License.
+	***************************************************************************** */
+	/* global Reflect, Promise */
+
+	var extendStatics = Object.setPrototypeOf ||
+	    ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+	    function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+
+	function __extends(d, b) {
+	    extendStatics(d, b);
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	}
+
+	// reference parameters are not sent over net. they are helpers in local game instance
+	var changeType = {
+	    addSerializableToTree: 'a',
+	    setPropertyValue: 's',
+	    deleteSerializable: 'd',
+	    move: 'm',
+	    deleteAllChildren: 'c',
+	};
+	var keyToShortKey = {
+	    id: 'i',
+	    type: 't',
+	    value: 'v',
+	    parentId: 'p' // obj._parent.id
+	};
+	var shortKeyToKey = {};
+	Object.keys(keyToShortKey).forEach(function (k) {
+	    shortKeyToKey[keyToShortKey[k]] = k;
+	});
+	var origin;
+	function getChangeOrigin() {
+	    return origin;
+	}
+	changeGetter.get = getChangeOrigin;
+	// @endif
+	function setChangeOrigin(_origin) {
+	    // @ifndef OPTIMIZE
+	    if (_origin !== origin) {
+	        origin = _origin;
+	    }
+	    // @endif
+	}
+	var externalChange = false;
+	// addChange needs to be called if editor, server or net game needs to share changes
+	function addChange(type, reference) {
+	    // @ifndef OPTIMIZE
+	    assert(origin, 'Change without origin!');
+	    // @endif
+	    if (!reference.id)
+	        { return; }
+	    var change = {
+	        type: type,
+	        reference: reference,
+	        id: reference.id,
+	        external: externalChange,
+	        origin: origin // exists in editor, but not in optimized release
+	    };
+	    if (type === changeType.setPropertyValue) {
+	        change.value = reference._value;
+	    }
+	    else if (type === changeType.move) {
+	        change.parent = reference._parent;
+	    }
+	    else if (type === changeType.addSerializableToTree) {
+	        change.parent = reference._parent;
+	        delete change.id;
+	    }
+	    var previousOrigin = origin;
+	    // @endif
+	    for (var i = 0; i < listeners.length; ++i) {
+	        listeners[i](change);
+	    }
+	    // @ifndef OPTIMIZE
+	    if (origin !== previousOrigin) {
+	        origin = previousOrigin;
+	    }
+	    // @endif
+	}
+	function executeExternal(callback) {
+	    setChangeOrigin('external');
+	    if (externalChange)
+	        { return callback(); }
+	    externalChange = true;
+	    callback();
+	    externalChange = false;
+	}
+	var listeners = [];
+	function addChangeListener(callback) {
+	    assert(typeof callback === 'function');
+	    listeners.push(callback);
+	}
+	function packChange(change) {
+	    if (change.packedChange)
+	        { return change.packedChange; } // optimization
+	    var packed = {};
+	    try {
+	        if (change.parent)
+	            { change.parentId = change.parent.id; }
+	        if (change.type === changeType.addSerializableToTree) {
+	            if (change.reference) {
+	                change.value = change.reference.toJSON();
+	            }
+	            else {
+	                assert(false, 'invalid change of type addSerializableToTree', change);
+	            }
+	        }
+	        else if (change.value !== undefined) {
+	            change.value = change.reference.propertyType.type.toJSON(change.value);
+	        }
+	        Object.keys(keyToShortKey).forEach(function (key) {
+	            if (change[key] !== undefined) {
+	                if (key === 'type' && change[key] === changeType.setPropertyValue)
+	                    { return; } // optimize most common type
+	                packed[keyToShortKey[key]] = change[key];
+	            }
+	        });
+	    }
+	    catch (e) {
+	        console.log('PACK ERROR', e);
+	    }
+	    return packed;
+	}
+	function unpackChange(packedChange) {
+	    var change = {
+	        packedChange: packedChange // optimization
+	    };
+	    Object.keys(packedChange).forEach(function (shortKey) {
+	        var key = shortKeyToKey[shortKey];
+	        change[key] = packedChange[shortKey];
+	    });
+	    if (!change.type)
+	        { change.type = changeType.setPropertyValue; }
+	    if (change.type === changeType.addSerializableToTree) {
+	        // reference does not exist because it has not been created yet
+	        change.id = change.value.id;
+	    }
+	    else {
+	        change.reference = getSerializable(change.id);
+	        if (change.reference) {
+	            change.id = change.reference.id;
+	        }
+	        else {
+	            console.error('received a change with unknown id', change, 'packed:', packedChange);
+	            return null;
+	        }
+	    }
+	    if (change.parentId)
+	        { change.parent = getSerializable(change.parentId); }
+	    return change;
+	}
+	function executeChange(change) {
+	    var newScene;
+	    executeExternal(function () {
+	        if (change.type === changeType.setPropertyValue) {
+	            change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
+	        }
+	        else if (change.type === changeType.addSerializableToTree) {
+	            if (change.parent) {
+	                var obj = Serializable.fromJSON(change.value);
+	                change.parent.addChild(obj);
+	                if (obj.threeLetterType === 'ent') {
+	                    obj.localMaster = false;
+	                }
+	            }
+	            else {
+	                var obj = Serializable.fromJSON(change.value); // Scene does not need a parent
+	                if (obj.threeLetterType === 'sce')
+	                    { newScene = obj; }
+	            }
+	        }
+	        else if (change.type === changeType.deleteAllChildren) {
+	            change.reference.deleteChildren();
+	        }
+	        else if (change.type === changeType.deleteSerializable) {
+	            change.reference.delete();
+	        }
+	        else if (change.type === changeType.move) {
+	            change.reference.move(change.parent);
+	        }
+	    });
+	    if (newScene)
+	        { newScene.play(); }
+	}
+	//# sourceMappingURL=change.js.map
+
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -16,24 +234,24 @@
 	 eventManager.dispatch('event name', paramOrParamArray);
 	 unlisten();
 	 */
-	var listeners = {};
+	var listeners$1 = {};
 	var events = {
 	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
 	    listen: function (event, callback, priority) {
 	        if (priority === void 0) { priority = 0; }
 	        callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
-	        if (!listeners.hasOwnProperty(event)) {
-	            listeners[event] = [];
+	        if (!listeners$1.hasOwnProperty(event)) {
+	            listeners$1[event] = [];
 	        }
 	        // listeners[event].push(callback);
 	        // if (!this._listeners.hasOwnProperty(event)) {
 	        // 	this._listeners[event] = [];
 	        // }
-	        var index = indexOfListener(listeners[event], callback);
-	        listeners[event].splice(index, 0, callback);
+	        var index = indexOfListener(listeners$1[event], callback);
+	        listeners$1[event].splice(index, 0, callback);
 	        return function () {
-	            var index = listeners[event].indexOf(callback);
-	            listeners[event].splice(index, 1);
+	            var index = listeners$1[event].indexOf(callback);
+	            listeners$1[event].splice(index, 1);
 	        };
 	    },
 	    dispatch: function (event) {
@@ -43,8 +261,8 @@
 	        for (var _i = 1; _i < arguments.length; _i++) {
 	            args[_i - 1] = arguments$1[_i];
 	        }
-	        if (listeners.hasOwnProperty(event)) {
-	            var listener = listeners[event];
+	        if (listeners$1.hasOwnProperty(event)) {
+	            var listener = listeners$1[event];
 	            for (var i = 0; i < listener.length; ++i) {
 	                listener[i].apply(null, args);
 	                /*
@@ -79,6 +297,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=events.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -105,6 +324,7 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 	var CHAR_COUNT = CHARACTERS.length;
@@ -537,235 +757,7 @@
 	    }
 	    return low;
 	}
-
-	var serializables = {};
-	function addSerializable(serializable) {
-	    // @ifndef OPTIMIZE
-	    if (serializables[serializable.id] !== undefined)
-	        { assert(false, ("Serializable id clash " + (serializable.id))); }
-	    // @endif
-	    serializables[serializable.id] = serializable;
-	}
-	function getSerializable$1(id) {
-	    return serializables[id] || null;
-	}
-	function removeSerializable(id) {
-	    /* When deleting a scene, this function is called a lot of times
-	    if (!serializables[id])
-	        throw new Error('Serializable not found!');
-	    */
-	    delete serializables[id];
-	}
-	// reference parameters are not sent over net. they are helpers in local game instance
-	var changeType = {
-	    addSerializableToTree: 'a',
-	    setPropertyValue: 's',
-	    deleteSerializable: 'd',
-	    move: 'm',
-	    deleteAllChildren: 'c',
-	};
-	var keyToShortKey = {
-	    id: 'i',
-	    type: 't',
-	    value: 'v',
-	    parentId: 'p' // obj._parent.id
-	};
-	var shortKeyToKey = {};
-	Object.keys(keyToShortKey).forEach(function (k) {
-	    shortKeyToKey[keyToShortKey[k]] = k;
-	});
-	var origin;
-	function getChangeOrigin() {
-	    return origin;
-	}
-	// @endif
-	function setChangeOrigin(_origin) {
-	    // @ifndef OPTIMIZE
-	    if (_origin !== origin) {
-	        origin = _origin;
-	    }
-	    // @endif
-	}
-	var externalChange = false;
-	// addChange needs to be called if editor, server or net game needs to share changes
-	function addChange(type, reference) {
-	    // @ifndef OPTIMIZE
-	    assert(origin, 'Change without origin!');
-	    // @endif
-	    if (!reference.id)
-	        { return; }
-	    var change = {
-	        type: type,
-	        reference: reference,
-	        id: reference.id,
-	        external: externalChange,
-	        origin: origin // exists in editor, but not in optimized release
-	    };
-	    if (type === changeType.setPropertyValue) {
-	        change.value = reference._value;
-	    }
-	    else if (type === changeType.move) {
-	        change.parent = reference._parent;
-	    }
-	    else if (type === changeType.addSerializableToTree) {
-	        change.parent = reference._parent;
-	        delete change.id;
-	    }
-	    var previousOrigin = origin;
-	    // @endif
-	    for (var i = 0; i < listeners$1.length; ++i) {
-	        listeners$1[i](change);
-	    }
-	    // @ifndef OPTIMIZE
-	    if (origin !== previousOrigin) {
-	        origin = previousOrigin;
-	    }
-	    // @endif
-	}
-	function executeExternal(callback) {
-	    setChangeOrigin('external');
-	    if (externalChange)
-	        { return callback(); }
-	    externalChange = true;
-	    callback();
-	    externalChange = false;
-	}
-	var listeners$1 = [];
-	function addChangeListener(callback) {
-	    assert(typeof callback === 'function');
-	    listeners$1.push(callback);
-	}
-	function packChange(change) {
-	    if (change.packedChange)
-	        { return change.packedChange; } // optimization
-	    var packed = {};
-	    try {
-	        if (change.parent)
-	            { change.parentId = change.parent.id; }
-	        if (change.type === changeType.addSerializableToTree) {
-	            if (change.reference) {
-	                change.value = change.reference.toJSON();
-	            }
-	            else {
-	                assert(false, 'invalid change of type addSerializableToTree', change);
-	            }
-	        }
-	        else if (change.value !== undefined) {
-	            change.value = change.reference.propertyType.type.toJSON(change.value);
-	        }
-	        Object.keys(keyToShortKey).forEach(function (key) {
-	            if (change[key] !== undefined) {
-	                if (key === 'type' && change[key] === changeType.setPropertyValue)
-	                    { return; } // optimize most common type
-	                packed[keyToShortKey[key]] = change[key];
-	            }
-	        });
-	    }
-	    catch (e) {
-	        console.log('PACK ERROR', e);
-	    }
-	    return packed;
-	}
-	function unpackChange(packedChange) {
-	    var change = {
-	        packedChange: packedChange // optimization
-	    };
-	    Object.keys(packedChange).forEach(function (shortKey) {
-	        var key = shortKeyToKey[shortKey];
-	        change[key] = packedChange[shortKey];
-	    });
-	    if (!change.type)
-	        { change.type = changeType.setPropertyValue; }
-	    if (change.type === changeType.addSerializableToTree) {
-	        // reference does not exist because it has not been created yet
-	        change.id = change.value.id;
-	    }
-	    else {
-	        change.reference = getSerializable$1(change.id);
-	        if (change.reference) {
-	            change.id = change.reference.id;
-	        }
-	        else {
-	            console.error('received a change with unknown id', change, 'packed:', packedChange);
-	            return null;
-	        }
-	    }
-	    if (change.parentId)
-	        { change.parent = getSerializable$1(change.parentId); }
-	    return change;
-	}
-	function executeChange(change) {
-	    var newScene;
-	    executeExternal(function () {
-	        if (change.type === changeType.setPropertyValue) {
-	            change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
-	        }
-	        else if (change.type === changeType.addSerializableToTree) {
-	            if (change.parent) {
-	                var obj = Serializable.fromJSON(change.value);
-	                change.parent.addChild(obj);
-	                if (obj.threeLetterType === 'ent') {
-	                    obj.localMaster = false;
-	                }
-	            }
-	            else {
-	                var obj = Serializable.fromJSON(change.value); // Scene does not need a parent
-	                if (obj.threeLetterType === 'sce')
-	                    { newScene = obj; }
-	            }
-	        }
-	        else if (change.type === changeType.deleteAllChildren) {
-	            change.reference.deleteChildren();
-	        }
-	        else if (change.type === changeType.deleteSerializable) {
-	            change.reference.delete();
-	        }
-	        else if (change.type === changeType.move) {
-	            change.reference.move(change.parent);
-	        }
-	    });
-	    if (newScene)
-	        { newScene.play(); }
-	}
-
-	// @ifndef OPTIMIZE
-	// @endif
-	function assert(condition, message) {
-	    // @ifndef OPTIMIZE
-	    if (!condition) {
-	        console.log('Assert', message, new Error().stack, '\norigin', getChangeOrigin());
-	        debugger;
-	        if (!window.force)
-	            { throw new Error(message); }
-	    }
-	    // @endif
-	}
-
-	/*! *****************************************************************************
-	Copyright (c) Microsoft Corporation. All rights reserved.
-	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-	this file except in compliance with the License. You may obtain a copy of the
-	License at http://www.apache.org/licenses/LICENSE-2.0
-
-	THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-	KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-	WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-	MERCHANTABLITY OR NON-INFRINGEMENT.
-
-	See the Apache Version 2.0 License for specific language governing permissions
-	and limitations under the License.
-	***************************************************************************** */
-	/* global Reflect, Promise */
-
-	var extendStatics = Object.setPrototypeOf ||
-	    ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-	    function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-
-	function __extends(d, b) {
-	    extendStatics(d, b);
-	    function __() { this.constructor = d; }
-	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-	}
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -860,6 +852,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -991,6 +984,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1123,10 +1117,11 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
-	        if (r && r.constructor === Color) {
+	        if (r instanceof Color) {
 	            this.r = r.r;
 	            this.g = r.g;
 	            this.b = r.b;
@@ -1172,6 +1167,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1318,6 +1314,7 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1437,6 +1434,7 @@
 	        });
 	    });
 	};
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1873,6 +1871,7 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1908,6 +1907,9 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -1977,6 +1979,7 @@
 	        { listener(game); }
 	}
 	// jee
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2064,6 +2067,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2196,6 +2200,7 @@
 	        });
 	    }
 	}
+	//# sourceMappingURL=input.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2440,6 +2445,7 @@
 	    if (scene)
 	        { listener(); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2575,6 +2581,7 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
+	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var eventListeners = [
@@ -2771,6 +2778,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -2958,6 +2966,7 @@
 	    return entity;
 	});
 	Entity.ENTITY_CREATION_DEBUGGING = false;
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    createPropertyType('name', 'No name', createPropertyType.string)
@@ -3191,6 +3200,13 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
+
+	var serializables = {};
+	function getSerializable$1(id) {
+	    return serializables[id] || null;
+	}
+	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3438,6 +3454,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3499,6 +3516,7 @@
 	    return prefab;
 	};
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    createPropertyType('name', 'No name', createPropertyType.string)
@@ -3522,6 +3540,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3607,6 +3628,7 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3630,6 +3652,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3803,6 +3826,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3843,6 +3867,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -3893,6 +3918,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -3940,6 +3966,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4136,6 +4163,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4161,6 +4189,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4445,6 +4474,7 @@
 	    }
 	    return textureCache[hash];
 	}
+	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4454,6 +4484,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4655,6 +4686,9 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4697,6 +4731,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -4839,6 +4874,7 @@
 	    });
 	}
 	window.addEventListener('load', connect);
+	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -4875,6 +4911,7 @@
 	window.addEventListener('resize', resizeCanvas);
 	listenSceneCreation(resizeCanvas);
 	var MAX_PIXELS = 1000 * 600;
+	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -4949,6 +4986,7 @@
 	    };
 	    return TouchControl;
 	}());
+	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5083,6 +5121,7 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
+	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5120,6 +5159,7 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

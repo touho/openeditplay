@@ -2,7 +2,6 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
-import PropertyOwner from '../../core/propertyOwner'
 import { listenKeyDown, key } from '../../util/input';
 
 class Type extends Module {
@@ -25,7 +24,7 @@ class Type extends Module {
 
 		// if the tab is not visible, do not waste CPU
 		let skipUpdate = !this._selected || this.moduleContainer.isPacked();
-		
+
 		if (editor.selection.type === 'prt') {
 			if (skipUpdate)
 				return;
@@ -40,7 +39,7 @@ class Type extends Module {
 	}
 	activate(command, parameter) {
 		if (command === 'focusOnProperty') {
-			
+
 			this.propertyEditor.el.querySelector(`.property[name='${parameter}'] input`).select();
 			// console.log(nameProp);
 		}

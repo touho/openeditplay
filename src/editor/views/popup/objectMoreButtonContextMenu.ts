@@ -3,7 +3,7 @@ import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
 import { list, el } from 'redom';
 import assert from '../../../util/assert';
-import { setChangeOrigin } from '../../../core/serializableManager';
+import { setChangeOrigin } from '../../../core/change';
 import { game } from '../../../core/game'
 
 export default class ObjectMoreButtonContextMenu extends Popup {
@@ -19,7 +19,7 @@ export default class ObjectMoreButtonContextMenu extends Popup {
 		let componentId = component._componentId;
 		let entityPrototype = component.entity.prototype;
 		let prototype = entityPrototype.prototype;
-		
+
 		let actions = [
 			{
 				text: 'Copy value to type ' + prototype.name,
@@ -51,7 +51,7 @@ export default class ObjectMoreButtonContextMenu extends Popup {
 				}
 			}
 		];
-		
+
 		this.update(actions);
 	}
 	update(data) {

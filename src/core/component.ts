@@ -42,9 +42,9 @@ export class Component extends PropertyOwner {
 			// @ifndef OPTIMIZE
 			performance.start(performanceName);
 			// @endif
-			
+
 			func.apply(self, arguments);
-			
+
 			// @ifndef OPTIMIZE
 			performance.stop(performanceName);
 			// @endif
@@ -64,10 +64,10 @@ export class Component extends PropertyOwner {
 			if (typeof this[eventListeners[i]] === 'function')
 				this._addEventListener(eventListeners[i]);
 		}
-		
+
 		if (this.constructor.componentName !== 'Transform' && this.scene)
 			this.scene.addComponent(this);
-		
+
 		try {
 			if (typeof this.preInit === 'function')
 				this.preInit();
@@ -95,9 +95,9 @@ export class Component extends PropertyOwner {
 
 		if (this.constructor.componentName !== 'Transform' && this.scene)
 			this.scene.removeComponent(this);
-		
+
 		this.forEachChild('com', c => c._sleep());
-		
+
 		this._listenRemoveFunctions.forEach(f => f());
 		this._listenRemoveFunctions.length = 0;
 	}
@@ -162,7 +162,7 @@ Component.register = function({
 		if (Component.reservedPrototypeMembers.has(k))
 			assert(false, 'Component prototype can not have a reserved member: ' + k);
 	});
-	
+
 	let constructorFunction = prototype.constructor;
 	let deleteFunction = prototype.delete;
 	delete prototype.constructor;
@@ -175,10 +175,10 @@ Component.register = function({
 		}
 		delete() {
 			if (!super.delete()) return false;
-			
+
 			if (deleteFunction)
 				deleteFunction.call(this);
-			
+
 			return true;
 		}
 	}
@@ -194,7 +194,7 @@ Component.register = function({
 	Com.description = description;
 	Com.allowMultiple = allowMultiple;
 	Com.icon = icon;
-	
+
 	let num = name.split('').reduce((prev, curr) => prev + curr.charCodeAt(0), 0);
 	Com.color = color || `hsla(${ num % 360 }, 40%, 60%, 1)`;
 

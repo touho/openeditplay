@@ -2,7 +2,8 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import events from '../../util/events';
 import Prototype from '../../core/prototype';
-import { getSerializable, changeType, setChangeOrigin } from '../../core/serializableManager';
+import { getSerializable } from '../../core/serializableManager';
+import { changeType, setChangeOrigin } from '../../core/change';
 import assert from '../../util/assert';
 import { editor } from '../editor';
 import * as performance from '../../util/performance';
@@ -32,7 +33,7 @@ class Types extends Module {
 				Module.activateModule('type', true, 'focusOnProperty', 'name');
 			}, 100);
 		};
-		
+
 		let searchTimeout = false;
 		this.search.addEventListener('keyup', () => {
 			if (searchTimeout)
@@ -42,21 +43,21 @@ class Types extends Module {
 				$(this.jstree).jstree().search(this.search.value.trim());
 			}, 200);
 		});
-		
+
 		this.externalChange = false;
 
 		events.listen('change', change => {
 			if (change.reference._rootType === 'sce')
 				return;
-			
+
 			let jstree = $(this.jstree).jstree(true);
 			if (!jstree)
 				return;
 
 			performance.start('Editor: Types');
-			
+
 			this.externalChange = true;
-			
+
 			if (change.reference.threeLetterType === 'prt') {
 				if (change.type === changeType.addSerializableToTree) {
 					let parent = change.parent;
@@ -81,7 +82,7 @@ class Types extends Module {
 			} else if (change.type === 'editorSelection') {
 				if (change.origin != this) {
 					let node;
-					
+
 					if (change.reference.type === 'prt') {
 						node = jstree.get_node(change.reference.items[0].id);
 					} else if (change.reference.type === 'epr') {
@@ -112,8 +113,8 @@ class Types extends Module {
 			this.dirty = true;
 
 		if (!this.dirty) return;
-		
-		
+
+
 		let data = [];
 		editor.game.forEachChild('prt', prototype => {
 			let parent = prototype.getParent();
@@ -126,23 +127,23 @@ class Types extends Module {
 
 		this.addButton.classList.toggle('clickMeEffect', data.length === 0);
 		this.helperText.classList.toggle('hidden', data.length === 0);
-		
+
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
 				let noPrototypes = editor.game.getChildren('prt').length === 0;
 				this.addButton.classList.toggle('clickMeEffect', noPrototypes);
 				this.helperText.classList.toggle('hidden', noPrototypes);
-				
+
 				if (this.externalChange || data.selected.length === 0)
 					return;
-				
+
 				// selection changed
 				let prototypes = data.selected.map(getSerializable);
 				editor.select(prototypes, this);
 				Module.activateModule('type', false);
 				if (prototypes.length === 1)
 					events.dispatch('prototypeClicked', prototypes[0]);
-				
+
 			}).on('loaded.jstree refresh.jstree', () => {
 				let jstree = $(this.jstree).jstree(true);
 				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
@@ -193,7 +194,7 @@ class Types extends Module {
 $(document).on('dnd_start.vakata', function (e, data) {
 	if (data.data.nodes.find(node => !node.startsWith('prt')))
 		return;
-	
+
 	let nodeObjects = data.data.nodes.map(getSerializable);
 	events.dispatch('dragPrototypeStarted', nodeObjects);
 });
@@ -203,7 +204,7 @@ $(document).on('dnd_start.vakata', function (e, data) {
 // $(document).on('dnd_move.vakata', function (e, data) {
 // 	if (data.data.nodes.find(node => !node.startsWith('prt')))
 // 		return;
-//	
+//
 // 	setTimeout(() => {
 // 		if (data.event.target.nodeName === 'CANVAS') {
 // 			data.helper.find('.jstree-icon').css({
@@ -220,14 +221,14 @@ $(document).on('dnd_start.vakata', function (e, data) {
 $(document).on('dnd_stop.vakata', function (e, data) {
 	if (data.data.nodes.find(node => !node.startsWith('prt')))
 		return;
-	
+
 	console.log('data', data);
 	console.log('e', e)
 	let jstree = $('#types-jstree').jstree(true);
 	// let typesModule = $('#types-jstree').data('typesModule');
-	
+
 	console.log('data.event.target.nodeName', data.event.target.nodeName)
-	
+
 	setTimeout(function () {
 		// Now the nodes have moved in the DOM.
 
@@ -237,7 +238,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 			events.dispatch('dragPrototypeToCanvas', nodeObjects);
 		} else {
 			// Drag prototype in types view
-			
+
 			let node = jstree.get_node(data.data.obj);
 			if (!node)
 				return;

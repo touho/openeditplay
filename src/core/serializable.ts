@@ -1,7 +1,12 @@
 import assert from '../util/assert';
-import { addSerializable, removeSerializable, addChange, changeType } from './serializableManager';
+import { changeType, addChange } from './change';
 import { isClient } from '../util/environment';
 import * as performanceTool from '../util/performance';
+
+export const changeDispacher = {
+	addSerializable: (serializable: Serializable) => {},
+	removeSerializable: (serializableId: string) => {},
+};
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 const CHAR_COUNT = CHARACTERS.length;
@@ -27,9 +32,6 @@ export default class Serializable {
 	id: string;
 	threeLetterType: string;
 	isRoot: boolean;
-
-	hello: Map;
-
 	_children: Map<string, Array<Serializable>>;
 	_listeners: object;
 	_rootType: string;

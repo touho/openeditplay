@@ -80,6 +80,7 @@
 	        return (diffYears | 0) + " years ago";
 	    }
 	}
+	//# sourceMappingURL=util.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -718,6 +719,7 @@
 
 
 	 */
+	//# sourceMappingURL=profile.js.map
 
 	var sizeExplanation = 'Game size in data units. Every object in scene, type, component, level and property is a data unit.';
 	var GameList = /** @class */ (function () {

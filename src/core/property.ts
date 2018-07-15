@@ -1,12 +1,12 @@
 import Serializable from './serializable';
-import { addChange, changeType, setChangeOrigin } from './serializableManager'; 
+import { addChange, changeType, setChangeOrigin } from './change';
 import assert from '../util/assert';
 import * as performanceTool from '../util/performance';
 
 let changesEnabled = true;
 let scenePropertyFilter = null;
 // true / false to enable / disable property value change sharing.
-// if object is passed, changes are only sent 
+// if object is passed, changes are only sent
 export function filterSceneChanges(_scenePropertyFilter) {
 	scenePropertyFilter = _scenePropertyFilter;
 	changesEnabled = true;
@@ -76,7 +76,7 @@ Object.defineProperty(Property.prototype, 'type', {
 Object.defineProperty(Property.prototype, 'value', {
 	set(newValue) {
 		this._value = this.propertyType.validator.validate(newValue);
-		
+
 		this.dispatch('change', this._value);
 		if (changesEnabled && this._rootType) { // not scene or empty
 			if (scenePropertyFilter === null

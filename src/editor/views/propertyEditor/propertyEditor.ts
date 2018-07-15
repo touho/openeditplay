@@ -5,7 +5,7 @@ import ComponentData from '../../../core/componentData';
 import assert from '../../../util/assert';
 import editors from './propertyEditorTypes';
 import ComponentAdder from '../popup/componentAdder';
-import { changeType, setChangeOrigin } from '../../../core/serializableManager';
+import { changeType, setChangeOrigin } from '../../../core/change';
 import { Prop } from '../../../core/component';
 import { setOption, getOption, editor } from '../../editor';
 import { scene } from '../../../core/scene';

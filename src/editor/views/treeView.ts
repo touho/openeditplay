@@ -48,7 +48,7 @@ export default class TreeView {
 				close_opened_onclear: false
 			}
 		});
-		
+
 		if (this.options.doubleClickCallback) {
 			jstree.bind("dblclick.jstree", (event) => {
 				var element = $(event.target).closest("li")[0];
@@ -82,7 +82,7 @@ export default class TreeView {
 			let node = document.getElementById(idOrList[0]);
 			if (!node)
 				return console.warn(`id ${idOrList[0]} not found from the tree`);
-			
+
 			let module = this.el.parentNode;
 			while (module && !module.classList.contains('module')) {
 				module = module.parentNode;

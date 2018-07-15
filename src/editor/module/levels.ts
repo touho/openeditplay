@@ -6,7 +6,7 @@ import Level from '../../core/level';
 import {Button} from '../views/popup/Popup';
 import {dispatch, listen} from '../../util/events';
 import events from "../../util/events";
-import {setChangeOrigin} from "../../core/serializableManager";
+import {setChangeOrigin} from "../../core/change";
 
 export function createNewLevel() {
 	let lvl = new Level();

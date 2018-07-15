@@ -17,14 +17,14 @@ class Objects extends Module {
 		super();
 		this.name = 'Objects';
 		this.id = 'objects';
-		
+
 		let createButton = el('button.button', 'Create', {
 			onclick: () => {
 				new CreateObject();
 			}
 		});
 		mount(this.el, createButton);
-		
+
 		this.treeView = new TreeView({
 			id: 'objects-tree',
 			selectionChangedCallback: selectedIds => {
@@ -75,7 +75,7 @@ class Objects extends Module {
 			}
 		});
 		mount(this.el, this.treeView);
-		
+
 		events.listen('treeView drag start objects-tree', event => {
 		});
 		events.listen('treeView drag move objects-tree', event => {
@@ -103,7 +103,7 @@ class Objects extends Module {
 				}
 				console.log('target.id', target.id)
 				let targetSerializable = getSerializable(target.id);
-				
+
 				let idSet = new Set(event.idList);
 				let serializables = event.idList.map(getSerializable).filter(serializable => {
 					let parent = serializable.getParent();
@@ -114,7 +114,7 @@ class Objects extends Module {
 					}
 					return true;
 				});
-				
+
 				console.log('move serializables', serializables, 'to', targetSerializable);
 				serializables.forEach(serializable => {
 					serializable.move(targetSerializable);
@@ -122,11 +122,11 @@ class Objects extends Module {
 				console.log('Done!')
 			}
 		});
-		
+
 		this.dirty = true;
 		this.treeType = null;
-		
-		// This will be called when play and reset has already happened. After all the 
+
+		// This will be called when play and reset has already happened. After all the
 		let update = () => {
 			this.dirty = true;
 			setTimeout(() => this.update(), 100);
@@ -135,7 +135,7 @@ class Objects extends Module {
 			scene.listen('onStart', update);
 			scene.listen('reset', update);
 		});
-		
+
 		// Set dirty so that every single serializable deletion and addition won't separately update the tree.
 		let setDirty = () => {
 			this.dirty = true;
@@ -143,22 +143,22 @@ class Objects extends Module {
 		events.listen('play', setDirty, -1);
 		events.listen('reset', setDirty, -1);
 		game.listen('levelCompleted', setDirty, -1);
-		
+
 		let tasks = [];
 		let taskTimeout = null;
-		
+
 		let addTask = (task) => {
 			tasks.push(task);
-			
+
 			if (taskTimeout)
 				clearTimeout(taskTimeout);
-			
+
 			if (tasks.length > 1000) {
 				tasks.length = 0;
 				this.dirty = true;
 				return;
 			}
-			
+
 			let delay = scene.playing ? 500 : 50;
 
 			taskTimeout = setTimeout(() => {
@@ -171,16 +171,16 @@ class Objects extends Module {
 				tasks.length = 0;
 			}, delay);
 		};
-		
+
 		// events.listen()
 		events.listen('change', change => {
 			if (this.dirty || !this._selected)
 				return;
-			
+
 			performance.start('Editor: Objects');
-			
+
 			this.externalChange = true;
-			
+
 			let newTask = null;
 
 			if (change.type === changeType.addSerializableToTree) {
@@ -210,7 +210,7 @@ class Objects extends Module {
 					}
 				}
 			}
-			
+
 			if (newTask) {
 				addTask(newTask);
 			}
@@ -266,22 +266,22 @@ class Objects extends Module {
 	update() {
 		if (!scene || !editor.selectedLevel)
 			return false;
-		
+
 		if (!this._selected)
 			return true;
-		
+
 		let newTreeType = this.treeType;
 		if (scene.isInInitialState()) {
 			newTreeType = 'epr';
 		} else {
 			newTreeType = 'ent';
 		}
-		
+
 		if (!this.dirty && newTreeType === this.treeType)
 			return true;
-		
+
 		this.treeType = newTreeType;
-		
+
 		let data = [];
 		if (this.treeType === 'epr') {
 			editor.selectedLevel.forEachChild('epr', epr => {
@@ -304,7 +304,7 @@ class Objects extends Module {
 		}
 		this.treeView.update(data);
 		this.dirty = false;
-		
+
 		return true;
 	}
 }

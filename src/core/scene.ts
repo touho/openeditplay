@@ -1,7 +1,7 @@
 import Serializable from './serializable';
 import assert from '../util/assert';
 import { game } from './game';
-import { addChange, changeType, setChangeOrigin } from './serializableManager';
+import { addChange, changeType, setChangeOrigin } from './change';
 import { createWorld, deleteWorld, updateWorld } from '../features/physics';
 import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, keyPressed } from '../util/input';
 import { default as PIXI, getRenderer, sortDisplayObjects } from '../features/graphics';

@@ -21,7 +21,7 @@ class Prefabs extends Module {
 			},
 		});
 		mount(this.el, this.treeView);
-		
+
 		events.listen('treeView drag start prefabs-tree', event => {
 			let prefabs = event.idList.map(getSerializable);
 			events.dispatch('dragPrefabsStarted', prefabs);
@@ -58,7 +58,7 @@ class Prefabs extends Module {
 				parent: '#'
 			});
 		});
-		
+
 		this.treeView.update(data);
 		this.dirty = false;
 

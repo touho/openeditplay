@@ -1,7 +1,7 @@
 // @flow
 
 import Serializable from './serializable'
-import { addChange, changeType, setChangeOrigin } from './serializableManager';
+import { addChange, changeType, setChangeOrigin } from './change';
 import Prototype from './prototype'
 import assert from '../util/assert'
 import PropertyOwner, { Prop } from './propertyOwner';
@@ -21,7 +21,7 @@ export default class Game extends PropertyOwner {
 	constructor(predefinedId) {
 		if (game)
 			console.error('Only one game allowed.');
-		
+
 		/*
 		if (isClient) {
 			if (game) {
@@ -33,9 +33,9 @@ export default class Game extends PropertyOwner {
 			}
 		}
 		*/
-		
+
 		super(...arguments);
-		
+
 		if (isClient) {
 			game = this;
 		}
@@ -51,12 +51,12 @@ export default class Game extends PropertyOwner {
 	delete() {
 		addChange(changeType.deleteSerializable, this);
 		if (!super.delete()) return false;
-		
+
 		if (game === this)
 			game = null;
 
 		stickyNonModalErrorPopup('Game deleted');
-		
+
 		return true;
 	}
 }
@@ -81,7 +81,7 @@ Serializable.registerSerializable(Game, 'gam', json => {
 let gameCreateListeners = [];
 export function listenGameCreation(listener: (object) => void) {
 	gameCreateListeners.push(listener);
-	
+
 	console.log('real ts');
 
 	if (game)

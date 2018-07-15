@@ -2,7 +2,7 @@ import {el, mount} from 'redom';
 
 export function stickyNonModalErrorPopup(text) {
 	document.body.style.filter = 'contrast(70%) brightness(130%) saturate(200%) sepia(40%) hue-rotate(300deg)';
-	
+
 	let popup = el('div', text, {
 		style: {
 			'position': 'fixed',
@@ -20,7 +20,7 @@ export function stickyNonModalErrorPopup(text) {
 			'box-sizing': 'border-box'
 		}
 	});
-	
+
 	mount(document.body, popup);
 }
 

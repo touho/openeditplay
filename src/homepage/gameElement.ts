@@ -47,7 +47,7 @@ class Game {
 									label: 'Edit',
 									callback: () => window.location.href = '/edit/?gameId=' + this.gameId
 								}
-							]);	
+							]);
 							*/
 						} else {
 							new ContextMenu(this.secondaryButton, [
@@ -70,7 +70,7 @@ class Game {
 	update(gameData) {
 		this.isMyGame = null;
 		this.gameId = gameData.id;
-		
+
 		this.name.textContent = gameData.name;
 		this.size.textContent = gameData.serializableCount;
 		this.levels.textContent = gameData.levelCount;
@@ -82,14 +82,14 @@ class Game {
 		this.modified.setAttribute('title', new Date(gameData.updatedAt).toLocaleString());
 
 		this.primaryButton.setAttribute('href', '/play/?gameId=' + gameData.id);
-		
+
 		profilePromise.then(user => {
 			this.isMyGame = !!(user.gameIdList && user.gameIdList.includes(gameData.id));
 			this.el.classList.toggle('isMyGame', this.isMyGame);
-			
+
 			// this.primaryButton.classList.toggle('playButton', !this.isMyGame);
 			// this.primaryButton.classList.toggle('editButton', this.isMyGame);
-			
+
 			if (this.isMyGame) {
 				this.secondaryButton.textContent = 'Edit';
 			} else {

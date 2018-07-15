@@ -9,9 +9,9 @@ window.IS_MOBILE_STANDALONE = window.navigator.standalone;
 window.addEventListener('load', () => {
 	if (IS_SMALL_SCREEN)
 		document.body.classList.add('isSmallDevice');
-	
+
 	setButtonContainer(document.getElementById('profileButtonContainer'));
-	
+
 	let gamesElement = document.getElementById('games');
 	getAjax('/api/gameListSample').then(gameListData => {
 		let gameList = new GameList();

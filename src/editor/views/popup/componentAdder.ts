@@ -3,7 +3,7 @@ import {componentClasses} from '../../../core/component';
 import ComponentData from '../../../core/componentData';
 import {list, el} from 'redom';
 import assert from '../../../util/assert';
-import {setChangeOrigin} from '../../../core/serializableManager';
+import {setChangeOrigin} from '../../../core/change';
 import Confirmation from './Confirmation';
 import { dispatch, listen } from '../../../util/events';
 
@@ -48,7 +48,7 @@ export default class ComponentAdder extends Popup {
 		});
 
 		this.update(categories);
-		
+
 		listen(this, 'refresh', () => {
 			this.update(categories);
 		})
@@ -98,7 +98,7 @@ class Category {
 
 	update(category) {
 		this.name.textContent = category.categoryName;
-		
+
 		let componentCounts = {};
 		this.parent.forEachChild('cda', cda => {
 			if (!componentCounts[cda.name])
@@ -121,7 +121,7 @@ class Category {
 				callback: () => {
 					if ('activeElement' in document)
 						document.activeElement.blur();
-					
+
 					this.addComponentToParent(comp);
 				}
 			};

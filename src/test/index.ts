@@ -1,5 +1,5 @@
 const deepStrictEqual = require('deep-strict-equal');
-import { setChangeOrigin } from '../core/serializableManager';
+import { setChangeOrigin } from '../core/change';
 
 import './game';
 import './component';

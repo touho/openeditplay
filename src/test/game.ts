@@ -17,6 +17,6 @@ test(done => {
 	eq(game.threeLetterType, 'gam');
 	eq(getSerializable('gam123').id, 'gam123');
 	eq(game.findChild('prp', prp => prp.name === 'name').value, 'Game name');
-	
+
 	done();
 });

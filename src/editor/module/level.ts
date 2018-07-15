@@ -3,7 +3,7 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import PropertyOwner from '../../core/propertyOwner'
-import { setChangeOrigin } from '../../core/serializableManager';
+import { setChangeOrigin } from '../../core/change';
 
 class Level extends Module {
 	constructor() {

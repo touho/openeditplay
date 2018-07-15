@@ -29,14 +29,14 @@ export default class Popup {
 		this.depth = popupDepth;
 		this.text.innerHTML = title;
 		this.cancelCallback = cancelCallback;
-		
-		
+
+
 		this.keyListener = listenKeyDown(keyChar => {
 			if (keyChar === key.esc && this.depth === popupDepth) {
 				this.remove();
 			}
 		});
-		
+
 		mount(document.body, this.el);
 	}
 	remove() {
@@ -55,7 +55,7 @@ export class Button {
 	}
 	update(button) {
 		let newClassName = button.class ? `button ${button.class}` : 'button';
-		
+
 		if (
 			this.el.textContent === button.text
 			&& this._prevIcon === button.icon
@@ -64,9 +64,9 @@ export class Button {
 		) {
 			return; // optimize
 		}
-		
+
 		this.el.textContent = button.text;
-		
+
 		this._prevIcon = button.icon;
 		if (button.icon) {
 			let icon = el('i.fa.' + button.icon);

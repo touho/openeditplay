@@ -14,7 +14,7 @@ export default class Confirmation extends Popup {
 			width: '500px',
 			content: list('div.confirmationButtons', Button)
 		});
-		
+
 		this.content.update([{
 			text: 'Cancel',
 			callback: () => this.remove()
@@ -26,7 +26,7 @@ export default class Confirmation extends Popup {
 				this.remove();
 			}
 		})]);
-		
+
 		let confirmButton = this.content.views[1];
 		confirmButton.el.focus();
 	}

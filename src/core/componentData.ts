@@ -65,7 +65,7 @@ export default class ComponentData extends Serializable {
 		let parentComponentData = this.getParentComponentData();
 		if (parentComponentData)
 			parentComponentData.getInheritedProperties(_depth + 1).forEach(prop => properties[prop.name] = prop);
-		
+
 		// properties from this. override properties of parents
 		this.getChildren('prp').forEach(prop => {
 			if (_depth === 0)
@@ -73,7 +73,7 @@ export default class ComponentData extends Serializable {
 			else
 				properties[prop.name] = prop.clone(true);
 		});
-		
+
 		// fill from propertyType
 		if (_depth === 0) {
 			return this.componentClass._propertyTypes.map(propertyType => {
@@ -117,10 +117,10 @@ export default class ComponentData extends Serializable {
 		if (property)
 			return property.value;
 		let parent = this.getParentComponentData();
-		
+
 		if (parent)
 			return parent.getValue(name);
-		
+
 		return this.componentClass._propertyTypesByName[name].initialValue;
 	}
 	createComponent() {

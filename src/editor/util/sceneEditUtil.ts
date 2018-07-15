@@ -1,6 +1,6 @@
 import { scene } from '../../core/scene';
 import { editor } from '../editor';
-import { changeType } from '../../core/serializableManager';
+import { changeType } from '../../core/change';
 import assert from '../../util/assert';
 import Vector from '../../util/vector';
 import { centerWidgetRadius } from '../widget/widget'
@@ -24,16 +24,16 @@ function setEntityPropertyValue(entity, componentName, componentId, sourceProper
 function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null) {
 	if (prototypeOrEntityPrototype.threeLetterType === 'epr') {
 		// EntityPrototype
-		
+
 		let entity = prototypeOrEntityPrototype.previouslyCreatedEntity;
 		if (entity && entity._alive)
 			return [entity];
 		else
 			return [];
 	}
-	
+
 	// Prototype
-	
+
 	let affectedPrototypes = new Set();
 
 	function goThroughChildren(prototype) {
@@ -63,20 +63,20 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 // Call setChangeOrigin(this) before calling this
 export function syncAChangeBetweenSceneAndLevel(change) {
 	if (!scene || !scene.level) return;
-	
+
 	if (!shouldSyncLevelAndScene())
 		return;
 
 	if (change.type === 'editorSelection')
 		return;
-	
+
 	let ref = change.reference;
 	assert(ref && ref._rootType);
-	
+
 	let threeLetterType = ref && ref.threeLetterType || null;
 	if (ref._rootType !== 'gam')
 		return;
-	
+
 	if (change.type === changeType.addSerializableToTree) {
 		if (threeLetterType === 'epr') {
 			let epr = ref;
@@ -91,14 +91,14 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 				// epr
 				entities = [parent.previouslyCreatedEntity].filter(ent => ent && ent._alive);
 			}
-			
+
 			entities.forEach(entity => {
-				
+
 				let oldComponent = entity.getComponents(ref.name).find(com => com._componentId === ref.componentId);
 				if (oldComponent)
 					entity.deleteComponent(oldComponent);
-				
-				
+
+
 				let proto = entity.prototype;
 				let componentData = proto.findComponentDataByComponentId(ref.componentId, true);
 				if (componentData) {
@@ -126,13 +126,13 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 		let prototype = cda.getParent();
 		if (prototype.threeLetterType === 'epr') {
 			// EntityPrototype
-			
+
 			if (prototype.previouslyCreatedEntity) {
 				setEntityPropertyValue(prototype.previouslyCreatedEntity, cda.name, cda.componentId, property);
 			}
 		} else {
 			// Prototype
-			
+
 			let entities = getAffectedEntities(prototype, prt => prt.findOwnProperty(cda.componentId, property.name) === null);
 
 			entities.forEach(ent => {
@@ -196,7 +196,7 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 				let epr = entity.prototype;
 				let oldComponent = entity.getComponents(componentData.name).find(com => com._componentId === componentData.componentId);
 				entity.deleteComponent(oldComponent);
-				
+
 				let inheritedComponentDatas = epr.getInheritedComponentDatas(cda => cda !== componentData);
 				let icd = inheritedComponentDatas.find(i => i.componentId === componentData.componentId);
 				if (icd) {
@@ -207,8 +207,8 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 		}
 		// If Prototype is deleted, all entity prototypes are also deleted so we can ignore Prototype here
 	} else if (change.type === changeType.move) {
-		
-	}	
+
+	}
 }
 
 export function copyEntitiesToScene(entities) {
@@ -233,18 +233,18 @@ export function copyEntitiesToScene(entities) {
 export function getWidgetUnderMouse(mousePos) {
 	let nearestWidget = null;
 	let nearestDistanceSq = Infinity;
-	
+
 	function testWidget(widget) {
 		if (!widget.isMouseInWidget(mousePos))
 			return;
-		
+
 		let distSq = mousePos.distanceSq(widget);
 		if (distSq < nearestDistanceSq) {
 			nearestDistanceSq = distSq;
 			nearestWidget = widget;
 		}
 	}
-	
+
 	scene.getComponents('EditorWidget').forEach(editorWidget => {
 		if (editorWidget.selected) {
 			editorWidget.widgets.forEach(testWidget);
@@ -252,17 +252,17 @@ export function getWidgetUnderMouse(mousePos) {
 			testWidget(editorWidget.position);
 		}
 	});
-	
+
 	return nearestWidget;
 }
 export function getEntitiesInSelection(start, end) {
 	let entities = [];
-	
+
 	let minX = Math.min(start.x, end.x);
 	let maxX = Math.max(start.x, end.x);
 	let minY = Math.min(start.y, end.y);
 	let maxY = Math.max(start.y, end.y);
-	
+
 	scene.forEachChild('ent', ent => {
 		let p = ent.getComponent('EditorWidget').positionHelper;
 		if (p.x < minX) return;
@@ -271,7 +271,7 @@ export function getEntitiesInSelection(start, end) {
 		if (p.y > maxY) return;
 		entities.push(ent);
 	}, true);
-	
+
 	return entities;
 }
 
@@ -280,13 +280,13 @@ export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) 
 		entities.forEach(e => {
 			let entityPrototypeTransform = e.prototype.getTransform();
 			let entityTransform = e.getComponent('Transform');
-			
+
 			console.log('ny mentiin')
 
 			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'position', '_p', (a, b) => a.isEqualTo(b));
 			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'scale', '_s', (a, b) => a.isEqualTo(b));
 			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'angle', '_a', (a, b) => a === b);
-			
+
 			/*
 			let position = entityPrototypeTransform.getProperty('position');
 			if (position) {
@@ -299,11 +299,11 @@ export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) 
 				});
 				entityPrototypeTransform.addChild(position);
 			}
-			
+
 			let scale = entityPrototypeTransform.findChild('prp', prp => prp.name === 'scale');
 			if (!scale.value.isEqualTo(entityTransform.scale))
 				scale.value = entityTransform.scale;
-			
+
 			let angle = entityPrototypeTransform.findChild('prp', prp => prp.name === 'angle');
 			if (angle.value !== entityTransform.angle)
 				angle.value = entityTransform.angle;
@@ -341,17 +341,17 @@ export function moveEntities(entities, change) {
 export function setEntityPositions(entities, position) {
 	if (entities.length === 0)
 		return;
-	
+
 	let averagePosition = new Vector();
 
 	entities.forEach(entity => {
 		averagePosition.add(entity.position);
 	});
-	
+
 	averagePosition.divideScalar(entities.length);
-	
+
 	let change = averagePosition.multiplyScalar(-1).add(position);
-	
+
 	entities.forEach(entity => {
 		entity.position = entity.position.add(change);
 	});
@@ -368,7 +368,7 @@ export function deleteEntities(entities) {
 export function entityModifiedInEditor(entity, change) {
 	if (!entity || entity.threeLetterType !== 'ent' || !change || change.type !== changeType.setPropertyValue)
 		return;
-	
+
 	if (shouldSyncLevelAndScene()) {
 		let entityPrototype = entity.prototype;
 		console.log('before', entityPrototype);

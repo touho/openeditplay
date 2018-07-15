@@ -12,13 +12,13 @@ export default class ModuleContainer {
 			this.tabs = list('div.tabs.select-none', ModuleTab),
 			this.moduleElements = el('div.moduleElements')
 		);
-		
+
 		if (packButtonIcon) {
 			let packId = 'moduleContainerPacked_' + moduleContainerName;
 			if (getOption(packId)) {
 				this.el.classList.add('packed');
 			}
-				
+
 			this.el.onclick = () => {
 				setOption(packId, '');
 				events.dispatch('layoutResize');
@@ -51,7 +51,7 @@ export default class ModuleContainer {
 		listen(this, 'moduleClicked', module => {
 			this.activateModule(module);
 		});
-		
+
 		this._updateTabs();
 	}
 	update() {
@@ -68,14 +68,14 @@ export default class ModuleContainer {
 	}
 	_updateTabs() {
 		if (!this.tabs) return;
-		
+
 		this.tabs.update(this.modules);
-		
+
 		if (!this.packButtonEnabled && this.modules.length <= 1)
 			this.tabs.el.style.display = 'none';
 		else
 			this.tabs.el.style.display = 'block';
-		
+
 		let noModules = !this.modules.find(m => m._enabled);
 		this.el.classList.toggle('noModules', noModules);
 	}
@@ -97,7 +97,7 @@ export default class ModuleContainer {
 			if (m._selected && modules.indexOf(m) >= 0)
 				return; // Already selected
 		}
-		
+
 		for (let i = 0; i < this.modules.length; ++i) {
 			let m = this.modules[i];
 			if (m._enabled && modules.indexOf(m) >= 0)
@@ -154,16 +154,16 @@ class ModuleTab {
 	update(module) {
 		if (this.module === module && this._sel === module._selected && this._ena === module._enabled)
 			return;
-		
+
 		this.el.setAttribute('moduleid', module.id);
-		
+
 		this.module = module;
 		if (this.el.innerHTML !== module.name)
 			this.el.innerHTML = module.name;
-		
+
 		this._sel = module._selected;
 		this._ena = module._enabled;
-		
+
 		this.el.classList.toggle('moduleSelected', module._selected);
 		this.el.classList.toggle('moduleEnabled', module._enabled);
 	}

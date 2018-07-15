@@ -18,7 +18,7 @@ import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import {Component} from '../../core/component';
 import {editor} from '../editor';
-import {changeType, setChangeOrigin} from '../../core/serializableManager';
+import {changeType, setChangeOrigin} from '../../core/change';
 import * as sceneEdit from '../util/sceneEditUtil';
 import Vector from '../../util/vector';
 import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
@@ -264,16 +264,16 @@ class SceneModule extends Module {
 					callback: btn => {
 						if (!scene || !scene.level)
 							return;
-		
+
 						setChangeOrigin(this);
-		
+
 						// this.makeSureSceneHasEditorLayer();
-		
+
 						this.clearState();
-						
+
 						if (scene.isInInitialState())
 							scene.setZoom(1);
-		
+
 						if (scene.playing) {
 							scene.editorLayer.visible = true;
 							scene.pause();
@@ -292,12 +292,12 @@ class SceneModule extends Module {
 					callback: btn => {
 						setChangeOrigin(this);
 						this.stopAndReset();
-		
+
 						if (scene.editorLayer)
 							scene.editorLayer.visible = true;
 					}
 				});
-				
+
 				*/
 
 		game.listen('levelCompleted', () => {
@@ -359,7 +359,7 @@ class SceneModule extends Module {
 
 			performanceTool.stop('Editor: Scene');
 		});
-		
+
 		events.listen('new entity created', entity => {
 			let handleEntity = entity => {
 				entity.addComponents([
@@ -554,7 +554,7 @@ class SceneModule extends Module {
 		};
 		events.listen('dragPrototypeToCanvas', entityDragEnd);
 		events.listen('dragPrefabsToScene', entityDragEnd);
-		
+
 		events.listen('dragPrototypeToNonCanvas', () => {
 			this.clearState();
 		});
@@ -625,7 +625,7 @@ class SceneModule extends Module {
 			this.draw();
 
 		performanceTool.stop('Editor: Scene');
-		
+
 		return needsDraw;
 	}
 
@@ -754,7 +754,7 @@ class SceneModule extends Module {
 			let change = false;
 			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
 			|| this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
-				
+
 				// Here you can tweak the game resolution in editor.
 				// scene.renderer.resize(this.canvas.parentElement.offsetWidth / 2, this.canvas.parentElement.offsetHeight / 2);
 				let width = this.canvas.parentElement.offsetWidth;
@@ -763,7 +763,7 @@ class SceneModule extends Module {
 				// Here you can change the resolution of the canvas
 				let pixels = width * height;
 				let quality = 1;
-				
+
 				/*
 				This doesn't work. Mouse position gets messed up.
 				const MAX_PIXELS = 1000 * 600;
@@ -771,9 +771,9 @@ class SceneModule extends Module {
 					quality = Math.sqrt(MAX_PIXELS / pixels);
 				}
 				*/
-				
+
 				scene.renderer.resize(width * quality, height * quality);
-				
+
 				change = true;
 			}
 
