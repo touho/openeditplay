@@ -6,10 +6,13 @@ import { scene } from '../../core/scene';
 import { listenKeyDown, key } from '../../util/input';
 
 class ObjectModule extends Module {
+	propertyEditor: PropertyEditor;
+
 	constructor() {
-		let propertyEditor = new PropertyEditor();
-		super(propertyEditor);
-		this.propertyEditor = propertyEditor;
+		super();
+
+		this.addElements(this.propertyEditor = new PropertyEditor());
+
 		this.id = 'object';
 		this.name = '<u>O</u>bject';
 

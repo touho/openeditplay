@@ -11,14 +11,11 @@ export default class Module {
 	_enabled: boolean;
 	el: HTMLElement;
 
-	constructor(...args) {
+	constructor() {
 		this.type = 'module';
 		this.name = this.name || 'Module';
 		this.id = this.id || 'module';
-		if (arguments.length > 0)
-			this.el = el('div.module', ...args);
-		else
-			this.el = el('div.module');
+		this.el = el('div.module');
 		this._selected = true;
 		this._enabled = true;
 
@@ -26,6 +23,11 @@ export default class Module {
 		setTimeout(() => {
 			moduleIdToModule[this.id] = this;
 		});
+	}
+	addElements(...elements) {
+		for (let element of elements) {
+			mount(this.el, element);
+		}
 	}
 	// Called when this module is opened. Other modules can call Module.activateModule('Module', ...args);
 	activate() {

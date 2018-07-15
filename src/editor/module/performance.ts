@@ -6,9 +6,11 @@ import { scene } from '../../core/scene';
 
 class PerformanceModule extends Module {
 	constructor() {
+		super();
+
 		let performanceList;
 		let fpsMeter;
-		super(
+		this.addElements(
 			el('div.performanceCPU',
 				new PerformanceItem({ name: 'Name', value: 'CPU %' }),
 				performanceList = list('div.performanceList', PerformanceItem, 'name')

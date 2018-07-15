@@ -6,8 +6,11 @@ import PropertyOwner from '../../core/propertyOwner'
 import { TopButton } from './topBar'
 
 class Game extends Module {
+	propertyEditor: PropertyEditor;
+
 	constructor() {
-		super(
+		super();
+		this.addElements(
 			this.propertyEditor = new PropertyEditor(),
 			el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: () => {
 				if (confirm(`Delete game '${game.name}'? (Cannot be undone)`)) {

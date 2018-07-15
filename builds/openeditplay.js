@@ -326,6 +326,10 @@
 	}
 	//# sourceMappingURL=performance.js.map
 
+	var changeDispacher = {
+	    addSerializable: function (serializable) { },
+	    removeSerializable: function (serializableId) { },
+	};
 	var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 	var CHAR_COUNT = CHARACTERS.length;
 	var random = Math.random;
@@ -366,7 +370,7 @@
 	        if (this.id.startsWith('?'))
 	            throw new Error('?');
 	            */
-	        addSerializable(this);
+	        changeDispacher.addSerializable(this);
 	    }
 	    Serializable.prototype.makeUpAName = function () {
 	        return 'Serializable';
@@ -380,7 +384,7 @@
 	        this._alive = false;
 	        this._rootType = null;
 	        this._listeners = {};
-	        removeSerializable(this.id);
+	        changeDispacher.removeSerializable(this.id);
 	        this._state |= Serializable.STATE_DESTROY;
 	        return true;
 	    };
@@ -757,7 +761,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -3204,9 +3207,25 @@
 	//# sourceMappingURL=prototype.js.map
 
 	var serializables = {};
+	function addSerializable(serializable) {
+	    // @ifndef OPTIMIZE
+	    if (serializables[serializable.id] !== undefined)
+	        { assert(false, ("Serializable id clash " + (serializable.id))); }
+	    // @endif
+	    serializables[serializable.id] = serializable;
+	}
+	changeDispacher.addSerializable = addSerializable;
 	function getSerializable$1(id) {
 	    return serializables[id] || null;
 	}
+	function removeSerializable(id) {
+	    /* When deleting a scene, this function is called a lot of times
+	    if (!serializables[id])
+	        throw new Error('Serializable not found!');
+	    */
+	    delete serializables[id];
+	}
+	changeDispacher.removeSerializable = removeSerializable;
 	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.

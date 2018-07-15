@@ -400,6 +400,10 @@
 	}
 	//# sourceMappingURL=performance.js.map
 
+	var changeDispacher = {
+	    addSerializable: function (serializable) { },
+	    removeSerializable: function (serializableId) { },
+	};
 	var CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
 	var CHAR_COUNT = CHARACTERS.length;
 	var random = Math.random;
@@ -440,7 +444,7 @@
 	        if (this.id.startsWith('?'))
 	            throw new Error('?');
 	            */
-	        addSerializable(this);
+	        changeDispacher.addSerializable(this);
 	    }
 	    Serializable.prototype.makeUpAName = function () {
 	        return 'Serializable';
@@ -454,7 +458,7 @@
 	        this._alive = false;
 	        this._rootType = null;
 	        this._listeners = {};
-	        removeSerializable(this.id);
+	        changeDispacher.removeSerializable(this.id);
 	        this._state |= Serializable.STATE_DESTROY;
 	        return true;
 	    };
@@ -3459,9 +3463,25 @@
 	//# sourceMappingURL=prototype.js.map
 
 	var serializables = {};
+	function addSerializable(serializable) {
+	    // @ifndef OPTIMIZE
+	    if (serializables[serializable.id] !== undefined)
+	        { assert$1(false, ("Serializable id clash " + (serializable.id))); }
+	    // @endif
+	    serializables[serializable.id] = serializable;
+	}
+	changeDispacher.addSerializable = addSerializable;
 	function getSerializable$1(id) {
 	    return serializables[id] || null;
 	}
+	function removeSerializable(id) {
+	    /* When deleting a scene, this function is called a lot of times
+	    if (!serializables[id])
+	        throw new Error('Serializable not found!');
+	    */
+	    delete serializables[id];
+	}
+	changeDispacher.removeSerializable = removeSerializable;
 	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
@@ -5337,20 +5357,11 @@
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
 	    function Module() {
-	        var arguments$1 = arguments;
-
-	        var args = [];
-	        for (var _i = 0; _i < arguments.length; _i++) {
-	            args[_i] = arguments$1[_i];
-	        }
 	        var _this = this;
 	        this.type = 'module';
 	        this.name = this.name || 'Module';
 	        this.id = this.id || 'module';
-	        if (arguments.length > 0)
-	            { this.el = el.apply(void 0, ['div.module'].concat(args)); }
-	        else
-	            { this.el = el('div.module'); }
+	        this.el = el('div.module');
 	        this._selected = true;
 	        this._enabled = true;
 	        // Timeout so that module constructor has time to set this.id after calling super.
@@ -5358,6 +5369,19 @@
 	            moduleIdToModule[_this.id] = _this;
 	        });
 	    }
+	    Module.prototype.addElements = function () {
+	        var arguments$1 = arguments;
+	        var this$1 = this;
+
+	        var elements = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            elements[_i] = arguments$1[_i];
+	        }
+	        for (var _a = 0, elements_1 = elements; _a < elements_1.length; _a++) {
+	            var element = elements_1[_a];
+	            mount(this$1.el, element);
+	        }
+	    };
 	    // Called when this module is opened. Other modules can call Module.activateModule('Module', ...args);
 	    Module.prototype.activate = function () {
 	    };
@@ -5424,7 +5448,8 @@
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
 	    function TopBarModule() {
-	        var _this = _super.call(this, _this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), _this.buttons = el('div.buttonContainer.select-none'), _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons')) || this;
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), _this.buttons = el('div.buttonContainer.select-none'), _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'));
 	        _this.id = 'topbar';
 	        _this.name = 'TopBar'; // not visible
 	        _this.keyboardShortcuts = {}; // key.x -> func
@@ -7674,6 +7699,8 @@
 	    });
 	    var idList = data.data.nodes;
 	    var targetElement = data.event.target;
+	    console.log('jou', data);
+	    debugger;
 	    var event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
 	    events.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
 	});
@@ -8151,7 +8178,8 @@
 	var Levels = /** @class */ (function (_super) {
 	    __extends(Levels, _super);
 	    function Levels() {
-	        var _this = _super.call(this, _this.content = el('div', _this.buttons = list('div.levelSelectorButtons', LevelItem), 'Create: ', _this.createButton = new Button)) || this;
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.content = el('div', _this.buttons = list('div.levelSelectorButtons', LevelItem), 'Create: ', _this.createButton = new Button));
 	        _this.name = 'Levels';
 	        _this.id = 'levels';
 	        _this.createButton.update({
@@ -9116,10 +9144,8 @@
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
 	    function ObjectModule() {
-	        var _this = this;
-	        var propertyEditor = new PropertyEditor();
-	        _this = _super.call(this, propertyEditor) || this;
-	        _this.propertyEditor = propertyEditor;
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.propertyEditor = new PropertyEditor());
 	        _this.id = 'object';
 	        _this.name = '<u>O</u>bject';
 	        listenKeyDown(function (k) {
@@ -9186,11 +9212,12 @@
 	var Game$1 = /** @class */ (function (_super) {
 	    __extends(Game$$1, _super);
 	    function Game$$1() {
-	        var _this = _super.call(this, _this.propertyEditor = new PropertyEditor(), el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.propertyEditor = new PropertyEditor(), el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
 	                if (confirm("Delete game '" + game.name + "'? (Cannot be undone)")) {
 	                    game.delete();
 	                }
-	            } })) || this;
+	            } }));
 	        _this.id = 'game';
 	        _this.name = 'Game';
 	        return _this;
@@ -9214,10 +9241,10 @@
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
 	    function PerformanceModule() {
-	        var _this = this;
+	        var _this = _super.call(this) || this;
 	        var performanceList;
 	        var fpsMeter;
-	        _this = _super.call(this, el('div.performanceCPU', new PerformanceItem({ name: 'Name', value: 'CPU %' }), performanceList = list('div.performanceList', PerformanceItem, 'name')), fpsMeter = new FPSMeter()) || this;
+	        _this.addElements(el('div.performanceCPU', new PerformanceItem({ name: 'Name', value: 'CPU %' }), performanceList = list('div.performanceList', PerformanceItem, 'name')), fpsMeter = new FPSMeter());
 	        _this.name = 'Performance';
 	        _this.id = 'performance';
 	        startPerformanceUpdates();
@@ -9319,7 +9346,6 @@
 	    };
 	    return FPSMeter;
 	}());
-	//# sourceMappingURL=performance.js.map
 
 	var PerSecond = /** @class */ (function (_super) {
 	    __extends(PerSecond, _super);

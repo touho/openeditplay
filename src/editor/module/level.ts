@@ -4,10 +4,17 @@ import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import PropertyOwner from '../../core/propertyOwner'
 import { setChangeOrigin } from '../../core/change';
+import Level from '../../core/level';
 
-class Level extends Module {
+class LevelModule extends Module {
+	propertyEditor: PropertyEditor;
+	deleteButton: HTMLElement;
+	level: Level;
+
 	constructor() {
-		super(
+		super();
+
+		this.addElements(
 			this.propertyEditor = new PropertyEditor(),
 			this.deleteButton = el('button.button.dangerButton', 'Delete', {
 				onclick: () => {
@@ -18,6 +25,7 @@ class Level extends Module {
 				}
 			})
 		);
+
 		this.id = 'level';
 		this.name = 'Level';
 	}
@@ -36,4 +44,4 @@ class Level extends Module {
 	}
 }
 
-Module.register(Level, 'right');
+Module.register(LevelModule, 'right');

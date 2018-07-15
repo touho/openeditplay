@@ -4,8 +4,8 @@ import { isClient } from '../util/environment';
 import * as performanceTool from '../util/performance';
 
 export const changeDispacher = {
-	addSerializable: (serializable: Serializable) => {},
-	removeSerializable: (serializableId: string) => {},
+	addSerializable: (serializable: Serializable) => { },
+	removeSerializable: (serializableId: string) => { },
 };
 
 const CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; // 62 chars
@@ -40,9 +40,9 @@ export default class Serializable {
 	_state: number;
 
 	constructor(predefinedId: string = '', skipSerializableRegistering = false) {
-// @ifndef OPTIMIZE
+		// @ifndef OPTIMIZE
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
-// @endif
+		// @endif
 		this._children = new Map(); // threeLetterType -> array
 		this._listeners = {};
 		this._rootType = this.isRoot ? this.threeLetterType : null;
@@ -57,7 +57,7 @@ export default class Serializable {
 		if (this.id.startsWith('?'))
 			throw new Error('?');
 			*/
-		addSerializable(this);
+		changeDispacher.addSerializable(this);
 	}
 	makeUpAName() {
 		return 'Serializable';
@@ -71,7 +71,7 @@ export default class Serializable {
 		this._alive = false;
 		this._rootType = null;
 		this._listeners = {};
-		removeSerializable(this.id);
+		changeDispacher.removeSerializable(this.id);
 		this._state |= Serializable.STATE_DESTROY;
 		return true;
 	}
@@ -268,17 +268,17 @@ export default class Serializable {
 		performanceTool.eventHappened('Event ' + event, listeners.length);
 
 		for (let i = 0; i < listeners.length; i++) {
-// @ifndef OPTIMIZE
+			// @ifndef OPTIMIZE
 			try {
-// @endif
+				// @endif
 
 				listeners[i](a, b, c);
 
-// @ifndef OPTIMIZE
-			} catch(e) {
+				// @ifndef OPTIMIZE
+			} catch (e) {
 				console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
 			}
-// @endif
+			// @endif
 		}
 	}
 	hasDescendant(child) {
@@ -313,7 +313,7 @@ export default class Serializable {
 		let obj;
 		try {
 			obj = fromJSON(json);
-		} catch(e) {
+		} catch (e) {
 			if (isClient) {
 				if (!window.force)
 					debugger; // Type 'force = true' in console to ignore failed imports.
@@ -399,18 +399,18 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 
 		let children = [];
 
-		function createDebugObject(type) {
-			if (type === 'gam') return new function Game(){};
-			if (type === 'sce') return new function Scene(){};
-			if (type === 'prt') return new function Prototype(){};
-			if (type === 'prp') return new function Property(){};
-			if (type === 'cda') return new function ComponentData(){};
-			if (type === 'com') return new function Component(){};
-			if (type === 'epr') return new function EntityPrototype(){};
-			if (type === 'ent') return new function Entity(){};
-			if (type === 'lvl') return new function Level(){};
-			if (type === 'pfa') return new function Prefab(){};
-			return new function Other(){};
+		function createDebugObject(type)  {
+			if (type === 'gam') return new function Game() { };
+			if (type === 'sce') return new function Scene() { };
+			if (type === 'prt') return new function Prototype() { };
+			if (type === 'prp') return new function Property() { };
+			if (type === 'cda') return new function ComponentData() { };
+			if (type === 'com') return new function Component() { };
+			if (type === 'epr') return new function EntityPrototype() { };
+			if (type === 'ent') return new function Entity() { };
+			if (type === 'lvl') return new function Level() { };
+			if (type === 'pfa') return new function Prefab() { };
+			return new function Other() { };
 		}
 
 		c.forEach(child => {

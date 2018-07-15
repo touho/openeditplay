@@ -2,17 +2,24 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise } from '../editor';
 import events from '../../util/events';
-import {listenSceneCreation, scene} from '../../core/scene';
-import {listenKeyDown, key} from "../../util/input";
+import { listenSceneCreation, scene } from '../../core/scene';
+import { listenKeyDown, key } from "../../util/input";
 
 export class TopBarModule extends Module {
+	logo: HTMLElement;
+	buttons: HTMLElement;
+	controlButtons: HTMLElement;
+	toolSelectionButtons: HTMLElement;
+
 	constructor() {
-		super(
+		super();
+		this.addElements(
 			this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }),
 			this.buttons = el('div.buttonContainer.select-none'),
 			this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'),
 			this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons')
 		);
+
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
 		this.keyboardShortcuts = {}; // key.x -> func

@@ -1,4 +1,9 @@
 export class DragAndDropEvent {
+	state: string;
+	idList: Array<string>;
+	targetElement: HTMLElement;
+	type: string;
+
 	constructor(idList, targetElement, state) {
 		this.state = state;
 		this.idList = idList;

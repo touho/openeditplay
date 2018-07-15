@@ -34,7 +34,9 @@ events.listen('createBlankLevel', createNewLevel);
 
 class Levels extends Module {
 	constructor() {
-		super(
+		super();
+
+		this.addElements(
 			this.content = el('div',
 				this.buttons = list('div.levelSelectorButtons', LevelItem),
 				'Create: ',
