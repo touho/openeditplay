@@ -1,18 +1,16 @@
-import {keyPressed, key, listenKeyDown, simulateKeyEvent} from '../util/input'
+import { keyPressed, key, listenKeyDown, simulateKeyEvent } from '../util/input'
 import Vector from '../util/vector';
 import debug from './debug'
 
 export const CONTROL_SIZE = 70; // pixels
 
 export default class TouchControl {
-	constructor(elementId, keyBinding, requireTouchStart) {
-		this.elementId = elementId;
-		this.element = null; // document not loaded yet.
-		this.keyBinding = keyBinding;
-		this.state = false; // is key binding simulated?
-		this.visible = false;
-		this.requireTouchStart = requireTouchStart;
-		this.containsFunc = null;
+	element: HTMLElement = null; // document not loaded yet.
+	state: boolean = false; // is key binding simulated?
+	visible: boolean = false;
+	containsFunc: (point: Vector) => boolean = null;
+
+	constructor(public elementId: string, public keyBinding: number, public requireTouchStart = false) {
 	}
 
 	initElement() {
@@ -20,7 +18,7 @@ export default class TouchControl {
 			this.element = document.getElementById(this.elementId);
 	}
 
-	setPosition(left, right, bottom) {
+	setPosition(left: number, right: number, bottom: number) {
 		if (left)
 			this.element.style.left = left + 'px';
 		else
@@ -32,21 +30,21 @@ export default class TouchControl {
 		let screen = document.getElementById('screen');
 		let screenWidth = parseInt(screen.style.width);
 		let screenHeight = parseInt(screen.style.height);
-		
+
 		let left = parseInt(this.element.style.left);
 		let right = parseInt(this.element.style.right);
 		let bottom = parseInt(this.element.style.bottom);
-		
+
 		let x = !isNaN(left) ? (left + this.element.offsetWidth / 2) : (screenWidth - right - this.element.offsetWidth / 2);
 		let y = screenHeight - bottom - this.element.offsetHeight / 2;
 
 		return new Vector(x, y);
 	}
 
-	contains(point) {
+	contains(point: Vector) {
 		if (!this.visible)
 			return false;
-		
+
 		if (this.containsFunc)
 			return this.containsFunc.call(this, point);
 
@@ -54,11 +52,11 @@ export default class TouchControl {
 		return position.distance(point) <= CONTROL_SIZE / 2;
 	}
 	// function(point) {...}
-	setContainsFunction(func) {
+	setContainsFunction(func: (point: Vector) => boolean)  {
 		this.containsFunc = func;
 	}
 
-	setVisible(visible) {
+	setVisible(visible: boolean) {
 		if (this.visible === visible)
 			return;
 
@@ -69,17 +67,17 @@ export default class TouchControl {
 			this.element.style.display = 'none';
 	}
 
-	setState(controlContainsATouch, isTouchStartEvent) {
+	setState(controlContainsATouch: boolean, isTouchStartEvent: boolean) {
 		let oldState = this.state;
-		
+
 		if (this.requireTouchStart && !this.state && !isTouchStartEvent)
 			this.state = false;
 		else
 			this.state = !!controlContainsATouch;
-		
+
 		if (this.state === oldState)
 			return;
-		
+
 		if (this.state) {
 			this.element.classList.add('pressed');
 			simulateKeyEvent('keydown', this.keyBinding);

@@ -151,6 +151,39 @@ export default class EntityPrototype extends Prototype {
 		assert(this.getTransform(), 'EntityPrototype must have a Transform');
 		super.setRootType(rootType);
 	}
+	// If Transform or Transform.position is missing, they are added.
+	static createFromPrototype(prototype) {
+		let entityPrototype = new EntityPrototype();
+		entityPrototype.prototype = prototype;
+		let id = entityPrototype.id;
+
+		let prototypeTransform = prototype.findChild('cda', cda => cda.name === 'Transform');
+		let fromPrefab = prototype.threeLetterType === 'pfa';
+
+		if (!fromPrefab && prototypeTransform)
+			assert(false, 'Prototype (prt) can not have a Transform component');
+
+		if (fromPrefab && !prototypeTransform)
+			assert(false, 'Prefab (pfa) must have a Transform component');
+
+		let name = createEntityPrototypeNameProperty(id);
+		let transform = createEntityPrototypeTransform(id);
+
+		if (fromPrefab && prototypeTransform) {
+			// No point to copy the position
+			// transform.setValue('position', prototypeTransform.getValue('position'));
+			transform.setValue('scale', prototypeTransform.getValue('scale'));
+			transform.setValue('angle', prototypeTransform.getValue('angle'));
+		}
+
+		entityPrototype.initWithChildren([name, transform]);
+
+		// @ifndef OPTIMIZE
+		assert(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+		// @endif
+
+		return entityPrototype;
+	}
 }
 Object.defineProperty(EntityPrototype.prototype, 'position', {
 	get() {
@@ -160,40 +193,6 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 		return this.getTransform().findChild('prp', prp => prp.name === 'position').value = position;
 	}
 });
-
-// If Transform or Transform.position is missing, they are added.
-EntityPrototype.createFromPrototype = function (prototype) {
-	let entityPrototype = new EntityPrototype();
-	entityPrototype.prototype = prototype;
-	let id = entityPrototype.id;
-
-	let prototypeTransform = prototype.findChild('cda', cda => cda.name === 'Transform');
-	let fromPrefab = prototype.threeLetterType === 'pfa';
-
-	if (!fromPrefab && prototypeTransform)
-		assert(false, 'Prototype (prt) can not have a Transform component');
-
-	if (fromPrefab && !prototypeTransform)
-		assert(false, 'Prefab (pfa) must have a Transform component');
-
-	let name = createEntityPrototypeNameProperty(id);
-	let transform = createEntityPrototypeTransform(id);
-
-	if (fromPrefab && prototypeTransform) {
-		// No point to copy the position
-		// transform.setValue('position', prototypeTransform.getValue('position'));
-		transform.setValue('scale', prototypeTransform.getValue('scale'));
-		transform.setValue('angle', prototypeTransform.getValue('angle'));
-	}
-
-	entityPrototype.initWithChildren([name, transform]);
-
-	// @ifndef OPTIMIZE
-	assert(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
-	// @endif
-
-	return entityPrototype;
-};
 
 function createEntityPrototypeNameProperty(entityPrototypeId, name = '') {
 	return EntityPrototype._propertyTypesByName.name.createProperty({

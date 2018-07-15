@@ -5,8 +5,11 @@ import { editor } from '../editor';
 import { listenKeyDown, key } from '../../util/input';
 
 class Type extends Module {
+	propertyEditor: PropertyEditor;
+
 	constructor() {
-		super(
+		super();
+		this.addElements(
 			this.propertyEditor = new PropertyEditor()
 		);
 		this.id = 'type';

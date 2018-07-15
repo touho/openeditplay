@@ -6,10 +6,11 @@ import { scene } from '../../core/scene';
 import { listenKeyDown, key } from '../../util/input';
 
 class PrefabModule extends Module {
+	propertyEditor: PropertyEditor;
+
 	constructor() {
-		let propertyEditor = new PropertyEditor();
-		super(propertyEditor);
-		this.propertyEditor = propertyEditor;
+		super();
+		this.addElements(this.propertyEditor = new PropertyEditor());
 		this.id = 'prefab';
 		this.name = 'Pre<u>f</u>ab';
 

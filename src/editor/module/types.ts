@@ -9,8 +9,16 @@ import { editor } from '../editor';
 import * as performance from '../../util/performance';
 
 class Types extends Module {
+	addButton: HTMLElement;
+	search: HTMLElement;
+	searchIcon: HTMLElement;
+	jstree: HTMLElement;
+	helperText: HTMLElement;
+
 	constructor() {
-		super(
+		super();
+
+		this.addElements(
 			this.addButton = el('span.addTypeButton.button.fa.fa-plus'),
 			this.search = el('input'),
 			this.searchIcon = el('i.fa.fa-search.searchIcon'),

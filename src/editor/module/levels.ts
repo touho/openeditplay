@@ -1,12 +1,12 @@
-import {el, list, mount} from 'redom';
+import { el, list, mount, List, RedomComponent } from 'redom';
 import Module from './module';
-import {game} from '../../core/game';
-import {editor} from '../editor';
+import { game } from '../../core/game';
+import { editor } from '../editor';
 import Level from '../../core/level';
-import {Button} from '../views/popup/Popup';
-import {dispatch, listen} from '../../util/events';
+import { Button } from '../views/popup/Popup';
+import { dispatch, listen } from '../../util/events';
 import events from "../../util/events";
-import {setChangeOrigin} from "../../core/change";
+import { setChangeOrigin } from "../../core/change";
 
 export function createNewLevel() {
 	let lvl = new Level();
@@ -33,6 +33,10 @@ export function createNewLevel() {
 events.listen('createBlankLevel', createNewLevel);
 
 class Levels extends Module {
+	content: HTMLElement;
+	buttons: List;
+	createButton: Button;
+
 	constructor() {
 		super();
 
@@ -81,7 +85,12 @@ class Levels extends Module {
 
 Module.register(Levels, 'left');
 
-class LevelItem {
+class LevelItem implements RedomComponent {
+	el: HTMLElement;
+	number: HTMLElement;
+	selectButton: Button;
+	level: Level;
+
 	constructor() {
 		this.el = el('div.levelItem',
 			this.number = el('span'),

@@ -9,11 +9,12 @@ import events from "../../util/events";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import { game } from "../../core/game";
-import TaskRunner from "../../util/taskRunner";
 import Prefab from "../../core/prefab";
 import Serializable from "../../core/serializable";
 
 class Objects extends Module {
+	treeView: TreeView;
+
 	constructor() {
 		super();
 		this.name = 'Objects';

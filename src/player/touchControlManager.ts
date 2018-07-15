@@ -6,7 +6,7 @@ import debug from './debug'
 
 const ARROW_HITBOX_RADIUS = 110;
 
-const controls = {
+const controls: { [s: string]: TouchControl; } = {
 	touchUp:	new TouchControl('touchUp',		key.up),
 	touchDown:	new TouchControl('touchDown',	key.down),
 	touchLeft:	new TouchControl('touchLeft',	key.left),
@@ -36,7 +36,7 @@ window.addEventListener('load', () => {
 
 function touchChange(event) {
 	event.preventDefault();
-	
+
 	let touchCoordinates = getTouchCoordinates(event);
 	controlArray.forEach(control => {
 		let isPressed = !!touchCoordinates.find(coord => control.contains(coord));
@@ -60,7 +60,7 @@ listenSceneCreation(() => {
 function positionControls() {
 	if (!scene)
 		return;
-	
+
 	let
 		playerFound = false,
 		jumperFound = false,
@@ -91,13 +91,13 @@ function positionControls() {
 	controls.touchJump.setVisible(jumpSpeedFound);
 	controls.touchA.setVisible(nextLevelButton); // Temp solution.
 	controls.touchB.setVisible(false);
-	
+
 	if (controls.touchUp.visible && controls.touchDown.visible) {
 		controls.touchLeft.setPosition(10, null, 60);
 		controls.touchRight.setPosition(110, null, 60);
 		controls.touchUp.setPosition(60, null, 110);
 		controls.touchDown.setPosition(60, null, 10);
-		
+
 		controls.touchLeft.setContainsFunction(point => {
 			let rel = getRelativePositionToArrowCenter(point);
 			return rel.x < 0 && Math.abs(rel.x) > Math.abs(rel.y) && rel.length() <= ARROW_HITBOX_RADIUS;
@@ -136,7 +136,7 @@ function positionControls() {
 	visibleRightHandControls.forEach((control, idx) => {
 		let idxFromRightWall = visibleRightHandControls.length - 1 - idx;
 		control.setPosition(null, 10 + idxFromRightWall * 20, 20 + idx * 70);
-		
+
 		if (idx === 0) {
 			// Bottom right corner control
 			control.setContainsFunction(point => {

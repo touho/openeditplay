@@ -3624,6 +3624,31 @@
 	        assert$1(this.getTransform(), 'EntityPrototype must have a Transform');
 	        _super.prototype.setRootType.call(this, rootType);
 	    };
+	    // If Transform or Transform.position is missing, they are added.
+	    EntityPrototype.createFromPrototype = function (prototype) {
+	        var entityPrototype = new EntityPrototype();
+	        entityPrototype.prototype = prototype;
+	        var id = entityPrototype.id;
+	        var prototypeTransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
+	        var fromPrefab = prototype.threeLetterType === 'pfa';
+	        if (!fromPrefab && prototypeTransform)
+	            { assert$1(false, 'Prototype (prt) can not have a Transform component'); }
+	        if (fromPrefab && !prototypeTransform)
+	            { assert$1(false, 'Prefab (pfa) must have a Transform component'); }
+	        var name = createEntityPrototypeNameProperty(id);
+	        var transform = createEntityPrototypeTransform(id);
+	        if (fromPrefab && prototypeTransform) {
+	            // No point to copy the position
+	            // transform.setValue('position', prototypeTransform.getValue('position'));
+	            transform.setValue('scale', prototypeTransform.getValue('scale'));
+	            transform.setValue('angle', prototypeTransform.getValue('angle'));
+	        }
+	        entityPrototype.initWithChildren([name, transform]);
+	        // @ifndef OPTIMIZE
+	        assert$1(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+	        // @endif
+	        return entityPrototype;
+	    };
 	    return EntityPrototype;
 	}(Prototype));
 	Object.defineProperty(EntityPrototype.prototype, 'position', {
@@ -3634,31 +3659,6 @@
 	        return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value = position;
 	    }
 	});
-	// If Transform or Transform.position is missing, they are added.
-	EntityPrototype.createFromPrototype = function (prototype) {
-	    var entityPrototype = new EntityPrototype();
-	    entityPrototype.prototype = prototype;
-	    var id = entityPrototype.id;
-	    var prototypeTransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
-	    var fromPrefab = prototype.threeLetterType === 'pfa';
-	    if (!fromPrefab && prototypeTransform)
-	        { assert$1(false, 'Prototype (prt) can not have a Transform component'); }
-	    if (fromPrefab && !prototypeTransform)
-	        { assert$1(false, 'Prefab (pfa) must have a Transform component'); }
-	    var name = createEntityPrototypeNameProperty(id);
-	    var transform = createEntityPrototypeTransform(id);
-	    if (fromPrefab && prototypeTransform) {
-	        // No point to copy the position
-	        // transform.setValue('position', prototypeTransform.getValue('position'));
-	        transform.setValue('scale', prototypeTransform.getValue('scale'));
-	        transform.setValue('angle', prototypeTransform.getValue('angle'));
-	    }
-	    entityPrototype.initWithChildren([name, transform]);
-	    // @ifndef OPTIMIZE
-	    assert$1(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
-	    // @endif
-	    return entityPrototype;
-	};
 	function createEntityPrototypeNameProperty(entityPrototypeId, name) {
 	    if (name === void 0) { name = ''; }
 	    return EntityPrototype._propertyTypesByName.name.createProperty({
@@ -3749,6 +3749,19 @@
 	    Prefab.prototype.getParentPrototype = function () {
 	        return null;
 	    };
+	    // Meant for entityPrototypes, but works theoretically for prototypes
+	    Prefab.createFromPrototype = function (prototype) {
+	        var inheritedComponentDatas = prototype.getInheritedComponentDatas();
+	        var children = inheritedComponentDatas.map(function (icd) {
+	            return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
+	        });
+	        children.push(prototype._properties.name.clone());
+	        var prefab = new Prefab().initWithChildren(children);
+	        // Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
+	        prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
+	        return prefab;
+	    };
 	    return Prefab;
 	}(Prototype));
 	/*
@@ -3778,19 +3791,6 @@
 	     }
 	]
 	 */
-	// Meant for entityPrototypes, but works theoretically for prototypes
-	Prefab.createFromPrototype = function (prototype) {
-	    var inheritedComponentDatas = prototype.getInheritedComponentDatas();
-	    var children = inheritedComponentDatas.map(function (icd) {
-	        return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
-	            .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
-	    });
-	    children.push(prototype._properties.name.clone());
-	    var prefab = new Prefab().initWithChildren(children);
-	    // Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
-	    prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
-	    return prefab;
-	};
 	Serializable.registerSerializable(Prefab, 'pfa');
 	//# sourceMappingURL=prefab.js.map
 
@@ -6550,7 +6550,7 @@
 	var SceneModule = /** @class */ (function (_super) {
 	    __extends(SceneModule, _super);
 	    function SceneModule() {
-	        var _this = this;
+	        var _this = _super.call(this) || this;
 	        var canvas, homeButton, globeButton, copyButton, deleteButton, sceneContextButtons;
 	        var disableMouseDown = function (e) {
 	            e.returnValue = false;
@@ -6558,7 +6558,7 @@
 	            e.stopPropagation();
 	            return false;
 	        };
-	        _this = _super.call(this, canvas = el('canvas.openEditPlayCanvas.select-none', {
+	        _this.addElements(canvas = el('canvas.openEditPlayCanvas.select-none', {
 	            // width and height will be fixed after loading
 	            width: 0,
 	            height: 0
@@ -6631,7 +6631,7 @@
 	            },
 	            onmousedown: disableMouseDown,
 	            title: 'Delete selected objects (Backspace)'
-	        })))) || this;
+	        }))));
 	        _this.el.classList.add('hideScenePauseInformation');
 	        _this.canvas = canvas;
 	        _this.homeButton = homeButton;
@@ -7329,7 +7329,8 @@
 	var Types = /** @class */ (function (_super) {
 	    __extends(Types, _super);
 	    function Types() {
-	        var _this = _super.call(this, _this.addButton = el('span.addTypeButton.button.fa.fa-plus'), _this.search = el('input'), _this.searchIcon = el('i.fa.fa-search.searchIcon'), _this.jstree = el('div'), _this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right'))) || this;
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.addButton = el('span.addTypeButton.button.fa.fa-plus'), _this.search = el('input'), _this.searchIcon = el('i.fa.fa-search.searchIcon'), _this.jstree = el('div'), _this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right')));
 	        _this.id = 'types';
 	        _this.name = 'Types';
 	        _this.addButton.onclick = function () {
@@ -7547,9 +7548,9 @@
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
-	        this.state = state;
 	        this.idList = idList;
-	        this.targetElement = targetElement; // the drop target target
+	        this.targetElement = targetElement;
+	        this.state = state;
 	        this.type = null;
 	        var types = Array.from(new Set(this.idList.map(function (id) { return id.substring(0, 3); })));
 	        if (types.length === 0)
@@ -7589,7 +7590,6 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
-	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
@@ -7697,10 +7697,9 @@
 	    data.helper.find('.jstree-icon').css({
 	        visibility: 'visible'
 	    });
+	    debugger;
 	    var idList = data.data.nodes;
 	    var targetElement = data.event.target;
-	    console.log('jou', data);
-	    debugger;
 	    var event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
 	    events.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
 	});
@@ -9064,7 +9063,8 @@
 	var Type = /** @class */ (function (_super) {
 	    __extends(Type, _super);
 	    function Type() {
-	        var _this = _super.call(this, _this.propertyEditor = new PropertyEditor()) || this;
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.propertyEditor = new PropertyEditor());
 	        _this.id = 'type';
 	        _this.name = '<u>T</u>ype';
 	        listenKeyDown(function (k) {
@@ -9107,10 +9107,8 @@
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
 	    function PrefabModule() {
-	        var _this = this;
-	        var propertyEditor = new PropertyEditor();
-	        _this = _super.call(this, propertyEditor) || this;
-	        _this.propertyEditor = propertyEditor;
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.propertyEditor = new PropertyEditor());
 	        _this.id = 'prefab';
 	        _this.name = 'Pre<u>f</u>ab';
 	        listenKeyDown(function (k) {
@@ -9175,22 +9173,23 @@
 	Module.register(ObjectModule, 'right');
 	//# sourceMappingURL=object.js.map
 
-	var Level$1 = /** @class */ (function (_super) {
-	    __extends(Level, _super);
-	    function Level() {
-	        var _this = _super.call(this, _this.propertyEditor = new PropertyEditor(), _this.deleteButton = el('button.button.dangerButton', 'Delete', {
+	var LevelModule = /** @class */ (function (_super) {
+	    __extends(LevelModule, _super);
+	    function LevelModule() {
+	        var _this = _super.call(this) || this;
+	        _this.addElements(_this.propertyEditor = new PropertyEditor(), _this.deleteButton = el('button.button.dangerButton', 'Delete', {
 	            onclick: function () {
 	                if (_this.level.isEmpty() || confirm('Are you sure you want to delete level: ' + _this.level.name)) {
 	                    setChangeOrigin(_this);
 	                    _this.level.delete();
 	                }
 	            }
-	        })) || this;
+	        }));
 	        _this.id = 'level';
 	        _this.name = 'Level';
 	        return _this;
 	    }
-	    Level.prototype.update = function () {
+	    LevelModule.prototype.update = function () {
 	        this.level = null;
 	        if (editor.selectedLevel) {
 	            this.level = editor.selectedLevel;
@@ -9199,14 +9198,14 @@
 	        else
 	            { return false; }
 	    };
-	    Level.prototype.activate = function (command, parameter) {
+	    LevelModule.prototype.activate = function (command, parameter) {
 	        if (command === 'focusOnProperty') {
 	            this.propertyEditor.el.querySelector(".property[name='" + parameter + "'] input").select();
 	        }
 	    };
-	    return Level;
+	    return LevelModule;
 	}(Module));
-	Module.register(Level$1, 'right');
+	Module.register(LevelModule, 'right');
 	//# sourceMappingURL=level.js.map
 
 	var Game$1 = /** @class */ (function (_super) {
@@ -9346,13 +9345,14 @@
 	    };
 	    return FPSMeter;
 	}());
+	//# sourceMappingURL=performance.js.map
 
 	var PerSecond = /** @class */ (function (_super) {
 	    __extends(PerSecond, _super);
 	    function PerSecond() {
-	        var _this = this;
+	        var _this = _super.call(this) || this;
 	        var counterList;
-	        _this = _super.call(this, el('div.perSecond', new PerSecondItem({ name: 'Name', count: '/ sec' }), counterList = list('div.perSecondList', PerSecondItem))) || this;
+	        _this.addElements(el('div.perSecond', new PerSecondItem({ name: 'Name', count: '/ sec' }), counterList = list('div.perSecondList', PerSecondItem)));
 	        _this.name = 'Per second';
 	        _this.id = 'perSecond';
 	        events.listen('perSecond snapshot', function (snapshot) {

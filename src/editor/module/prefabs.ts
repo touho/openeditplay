@@ -7,6 +7,8 @@ import {getSerializable} from "../../core/serializableManager";
 import {editor} from "../editor";
 
 class Prefabs extends Module {
+	treeView: TreeView;
+
 	constructor() {
 		super();
 		this.name = 'Prefabs';

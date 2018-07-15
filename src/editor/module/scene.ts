@@ -37,6 +37,8 @@ const MAX_ZOOM = 10;
 
 class SceneModule extends Module {
 	constructor() {
+		super();
+
 		let canvas,
 			homeButton,
 			globeButton,
@@ -51,7 +53,7 @@ class SceneModule extends Module {
 			return false;
 		};
 
-		super(
+		this.addElements(
 			canvas = el('canvas.openEditPlayCanvas.select-none', {
 				// width and height will be fixed after loading
 				width: 0,

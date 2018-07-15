@@ -2,6 +2,8 @@ import {el, list, mount} from 'redom';
 import events from "../../util/events";
 import {DragAndDropMoveEvent, DragAndDropStartEvent, DragAndDropStopEvent} from "../util/dragAndDrop";
 
+declare var $: any;
+
 export default class TreeView {
 	constructor(options) {
 		this.options = Object.assign({
@@ -123,6 +125,7 @@ $(document).on('dnd_move.vakata', function (e, data) {
 	data.helper.find('.jstree-icon').css({
 		visibility: 'visible'
 	});
+	debugger;
 	let idList = data.data.nodes;
 	let targetElement = data.event.target;
 	let event = new DragAndDropMoveEvent(idList, targetElement, data.helper);

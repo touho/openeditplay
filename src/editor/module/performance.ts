@@ -45,23 +45,27 @@ class PerformanceModule extends Module {
 Module.register(PerformanceModule, 'bottom');
 
 class PerformanceItem {
-    constructor(initItem) {
-        this.el = el('div.performanceItem',
-            this.name = el('span.performanceItemName'),
+	el: HTMLElement;
+	name: HTMLElement;
+	value: HTMLElement;
+
+	constructor(initItem) {
+		this.el = el('div.performanceItem',
+			this.name = el('span.performanceItemName'),
 			this.value = el('span.performanceItemValue')
-        );
+		);
 
-        if (initItem) {
-        	this.name.textContent = initItem.name;
-        	this.value.textContent = initItem.value;
+		if (initItem) {
+			this.name.textContent = initItem.name;
+			this.value.textContent = initItem.value;
 
-        	this.el.classList.add('performanceHeader');
+			this.el.classList.add('performanceHeader');
 		}
-    }
-    update(snapshotItem) {
-        this.name.textContent = snapshotItem.name;
-        let value = snapshotItem.value * 100;
-        this.value.textContent = value.toFixed(1); // example: 10.0%
+	}
+	update(snapshotItem) {
+		this.name.textContent = snapshotItem.name;
+		let value = snapshotItem.value * 100;
+		this.value.textContent = value.toFixed(1); // example: 10.0%
 
 		if (value > 40)
 			this.el.style.color = '#ff7075';
@@ -71,7 +75,7 @@ class PerformanceItem {
 			this.el.style.color = '';
 		else
 			this.el.style.color = 'rgba(200, 200, 200, 0.5)';
-    }
+	}
 }
 
 class FPSMeter {
@@ -109,7 +113,7 @@ class FPSMeter {
 				c.stroke();
 				c.strokeStyle = '#ff7385';
 				c.beginPath();
-				c.moveTo(i-1, secToY(fpsData[i-1]));
+				c.moveTo(i - 1, secToY(fpsData[i - 1]));
 				c.lineTo(i, secToY(secs));
 				c.stroke();
 				c.strokeStyle = normalStrokeStyle;
@@ -118,7 +122,7 @@ class FPSMeter {
 				c.stroke();
 				c.strokeStyle = '#ffc5a4';
 				c.beginPath();
-				c.moveTo(i-1, secToY(fpsData[i-1]));
+				c.moveTo(i - 1, secToY(fpsData[i - 1]));
 				c.lineTo(i, secToY(secs));
 				c.stroke();
 				c.strokeStyle = normalStrokeStyle;

@@ -26,6 +26,22 @@ export default class Prefab extends Prototype {
 	getParentPrototype() {
 		return null;
 	}
+	// Meant for entityPrototypes, but works theoretically for prototypes
+	static createFromPrototype(prototype) {
+		let inheritedComponentDatas = prototype.getInheritedComponentDatas();
+		let children = inheritedComponentDatas.map(icd => {
+			return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+				.initWithChildren(icd.properties.map(prp => prp.clone()));
+		});
+
+		children.push(prototype._properties.name.clone());
+
+		let prefab = new Prefab().initWithChildren(children);
+
+		// Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
+		prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
+		return prefab;
+	};
 
 	// Do not use EntityPrototype optimization
 	// This is only needed if Prefab would extend EntityPrototype instead of Prototype
@@ -66,25 +82,5 @@ Returns JSON:
 	 }
 ]
  */
-
-
-
-
-// Meant for entityPrototypes, but works theoretically for prototypes
-Prefab.createFromPrototype = function(prototype) {
-	let inheritedComponentDatas = prototype.getInheritedComponentDatas();
-	let children = inheritedComponentDatas.map(icd => {
-		return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
-			.initWithChildren(icd.properties.map(prp => prp.clone()));
-	});
-	
-	children.push(prototype._properties.name.clone());
-	
-	let prefab = new Prefab().initWithChildren(children);
-	
-	// Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
-	prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
-	return prefab;
-};
 
 Serializable.registerSerializable(Prefab, 'pfa');

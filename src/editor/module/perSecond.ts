@@ -6,8 +6,9 @@ import { scene } from '../../core/scene';
 
 class PerSecond extends Module {
 	constructor() {
+		super();
 		let counterList;
-		super(
+		this.addElements(
 			el('div.perSecond',
 				new PerSecondItem({ name: 'Name', count: '/ sec' }),
 				counterList = list('div.perSecondList', PerSecondItem)

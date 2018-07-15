@@ -1,5 +1,6 @@
 import { el, list, mount } from 'redom';
 import events from '../../util/events';
+import ModuleContainer from '../layout/moduleContainer';
 
 let moduleIdToModule = {};
 
@@ -10,6 +11,7 @@ export default class Module {
 	_selected: boolean;
 	_enabled: boolean;
 	el: HTMLElement;
+	moduleContainer: ModuleContainer;
 
 	constructor() {
 		this.type = 'module';
