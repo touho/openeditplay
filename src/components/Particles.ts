@@ -34,7 +34,7 @@ Component.register({
 	prototype: {
 		init() {
 			//ParticleContainer does not work properly!
-			
+
 			// maxSize < 40 will crash
 			// With many Particle-components with few particles, this is deadly-expensive.
 			// And also crashes now and then with low maxValue.
@@ -45,32 +45,32 @@ Component.register({
 			// 	rotation: false,
 			// 	uvs: false
 			// });
-			
+
 
 			// Use normal container instead
 			this.container = new PIXI.Container();
-			
+
 			// Texture
 			this.updateTexture();
 			['particleSize', 'particleHardness', 'alpha'].forEach(propertyName => {
 				this.listenProperty(this, propertyName, () => {
 					this.updateTexture();
-				});				
+				});
 			});
-			
+
 			// Blend mode
 			this.listenProperty(this, 'blendMode', blendMode => {
 				if (!this.particles)
 					return;
-				
+
 				this.particles.forEach(p => {
 					if (p.sprite)
 						p.sprite.blendMode = blendModes[blendMode];
 				});
 			});
-			
+
 			this.scene.layers.main.addChild(this.container);
-			
+
 			this.initParticles();
 			['particleLifetime', 'particleCount'].forEach(propertyName => {
 				this.listenProperty(this, propertyName, () => {
@@ -82,10 +82,10 @@ Component.register({
 			this.listenProperty(this, 'globalCoordinates', () => {
 				this.updateGlobalCoordinatesProperty();
 			});
-			
+
 			this.Physics = this.entity.getComponent('Physics');
 		},
-		
+
 		updateGlobalCoordinatesProperty() {
 			if (this.positionListener) {
 				this.positionListener();
@@ -113,7 +113,7 @@ Component.register({
 				});
 			}
 		},
-		
+
 		updateTexture() {
 			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, {r: 255, g: 255, b: 255, a: this.alpha});
 			// this.container.baseTexture = this.texture;
@@ -124,7 +124,7 @@ Component.register({
 				});
 			}
 		},
-		
+
 		initParticles() {
 			if (this.particles) {
 				this.particles.forEach(p => {
@@ -142,9 +142,9 @@ Component.register({
 				});
 			}
 		},
-		
+
 		resetParticle(p) {
-			
+
 			p.vx = this.speed.x;
 			p.vy = this.speed.y;
 			if (this.speedRandom > 0) {
@@ -172,14 +172,14 @@ Component.register({
 				p.sprite.x = -this.spawnRect.x / 2 + Math.random() * this.spawnRect.x;
 				p.sprite.y = -this.spawnRect.y / 2 + Math.random() * this.spawnRect.y;
 			}
-			
+
 			p.age = this.scene.time - p.nextBirth;
 			p.nextBirth += this.particleLifetime;
 
 			if (this.globalCoordinates) {
 				p.sprite.x += this.Transform.position.x;
 				p.sprite.y += this.Transform.position.y;
-				
+
 				if (this.Physics && this.Physics.body) {
 					let vel = this.Physics.body.velocity;
 					p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
@@ -187,14 +187,14 @@ Component.register({
 				}
 			}
 		},
-		
+
 		onUpdate(dt, t) {
 			const particleLifetime = this.particleLifetime;
 			const invParticleLifetime = 1 / particleLifetime;
 			const particles = this.particles;
 			const accelerationX = this.acceleration.x * dt;
 			const accelerationY = this.acceleration.y * dt;
-			
+
 			// Fast color interpolation
 			const startColor = this.startColor;
 			const endColor = this.endColor;
@@ -205,17 +205,17 @@ Component.register({
 				let b = (startColor.b * startMultiplier + endColor.b * lerp) | 0;
 				return 65536 * r + 256 * g + b;
 			}
-			
-			let sprite, 
+
+			let sprite,
 				spritePos,
 				scale,
 				lerp,
 				p
 			;
-			
+
 			for (let i = 0; i < this.particleCount; i++) {
 				p = particles[i];
-				
+
 				if (!p.alive) {
 					// Not alive
 					if (t >= p.nextBirth) {
@@ -230,12 +230,12 @@ Component.register({
 						continue;
 					}
 				}
-				
+
 				// Is alive
 
 				sprite = p.sprite;
 				spritePos = sprite.transform.position;
-				
+
 				p.age += dt;
 				lerp = p.age * invParticleLifetime;
 				if (lerp >= 1) {
@@ -247,20 +247,20 @@ Component.register({
 					spritePos.x += p.vx * dt;
 					spritePos.y += p.vy * dt;
 				}
-				
+
 				sprite.tint = colorLerp(lerp);
-				
+
 				sprite.alpha = alphaLerp(lerp);
-				
+
 				scale = scaleLerp(lerp);
 				sprite.scale.set(scale, scale);
 
 			}
 		},
-		
+
 		sleep() {
 			this.particles = null;
-			
+
 			this.container.destroy();
 			this.container = null;
 
@@ -268,7 +268,7 @@ Component.register({
 				this.positionListener();
 				this.positionListener = null;
 			}
-			
+
 			// do not destroy textures. we can reuse them.
 		}
 	}

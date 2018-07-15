@@ -47,10 +47,6 @@
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
 
-	var serializables = {};
-	function getSerializable$1(id) {
-	    return serializables[id] || null;
-	}
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
 	    addSerializableToTree: 'a',
@@ -84,7 +80,7 @@
 	}
 	var externalChange = false;
 	// addChange needs to be called if editor, server or net game needs to share changes
-	function addChange$1(type, reference) {
+	function addChange(type, reference) {
 	    // @ifndef OPTIMIZE
 	    assert$1(origin, 'Change without origin!');
 	    // @endif
@@ -177,7 +173,7 @@
 	        change.id = change.value.id;
 	    }
 	    else {
-	        change.reference = getSerializable$1(change.id);
+	        change.reference = getSerializable(change.id);
 	        if (change.reference) {
 	            change.id = change.reference.id;
 	        }
@@ -187,7 +183,7 @@
 	        }
 	    }
 	    if (change.parentId)
-	        { change.parent = getSerializable$1(change.parentId); }
+	        { change.parent = getSerializable(change.parentId); }
 	    return change;
 	}
 	function executeChange(change) {
@@ -223,7 +219,7 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=serializableManager.js.map
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
@@ -823,9 +819,9 @@
 	    }
 	});
 	// If a serializable is a ancestor of another serializable, it is filtered out from the list
-	function filterChildren(serializables$$1) {
-	    var idSet = new Set(serializables$$1.map(function (s) { return s.id; }));
-	    return serializables$$1.filter(function (serializable) {
+	function filterChildren(serializables) {
+	    var idSet = new Set(serializables.map(function (s) { return s.id; }));
+	    return serializables.filter(function (serializable) {
 	        var parent = serializable.getParent();
 	        while (parent) {
 	            if (idSet.has(parent.id))
@@ -853,7 +849,7 @@
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
 	// true / false to enable / disable property value change sharing.
-	// if object is passed, changes are only sent 
+	// if object is passed, changes are only sent
 	function filterSceneChanges(_scenePropertyFilter) {
 	    scenePropertyFilter = _scenePropertyFilter;
 	    changesEnabled = true;
@@ -932,7 +928,7 @@
 	            if (scenePropertyFilter === null
 	                || this._rootType !== 'sce'
 	                || scenePropertyFilter(this)) {
-	                addChange$1(changeType.setPropertyValue, this);
+	                addChange(changeType.setPropertyValue, this);
 	            }
 	        }
 	    },
@@ -2218,10 +2214,10 @@
 	    }
 	    Game.prototype.initWithChildren = function () {
 	        _super.prototype.initWithChildren.apply(this, arguments);
-	        addChange$1(changeType.addSerializableToTree, this);
+	        addChange(changeType.addSerializableToTree, this);
 	    };
 	    Game.prototype.delete = function () {
-	        addChange$1(changeType.deleteSerializable, this);
+	        addChange(changeType.deleteSerializable, this);
 	        if (!_super.prototype.delete.call(this))
 	            { return false; }
 	        if (game === this)
@@ -2487,7 +2483,7 @@
 	            listenMouseDown(_this.canvas, function (mousePosition) { return _this.dispatch('onMouseDown', mousePosition); }),
 	            listenMouseUp(_this.canvas, function (mousePosition) { return _this.dispatch('onMouseUp', mousePosition); })
 	        ];
-	        addChange$1(changeType.addSerializableToTree, _this);
+	        addChange(changeType.addSerializableToTree, _this);
 	        sceneCreateListeners.forEach(function (listener) { return listener(); });
 	        return _this;
 	    }
@@ -3320,9 +3316,9 @@
 	        if (child)
 	            { return child; }
 	        if (alsoFindFromParents) {
-	            var parent = this.getParentPrototype();
-	            if (parent)
-	                { return parent.findComponentDataByComponentId(componentId, alsoFindFromParents); }
+	            var parent_1 = this.getParentPrototype();
+	            if (parent_1)
+	                { return parent_1.findComponentDataByComponentId(componentId, alsoFindFromParents); }
 	        }
 	        return null;
 	    };
@@ -3461,6 +3457,12 @@
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
 	//# sourceMappingURL=prototype.js.map
+
+	var serializables = {};
+	function getSerializable$1(id) {
+	    return serializables[id] || null;
+	}
+	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -5616,14 +5618,14 @@
 	                { epr.createEntity(scene); }
 	        }
 	        else if (threeLetterType === 'cda') {
-	            var parent = ref.getParent();
+	            var parent_1 = ref.getParent();
 	            var entities = void 0;
-	            if (parent.threeLetterType === 'prt') {
-	                entities = getAffectedEntities(parent);
+	            if (parent_1.threeLetterType === 'prt') {
+	                entities = getAffectedEntities(parent_1);
 	            }
 	            else {
 	                // epr
-	                entities = [parent.previouslyCreatedEntity].filter(function (ent) { return ent && ent._alive; });
+	                entities = [parent_1.previouslyCreatedEntity].filter(function (ent) { return ent && ent._alive; });
 	            }
 	            entities.forEach(function (entity) {
 	                var oldComponent = entity.getComponents(ref.name).find(function (com) { return com._componentId === ref.componentId; });
@@ -6703,16 +6705,16 @@
 	                    callback: btn => {
 	                        if (!scene || !scene.level)
 	                            return;
-	        
+
 	                        setChangeOrigin(this);
-	        
+
 	                        // this.makeSureSceneHasEditorLayer();
-	        
+
 	                        this.clearState();
-	                        
+
 	                        if (scene.isInInitialState())
 	                            scene.setZoom(1);
-	        
+
 	                        if (scene.playing) {
 	                            scene.editorLayer.visible = true;
 	                            scene.pause();
@@ -6731,12 +6733,12 @@
 	                    callback: btn => {
 	                        setChangeOrigin(this);
 	                        this.stopAndReset();
-	        
+
 	                        if (scene.editorLayer)
 	                            scene.editorLayer.visible = true;
 	                    }
 	                });
-	                
+
 	                */
 	        game.listen('levelCompleted', function () {
 	            _this.playingModeChanged();
@@ -7333,12 +7335,12 @@
 	            _this.externalChange = true;
 	            if (change.reference.threeLetterType === 'prt') {
 	                if (change.type === changeType.addSerializableToTree) {
-	                    var parent = change.parent;
+	                    var parent_1 = change.parent;
 	                    var parentNode = void 0;
-	                    if (parent.threeLetterType === 'gam')
+	                    if (parent_1.threeLetterType === 'gam')
 	                        { parentNode = '#'; }
 	                    else
-	                        { parentNode = jstree.get_node(parent.id); }
+	                        { parentNode = jstree.get_node(parent_1.id); }
 	                    jstree.create_node(parentNode, {
 	                        text: change.reference.getChildren('prp')[0].value,
 	                        id: change.reference.id
@@ -7465,7 +7467,7 @@
 	// $(document).on('dnd_move.vakata', function (e, data) {
 	// 	if (data.data.nodes.find(node => !node.startsWith('prt')))
 	// 		return;
-	//	
+	//
 	// 	setTimeout(() => {
 	// 		if (data.event.target.nodeName === 'CANVAS') {
 	// 			data.helper.find('.jstree-icon').css({
@@ -7868,8 +7870,8 @@
 	            moveCallback: function (serializableId, parentId) {
 	                if (serializableId.substring(0, 3) === 'epr') {
 	                    var serializable = getSerializable$1(serializableId);
-	                    var parent = parentId === '#' ? editor.selectedLevel : getSerializable$1(parentId);
-	                    serializable.move(parent);
+	                    var parent_1 = parentId === '#' ? editor.selectedLevel : getSerializable$1(parentId);
+	                    serializable.move(parent_1);
 	                    /*
 	                    let target = event.targetElement;
 	                    while (!target.classList.contains('jstree-node')) {
@@ -7954,7 +7956,7 @@
 	        });
 	        _this.dirty = true;
 	        _this.treeType = null;
-	        // This will be called when play and reset has already happened. After all the 
+	        // This will be called when play and reset has already happened. After all the
 	        var update = function () {
 	            _this.dirty = true;
 	            setTimeout(function () { return _this.update(); }, 100);
@@ -8042,7 +8044,7 @@
 	                                    parentNode = '#';
 	                                else
 	                                    parentNode = jstree.get_node(parent.id);
-	            
+
 	                                jstree.create_node(parentNode, {
 	                                    text: change.reference.getChildren('prp')[0].value,
 	                                    id: change.reference.id
@@ -8982,12 +8984,12 @@
 	            this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 	            this.el.classList.toggle('ownProperty', !!this.property.id);
 	            if (this.property.id) {
-	                var parent = this.property.getParent();
-	                if (parent.threeLetterType === 'cda'
-	                    && (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr')) 
+	                var parent_1 = this.property.getParent();
+	                if (parent_1.threeLetterType === 'cda'
+	                    && (parent_1.name !== 'Transform' || parent_1.getParent().threeLetterType !== 'epr')) 
 	                // Can not delete anything from entity prototype transform
 	                {
-	                    this.name.style.color = parent.componentClass.color;
+	                    this.name.style.color = parent_1.componentClass.color;
 	                    mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
 	                        onclick: function () {
 	                            dispatch(_this, 'makingChanges');
@@ -8995,8 +8997,8 @@
 	                        }
 	                    }));
 	                }
-	                else if (parent.threeLetterType === 'com') {
-	                    this.name.style.color = parent.constructor.color;
+	                else if (parent_1.threeLetterType === 'com') {
+	                    this.name.style.color = parent_1.constructor.color;
 	                    mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
 	                        onclick: function () {
 	                            new ObjectMoreButtonContextMenu(_this.property);

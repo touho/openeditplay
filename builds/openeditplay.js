@@ -1815,6 +1815,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -3060,9 +3061,9 @@
 	        if (child)
 	            { return child; }
 	        if (alsoFindFromParents) {
-	            var parent = this.getParentPrototype();
-	            if (parent)
-	                { return parent.findComponentDataByComponentId(componentId, alsoFindFromParents); }
+	            var parent_1 = this.getParentPrototype();
+	            if (parent_1)
+	                { return parent_1.findComponentDataByComponentId(componentId, alsoFindFromParents); }
 	        }
 	        return null;
 	    };

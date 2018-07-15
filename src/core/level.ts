@@ -1,7 +1,6 @@
 import Serializable from './serializable';
-import PropertyOwner, { Prop } from '../core/propertyOwner';
+import PropertyOwner, { Prop } from './propertyOwner';
 import Scene, { scene } from './scene';
-import events from "../util/events";
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -14,15 +13,15 @@ export default class Level extends PropertyOwner {
 	createScene(predefinedSceneObject = false) {
 		if (!predefinedSceneObject)
 			new Scene();
-		
+
 		scene.loadLevel(this);
-		
+
 		return scene;
 	}
 	isEmpty() {
 		return this.getChildren('epr').length === 0;
 	}
-	
+
 	/*
 	OPTIMIZATION DOES NOT WORK, YET
 	toJSON() {
@@ -34,7 +33,7 @@ export default class Level extends PropertyOwner {
 				console.log('child', child);
 				prototypeIds.add(child.p);
 			});
-			
+
 			let prototypeIdToNum = {};
 			let prototypeIdArray = [];
 			let num = 0;
@@ -46,7 +45,7 @@ export default class Level extends PropertyOwner {
 			json.c.forEach(child => {
 				child.p = prototypeIdToNum[child.p] || child.p;
 			});
-			
+
 			json.p = prototypeIdArray;
 
 			console.log(json, prototypeIds, prototypeIdToNum, prototypeIdArray);

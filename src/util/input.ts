@@ -1,4 +1,4 @@
-import Vector from '../util/vector';
+import Vector from './vector';
 
 export function keyPressed(key) {
 	return keys[key] || false;
@@ -78,7 +78,7 @@ export function listenMouseMove(element, handler) {
 			y -= el.offsetTop;
 			el = el.offsetParent;
 		}
-		
+
 		element._mx = x;
 		element._my = y;
 		handler && handler(new Vector(x, y));
@@ -122,12 +122,12 @@ if (typeof window !== 'undefined') {
 
 		if (document.activeElement.nodeName.toLowerCase() == "input" && keyCode !== key.esc)
 			return;
-		
+
 		if (!keys[keyCode]) {
 			keys[keyCode] = true;
 			keyDownListeners.forEach(l => l(keyCode));
 		}
-		
+
 		// console.log(keyCode);
 	};
 	window.onkeyup = event => {

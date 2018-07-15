@@ -2,12 +2,13 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import TreeView from "../views/treeView";
 import { editor } from '../editor';
-import {listenSceneCreation, scene} from '../../core/scene';
-import {getSerializable, changeType} from "../../core/serializableManager";
+import { listenSceneCreation, scene } from '../../core/scene';
+import { getSerializable } from "../../core/serializableManager";
+import { changeType } from "../../core/change";
 import events from "../../util/events";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
-import {game} from "../../core/game";
+import { game } from "../../core/game";
 import TaskRunner from "../../util/taskRunner";
 import Prefab from "../../core/prefab";
 import Serializable from "../../core/serializable";
@@ -214,47 +215,47 @@ class Objects extends Module {
 			if (newTask) {
 				addTask(newTask);
 			}
-/*
-			if (change.reference.threeLetterType === 'prt') {
-				if (change.type === changeType.addSerializableToTree) {
-					let parent = change.parent;
-					let parentNode;
-					if (parent.threeLetterType === 'gam')
-						parentNode = '#';
-					else
-						parentNode = jstree.get_node(parent.id);
+			/*
+						if (change.reference.threeLetterType === 'prt') {
+							if (change.type === changeType.addSerializableToTree) {
+								let parent = change.parent;
+								let parentNode;
+								if (parent.threeLetterType === 'gam')
+									parentNode = '#';
+								else
+									parentNode = jstree.get_node(parent.id);
 
-					jstree.create_node(parentNode, {
-						text: change.reference.getChildren('prp')[0].value,
-						id: change.reference.id
-					});
-				} else
-					this.dirty = true; // prototypes added, removed, moved or something
-			} else if (change.type === changeType.setPropertyValue) {
-				let propParent = change.reference._parent;
-				if (propParent && propParent.threeLetterType === 'prt') {
-					let node = jstree.get_node(propParent.id);
-					jstree.rename_node(node, change.value);
-				}
-			} else if (change.type === 'editorSelection') {
-				if (change.origin != this) {
-					if (change.reference.type === 'prt') {
-						let node = jstree.get_node(change.reference.items[0].id);
-						jstree.deselect_all();
-						jstree.select_node(node);
-					} else if (change.reference.type === 'epr') {
-						let jstree = $(this.jstree).jstree(true);
-						let node = jstree.get_node(change.reference.items[0].getParentPrototype().id);
-						jstree.deselect_all();
-						jstree.select_node(node);
-					} else if (change.reference.type === 'ent') {
-						let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
-						jstree.deselect_all();
-						jstree.select_node(node);
-					}
-				}
-			}
-*/
+								jstree.create_node(parentNode, {
+									text: change.reference.getChildren('prp')[0].value,
+									id: change.reference.id
+								});
+							} else
+								this.dirty = true; // prototypes added, removed, moved or something
+						} else if (change.type === changeType.setPropertyValue) {
+							let propParent = change.reference._parent;
+							if (propParent && propParent.threeLetterType === 'prt') {
+								let node = jstree.get_node(propParent.id);
+								jstree.rename_node(node, change.value);
+							}
+						} else if (change.type === 'editorSelection') {
+							if (change.origin != this) {
+								if (change.reference.type === 'prt') {
+									let node = jstree.get_node(change.reference.items[0].id);
+									jstree.deselect_all();
+									jstree.select_node(node);
+								} else if (change.reference.type === 'epr') {
+									let jstree = $(this.jstree).jstree(true);
+									let node = jstree.get_node(change.reference.items[0].getParentPrototype().id);
+									jstree.deselect_all();
+									jstree.select_node(node);
+								} else if (change.reference.type === 'ent') {
+									let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
+									jstree.deselect_all();
+									jstree.select_node(node);
+								}
+							}
+						}
+			*/
 			this.externalChange = false;
 
 			performance.stop('Editor: Objects');

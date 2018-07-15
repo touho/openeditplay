@@ -15,7 +15,7 @@ export default class PropertyOwner extends Serializable {
 	// Just a helper
 	initWithPropertyValues(values = {}) {
 		let children = [];
-		
+
 		Object.keys(values).forEach(propName => {
 			let propertyType = this.constructor._propertyTypesByName[propName];
 			assert(propertyType, 'Invalid property ' + propName);
@@ -29,7 +29,7 @@ export default class PropertyOwner extends Serializable {
 	initWithChildren(children = []) {
 		assert(!(this._state & Serializable.STATE_INIT), 'init already done');
 		this._state |= Serializable.STATE_INIT;
-		
+
 		let propChildren = [];
 		let otherChildren = [];
 		// Separate Property children and other children
@@ -41,9 +41,9 @@ export default class PropertyOwner extends Serializable {
 			}
 		});
 		super.addChildren(otherChildren);
-		
+
 		let invalidPropertiesCount = 0;
-		
+
 		// Make sure Properties have a PropertyType. They don't work without it.
 		propChildren.filter(prop => !prop.propertyType).forEach(prop => {
 			let propertyType = this.constructor._propertyTypesByName[prop.name];
@@ -57,7 +57,7 @@ export default class PropertyOwner extends Serializable {
 		});
 		if (invalidPropertiesCount)
 			propChildren = propChildren.filter(p => !p.isInvalid);
-		
+
 		// Make sure all PropertyTypes have a matching Property
 		let nameToProp = {};
 		propChildren.forEach(c => nameToProp[c.name] = c);
@@ -65,7 +65,7 @@ export default class PropertyOwner extends Serializable {
 			if (!nameToProp[propertyType.name])
 				propChildren.push(propertyType.createProperty());
 		});
-		
+
 		super.addChildren(propChildren);
 		return this;
 	}

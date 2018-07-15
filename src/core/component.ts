@@ -10,8 +10,8 @@ import ComponentData from './componentData';
 import * as performance from '../util/performance';
 
 const eventListeners = [
-	'onUpdate'
-	,'onStart'
+	'onUpdate',
+	'onStart'
 ];
 
 // Object of a component, see _componentExample.js
@@ -38,7 +38,7 @@ export class Component extends PropertyOwner {
 		let func = this[functionName];
 		let self = this;
 		let performanceName = 'Component: ' + self.constructor.componentName;
-		this._listenRemoveFunctions.push(this.scene.listen(functionName, function() {
+		this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
 			// @ifndef OPTIMIZE
 			performance.start(performanceName);
 			// @endif
@@ -71,7 +71,7 @@ export class Component extends PropertyOwner {
 		try {
 			if (typeof this.preInit === 'function')
 				this.preInit();
-		} catch(e) {
+		} catch (e) {
 			console.error(this.entity, this.constructor.componentName, 'preInit', e);
 		}
 	}
@@ -81,7 +81,7 @@ export class Component extends PropertyOwner {
 		try {
 			if (typeof this.init === 'function')
 				this.init();
-		} catch(e) {
+		} catch (e) {
 			console.error(this.entity, this.constructor.componentName, 'init', e);
 		}
 	}
@@ -89,7 +89,7 @@ export class Component extends PropertyOwner {
 		try {
 			if (typeof this.sleep === 'function')
 				this.sleep();
-		} catch(e) {
+		} catch (e) {
 			console.error(this.entity, this.constructor.componentName, 'sleep', e);
 		}
 
@@ -124,14 +124,14 @@ export class Component extends PropertyOwner {
 		});
 	}
 }
-Component.create = function(name, values = {}) {
+Component.create = function (name, values = {}) {
 	let componentClass = componentClasses.get(name);
 	assert(componentClass);
 	let component = new componentClass();
 	component.initWithPropertyValues(values);
 	return component;
 };
-Component.createWithInheritedComponentData = function(inheritedComponentData) {
+Component.createWithInheritedComponentData = function (inheritedComponentData) {
 	let component = new inheritedComponentData.componentClass;
 	component._componentId = inheritedComponentData.componentId;
 	let properties = inheritedComponentData.properties.map(p => p.clone());
@@ -141,7 +141,7 @@ Component.createWithInheritedComponentData = function(inheritedComponentData) {
 
 Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
 Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
-Component.register = function({
+Component.register = function ({
 	name = '', // required
 	description = '',
 	category = 'Other',
@@ -196,7 +196,7 @@ Component.register = function({
 	Com.icon = icon;
 
 	let num = name.split('').reduce((prev, curr) => prev + curr.charCodeAt(0), 0);
-	Com.color = color || `hsla(${ num % 360 }, 40%, 60%, 1)`;
+	Com.color = color || `hsla(${num % 360}, 40%, 60%, 1)`;
 
 	prototype._name = name;
 	Object.assign(Com.prototype, prototype);

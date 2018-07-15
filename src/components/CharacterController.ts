@@ -33,7 +33,7 @@ Component.register({
 			this.keyListener = listenKeyDown(keyCode => {
 				if (this.controlType !== 'jumper' || !this.scene.playing)
 					return;
-				
+
 				if (this.keyboardControls === 'arrows') {
 					if (keyCode === key.up)
 						this.jump();
@@ -82,15 +82,15 @@ Component.register({
 		},
 		onUpdate(dt, t) {
 			let { up, down, left, right } = this.getInput();
-			
+
 			let dx = 0,
 				dy = 0;
-			
+
 			if (right) dx++;
 			if (left) dx--;
 			if (up) dy--;
 			if (down) dy++;
-			
+
 			if (this.controlType === 'top down') {
 				this.moveTopDown(dx, dy, dt);
 			} else if (this.controlType === 'jumper') {
@@ -111,7 +111,7 @@ Component.register({
 
 			if (!this.Physics.body)
 				return;
-			
+
 			// Physics based
 			// #############
 
@@ -123,7 +123,7 @@ Component.register({
 		moveJumper(dx, dy, dt) {
 			if (!this.Physics || !this.Physics.body)
 				return false;
-			
+
 			let bodyVelocity = this.Physics.body.velocity;
 
 			bodyVelocity[0] = this.calculateNewVelocity(bodyVelocity[0] / PHYSICS_SCALE, dx, dt) * PHYSICS_SCALE;
@@ -131,7 +131,7 @@ Component.register({
 		jump() {
 			if (this.scene.time > this.lastJumpTime + JUMP_SAFE_DELAY && this.checkIfCanJump()) {
 				this.lastJumpTime = this.scene.time;
-				
+
 				let bodyVelocity = this.Physics.body.velocity;
 				if (bodyVelocity[1] > 0) {
 					// going down
@@ -142,7 +142,7 @@ Component.register({
 
 					let contactEquations = getWorld(this.scene).narrowphase.contactEquations;
 					let body = this.Physics.body;
-					
+
 					for (let i = contactEquations.length - 1; i >= 0; --i) {
 						let contact = contactEquations[i];
 						if (contact.bodyA === body || contact.bodyB === body) {
@@ -156,7 +156,7 @@ Component.register({
 							}
 						}
 					}
-					
+
 					bodyVelocity[1] = velocityVector.y * this.jumpAddedToVelocity - this.jumpSpeed * PHYSICS_SCALE;
 				}
 			}
@@ -164,16 +164,16 @@ Component.register({
 		checkIfCanJump() {
 			if (!this.Physics || this.controlType !== 'jumper')
 				return false;
-			
+
 			let contactEquations = getWorld(this.scene).narrowphase.contactEquations;
 			let body = this.Physics.body;
-			
+
 			if (!body)
 				return false;
-			
+
 			if (body.sleepState === p2.Body.SLEEPING)
 				return true;
-			
+
 			for (let i = contactEquations.length - 1; i >= 0; --i) {
 				let contact = contactEquations[i];
 				if (contact.bodyA === body || contact.bodyB === body) {
@@ -184,7 +184,7 @@ Component.register({
 						return true;
 				}
 			}
-			
+
 			return false;
 		},
 		calculateNewVelocity(velocity, input, dt) {
