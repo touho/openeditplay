@@ -1,8 +1,15 @@
 import assert from './assert'
 
+function isColor(color) {
+
+}
+
 export class Color {
-	constructor(r, g, b) {
-		if (r && r.constructor === Color) {
+	r: number;
+	g: number;
+	b: number;
+	constructor(r: number | Color | string, g?: number, b?: number) {
+		if (r instanceof Color) {
 			this.r = r.r;
 			this.g = r.g;
 			this.b = r.b;
@@ -39,15 +46,15 @@ export function hexToRgb(hex) {
 	} : null;
 }
 
-export function componentToHex(c) {
+export function componentToHex(c: number) {
 	var hex = c.toString(16);
 	return hex.length == 1 ? "0" + hex : hex;
 }
 
-export function rgbToHex(r, g, b) {
+export function rgbToHex(r: number, g: number, b: number) {
 	return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-export function isHexString(hex) {
+export function isHexString(hex: string) {
 	return hex && hex.match(/^#[0-9a-f]{6}$/i) ? true : false;
 }

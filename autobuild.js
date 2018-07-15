@@ -20,10 +20,17 @@ const preprocess = require('rollup-plugin-preprocess').default;
 const ROOT = path.join(__dirname, './');
 module.exports.ROOT = ROOT;
 
-let targets = ['all', 'editor']; // TODO: add 'editorOnce' and 'allOnce' ... or just 'build' or 'once'
+let checkTypeScriptErrors = false;
+
+let targets = ['all', 'editor', 'ts']; // TODO: add 'editorOnce' and 'allOnce' ... or just 'build' or 'once'
 let target = process.argv[2];
-if (targets.indexOf(target) < 0)
+if (targets.indexOf(target) < 0) {
 	target = targets[0];
+}
+if (target === 'ts') {
+	target = 'all';
+	checkTypeScriptErrors = true;
+}
 
 if (!global.TARGET_NONE) {
 	let helpMessage = '';
@@ -116,20 +123,11 @@ if (!global.TARGET_NONE) {
 	autobuildJs('src/editor/main.ts', 'builds/openeditplay.editor.js', {
 		copyTo: 'public/edit/'
 	});
-	// autobuildJs('src/main.js', 'builds/openeditplay.editor.min.js', {
-	// 	uglify: true,
-	// 	copyTo: 'public/'
-	// });
 
 	watch(['public/edit/**/*', 'public/play/**/*'], () => {
 		if (serverProcess && serverProcess.connected)
 			serverProcess.send('refreshOldBrowsers');
 	});
-
-	if (target === 'all') {
-		// tests aren't used actively and they are not very overwhelming
-		// autobuildJs('src/testMain.js', 'builds/openeditplay.tests.js');
-	}
 
 	// Server restarter
 	function launchServer() {
@@ -221,9 +219,8 @@ function autobuildJs(entry, destination, options) {
 	let plugins = [];
 
 	plugins.push(rollupTypeScript({
-		module: 'es6',
-		strictNullChecks: true
-		// outDir: 'marko'
+		check: checkTypeScriptErrors,
+		noEmit: false
 	}));
 
 	plugins.push(rollupNodeResolve({
@@ -247,7 +244,7 @@ function autobuildJs(entry, destination, options) {
 	if (options.uglify)
 		plugins.push(rollupUglify());
 
-	let rollupOptions = {
+	let watchOptions = {
 		input: ROOT + entry,
 		output: {
 			file: ROOT + destination,
@@ -255,25 +252,31 @@ function autobuildJs(entry, destination, options) {
 			format: options.format
 		},
 		plugins,
-		external: options.externalDependencies
+		external: options.externalDependencies,
+		watch: {
+			include: 'src/**/*.ts'
+		}
 	};
-	let rollupWatcher = rollupWatch(rollup, rollupOptions);
+
+	//let rollupWatcher = rollupWatch(rollup, rollupOptions);
+	let rollupWatcher = rollup.watch(watchOptions);
 
 	// From https://github.com/rollup/rollup/blob/master/bin/src/runRollup.js
 	rollupWatcher.on('event', event => {
 		switch (event.code) {
-			case 'STARTING':
-			case 'BUILD_START':
-				// console.log('START', destination);
+			case 'START':
+			case 'BUNDLE_START':
+			case 'BUNDLE_END':
+			case 'ERROR':
 				break;
-			case 'BUILD_END':
+			case 'END':
 				console.log(`Built ${destination} (${event.duration} ms)`);
 				if (options.copyTo) {
 					copy(destination + '*', options.copyTo);
 				}
 				break;
 
-			case 'ERROR':
+			case 'FATAL':
 				var err = event.error;
 
 			function syntaxError(filename, message) {

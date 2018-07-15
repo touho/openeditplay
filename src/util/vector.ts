@@ -1,58 +1,60 @@
 export default class Vector {
-	constructor(x, y) {
+	x: number;
+	y: number;
+	constructor(x: number, y: number) {
 		this.x = x || 0;
 		this.y = y || 0;
 	}
-	add(vec) {
+	add(vec: Vector) {
 		this.x += vec.x;
 		this.y += vec.y;
 		return this;
 	}
-	addScalars(x, y) {
+	addScalars(x: number, y: number) {
 		this.x += x;
 		this.y += y;
 		return this;
 	}
-	subtract(vec) {
+	subtract(vec: Vector) {
 		this.x -= vec.x;
 		this.y -= vec.y;
 		return this;
 	}
-	subtractScalars(x, y) {
+	subtractScalars(x: number, y: number) {
 		this.x -= x;
 		this.y -= y;
 		return this;
 	}
-	multiply(vec) {
+	multiply(vec: Vector) {
 		this.x *= vec.x;
 		this.y *= vec.y;
 		return this;
 	}
-	multiplyScalar(scalar) {
+	multiplyScalar(scalar: number) {
 		this.x *= scalar;
 		this.y *= scalar;
 		return this;
 	}
-	divide(vec) {
+	divide(vec: Vector) {
 		this.x /= vec.x;
 		this.y /= vec.y;
 		return this;
 	}
-	divideScalar(scalar) {
+	divideScalar(scalar: number) {
 		this.x /= scalar;
 		this.y /= scalar;
 		return this;
 	}
-	dot(vec) {
+	dot(vec: Vector) {
 		return this.x * vec.x + this.y * vec.y;
 	}
-	length() {
+	length(): number {
 		return Math.sqrt(this.x * this.x + this.y * this.y);
 	}
-	lengthSq() {
+	lengthSq(): number {
 		return this.x * this.x + this.y * this.y;
 	}
-	setLength(newLength) {
+	setLength(newLength: number) {
 		let oldLength = this.length();
 
 		if (oldLength === 0) {
@@ -63,19 +65,19 @@ export default class Vector {
 		}
 		return this;
 	}
-	getProjectionOn(vec) {
+	getProjectionOn(vec: Vector) {
 		let length = vec.length();
 		if (length === 0)
 			return this.clone();
 		else
 			return vec.clone().multiplyScalar(this.dot(vec) / (length * length));
 	}
-	distance(vec) {
+	distance(vec: Vector) {
 		let dx = this.x - vec.x,
 			dy = this.y - vec.y;
 		return Math.sqrt(dx * dx + dy * dy);
 	}
-	distanceSq(vec) {
+	distanceSq(vec: Vector) {
 		let dx = this.x - vec.x,
 			dy = this.y - vec.y;
 		return dx * dx + dy * dy;
@@ -89,45 +91,46 @@ export default class Vector {
 	verticalAngle() {
 		return Math.atan2(this.x, this.y);
 	}
-	rotate(angle) {
+	rotate(angle: number) {
 		let x = this.x * Math.cos(angle) - this.y * Math.sin(angle);
 		this.y = this.x * Math.sin(angle) + this.y * Math.cos(angle);
 		this.x = x;
 
 		return this;
 	}
-	rotateTo(angle) {
-		return this.rotate(angle-this.verticalAngle());
+	rotateTo(angle: number) {
+		return this.rotate(angle - this.verticalAngle());
 	}
-	isEqualTo(vec) {
+	isEqualTo(vec: Vector) {
 		return this.x === vec.x && this.y === vec.y;
 	}
-	isZero() {
+	isZero(): boolean {
 		return !this.x && !this.y;
 	}
-	clone() {
+	clone(): Vector {
 		return new Vector(this.x, this.y);
 	}
-	set(vec) {
+	set(vec: Vector) {
 		this.x = vec.x;
 		this.y = vec.y;
 		return this;
 	}
-	setScalars(x, y) {
+	setScalars(x: number, y: number) {
 		this.x = x;
 		this.y = y;
 		return this;
 	}
-	toString() {
+	toString(): string {
 		return `[${this.x}, ${this.y}]`;
 	}
-	toArray() {
+	toArray(): Array<number> {
 		return [this.x, this.y];
 	}
+
+	static fromObject(obj: { x: number, y: number }) {
+		return new Vector(obj.x, obj.y);
+	};
+	static fromArray(obj) {
+		return new Vector(obj[0], obj[1]);
+	};
 }
-Vector.fromObject = function(obj) {
-	return new Vector(obj.x, obj.y);
-};
-Vector.fromArray = function(obj) {
-	return new Vector(obj[0], obj[1]);
-};

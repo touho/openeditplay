@@ -29,7 +29,7 @@ export default class PropertyEditor {
 		);
 		this.dirty = true;
 		this.editingProperty = false;
-		
+
 		// Change in serializable tree
 		events.listen('change', change => {
 			if (change.type === 'editorSelection') {
@@ -58,16 +58,16 @@ export default class PropertyEditor {
 				}
 			}
 		});
-		
+
 		listen(this, 'makingChanges', () => {
 			setChangeOrigin(this);
 		});
-		
+
 		// Change in this editor
 		listen(this, 'markPropertyEditorDirty', () => {
 			this.dirty = true;
 		});
-		
+
 		listen(this, 'propertyEditorSelect', items => {
 			editor.select(items, this);
 		});
@@ -83,7 +83,7 @@ export default class PropertyEditor {
 	update(items, threeLetterType) {
 		if (!this.dirty) return;
 		if (!items) return;
-		
+
 		if (['prt', 'ent', 'epr'].indexOf(threeLetterType) >= 0 && items.length === 1
 		|| items.length === 1 && items[0] instanceof PropertyOwner) {
 			this.item = items[0];
@@ -91,7 +91,7 @@ export default class PropertyEditor {
 		} else {
 			this.list.update([]);
 		}
-		
+
 		this.dirty = false;
 	}
 }
@@ -138,7 +138,7 @@ class Container {
 		this.title.onclick = () => {
 			this.titleClickedCallback && this.titleClickedCallback();
 		};
-		
+
 		listen(this, 'propertyInherited', (property, view) => {
 			if (this.item.threeLetterType !== 'icd') return;
 			// this.item is inheritedComponentData
@@ -150,7 +150,7 @@ class Container {
 	}
 	update(state) {
 		let itemChanged = this.item !== state;
-		
+
 		if (itemChanged) {
 			this.item = state;
 			this.el.setAttribute('type', this.item.threeLetterType);
@@ -158,9 +158,9 @@ class Container {
 			// Skip transitions when changing item
 			skipTransitions(this.el);
 		}
-		
+
 		this.clearControls();
-		
+
 		this.titleClickedCallback = null;
 
 		if (this.item.threeLetterType === 'icd') this.updateInheritedComponentData();
@@ -179,7 +179,7 @@ class Container {
 		let inheritedComponentDatas = this.item.getInheritedComponentDatas();
 		this.containers.update(inheritedComponentDatas);
 		this.properties.update(this.item.getChildren('prp'));
-		
+
 		let addButton;
 		mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
 			onclick: () => {
@@ -188,7 +188,7 @@ class Container {
 		}));
 		if (inheritedComponentDatas.length === 0)
 			addButton.classList.add('clickMeEffect');
-		
+
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', { onclick: () => {
 			dispatch(this, 'makingChanges');
 			let clone = this.item.clone();
@@ -243,7 +243,7 @@ class Container {
 	}
 	updateInheritedComponentData() {
 		this.updateComponentKindOfThing(this.item.componentClass);
-		
+
 		let packId = 'pack' + this.item.componentClass.componentName;
 		let packedStatus = getOption(packId);
 		if (packedStatus === 'true') {
@@ -253,12 +253,12 @@ class Container {
 		} else {
 			this.el.classList.toggle('packed', !this.item.ownComponentData);
 		}
-		
+
 		this.titleClickedCallback = () => {
 			this.el.classList.toggle('packed');
 			setOption(packId, this.el.classList.contains('packed') ? 'true' : 'false');
 		};
-		
+
 		let parentComponentData = this.item.ownComponentData && this.item.ownComponentData.getParentComponentData();
 		let hasOwnProperties = false;
 		this.item.properties.forEach(prop => {
@@ -269,7 +269,7 @@ class Container {
 			}
 		});
 		this.properties.update(this.item.properties);
-		
+
 		if (!this.item.ownComponentData || parentComponentData) {
 			mount(this.controls, el('button.button', 'Show Parent', {
 				onclick: () => {
@@ -283,7 +283,7 @@ class Container {
 		if (this.item.componentClass.componentName === 'Transform'
 			&& this.item.generatedForPrototype.threeLetterType === 'epr')
 			return;
-		
+
 		if (this.item.componentClass.allowMultiple) {
 			mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 				onclick: () => {
@@ -322,7 +322,7 @@ class Container {
 						dispatch(this, 'markPropertyEditorDirty');
 						this.item.ownComponentData.delete();
 					}
-					
+
 					let componentName = this.item.componentClass.componentName;
 					let parent = this.item.ownComponentData.getParent();
 					let similarComponent = parent.findChild('cda', cda => cda.name === componentName && cda !== this.item.ownComponentData);
@@ -374,14 +374,14 @@ class Container {
 		let className = 'icon fa ' + componentClass.icon;
 		if (this.titleIcon.className !== className)
 			this.titleIcon.className = className;
-		
+
 		if (this.componentClassColorCache !== componentClass.color) {
 			this.componentClassColorCache = componentClass.color;
-			
+
 			this.title.style.color = componentClass.color;
 			this.el.style['border-color'] = componentClass.color;
 		}
-		
+
 		if (this.title.getAttribute('title') !== componentClass.description)
 			this.title.setAttribute('title', componentClass.description);
 	}
@@ -404,7 +404,7 @@ class Property {
 			if (componentData.getParentComponentData())
 				componentData.delete();
 		}
-		
+
 		dispatch(this, 'markPropertyEditorDirty');
 	}
 	focus() {
@@ -454,16 +454,16 @@ class Property {
 		// Optimization
 		if (this.property === property && this._previousValue === property.value)
 			return;
-		
+
 		const propertyChanged = this.property !== property;
 		let keepOldInput = false;
 		if (this.property && this.property.propertyType === property.propertyType && !this.property.id && property.id) {
 			// Special case.
 			keepOldInput = true;
 		}
-		
+
 		this._previousValue = property.value;
-		
+
 		if (this.visibleIfListener) {
 			this.visibleIfListener(); // unlisten
 			this.visibleIfListener = null;
@@ -478,7 +478,7 @@ class Property {
 			if (property.propertyType.description) {
 				mount(this.name, el('span.infoI', 'i'));
 			}
-			
+
 			if (!keepOldInput) {
 				this.content.innerHTML = '';
 				this.propertyEditorInstance = editors[this.property.propertyType.type.name] || editors.default;
@@ -487,7 +487,7 @@ class Property {
 					placeholder: property._editorPlaceholder
 				});
 			}
-			
+
 			this.el.classList.toggle('visibleIf', !!property.propertyType.visibleIf);
 			this.el.classList.toggle('ownProperty', !!this.property.id);
 
@@ -495,7 +495,7 @@ class Property {
 				let parent = this.property.getParent();
 				if (parent.threeLetterType === 'cda'
 					&& (parent.name !== 'Transform' || parent.getParent().threeLetterType !== 'epr'))
-				// Can not delete anything from entity prototype transform 
+				// Can not delete anything from entity prototype transform
 				{
 					this.name.style.color = parent.componentClass.color;
 

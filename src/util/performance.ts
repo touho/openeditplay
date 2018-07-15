@@ -39,7 +39,7 @@ let performanceInterval = null;
 export function startPerformanceUpdates() {
 	performanceInterval = setInterval(() => {
 		printPrivatePerformance(cumulativePerformance);
-		
+
 		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
 		cumulativePerformance = {};
 		events.dispatch('performance snapshot', snapshotPerformance);
