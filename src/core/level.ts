@@ -7,8 +7,8 @@ let propertyTypes = [
 ];
 
 export default class Level extends PropertyOwner {
-	constructor(predefinedId) {
-		super(...arguments);
+	constructor(predefinedId?) {
+		super(predefinedId);
 	}
 	createScene(predefinedSceneObject = false) {
 		if (!predefinedSceneObject)

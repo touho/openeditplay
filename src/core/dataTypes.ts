@@ -1,7 +1,7 @@
 import assert from '../util/assert';
-import { createDataType, dataType } from './propertyType';
+import Prop, { createDataType, PropType, DataTypeDefinition } from './propertyType';
 import Vector from '../util/vector';
-import {isHexString, Color} from '../util/color';
+import { isHexString, Color } from '../util/color';
 
 function validateFloat(val) {
 	if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -12,7 +12,13 @@ const FLOAT_JSON_PRECISION = 4;
 const FLOAT_JSON_PRECISION_MULTIPLIER = Math.pow(10, FLOAT_JSON_PRECISION);
 const FLOAT_DELTA = 0.0000001;
 
-dataType.float = createDataType({
+export interface DataTypeContainer {
+	float?: Function & {
+		range?: (min: number, max: number) => number,
+		modulo?: (min: number, max: number) => number
+	};
+}
+Prop.float = createDataType({
 	name: 'float',
 	validators: {
 		default(x) {
@@ -23,30 +29,36 @@ dataType.float = createDataType({
 			return x;
 		},
 		// PropertyType.float.range(min, max)
-		range(x, min, max) {
-			x = parseFloat(x);
+		range(x: number, min: number, max: number): number {
+			x = Number(x);
 			validateFloat(x);
 			return Math.min(max, Math.max(min, x));
 		},
 		modulo(x, min, max) {
-			x = parseFloat(x);
+			x = Number(x);
 			validateFloat(x);
-			
+
 			let range = max - min;
-			
+
 			if (x < min) {
 				x += (((min - x) / range | 0) + 1) * range;
 			} else if (x > max - FLOAT_DELTA) {
 				x -= (((x - max) / range | 0) + 1) * range;
 			}
-			
+
 			return x;
 		}
 	},
-	toJSON: x => Math.round(x*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER,
+	toJSON: x => Math.round(x * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER,
 	fromJSON: x => x
 });
-dataType.int = createDataType({
+
+export interface DataTypeContainer {
+	int?: Function & {
+		range?: (min: number, max: number) => number
+	};
+}
+Prop.int = createDataType({
 	name: 'int',
 	validators: {
 		default(x) {
@@ -67,7 +79,8 @@ dataType.int = createDataType({
 	fromJSON: x => x
 });
 
-dataType.vector = createDataType({
+export interface DataTypeContainer { vector?: DataTypeDefinition; }
+Prop.vector = createDataType({
 	name: 'vector',
 	validators: {
 		default(vec) {
@@ -86,14 +99,15 @@ dataType.vector = createDataType({
 		}
 	},
 	toJSON: vec => ({
-		x: Math.round(vec.x*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER,
-		y: Math.round(vec.y*FLOAT_JSON_PRECISION_MULTIPLIER)/FLOAT_JSON_PRECISION_MULTIPLIER
+		x: Math.round(vec.x * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER,
+		y: Math.round(vec.y * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER
 	}),
 	fromJSON: vec => Vector.fromObject(vec),
 	clone: vec => vec.clone()
 });
 
-dataType.string = createDataType({
+export interface DataTypeContainer { string?: DataTypeDefinition; }
+Prop.string = createDataType({
 	name: 'string',
 	validators: {
 		default: x => x ? String(x) : ''
@@ -102,7 +116,8 @@ dataType.string = createDataType({
 	fromJSON: x => x
 });
 
-dataType.bool = createDataType({
+export interface DataTypeContainer { bool?: DataTypeDefinition; }
+Prop.bool = createDataType({
 	name: 'bool',
 	validators: {
 		default(x) {
@@ -115,7 +130,12 @@ dataType.bool = createDataType({
 	fromJSON: x => !!x
 });
 
-dataType.enum = createDataType({
+export interface DataTypeContainer {
+	enum?: Function & {
+		values?: (...values: Array<string>) => string
+	};
+}
+Prop.enum = createDataType({
 	name: 'enum',
 	validators: {
 		default() {
@@ -135,7 +155,8 @@ dataType.enum = createDataType({
 	fromJSON: x => x
 });
 
-dataType.color = createDataType({
+export interface DataTypeContainer { color?: DataTypeDefinition; }
+Prop.color = createDataType({
 	name: 'color',
 	validators: {
 		default(color) {

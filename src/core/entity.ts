@@ -91,7 +91,7 @@ export default class Entity extends Serializable {
 		for (let i = 0; i < components.length; i++)
 			components[i]._preInit();
 	}
-	
+
 	static initComponents(components) {
 		if (Entity.ENTITY_CREATION_DEBUGGING)  console.log(`init ${components.length} components for`, components[0].entity.makeUpAName());
 		for (let i = 0; i < components.length; i++)
@@ -121,7 +121,7 @@ export default class Entity extends Serializable {
 	wakeUp() {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) return false;
-		
+
 		this.components.forEach((value, key) => Entity.preInitComponents(value));
 		this.components.forEach((value, key) => Entity.initComponents(value));
 
@@ -158,9 +158,9 @@ export default class Entity extends Serializable {
 			return;
 
 		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('entity added to tree', this.makeUpAName());
-		
+
 		super.setRootType(rootType);
-		
+
 		let i;
 		this.components.forEach((value, key) => {
 			for (i = 0; i < value.length; ++i) {

@@ -1,17 +1,23 @@
 import assert from '../util/assert';
 import Property from './property';
-
+import { DataTypeContainer } from './dataTypes';
 // info about type, validator, validatorParameters, initialValue
 
-
-
-class PropertyType {
-	constructor(name, type, validator, initialValue, description, flags = [], visibleIf) {
-		assert(typeof name === 'string');
+export class PropertyType {
+	flags: any;
+	constructor(
+		public name: string,
+		public type: DataType,
+		public validator,
+		public initialValue,
+		public description: string,
+		flags: Array<any> = [],
+		public visibleIf
+	) {
 		assert(name[0] >= 'a' && name[0] <= 'z', 'Name of a property must start with lower case letter.');
 		assert(type && typeof type.name === 'string');
 		assert(validator && typeof validator.validate === 'function');
-		
+
 		this.name = name;
 		this.type = type;
 		this.validator = validator;
@@ -19,12 +25,16 @@ class PropertyType {
 		this.description = description;
 		this.visibleIf = visibleIf;
 		this.flags = {};
-		flags.forEach(f => this.flags[f.type] = f);
+		this.flags.forEach(f => this.flags[f.type] = f);
 	}
-	getFlag(flag) {
+	getFlag(flag: Flag) {
 		return this.flags[flag.type];
 	}
-	createProperty({ value, predefinedId, skipSerializableRegistering = false } = {}) {
+	createProperty({
+		value,
+		predefinedId,
+		skipSerializableRegistering = false
+	}: CreatePropertyParameters = {}) {
 		return new Property({
 			propertyType: this,
 			value,
@@ -35,16 +45,26 @@ class PropertyType {
 	}
 }
 
+type CreatePropertyParameters = {
+	value?: any;
+	predefinedId?: string;
+	skipSerializableRegistering?: boolean;
+}
+
+export interface PropType extends Function, DataTypeContainer {
+	visibleIf?: (propertyName: string, value: any) => any;
+}
+
 /*
 	Beautiful way of creating property types
-	
+
 	optionalParameters:
 		description: 'Example',
 		validator: PropertyType.
  */
-export default function createPropertyType(propertyName, defaultValue, type, ...optionalParameters) {
-	type = type();
-	let validator = type.validators.default();
+const Prop: PropType = function Prop(propertyName: string, defaultValue: any, type: DataTypeDefinition, ...optionalParameters) {
+	let dataType = type();
+	let validator = dataType.validators.default();
 	let description = '';
 	let flags = [];
 	let visibleIf = null;
@@ -60,14 +80,14 @@ export default function createPropertyType(propertyName, defaultValue, type, ...
 		else
 			assert(false, 'invalid parameter ' + p + ' idx ' + idx);
 	});
-	return new PropertyType(propertyName, type, validator, defaultValue, description, flags, visibleIf);
+	return new PropertyType(propertyName, dataType, validator, defaultValue, description, flags, visibleIf);
 };
 
-export let dataType = createPropertyType;
+export default Prop;
 
 // if value is string, property must be value
 // if value is an array, property must be one of the values
-dataType.visibleIf = function(propertyName, value) {
+Prop.visibleIf = function (propertyName, value) {
 	assert(typeof propertyName === 'string' && propertyName.length);
 	assert(typeof value !== 'undefined');
 	return {
@@ -77,13 +97,29 @@ dataType.visibleIf = function(propertyName, value) {
 	};
 };
 
-function createFlag(type, func = {}) {
+type Flag = {
+	type: string;
+	isFlag: boolean;
+};
+function createFlag(type: string, func: any = {}): Flag {
 	func.isFlag = true;
 	func.type = type;
 	return func;
 }
 
-createPropertyType.flagDegreesInEditor = createFlag('degreesInEditor');
+export interface PropType {
+	flagDegreesInEditor?: Flag;
+}
+Prop.flagDegreesInEditor = createFlag('degreesInEditor');
+
+type DataType = {
+	name: string;
+	validators?: { [s: string]: Function };
+	toJSON?: Function;
+	fromJSON?: Function;
+	clone?: Function;
+};
+export type DataTypeDefinition = Function;
 
 export function createDataType({
 	name = '',
@@ -91,13 +127,13 @@ export function createDataType({
 	toJSON = x => x,
 	fromJSON = x => x,
 	clone = x => x
-}) {
+}: DataType): DataTypeDefinition {
 	assert(name, 'name missing from property type');
-	assert(typeof validators.default === 'function','default validator missing from property type: ' + name);
+	assert(typeof validators.default === 'function', 'default validator missing from property type: ' + name);
 	assert(typeof toJSON === 'function', 'invalid toJSON for property type: ' + name);
 	assert(typeof fromJSON === 'function', 'invalid fromJSON for property type: ' + name);
 
-	let type = {
+	let type: DataType = {
 		name,
 		validators,
 		toJSON,
@@ -113,13 +149,19 @@ export function createDataType({
 	return createType;
 }
 
-function createValidator(name, validatorFunction) {
-	let validator = function(...args) {
+type Validator = {
+	validate?: Function,
+	validatorName?: string,
+	parameters?: Array<any>
+};
+
+function createValidator(name: string, validatorFunction: Function): Validator {
+	let validator: any = function (...args): Validator {
 		let parameters = args;
 		let validatorArgs = [null, ...args];
 		return {
 			validatorName: name,
-			validate: function(x) {
+			validate: function (x) {
 				validatorArgs[0] = x;
 				return validatorFunction.apply(null, validatorArgs);
 			},

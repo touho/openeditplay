@@ -4,7 +4,7 @@ import Serializable from './serializable'
 import { addChange, changeType, setChangeOrigin } from './change';
 import Prototype from './prototype'
 import assert from '../util/assert'
-import PropertyOwner, { Prop } from './propertyOwner';
+import PropertyOwner, { Prop, PropertyOwnerClass } from './propertyOwner';
 import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
 

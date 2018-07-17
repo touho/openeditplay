@@ -103,7 +103,7 @@ export default class Serializable {
 			this.addChild(children[i]);
 		return this;
 	}
-	addChild(child) {
+	addChild(child: Serializable): Serializable {
 		this._addChild(child);
 
 		this._state |= Serializable.STATE_ADDCHILD;
@@ -150,20 +150,20 @@ export default class Serializable {
 		}
 	}
 	findParent(threeLetterType, filterFunction = null) {
-		let parent = this;
-		while (parent) {
-			if (parent.threeLetterType === threeLetterType && (!filterFunction || filterFunction(parent)))
-				return parent;
-			parent = parent._parent;
+		let serializable: Serializable = this;
+		while (serializable) {
+			if (serializable.threeLetterType === threeLetterType && (!filterFunction || filterFunction(serializable)))
+				return serializable;
+			serializable = serializable._parent;
 		}
 		return null;
 	}
 	getRoot() {
-		let element = this;
-		while (element._parent) {
-			element = element._parent;
+		let serializable: Serializable = this;
+		while (serializable._parent) {
+			serializable = serializable._parent;
 		}
-		return element;
+		return serializable;
 	}
 	// idx is optional
 	deleteChild(child: Serializable, idx?) {
@@ -219,7 +219,7 @@ export default class Serializable {
 		return this._children.get(threeLetterType) || [];
 	}
 	toJSON() {
-		let json = {
+		let json: any = {
 			id: this.id
 		};
 		if (this._children.size > 0) {
@@ -245,7 +245,7 @@ export default class Serializable {
 		return obj;
 	}
 	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	listen(event, callback, priority = 0) {
+	listen(event: string, callback: ListenerFunction, priority = 0) {
 		callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 		if (!this._listeners.hasOwnProperty(event)) {
 			this._listeners[event] = [];
@@ -260,7 +260,7 @@ export default class Serializable {
 				this._listeners[event].splice(index, 1);
 		};
 	}
-	dispatch(event, a, b, c) {
+	dispatch(event: string, a?, b?, c?) {
 		let listeners = this._listeners[event];
 		if (!listeners)
 			return;
@@ -399,7 +399,7 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 
 		let children = [];
 
-		function createDebugObject(type)  {
+		function createDebugObject(type) {
 			if (type === 'gam') return new function Game() { };
 			if (type === 'sce') return new function Scene() { };
 			if (type === 'prt') return new function Prototype() { };
@@ -458,3 +458,5 @@ function indexOfListener(array, callback) {
 	}
 	return low;
 }
+
+type ListenerFunction = Function & { priority?: number };

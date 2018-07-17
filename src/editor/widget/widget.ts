@@ -5,13 +5,30 @@ Widget is the smallest little thing in editor scene that user can interact and e
 import Vector from '../../util/vector';
 import PIXI from '../../features/graphics';
 import { scene } from '../../core/scene'
+import { Component } from '../../core/component';
 
 export let defaultWidgetRadius = 5;
 export let centerWidgetRadius = 10;
 export let defaultWidgetDistance = 30;
 
+type WidgetOptions = {
+	x?: number;
+	y?: number;
+	r?: number;
+	component?: Component;
+	relativePosition?: Vector;
+}
+
 export default class Widget {
-	constructor(options) {
+	x: number;
+	y: number;
+	r: number;
+	hovering: boolean;
+	component: Component;
+	relativePosition: Vector;
+	graphics: any;
+
+	constructor(options: WidgetOptions) {
 		this.x = options.x || 0;
 		this.y = options.y || 0;
 		this.r = options.r || defaultWidgetRadius;
@@ -28,17 +45,17 @@ export default class Widget {
 		let pos = this.relativePosition.clone().rotate(T.getGlobalAngle()).add(T.getGlobalPosition());
 		this.x = pos.x;
 		this.y = pos.y;
-		
+
 		if (this.graphics) {
 			this.graphics.x = this.x;
 			this.graphics.y = this.y;
 		}
 	}
-	
+
 	// Optimized for many function calls
 	isMouseInWidget(mousePosition) {
 		let r = this.r / scene.cameraZoom;
-		
+
 		if (mousePosition.x >= this.x - r
 			&& mousePosition.x <= this.x + r
 			&& mousePosition.y >= this.y - r
@@ -50,19 +67,19 @@ export default class Widget {
 
 		return false;
 	}
-	
+
 	createGraphics() {
 		let graphics = new PIXI.Graphics();
-		
+
 		graphics.lineStyle(2, 0x000000, 1);
 		graphics.drawCircle(1, 1, this.r);
 
 		graphics.lineStyle(2, 0xFFFFFF, 1);
 		graphics.drawCircle(0, 0, this.r);
-		
+
 		return graphics;
 	}
-	
+
 	init() {
 		this.graphics = this.createGraphics();
 		this.updatePosition();
@@ -72,20 +89,20 @@ export default class Widget {
 		let invZoom = 1 / scene.cameraZoom;
 		this.graphics.scale.set(invZoom, invZoom);
 	}
-	
+
 	sleep() {
 		if (this.graphics) {
 			this.graphics.destroy();
 			this.graphics = null;
 		}
 	}
-	
+
 	delete() {
 		this.sleep();
 		this.component = null;
 		this.relativePosition = null;
 	}
-	
+
 	updateVisibility() {
 		if (this.graphics) {
 			if (this.hovering) {
@@ -95,7 +112,7 @@ export default class Widget {
 			}
 		}
 	}
-	
+
 	hover() {
 		this.hovering = true;
 		this.updateVisibility();

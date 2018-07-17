@@ -13,6 +13,7 @@
     "build-editor": "rollup -c -i src/editor/main.ts -o builds/openeditplay.editor.js"
   },
   "devDependencies": {
+    "@types/pixi.js": "^4.8.0",
     "chokidar": "^1.6.1",
     "concat-files": "^0.1.1",
     "deep-strict-equal": "^0.2.0",

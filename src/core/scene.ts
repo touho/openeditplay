@@ -8,6 +8,7 @@ import { default as PIXI, getRenderer, sortDisplayObjects } from '../features/gr
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
 import events from "../util/events";
+import Level from './level';
 
 let scene = null;
 export { scene };
@@ -17,7 +18,16 @@ const physicsOptions = {
 };
 
 export default class Scene extends Serializable {
-	constructor(predefinedId = false) {
+	canvas: HTMLCanvasElement;
+	renderer: any;
+	mouseListeners: Array<() => void>;
+	level: Level;
+	stage: PIXI.Container;
+	cameraPosition: Vector;
+	cameraZoom: number;
+	layers: { [s: string]: PIXI.Container };
+
+	constructor(predefinedId?) {
 		super(predefinedId);
 
 		if (scene) {
@@ -58,7 +68,7 @@ export default class Scene extends Serializable {
 		this.cameraZoom = 1;
 
 		let self = this;
-		function createLayer(parent = self.stage) {
+		function createLayer(parent = self.stage): PIXI.Container {
 			let layer = new PIXI.Container();
 			parent.addChild(layer);
 			return layer;
@@ -166,7 +176,7 @@ export default class Scene extends Serializable {
 
 		// Update physics
 		performanceTool.start('Physics');
-		updateWorld(this, dt, timeInMilliseconds);
+		updateWorld(this, dt);
 		performanceTool.stop('Physics');
 
 		// Update graphics

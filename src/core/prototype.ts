@@ -14,28 +14,31 @@ let propertyTypes = [
 ];
 
 export default class Prototype extends PropertyOwner {
-	constructor() {
-		super(...arguments);
-		
+	previouslyCreatedEntity: Entity;
+	constructor(predefinedId?: string) {
+		super(predefinedId);
+
 		this.previouslyCreatedEntity = null;
 	}
-	
+
 	makeUpAName() {
 		return this.name || 'Prototype';
 	}
-	
-	addChild(child) {
-		if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
+
+	addChild(child: Serializable): Prototype {
+		// if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
+		if (child instanceof PropertyOwner && !child.componentClass.allowMultiple)
 			assert(this.findChild('cda', cda => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
 		super.addChild(child);
+		return this;
 	}
 	getParentPrototype() {
 		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
 	}
-	
+
 	/*
 	filter filters component datas
-	
+
 	Returns JSON:
 	[
 		{
@@ -75,7 +78,7 @@ export default class Prototype extends PropertyOwner {
 
 		return array.sort(sortInheritedComponentDatas);
 	}
-	
+
 	createAndAddPropertyForComponentData(inheritedComponentData, propertyName, propertyValue) {
 		let propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
 		assert(propertyType, 'Invalid propertyName', propertyName, inheritedComponentData);
@@ -96,13 +99,13 @@ export default class Prototype extends PropertyOwner {
 			value: propertyValue,
 		});
 		componentData.addChild(property);
-		
+
 		if (componentDataIsNew)
 			this.addChild(componentData);
-		
+
 		return property;
 	}
-	
+
 	findComponentDataByComponentId(componentId, alsoFindFromParents = false) {
 		let child = this.findChild('cda', componentData => componentData.componentId === componentId);
 		if (child)
@@ -114,20 +117,20 @@ export default class Prototype extends PropertyOwner {
 		}
 		return null;
 	}
-	
+
 	getOwnComponentDataOrInherit(componentId) {
 		let componentData = this.findComponentDataByComponentId(componentId, false);
 		if (!componentData) {
 			let inheritedComponentData = this.findComponentDataByComponentId(componentId, true);
 			if (!inheritedComponentData)
 				return null;
-			
+
 			componentData = new ComponentData(inheritedComponentData.name, false, componentId);
 			this.addChild(componentData);
 		}
 		return componentData
 	}
-	
+
 	findOwnProperty(componentId, propertyName) {
 		let componentData = this.findComponentDataByComponentId(componentId);
 		if (componentData) {
@@ -135,37 +138,37 @@ export default class Prototype extends PropertyOwner {
 		}
 		return null;
 	}
-	
+
 	// Parent is needed so that we can init children knowing who is the parent
-	createEntity(parent, _skipNewEntityEvent = false) {
+	createEntity(parent?: Serializable, _skipNewEntityEvent = false) {
 		let entity = new Entity();
-		
+
 		let inheritedComponentDatas = this.getInheritedComponentDatas();
 		let components = inheritedComponentDatas.map(Component.createWithInheritedComponentData);
 		entity.addComponents(components, { fullInit: false }); // Only do preInit
-		
+
 		entity.prototype = this;
-		
+
 		if (parent)
 			parent.addChild(entity);
 
 		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('create entity', this.makeUpAName());
-		
+
 		this.forEachChild('epr', epr => epr.createEntity(entity, true));
 		// let childEntityPrototypes = this.getChildren('epr');
 		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
-		
+
 		// Components have only been preinited. Lets call the init now.
 		Entity.initComponents(components);
-		
+
 		this.previouslyCreatedEntity = entity;
-		
+
 		if (!_skipNewEntityEvent)
 			events.dispatch('new entity created', entity);
-		
+
 		return entity;
 	}
-	
+
 	getValue(componentId, propertyName) {
 		let componentData = this.findComponentDataByComponentId(componentId, true);
 		if (componentData)
@@ -173,11 +176,11 @@ export default class Prototype extends PropertyOwner {
 		else
 			return undefined;
 	}
-	
+
 	countEntityPrototypes(findParents = false) {
 		if (this.threeLetterType !== 'prt')
 			return 0;
-		
+
 		let count = 0;
 		let levels = game.getChildren('lvl');
 		for (let i = levels.length-1; i >= 0; i--) {
@@ -187,13 +190,13 @@ export default class Prototype extends PropertyOwner {
 					count++;
 			}
 		}
-		
+
 		if (findParents)
 			this.forEachChild('prt', prt => count += prt.countEntityPrototypes(true));
-		
+
 		return count;
 	}
-	
+
 	delete() {
 		this._gameRoot = this._gameRoot || this.getRoot();
 		if (!super.delete()) return false;
@@ -227,7 +230,7 @@ function getDataFromPrototype(prototype, originalPrototype, filter, _depth = 0) 
 		data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1);
 	else
 		data = {}; // Top level
-	
+
 	let componentDatas = prototype.getChildren('cda');
 	if (filter)
 		componentDatas = componentDatas.filter(filter);
@@ -247,13 +250,13 @@ function getDataFromPrototype(prototype, originalPrototype, filter, _depth = 0) 
 				generatedForPrototype: originalPrototype,
 			};
 		}
-		
+
 		if (_depth === 0) {
 			data[componentData.componentId].ownComponentData = componentData;
 		}
-		
+
 		let propertyHash = data[componentData.componentId].propertyHash;
-		
+
 		let properties = componentData.getChildren('prp');
 		let property;
 		for (let j = 0; j < properties.length; ++j) {

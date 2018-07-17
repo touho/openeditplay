@@ -32,7 +32,7 @@ Component.register({
 			} else {
 				this.layer.addChild(this.container);
 			}
-			
+
 			// Optimize this. Shouldn't be called multiple times per frame.
 			let change = () => {
 				this.dispatch('globalTransformChanged', this);
@@ -55,13 +55,13 @@ Component.register({
 		getParentTransform() {
 			if (this.parentTransform !== undefined)
 				return this.parentTransform;
-			
+
 			let parentEntity = this.entity.getParent();
 			if (parentEntity && parentEntity.threeLetterType === 'ent')
 				this.parentTransform = parentEntity.getComponent('Transform');
 			else
 				this.parentTransform = null;
-			
+
 			return this.parentTransform;
 		},
 		getGlobalPosition() {
@@ -82,10 +82,10 @@ Component.register({
 		sleep() {
 			this.container.destroy();
 			this.container = null;
-			
+
 			delete this.parentTransform;
 		}
-		
+
 	}
 });
 

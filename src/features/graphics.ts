@@ -3,22 +3,22 @@ import { isClient } from '../util/environment';
 let PIXI;
 
 if (isClient) {
-	PIXI = window.PIXI;
+	PIXI = window['PIXI'];
 	PIXI.ticker.shared.stop();
 }
 
 export default PIXI;
 
-let renderer = null; // Only one PIXI renderer supported for now
+let renderer: PIXI.WebGLRenderer | PIXI.CanvasRenderer = null; // Only one PIXI renderer supported for now
 
-export function getRenderer(canvas) {
+export function getRenderer(canvas: HTMLCanvasElement) {
 	/*
 	return {
 		render: () => {},
 		resize: () => {}
 	};
 	*/
-	
+
 	if (!renderer) {
 		renderer = PIXI.autoDetectRenderer({
 			view: canvas,
@@ -30,7 +30,7 @@ export function getRenderer(canvas) {
 		if (renderer.plugins.interaction) // if interaction is left out from pixi build, interaction is no defined
 			renderer.plugins.interaction.destroy();
 	}
-	
+
 	return renderer;
 }
 
@@ -46,10 +46,10 @@ function sortFunc(a, b) {
 		return 0;
 }
 
-let texturesAndAnchors = {};
+let texturesAndAnchors: { [hash: string]: { texture: any, anchor: any } } = {};
 export function resetTexturesAndAnchors() {
-	for (let textureAndAnchor in texturesAndAnchors) {
-		textureAndAnchor.texture.destroy();
+	for (let i in texturesAndAnchors) {
+		texturesAndAnchors[i].texture.destroy();
 	}
 	texturesAndAnchors = {};
 }

@@ -19,6 +19,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -218,11 +219,13 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -294,6 +297,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=events.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -320,6 +324,7 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -756,6 +761,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -850,13 +856,19 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
 	    function PropertyType(name, type, validator, initialValue, description, flags, visibleIf) {
 	        if (flags === void 0) { flags = []; }
 	        var _this = this;
-	        assert(typeof name === 'string');
+	        this.name = name;
+	        this.type = type;
+	        this.validator = validator;
+	        this.initialValue = initialValue;
+	        this.description = description;
+	        this.visibleIf = visibleIf;
 	        assert(name[0] >= 'a' && name[0] <= 'z', 'Name of a property must start with lower case letter.');
 	        assert(type && typeof type.name === 'string');
 	        assert(validator && typeof validator.validate === 'function');
@@ -867,7 +879,7 @@
 	        this.description = description;
 	        this.visibleIf = visibleIf;
 	        this.flags = {};
-	        flags.forEach(function (f) { return _this.flags[f.type] = f; });
+	        this.flags.forEach(function (f) { return _this.flags[f.type] = f; });
 	    }
 	    PropertyType.prototype.getFlag = function (flag) {
 	        return this.flags[flag.type];
@@ -886,7 +898,7 @@
 	}());
 	/*
 	    Beautiful way of creating property types
-	    
+
 	    optionalParameters:
 	        description: 'Example',
 	        validator: PropertyType.
@@ -981,6 +993,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1113,6 +1126,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1162,6 +1176,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1308,13 +1323,15 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
 	    function PropertyOwner(predefinedId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
 	        var _this = _super.call(this, predefinedId) || this;
-	        assert(Array.isArray(_this.constructor._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
+	        _this.name = '';
+	        _this.class = null;
+	        assert(Array.isArray(_this.class._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 	        _this._properties = {};
 	        return _this;
 	    }
@@ -1327,7 +1344,7 @@
 	        if (values === void 0) { values = {}; }
 	        var children = [];
 	        Object.keys(values).forEach(function (propName) {
-	            var propertyType = _this.constructor._propertyTypesByName[propName];
+	            var propertyType = _this.class._propertyTypesByName[propName];
 	            assert(propertyType, 'Invalid property ' + propName);
 	            children.push(propertyType.createProperty({
 	                value: values[propName]
@@ -1370,7 +1387,7 @@
 	        // Make sure all PropertyTypes have a matching Property
 	        var nameToProp = {};
 	        propChildren.forEach(function (c) { return nameToProp[c.name] = c; });
-	        this.constructor._propertyTypes.forEach(function (propertyType) {
+	        this.class._propertyTypes.forEach(function (propertyType) {
 	            if (!nameToProp[propertyType.name])
 	                { propChildren.push(propertyType.createProperty()); }
 	        });
@@ -1378,15 +1395,15 @@
 	        return this;
 	    };
 	    PropertyOwner.prototype.addChild = function (child) {
-	        assert(this._state & Serializable.STATE_INIT, this.constructor.componentName || this.constructor + ' requires that initWithChildren will be called before addChild');
+	        assert(this._state & Serializable.STATE_INIT, this.makeUpAName() || this.constructor + ' requires that initWithChildren will be called before addChild');
 	        _super.prototype.addChild.call(this, child);
 	        if (child.threeLetterType === 'prp') {
 	            if (!child.propertyType) {
-	                if (!this.constructor._propertyTypesByName[child.name]) {
+	                if (!this.class._propertyTypesByName[child.name]) {
 	                    console.log('Property of that name not defined', this.id, child, this);
 	                    return;
 	                }
-	                child.setPropertyType(this.constructor._propertyTypesByName[child.name]);
+	                child.setPropertyType(this.class._propertyTypesByName[child.name]);
 	            }
 	            assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
 	            this._properties[child.propertyType.name] = child;
@@ -1408,25 +1425,27 @@
 	        _super.prototype.deleteChild.call(this, child, idx);
 	        return this;
 	    };
+	    PropertyOwner.defineProperties = function (Class, propertyTypes) {
+	        var ClassAsTypeHolder = Class;
+	        ClassAsTypeHolder._propertyTypes = propertyTypes;
+	        ClassAsTypeHolder._propertyTypesByName = {};
+	        propertyTypes.forEach(function (propertyType) {
+	            var propertyTypeName = propertyType.name;
+	            assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+	            ClassAsTypeHolder._propertyTypesByName[propertyTypeName] = propertyType;
+	            Object.defineProperty(Class.prototype, propertyTypeName, {
+	                get: function () {
+	                    return this._properties[propertyTypeName].value;
+	                },
+	                set: function (value) {
+	                    this._properties[propertyTypeName].value = value;
+	                }
+	            });
+	        });
+	    };
 	    return PropertyOwner;
 	}(Serializable));
-	PropertyOwner.defineProperties = function (Class, propertyTypes) {
-	    Class._propertyTypes = propertyTypes;
-	    Class._propertyTypesByName = {};
-	    propertyTypes.forEach(function (propertyType) {
-	        var propertyTypeName = propertyType.name;
-	        assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
-	        Class._propertyTypesByName[propertyTypeName] = propertyType;
-	        Object.defineProperty(Class.prototype, propertyTypeName, {
-	            get: function () {
-	                return this._properties[propertyTypeName].value;
-	            },
-	            set: function (value) {
-	                this._properties[propertyTypeName].value = value;
-	            }
-	        });
-	    });
-	};
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1807,6 +1826,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1863,6 +1883,7 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1898,6 +1919,9 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -1967,6 +1991,7 @@
 	        { listener(game); }
 	}
 	// jee
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2054,6 +2079,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2186,6 +2212,7 @@
 	        });
 	    }
 	}
+	//# sourceMappingURL=input.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2194,7 +2221,6 @@
 	var Scene = /** @class */ (function (_super) {
 	    __extends(Scene, _super);
 	    function Scene(predefinedId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
 	        var _this = _super.call(this, predefinedId) || this;
 	        if (scene) {
 	            try {
@@ -2430,6 +2456,7 @@
 	    if (scene)
 	        { listener(); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2565,9 +2592,10 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
+	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
-	var eventListeners = [
+	var automaticSceneEventListeners = [
 	    'onUpdate',
 	    'onStart'
 	];
@@ -2575,7 +2603,6 @@
 	var Component = /** @class */ (function (_super) {
 	    __extends(Component, _super);
 	    function Component(predefinedId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this._componentId = null; // Creator will fill this
 	        _this.scene = scene;
@@ -2585,7 +2612,7 @@
 	        return _this;
 	    }
 	    Component.prototype.makeUpAName = function () {
-	        return self.constructor.componentName;
+	        return this.class.componentName;
 	    };
 	    Component.prototype.delete = function () {
 	        // Component.delete never returns false because entity doesn't have components as children
@@ -2597,7 +2624,7 @@
 	    Component.prototype._addEventListener = function (functionName) {
 	        var func = this[functionName];
 	        var self = this;
-	        var performanceName = 'Component: ' + self.constructor.componentName;
+	        var performanceName = 'Component: ' + this.class.componentName;
 	        this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
 	            // @ifndef OPTIMIZE
 	            start(performanceName);
@@ -2614,23 +2641,23 @@
 	        var this$1 = this;
 
 	        var _this = this;
-	        this.constructor.requirements.forEach(function (r) {
+	        this.class.requirements.forEach(function (r) {
 	            _this[r] = _this.entity.getComponent(r);
-	            assert(_this[r], _this.constructor.componentName + " requires component " + r + " but it is not found");
+	            assert(_this[r], _this.class.componentName + " requires component " + r + " but it is not found");
 	        });
 	        this.forEachChild('com', function (c) { return c._preInit(); });
-	        for (var i = 0; i < eventListeners.length; ++i) {
-	            if (typeof this$1[eventListeners[i]] === 'function')
-	                { this$1._addEventListener(eventListeners[i]); }
+	        for (var i = 0; i < automaticSceneEventListeners.length; ++i) {
+	            if (typeof this$1[automaticSceneEventListeners[i]] === 'function')
+	                { this$1._addEventListener(automaticSceneEventListeners[i]); }
 	        }
-	        if (this.constructor.componentName !== 'Transform' && this.scene)
+	        if (this.class.componentName !== 'Transform' && this.scene)
 	            { this.scene.addComponent(this); }
 	        try {
 	            if (typeof this.preInit === 'function')
 	                { this.preInit(); }
 	        }
 	        catch (e) {
-	            console.error(this.entity, this.constructor.componentName, 'preInit', e);
+	            console.error(this.entity, this.class.componentName, 'preInit', e);
 	        }
 	    };
 	    // In preInit you can access other components and know that their preInit is done.
@@ -2641,7 +2668,7 @@
 	                { this.init(); }
 	        }
 	        catch (e) {
-	            console.error(this.entity, this.constructor.componentName, 'init', e);
+	            console.error(this.entity, this.class.componentName, 'init', e);
 	        }
 	    };
 	    Component.prototype._sleep = function () {
@@ -2650,9 +2677,9 @@
 	                { this.sleep(); }
 	        }
 	        catch (e) {
-	            console.error(this.entity, this.constructor.componentName, 'sleep', e);
+	            console.error(this.entity, this.class.componentName, 'sleep', e);
 	        }
-	        if (this.constructor.componentName !== 'Transform' && this.scene)
+	        if (this.class.componentName !== 'Transform' && this.scene)
 	            { this.scene.removeComponent(this); }
 	        this.forEachChild('com', function (c) { return c._sleep(); });
 	        this._listenRemoveFunctions.forEach(function (f) { return f(); });
@@ -2663,8 +2690,8 @@
 	    };
 	    Component.prototype.createComponentData = function () {
 	        var _this = this;
-	        var componentName = this.constructor.componentName;
-	        var propertyTypes = this.constructor._propertyTypes;
+	        var componentName = this.class.componentName;
+	        var propertyTypes = this.class._propertyTypes;
 	        var componentData = new ComponentData(componentName);
 	        var children = [];
 	        propertyTypes.forEach(function (pt) {
@@ -2677,90 +2704,98 @@
 	    };
 	    Component.prototype.toJSON = function () {
 	        return Object.assign(_super.prototype.toJSON.call(this), {
-	            n: this.constructor.componentName,
+	            n: this.class.componentName,
 	            cid: this._componentId
 	        });
 	    };
+	    Component.create = function (name, values) {
+	        if (values === void 0) { values = {}; }
+	        var componentClass = componentClasses.get(name);
+	        assert(componentClass);
+	        var component = new componentClass();
+	        component.initWithPropertyValues(values);
+	        return component;
+	    };
+	    Component.createWithInheritedComponentData = function (inheritedComponentData) {
+	        var component = new inheritedComponentData.componentClass;
+	        component._componentId = inheritedComponentData.componentId;
+	        var properties = inheritedComponentData.properties.map(function (p) { return p.clone(); });
+	        component.initWithChildren(properties);
+	        return component;
+	    };
+	    Component.register = function (_a) {
+	        var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? '' : _c, // required
+	        _d = _b.description, // required
+	        description = _d === void 0 ? '' : _d, _e = _b.category, category = _e === void 0 ? 'Other' : _e, _f = _b.icon, icon = _f === void 0 ? 'fa-puzzle-piece' : _f, // in editor
+	        _g = _b.color, // in editor
+	        color = _g === void 0 ? '' : _g, // in editor
+	        _h = _b.properties, // in editor
+	        properties = _h === void 0 ? [] : _h, _j = _b.requirements, requirements = _j === void 0 ? ['Transform'] : _j, _k = _b.children, children = _k === void 0 ? [] : _k, _l = _b.parentClass, parentClass = _l === void 0 ? Component : _l, _m = _b.prototype, prototype = _m === void 0 ? {} : _m, _o = _b.allowMultiple, allowMultiple = _o === void 0 ? true : _o, _p = _b.requiresInitWhenEntityIsEdited;
+	        assert(name, 'Component must have a name.');
+	        assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
+	        assert(!componentClasses.has(name), 'Duplicate component class ' + name);
+	        Object.keys(prototype).forEach(function (k) {
+	            if (Component.reservedPrototypeMembers.has(k))
+	                { assert(false, 'Component prototype can not have a reserved member: ' + k); }
+	        });
+	        if (requirements.indexOf('Transform') < 0)
+	            { requirements.push('Transform'); }
+	        var colorNum = name.split('').reduce(function (prev, curr) { return prev + curr.charCodeAt(0); }, 0);
+	        var constructorFunction = prototype.constructor;
+	        var deleteFunction = prototype.delete;
+	        delete prototype.constructor;
+	        delete prototype.delete;
+	        var Com = /** @class */ (function (_super) {
+	            __extends(Com, _super);
+	            function Com() {
+	                var arguments$1 = arguments;
+
+	                var args = [];
+	                for (var _i = 0; _i < arguments.length; _i++) {
+	                    args[_i] = arguments$1[_i];
+	                }
+	                var _this = _super.apply(this, args) || this;
+	                if (constructorFunction)
+	                    { constructorFunction.call(_this); }
+	                return _this;
+	            }
+	            Com.prototype.delete = function () {
+	                if (!_super.prototype.delete.call(this))
+	                    { return false; }
+	                if (deleteFunction)
+	                    { deleteFunction.call(this); }
+	                return true;
+	            };
+	            Com.componentName = name;
+	            Com.category = category;
+	            Com.requirements = requirements;
+	            Com.children = children;
+	            Com.description = description;
+	            Com.allowMultiple = allowMultiple;
+	            Com.icon = icon;
+	            Com.color = color || "hsla(" + colorNum % 360 + ", 40%, 60%, 1)";
+	            return Com;
+	        }(parentClass));
+	        properties.forEach(function (p) {
+	            assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
+	        });
+	        PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
+	        prototype._name = name;
+	        Com.prototype.class = Com;
+	        Object.assign(Com.prototype, prototype);
+	        componentClasses.set(Com.componentName, Com);
+	        return Com;
+	    };
+	    Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
+	    Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
 	    return Component;
 	}(PropertyOwner));
-	Component.create = function (name, values) {
-	    if (values === void 0) { values = {}; }
-	    var componentClass = componentClasses.get(name);
-	    assert(componentClass);
-	    var component = new componentClass();
-	    component.initWithPropertyValues(values);
-	    return component;
-	};
-	Component.createWithInheritedComponentData = function (inheritedComponentData) {
-	    var component = new inheritedComponentData.componentClass;
-	    component._componentId = inheritedComponentData.componentId;
-	    var properties = inheritedComponentData.properties.map(function (p) { return p.clone(); });
-	    component.initWithChildren(properties);
-	    return component;
-	};
-	Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
-	Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
-	Component.register = function (_a) {
-	    var _b = _a.name, name = _b === void 0 ? '' : _b, // required
-	    _c = _a.description, // required
-	    description = _c === void 0 ? '' : _c, _d = _a.category, category = _d === void 0 ? 'Other' : _d, _e = _a.icon, icon = _e === void 0 ? 'fa-puzzle-piece' : _e, // in editor
-	    _f = _a.color, // in editor
-	    color = _f === void 0 ? '' : _f, // in editor
-	    _g = _a.properties, // in editor
-	    properties = _g === void 0 ? [] : _g, _h = _a.requirements, requirements = _h === void 0 ? ['Transform'] : _h, _j = _a.children, children = _j === void 0 ? [] : _j, _k = _a.parentClass, parentClass = _k === void 0 ? Component : _k, _l = _a.prototype, prototype = _l === void 0 ? {} : _l, _m = _a.allowMultiple, allowMultiple = _m === void 0 ? true : _m, _o = _a.requiesInitWhenEntityIsEdited;
-	    assert(name, 'Component must have a name.');
-	    assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
-	    assert(!componentClasses.has(name), 'Duplicate component class ' + name);
-	    Object.keys(prototype).forEach(function (k) {
-	        if (Component.reservedPrototypeMembers.has(k))
-	            { assert(false, 'Component prototype can not have a reserved member: ' + k); }
-	    });
-	    var constructorFunction = prototype.constructor;
-	    var deleteFunction = prototype.delete;
-	    delete prototype.constructor;
-	    delete prototype.delete;
-	    var Com = /** @class */ (function (_super) {
-	        __extends(Com, _super);
-	        function Com() {
-	            var _this = _super.apply(this, arguments) || this;
-	            if (constructorFunction)
-	                { constructorFunction.call(_this); }
-	            return _this;
-	        }
-	        Com.prototype.delete = function () {
-	            if (!_super.prototype.delete.call(this))
-	                { return false; }
-	            if (deleteFunction)
-	                { deleteFunction.call(this); }
-	            return true;
-	        };
-	        return Com;
-	    }(parentClass));
-	    properties.forEach(function (p) {
-	        assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
-	    });
-	    PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
-	    Com.componentName = name;
-	    Com.category = category;
-	    if (requirements.indexOf('Transform') < 0)
-	        { requirements.push('Transform'); }
-	    Com.requirements = requirements;
-	    Com.children = children;
-	    Com.description = description;
-	    Com.allowMultiple = allowMultiple;
-	    Com.icon = icon;
-	    var num = name.split('').reduce(function (prev, curr) { return prev + curr.charCodeAt(0); }, 0);
-	    Com.color = color || "hsla(" + num % 360 + ", 40%, 60%, 1)";
-	    prototype._name = name;
-	    Object.assign(Com.prototype, prototype);
-	    componentClasses.set(Com.componentName, Com);
-	    return Com;
-	};
 	Serializable.registerSerializable(Component, 'com', function (json) {
 	    var component = new (componentClasses.get(json.n))(json.id);
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -2948,6 +2983,7 @@
 	    return entity;
 	});
 	Entity.ENTITY_CREATION_DEBUGGING = false;
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    createPropertyType('name', 'No name', createPropertyType.string)
@@ -2972,7 +3008,7 @@
 	    };
 	    /*
 	    filter filters component datas
-	    
+
 	    Returns JSON:
 	    [
 	        {
@@ -3181,6 +3217,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3202,6 +3239,7 @@
 	    delete serializables[id];
 	}
 	changeDispacher.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3449,6 +3487,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3510,6 +3549,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    createPropertyType('name', 'No name', createPropertyType.string)
@@ -3533,6 +3573,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3618,6 +3661,7 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3641,6 +3685,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3814,6 +3859,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3854,6 +3900,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -3904,6 +3951,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -3951,6 +3999,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -3979,7 +4028,7 @@
 	    requirements: [
 	        'Shape'
 	    ],
-	    requiesInitWhenEntityIsEdited: true,
+	    requiresInitWhenEntityIsEdited: true,
 	    prototype: {
 	        inited: false,
 	        init: function () {
@@ -4147,6 +4196,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4172,6 +4222,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4456,6 +4507,7 @@
 	    }
 	    return textureCache[hash];
 	}
+	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4465,6 +4517,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4666,6 +4719,9 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4708,6 +4764,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -4850,6 +4907,7 @@
 	    });
 	}
 	window.addEventListener('load', connect);
+	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -4886,6 +4944,7 @@
 	window.addEventListener('resize', resizeCanvas);
 	listenSceneCreation(resizeCanvas);
 	var MAX_PIXELS = 1000 * 600;
+	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -4961,6 +5020,7 @@
 	    };
 	    return TouchControl;
 	}());
+	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5095,6 +5155,7 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
+	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5132,6 +5193,7 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

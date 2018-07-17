@@ -68,7 +68,7 @@ export const key = {
 	questionMark: 191
 };
 
-export function listenMouseMove(element, handler) {
+export function listenMouseMove(element: HTMLElement, handler: (Vector) => void): () => void {
 	element.addEventListener('mousemove', event => {
 		let x = event.pageX;
 		let y = event.pageY;
@@ -76,7 +76,7 @@ export function listenMouseMove(element, handler) {
 		while( el != null ) {
 			x -= el.offsetLeft;
 			y -= el.offsetTop;
-			el = el.offsetParent;
+			el = <HTMLElement> el.offsetParent;
 		}
 
 		element._mx = x;
@@ -86,7 +86,7 @@ export function listenMouseMove(element, handler) {
 	return () => element.removeEventListener('mousemove', handler);
 }
 // Requires listenMouseMove on the same element to get the mouse position
-export function listenMouseDown(element, handler) {
+export function listenMouseDown(element: HTMLElement, handler) {
 	element.addEventListener('mousedown', event => {
 		if (typeof element._mx === 'number')
 			handler(new Vector(element._mx, element._my));
@@ -96,7 +96,7 @@ export function listenMouseDown(element, handler) {
 	return () => element.removeEventListener('mousedown', handler);
 }
 // Requires listenMouseMove on the same element to get the mouse position
-export function listenMouseUp(element, handler) {
+export function listenMouseUp(element: HTMLElement, handler) {
 	// listen document body because many times mouse is accidentally dragged outside of element
 	document.body.addEventListener('mouseup', event => {
 		if (typeof element._mx === 'number')
@@ -137,7 +137,7 @@ if (typeof window !== 'undefined') {
 	};
 }
 
-export function simulateKeyEvent(eventName, keyCode) {
+export function simulateKeyEvent(eventName: string, keyCode: number) {
 	if (eventName === 'keydown') {
 		window.onkeydown({
 			keyCode

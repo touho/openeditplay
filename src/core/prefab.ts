@@ -10,8 +10,8 @@ import EntityPrototype from "./entityPrototype";
 
 // Prefab is an EntityPrototype that has been saved to a prefab.
 export default class Prefab extends Prototype {
-	constructor(predefinedId = false) {
-		super(...arguments);
+	constructor(predefinedId?: string) {
+		super(predefinedId);
 	}
 
 	makeUpAName() {

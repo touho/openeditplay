@@ -22,6 +22,10 @@ export function enableAllChanges() {
 
 // Object of a property
 export default class Property extends Serializable {
+	_value: any;
+	_initialValue: any;
+	name: any;
+
 	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
 	// if you give propertyType, value in real value form
 	// if you don't give propertyType (give it later), value as JSON form

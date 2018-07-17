@@ -35,7 +35,7 @@ Component.register({
 	requirements: [
 		'Shape'
 	],
-	requiesInitWhenEntityIsEdited: true,
+	requiresInitWhenEntityIsEdited: true,
 	prototype: {
 		inited: false,
 		init() {
@@ -60,7 +60,7 @@ Component.register({
 			];
 			for (let i = 0; i < Shapes.length; ++i) {
 				shapePropertiesThatShouldUpdateShape.forEach(property => {
-					this.listenProperty(Shapes[i], property, update(() => this.updateShape()));	
+					this.listenProperty(Shapes[i], property, update(() => this.updateShape()));
 				});
 			}
 
@@ -95,7 +95,7 @@ Component.register({
 		},
 		createBody() {
 			assert(!this.body);
-			
+
 			this.body = new p2.Body({
 				type: type[this.type],
 				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
@@ -111,18 +111,18 @@ Component.register({
 			this.updateShape();
 
 			this.body.entity = this.entity;
-			
+
 			addBody(this.scene, this.body);
 		},
 		updateShape() {
 			if (this.body.shapes.length > 0) {
 				// We update instead of create.
 				// Should remove existing shapes
-				
+
 				// The library does not support updating shapes during the step.
 				let world = getWorld(this.scene);
 				assert(!world.stepping);
-				
+
 				let shapes = this.body.shapes;
 				for (let i = 0; i < shapes.length; ++i) {
 					shapes[i].body = null;
@@ -135,7 +135,7 @@ Component.register({
 
 			Shapes.forEach(Shape => {
 				let shape;
-				
+
 				if (Shape.type === 'rectangle') {
 					shape = new p2.Box({
 						width: Shape.size.x * PHYSICS_SCALE * scale.x,
@@ -143,7 +143,7 @@ Component.register({
 					});
 				} else if (Shape.type === 'circle') {
 					let averageScale = (scale.x + scale.y) / 2;
-					
+
 					shape = new p2.Circle({
 						radius: Shape.radius * PHYSICS_SCALE * averageScale
 					});
@@ -152,11 +152,11 @@ Component.register({
 						vertices: Shape.getConvexPoints().map(p => ([p.x * PHYSICS_SCALE, p.y * PHYSICS_SCALE]))
 					});
 				}
-				
+
 				if (shape)
 					this.body.addShape(shape);
 			});
-			
+
 			this.updateMass();
 			this.updateMaterial();
 		},
@@ -187,16 +187,16 @@ Component.register({
 			let b = this.body;
 			if (!b || b.sleepState === SLEEPING || b.type === STATIC)
 				return;
-			
+
 			this.updatingOthers = true;
-			
+
 			let newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
 			if (!this.Transform.position.isEqualTo(newPos))
 				this.Transform.position = newPos;
-			
+
 			if (this.Transform.angle !== b.angle)
 				this.Transform.angle = b.angle;
-			
+
 			this.updatingOthers = false;
 		},
 		sleep() {

@@ -1,7 +1,7 @@
-import {Component, Prop} from '../core/component';
+import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import {Color} from '../util/color';
-import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../features/graphics';
+import { Color } from '../util/color';
+import { default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor } from '../features/graphics';
 import { isClient } from '../util/environment';
 
 import { PHYSICS_SCALE } from './Physics';
@@ -115,7 +115,7 @@ Component.register({
 		},
 
 		updateTexture() {
-			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, {r: 255, g: 255, b: 255, a: this.alpha});
+			this.texture = getParticleTexture(this.particleSize, this.particleHardness * 0.9, { r: 255, g: 255, b: 255, a: this.alpha });
 			// this.container.baseTexture = this.texture;
 			if (this.particles) {
 				this.particles.forEach(p => {
@@ -211,7 +211,7 @@ Component.register({
 				scale,
 				lerp,
 				p
-			;
+				;
 
 			for (let i = 0; i < this.particleCount; i++) {
 				p = particles[i];
@@ -294,14 +294,14 @@ function scaleLerp(lerp) {
 
 const blendModes = {
 	add: isClient ? PIXI.BLEND_MODES.ADD : 0,
-	normal: isClient ? PIXI.BLEND_MODES.NORMAL: 0
+	normal: isClient ? PIXI.BLEND_MODES.NORMAL : 0
 };
 
 let textureCache = {};
 
 // size: pixels
 // gradientHardness: 0..1
-function getParticleTexture(size, gradientHardness = 0, rgb = {r: 255, g: 255, b: 255, a: 1}) {
+function getParticleTexture(size, gradientHardness = 0, rgb = { r: 255, g: 255, b: 255, a: 1 }) {
 	let hash = `${size}-${gradientHardness}-${rgb.r}-${rgb.g}-${rgb.b}-${rgb.a}`;
 	if (!textureCache[hash]) {
 		let canvas = document.createElement('canvas');
