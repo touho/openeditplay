@@ -1,11 +1,21 @@
 import Serializable from './serializable';
 import assert from '../util/assert';
 import * as performanceTool from '../util/performance';
+import Prototype from './prototype';
+import { Component } from './component';
+import { getSerializable } from './serializableManager';
 
 const ALIVE_ERROR = 'entity is already dead';
 
 export default class Entity extends Serializable {
-	constructor(predefinedId = false) {
+	components: Map<string, Array<Component>>;
+	sleeping: boolean;
+	prototype: Prototype;
+	localMaster: boolean;
+
+	static ENTITY_CREATION_DEBUGGING = false;
+
+	constructor(predefinedId?) {
 		super(predefinedId);
 		this.components = new Map(); // name -> array
 		this.sleeping = false;
@@ -87,13 +97,13 @@ export default class Entity extends Serializable {
 	}
 
 	static preInitComponents(components) {
-		if (Entity.ENTITY_CREATION_DEBUGGING)  console.log('preInit components for', components[0].entity.makeUpAName());
+		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('preInit components for', components[0].entity.makeUpAName());
 		for (let i = 0; i < components.length; i++)
 			components[i]._preInit();
 	}
 
 	static initComponents(components) {
-		if (Entity.ENTITY_CREATION_DEBUGGING)  console.log(`init ${components.length} components for`, components[0].entity.makeUpAName());
+		if (Entity.ENTITY_CREATION_DEBUGGING) console.log(`init ${components.length} components for`, components[0].entity.makeUpAName());
 		for (let i = 0; i < components.length; i++)
 			components[i]._init();
 	}
@@ -205,4 +215,3 @@ Serializable.registerSerializable(Entity, 'ent', json => {
 	return entity;
 });
 
-Entity.ENTITY_CREATION_DEBUGGING = false;

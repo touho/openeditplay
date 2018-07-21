@@ -84,7 +84,7 @@ export default class Widget {
 		this.graphics = this.createGraphics();
 		this.updatePosition();
 		this.updateVisibility();
-		this.component.scene.positionHelperLayer.addChild(this.graphics);
+		this.component.scene.layers.positionHelperLayer.addChild(this.graphics);
 
 		let invZoom = 1 / scene.cameraZoom;
 		this.graphics.scale.set(invZoom, invZoom);

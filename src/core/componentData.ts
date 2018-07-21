@@ -8,7 +8,7 @@ export default class ComponentData extends Serializable {
 	componentClass: object;
 	componentId: string;
 
-	constructor(componentClassName, predefinedId = false, predefinedComponentId: string = '') {
+	constructor(componentClassName, predefinedId?, predefinedComponentId: string = '') {
 		super(predefinedId);
 		this.name = componentClassName;
 		this.componentClass = componentClasses.get(this.name);

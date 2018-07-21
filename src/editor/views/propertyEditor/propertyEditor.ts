@@ -16,6 +16,8 @@ import ObjectMoreButtonContextMenu from '../popup/objectMoreButtonContextMenu'
 import Confirmation from "../popup/Confirmation";
 import { listenKeyDown, key } from '../../../util/input';
 import { parseTextAndNumber, skipTransitions } from './util';
+import Serializable from '../../../core/serializable';
+import Property from '../../../core/property';
 
 /*
 Reference: Unbounce
@@ -27,6 +29,7 @@ export default class PropertyEditor {
 	list: List;
 	dirty: boolean;
 	editingProperty: boolean;
+	item: Serializable;
 
 	constructor() {
 		this.el = el('div.propertyEditor',
@@ -123,6 +126,9 @@ class Container {
 	controls: HTMLElement;
 	properties: List;
 	containers: List;
+	titleClickedCallback: () => void;
+	item: Serializable;
+
 
 	constructor() {
 		this.el = el('div.container',
@@ -131,13 +137,13 @@ class Container {
 				this.titleIcon = el('i.icon.fa')
 			),
 			this.content = el('div.containerContent',
-				this.properties = list('div.propertyEditorProperties', Property, null, this.propertyEditor),
-				this.containers = list('div', Container, null, this.propertyEditor),
+				this.properties = list('div.propertyEditorProperties', PropertyElement, null),
+				this.containers = list('div', Container, null),
 				this.controls = el('div'),
 				el('i.button.logButton.fa.fa-eye', {
 					onclick: () => {
 						console.log(this.item);
-						window.item = this.item;
+						window['item'] = this.item;
 						console.log(`you can use variable 'item'`);
 						let element = el('span', ' logged to console');
 						mount(this.title, element);
@@ -408,10 +414,14 @@ class Container {
 	}
 }
 
-class Property {
+class PropertyElement {
 	el: HTMLElement;
 	name: HTMLElement;
 	content: HTMLElement;
+	property: Property;
+	setValue: (any) => void;
+	_previousValue: any;
+	visibleIfListener: Function;
 
 	constructor() {
 		this.el = el('div.property', { name: '' },
@@ -420,7 +430,7 @@ class Property {
 		);
 	}
 	reset() {
-		let componentData = this.property.getParent();
+		let componentData = this.property.getParent() as any as ComponentData;
 		this.property.delete();
 		if (componentData._children.size === 0) {
 			if (componentData.getParentComponentData())

@@ -18,7 +18,7 @@ export { game };
 let isClient = typeof window !== 'undefined';
 
 export default class Game extends PropertyOwner {
-	constructor(predefinedId) {
+	constructor(predefinedId?: string) {
 		if (game)
 			console.error('Only one game allowed.');
 
@@ -34,7 +34,7 @@ export default class Game extends PropertyOwner {
 		}
 		*/
 
-		super(...arguments);
+		super(predefinedId);
 
 		if (isClient) {
 			game = this;

@@ -54,7 +54,7 @@ export default events;
 
 // DOM / ReDom event system
 
-export function dispatch(view, type, data) {
+export function dispatch(view, type, data?) {
 	const el = view === window ? view : view.el || view;
 	const debug = 'Debug info ' + new Error().stack;
 	el.dispatchEvent(new CustomEvent(type, {

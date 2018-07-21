@@ -58,8 +58,8 @@ export default Component.register({
 
 		constructor() {
 			// this.createWidgets();
-			
-			
+
+
 			// this.widgets = [
 			// 	this.position = new PositionWidget(this),
 			// 	this.xScale = new ScaleWidget(this, 1, 0),
@@ -68,7 +68,7 @@ export default Component.register({
 			// 	this.angle = new AngleWidget(this)
 			// ];
 			// return;
-			
+
 			this.createWidgets();
 			events.listen('selectedToolChanged', () => {
 				this.createWidgets();
@@ -76,13 +76,13 @@ export default Component.register({
 		},
 		createWidgets() {
 			let positionWasInited = this.position && this.position.graphics;
-			
+
 			if (this.widgets) {
 				this.widgets.forEach(widget => widget.delete());
 				this.widgets = null;
 				this.position = null;
 			}
-			
+
 			if (selectedToolName === 'multiTool') {
 				this.widgets = [
 					this.position = new PositionWidget(this),
@@ -107,11 +107,11 @@ export default Component.register({
 			} else {
 				throw new Error('selectedToolName invalid: ' + selectedToolName);
 			}
-			
+
 			if (this.entity && !this.entity.sleeping) {
 				if (positionWasInited)
 					this.position.init();
-				
+
 				if (this.selected) {
 					this.deselect();
 					this.select();
@@ -121,7 +121,7 @@ export default Component.register({
 		select() {
 			if (!this.selected) {
 				this.selected = true;
-				
+
 				// Skip position widget
 				for (let i = 1; i < this.widgets.length; ++i) {
 					this.widgets[i].init();
@@ -149,7 +149,7 @@ export default Component.register({
 		},
 		init() {
 			this.listeners = [];
-			
+
 			let positionListener = () => {
 				if (this.scene.playing) {
 					this.requiresWidgetUpdate = true;
@@ -180,8 +180,8 @@ export default Component.register({
 					this.requiresWidgetUpdate = false;
 				}
 			}));
-			
-			
+
+
 			if (this.position)
 				this.position.init();
 
@@ -193,7 +193,7 @@ export default Component.register({
 			this.positionHelper.drawCircle(0, 0, 1.3);
 			this.positionHelper.endFill();
 			this.positionHelper.position.copy(this.Transform.getGlobalPosition());
-			this.scene.positionHelperLayer.addChild(this.positionHelper);
+			this.scene.layers.positionHelperLayer.addChild(this.positionHelper);
 
 			this.listeners.push(this.scene.listen('zoomChange', () => this.updateZoomLevel()));
 			this.updateZoomLevel();

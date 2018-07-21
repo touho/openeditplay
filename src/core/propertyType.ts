@@ -25,7 +25,7 @@ export class PropertyType {
 		this.description = description;
 		this.visibleIf = visibleIf;
 		this.flags = {};
-		this.flags.forEach(f => this.flags[f.type] = f);
+		flags.forEach(f => this.flags[f.type] = f);
 	}
 	getFlag(flag: Flag) {
 		return this.flags[flag.type];

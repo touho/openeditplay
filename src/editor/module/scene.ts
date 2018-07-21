@@ -1,6 +1,6 @@
-import {el, list, mount} from 'redom';
+import { el, list, mount } from 'redom';
 import Module from './module';
-import events, {dispatch, listen} from '../../util/events';
+import events, { dispatch, listen } from '../../util/events';
 import {
 	listenMouseMove,
 	listenMouseDown,
@@ -10,41 +10,41 @@ import {
 	key,
 	keyPressed
 } from '../../util/input';
-import Scene, {scene} from '../../core/scene';
-import {game} from '../../core/game';
+import Scene, { scene } from '../../core/scene';
+import { game } from '../../core/game';
 import EntityPrototype from '../../core/entityPrototype';
 import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
-import {Component} from '../../core/component';
-import {editor} from '../editor';
-import {changeType, setChangeOrigin} from '../../core/change';
+import { Component } from '../../core/component';
+import { editor } from '../editor';
+import { changeType, setChangeOrigin } from '../../core/change';
 import * as sceneEdit from '../util/sceneEditUtil';
 import Vector from '../../util/vector';
-import {removeTheDeadFromArray, absLimit} from '../../util/algorithm';
-import {help} from '../help';
+import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
+import { help } from '../help';
 import PIXI from '../../features/graphics';
 import * as performanceTool from '../../util/performance';
-import {enableAllChanges, filterSceneChanges, disableAllChanges} from '../../core/property';
+import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../core/property';
 
 import '../components/EditorWidget';
-import {filterChildren} from "../../core/serializable";
-import {limit} from "../../util/callLimiter";
+import { filterChildren } from "../../core/serializable";
+import { limit } from "../../util/callLimiter";
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 10;
 
 class SceneModule extends Module {
+	canvas: HTMLCanvasElement;
+	homeButton: HTMLElement;
+	globeButton: HTMLElement;
+	copyButton: HTMLElement;
+	deleteButton: HTMLElement;
+	sceneContextButtons: HTMLElement;
+
 	constructor() {
 		super();
-
-		let canvas,
-			homeButton,
-			globeButton,
-			copyButton,
-			deleteButton,
-			sceneContextButtons;
 
 		let disableMouseDown = e => {
 			e.returnValue = false;
@@ -54,7 +54,7 @@ class SceneModule extends Module {
 		};
 
 		this.addElements(
-			canvas = el('canvas.openEditPlayCanvas.select-none', {
+			this.canvas = <HTMLCanvasElement>el('canvas.openEditPlayCanvas.select-none', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -89,7 +89,7 @@ class SceneModule extends Module {
 					},
 					title: 'Zoom out (-)'
 				}),
-				globeButton = el('i.fa.fa-globe.iconButton.button', {
+				this.globeButton = el('i.fa.fa-globe.iconButton.button', {
 					onclick: () => {
 						if (!scene) return;
 
@@ -109,7 +109,7 @@ class SceneModule extends Module {
 					},
 					title: 'Zoom to globe (G)'
 				}),
-				homeButton = el('i.fa.fa-home.iconButton.button', {
+				this.homeButton = el('i.fa.fa-home.iconButton.button', {
 					onclick: () => {
 						if (!scene) return;
 						scene.cameraPosition.setScalars(0, 0); // If there are no players
@@ -120,8 +120,8 @@ class SceneModule extends Module {
 					},
 					title: 'Go home to player or to default start position (H)'
 				}),
-				sceneContextButtons = el('div.sceneContextButtons',
-					copyButton = el('i.fa.fa-copy.iconButton.button', {
+				this.sceneContextButtons = el('div.sceneContextButtons',
+					this.copyButton = el('i.fa.fa-copy.iconButton.button', {
 						onclick: () => {
 							if (this.selectedEntities.length > 0) {
 								this.deleteNewEntities();
@@ -135,7 +135,7 @@ class SceneModule extends Module {
 						onmousedown: disableMouseDown,
 						title: 'Copy selected objects (C)'
 					}),
-					deleteButton = el('i.fa.fa-trash.iconButton.button', {
+					this.deleteButton = el('i.fa.fa-trash.iconButton.button', {
 						onclick: () => {
 							sceneEdit.deleteEntities(this.selectedEntities);
 							this.clearState();
@@ -148,12 +148,6 @@ class SceneModule extends Module {
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
-		this.canvas = canvas;
-		this.homeButton = homeButton;
-		this.globeButton = globeButton;
-		this.copyButton = copyButton;
-		this.deleteButton = deleteButton;
-		this.sceneContextButtons = sceneContextButtons;
 
 		events.listen('locate serializable', serializable => {
 			if (serializable.threeLetterType === 'epr') {
@@ -222,8 +216,8 @@ class SceneModule extends Module {
 			setChangeOrigin(this);
 			this.stopAndReset();
 
-			if (scene.editorLayer)
-				scene.editorLayer.visible = true;
+			if (scene.layers.editorLayer)
+				scene.layers.editorLayer.visible = true;
 		});
 
 		events.listen('play', () => {
@@ -236,7 +230,7 @@ class SceneModule extends Module {
 			if (scene.isInInitialState())
 				scene.setZoom(1);
 
-			scene.editorLayer.visible = false;
+			scene.layers.editorLayer.visible = false;
 			scene.play();
 			this.playingModeChanged();
 			this.updatePropertyChangeCreationFilter();
@@ -252,7 +246,7 @@ class SceneModule extends Module {
 			if (scene.isInInitialState())
 				scene.setZoom(1);
 
-			scene.editorLayer.visible = true;
+			scene.layers.editorLayer.visible = true;
 			scene.pause();
 
 			this.draw();
@@ -277,11 +271,11 @@ class SceneModule extends Module {
 							scene.setZoom(1);
 
 						if (scene.playing) {
-							scene.editorLayer.visible = true;
+							scene.layers.editorLayer.visible = true;
 							scene.pause();
 							this.draw();
 						} else {
-							scene.editorLayer.visible = false;
+							scene.layers.editorLayer.visible = false;
 							scene.play();
 						}
 						this.playingModeChanged();
@@ -295,8 +289,8 @@ class SceneModule extends Module {
 						setChangeOrigin(this);
 						this.stopAndReset();
 
-						if (scene.editorLayer)
-							scene.editorLayer.visible = true;
+						if (scene.layers.editorLayer)
+							scene.layers.editorLayer.visible = true;
 					}
 				});
 
@@ -321,24 +315,20 @@ class SceneModule extends Module {
 		});
 
 		events.listen('scene load level before entities', (scene, level) => {
-			assert(!scene.editorLayer, 'editorLayer should not be there');
+			assert(!scene.layers.editorLayer, 'editorLayer should not be there');
 
-			scene.editorLayer = new PIXI.Container();
-			scene.layers.move.addChild(scene.editorLayer);
+			scene.layers.editorLayer = new PIXI.Container();
+			scene.layers.move.addChild(scene.layers.editorLayer);
 
 			scene.widgetLayer = new PIXI.Container();
-			scene.positionHelperLayer = new PIXI.Container();
+			scene.layers.positionHelperLayer = new PIXI.Container();
 			scene.selectionLayer = new PIXI.Container();
 
-			scene.editorLayer.addChild(
+			scene.layers.editorLayer.addChild(
 				scene.widgetLayer,
-				scene.positionHelperLayer,
+				scene.layers.positionHelperLayer,
 				scene.selectionLayer
 			);
-		});
-		events.listen('scene unload level', (scene, level) => {
-			assert(scene.editorLayer, 'editorLayer should be there');
-			delete scene.editorLayer; // No need to destroy. Scene does it already.
 		});
 
 		// Change in serializable tree
@@ -755,7 +745,7 @@ class SceneModule extends Module {
 		if (scene && this.canvas) {
 			let change = false;
 			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
-			|| this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
+				|| this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
 
 				// Here you can tweak the game resolution in editor.
 				// scene.renderer.resize(this.canvas.parentElement.offsetWidth / 2, this.canvas.parentElement.offsetHeight / 2);

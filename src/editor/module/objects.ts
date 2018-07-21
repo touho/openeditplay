@@ -11,9 +11,13 @@ import CreateObject from "../views/popup/createObject";
 import { game } from "../../core/game";
 import Prefab from "../../core/prefab";
 import Serializable from "../../core/serializable";
+import assert from '../../util/assert';
 
 class Objects extends Module {
 	treeView: TreeView;
+	dirty: boolean;
+	treeType: string;
+	externalChange: boolean;
 
 	constructor() {
 		super();
@@ -100,8 +104,9 @@ class Objects extends Module {
 				let target = event.targetElement;
 				while (!target.classList.contains('jstree-node')) {
 					target = target.parentElement;
-					if (!target)
-						throw new Error('Invalid target', event.targetElement);
+					if (!target){
+						console.error('Invalid target', event.targetElement);
+					}
 				}
 				console.log('target.id', target.id)
 				let targetSerializable = getSerializable(target.id);

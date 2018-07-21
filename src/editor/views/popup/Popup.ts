@@ -14,7 +14,7 @@ export default class Popup {
 		cancelCallback = null,
 		width = null,
 		content = el('div.genericCustomContent', 'Undefined content')
-	}) {
+	} = {}) {
 		this.el = el('div.popup', {
 				style: {
 					'z-index': 1000 + popupDepth++

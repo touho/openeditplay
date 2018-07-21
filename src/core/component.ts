@@ -24,7 +24,8 @@ export class Component extends PropertyOwner {
 	entity: Entity;
 	componentClass: typeof Component;
 	componentName: string;
-	// [s: string]: any; // Suppress all errors. Components will have many custom parameters.
+	Transform: Component;
+	[s: string]: any; // Suppress all errors. Components will have many custom parameters.
 
 	static componentName: string;
 	static category: string;

@@ -10,6 +10,8 @@ import Vector from '../util/vector';
 import events from "../util/events";
 import Level from './level';
 import { GameEvent } from './gameEvents';
+import { Component } from './component';
+import EntityPrototype from './entityPrototype';
 
 let scene: Scene = null;
 export { scene };
@@ -26,7 +28,14 @@ export default class Scene extends Serializable {
 	stage: PIXI.Container;
 	cameraPosition: Vector;
 	cameraZoom: number;
-	layers: { [s: string]: PIXI.Container };
+	layers: { [s: string]: PIXI.Container } = {};
+	components: Map<string, Set<Component>>;
+	animationFrameId: any;
+	playing: boolean;
+	time: number;
+	won: boolean;
+	_prevUpdate: number;
+	resetting: boolean = false;
 
 	constructor(predefinedId?) {
 		super(predefinedId);
@@ -99,7 +108,7 @@ export default class Scene extends Serializable {
 
 		events.dispatch('scene load level before entities', scene, level);
 
-		this.level.getChildren('epr').map(epr => epr.createEntity(this));
+		this.level.getChildren('epr').map((epr: EntityPrototype) => epr.createEntity(this));
 
 		events.dispatch('scene load level', scene, level);
 
@@ -117,7 +126,7 @@ export default class Scene extends Serializable {
 			this.stage.destroy();
 		this.stage = null;
 
-		this.layers = null;
+		this.layers = {};
 
 		this.components.clear();
 
@@ -286,17 +295,17 @@ export default class Scene extends Serializable {
 	}
 
 	// To make component based entity search fast:
-	addComponent(component) {
-		let set = this.components.get(component.constructor.componentName);
+	addComponent(component: Component) {
+		let set = this.components.get(component.componentClass.componentName);
 		if (!set) {
 			set = new Set();
-			this.components.set(component.constructor.componentName, set);
+			this.components.set(component.componentClass.componentName, set);
 		}
 		set.add(component);
 	}
 
-	removeComponent(component) {
-		let set = this.components.get(component.constructor.componentName);
+	removeComponent(component: Component) {
+		let set = this.components.get(component.componentClass.componentName);
 		assert(set);
 		assert(set.delete(component));
 	}

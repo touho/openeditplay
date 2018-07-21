@@ -2,6 +2,7 @@ import Serializable from './serializable';
 import { addChange, changeType, setChangeOrigin } from './change';
 import assert from '../util/assert';
 import * as performanceTool from '../util/performance';
+import { PropertyType } from './propertyType';
 
 let changesEnabled = true;
 let scenePropertyFilter = null;
@@ -25,6 +26,7 @@ export default class Property extends Serializable {
 	_value: any;
 	_initialValue: any;
 	name: any;
+	propertyType: PropertyType;
 
 	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
 	// if you give propertyType, value in real value form

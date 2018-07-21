@@ -19,7 +19,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -219,13 +218,11 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -297,7 +294,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=events.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -324,7 +320,6 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -342,6 +337,7 @@
 	    return id;
 	}
 	var serializableClasses = new Map();
+	// type Listeners = { [event in GameEvent]: Array<(a?, b?, c?) => void>};
 	/*
 	Serializable lifecycle:
 
@@ -465,20 +461,20 @@
 	    };
 	    Serializable.prototype.findParent = function (threeLetterType, filterFunction) {
 	        if (filterFunction === void 0) { filterFunction = null; }
-	        var parent = this;
-	        while (parent) {
-	            if (parent.threeLetterType === threeLetterType && (!filterFunction || filterFunction(parent)))
-	                { return parent; }
-	            parent = parent._parent;
+	        var serializable = this;
+	        while (serializable) {
+	            if (serializable.threeLetterType === threeLetterType && (!filterFunction || filterFunction(serializable)))
+	                { return serializable; }
+	            serializable = serializable._parent;
 	        }
 	        return null;
 	    };
 	    Serializable.prototype.getRoot = function () {
-	        var element = this;
-	        while (element._parent) {
-	            element = element._parent;
+	        var serializable = this;
+	        while (serializable._parent) {
+	            serializable = serializable._parent;
 	        }
-	        return element;
+	        return serializable;
 	    };
 	    // idx is optional
 	    Serializable.prototype.deleteChild = function (child, idx) {
@@ -637,6 +633,7 @@
 	        }
 	        catch (e) {
 	            if (isClient) {
+	                console.error(e);
 	                if (!window.force)
 	                    { debugger; } // Type 'force = true' in console to ignore failed imports.
 	                if (!window.force)
@@ -761,7 +758,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -856,7 +852,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -879,7 +874,7 @@
 	        this.description = description;
 	        this.visibleIf = visibleIf;
 	        this.flags = {};
-	        this.flags.forEach(function (f) { return _this.flags[f.type] = f; });
+	        flags.forEach(function (f) { return _this.flags[f.type] = f; });
 	    }
 	    PropertyType.prototype.getFlag = function (flag) {
 	        return this.flags[flag.type];
@@ -903,15 +898,15 @@
 	        description: 'Example',
 	        validator: PropertyType.
 	 */
-	function createPropertyType(propertyName, defaultValue, type) {
+	var Prop = function Prop(propertyName, defaultValue, type) {
 	    var arguments$1 = arguments;
 
 	    var optionalParameters = [];
 	    for (var _i = 3; _i < arguments.length; _i++) {
 	        optionalParameters[_i - 3] = arguments$1[_i];
 	    }
-	    type = type();
-	    var validator = type.validators.default();
+	    var dataType = type();
+	    var validator = dataType.validators.default();
 	    var description = '';
 	    var flags = [];
 	    var visibleIf = null;
@@ -927,12 +922,11 @@
 	        else
 	            { assert(false, 'invalid parameter ' + p + ' idx ' + idx); }
 	    });
-	    return new PropertyType(propertyName, type, validator, defaultValue, description, flags, visibleIf);
-	}
-	var dataType = createPropertyType;
+	    return new PropertyType(propertyName, dataType, validator, defaultValue, description, flags, visibleIf);
+	};
 	// if value is string, property must be value
 	// if value is an array, property must be one of the values
-	dataType.visibleIf = function (propertyName, value) {
+	Prop.visibleIf = function (propertyName, value) {
 	    assert(typeof propertyName === 'string' && propertyName.length);
 	    assert(typeof value !== 'undefined');
 	    return {
@@ -947,7 +941,7 @@
 	    func.type = type;
 	    return func;
 	}
-	createPropertyType.flagDegreesInEditor = createFlag('degreesInEditor');
+	Prop.flagDegreesInEditor = createFlag('degreesInEditor');
 	function createDataType(_a) {
 	    var _b = _a.name, name = _b === void 0 ? '' : _b, _c = _a.validators, validators = _c === void 0 ? { default: function (x) { return x; } } : _c, // default must exist. if value is a reference(object), validator should copy the value.
 	    _d = _a.toJSON, // default must exist. if value is a reference(object), validator should copy the value.
@@ -993,7 +987,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1126,7 +1119,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1176,7 +1168,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1185,7 +1176,7 @@
 	var FLOAT_JSON_PRECISION = 4;
 	var FLOAT_JSON_PRECISION_MULTIPLIER = Math.pow(10, FLOAT_JSON_PRECISION);
 	var FLOAT_DELTA = 0.0000001;
-	dataType.float = createDataType({
+	Prop.float = createDataType({
 	    name: 'float',
 	    validators: {
 	        default: function (x) {
@@ -1197,12 +1188,12 @@
 	        },
 	        // PropertyType.float.range(min, max)
 	        range: function (x, min, max) {
-	            x = parseFloat(x);
+	            x = Number(x);
 	            validateFloat(x);
 	            return Math.min(max, Math.max(min, x));
 	        },
 	        modulo: function (x, min, max) {
-	            x = parseFloat(x);
+	            x = Number(x);
 	            validateFloat(x);
 	            var range = max - min;
 	            if (x < min) {
@@ -1217,7 +1208,7 @@
 	    toJSON: function (x) { return Math.round(x * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER; },
 	    fromJSON: function (x) { return x; }
 	});
-	dataType.int = createDataType({
+	Prop.int = createDataType({
 	    name: 'int',
 	    validators: {
 	        default: function (x) {
@@ -1237,7 +1228,7 @@
 	    toJSON: function (x) { return x; },
 	    fromJSON: function (x) { return x; }
 	});
-	dataType.vector = createDataType({
+	Prop.vector = createDataType({
 	    name: 'vector',
 	    validators: {
 	        default: function (vec) {
@@ -1262,7 +1253,7 @@
 	    fromJSON: function (vec) { return Vector.fromObject(vec); },
 	    clone: function (vec) { return vec.clone(); }
 	});
-	dataType.string = createDataType({
+	Prop.string = createDataType({
 	    name: 'string',
 	    validators: {
 	        default: function (x) { return x ? String(x) : ''; }
@@ -1270,7 +1261,7 @@
 	    toJSON: function (x) { return x; },
 	    fromJSON: function (x) { return x; }
 	});
-	dataType.bool = createDataType({
+	Prop.bool = createDataType({
 	    name: 'bool',
 	    validators: {
 	        default: function (x) {
@@ -1282,7 +1273,7 @@
 	    toJSON: function (x) { return x ? 1 : 0; },
 	    fromJSON: function (x) { return !!x; }
 	});
-	dataType.enum = createDataType({
+	Prop.enum = createDataType({
 	    name: 'enum',
 	    validators: {
 	        default: function () {
@@ -1307,7 +1298,7 @@
 	    toJSON: function (x) { return x; },
 	    fromJSON: function (x) { return x; }
 	});
-	dataType.color = createDataType({
+	Prop.color = createDataType({
 	    name: 'color',
 	    validators: {
 	        default: function (color) {
@@ -1323,16 +1314,13 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
 	    function PropertyOwner(predefinedId) {
 	        var _this = _super.call(this, predefinedId) || this;
-	        _this.name = '';
-	        _this.class = null;
-	        assert(Array.isArray(_this.class._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 	        _this._properties = {};
+	        assert(Array.isArray(_this._propertyOwnerClass._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 	        return _this;
 	    }
 	    PropertyOwner.prototype.makeUpAName = function () {
@@ -1344,7 +1332,7 @@
 	        if (values === void 0) { values = {}; }
 	        var children = [];
 	        Object.keys(values).forEach(function (propName) {
-	            var propertyType = _this.class._propertyTypesByName[propName];
+	            var propertyType = _this._propertyOwnerClass._propertyTypesByName[propName];
 	            assert(propertyType, 'Invalid property ' + propName);
 	            children.push(propertyType.createProperty({
 	                value: values[propName]
@@ -1387,7 +1375,7 @@
 	        // Make sure all PropertyTypes have a matching Property
 	        var nameToProp = {};
 	        propChildren.forEach(function (c) { return nameToProp[c.name] = c; });
-	        this.class._propertyTypes.forEach(function (propertyType) {
+	        this._propertyOwnerClass._propertyTypes.forEach(function (propertyType) {
 	            if (!nameToProp[propertyType.name])
 	                { propChildren.push(propertyType.createProperty()); }
 	        });
@@ -1395,15 +1383,15 @@
 	        return this;
 	    };
 	    PropertyOwner.prototype.addChild = function (child) {
-	        assert(this._state & Serializable.STATE_INIT, this.makeUpAName() || this.constructor + ' requires that initWithChildren will be called before addChild');
+	        assert(this._state & Serializable.STATE_INIT, this.constructor + ' requires that initWithChildren will be called before addChild');
 	        _super.prototype.addChild.call(this, child);
 	        if (child.threeLetterType === 'prp') {
 	            if (!child.propertyType) {
-	                if (!this.class._propertyTypesByName[child.name]) {
+	                if (!this._propertyOwnerClass._propertyTypesByName[child.name]) {
 	                    console.log('Property of that name not defined', this.id, child, this);
 	                    return;
 	                }
-	                child.setPropertyType(this.class._propertyTypesByName[child.name]);
+	                child.setPropertyType(this._propertyOwnerClass._propertyTypesByName[child.name]);
 	            }
 	            assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
 	            this._properties[child.propertyType.name] = child;
@@ -1426,6 +1414,7 @@
 	        return this;
 	    };
 	    PropertyOwner.defineProperties = function (Class, propertyTypes) {
+	        Class.prototype._propertyOwnerClass = Class; // TEST
 	        var ClassAsTypeHolder = Class;
 	        ClassAsTypeHolder._propertyTypes = propertyTypes;
 	        ClassAsTypeHolder._propertyTypesByName = {};
@@ -1435,6 +1424,8 @@
 	            ClassAsTypeHolder._propertyTypesByName[propertyTypeName] = propertyType;
 	            Object.defineProperty(Class.prototype, propertyTypeName, {
 	                get: function () {
+	                    if (!this._properties[propertyTypeName])
+	                        { debugger; }
 	                    return this._properties[propertyTypeName].value;
 	                },
 	                set: function (value) {
@@ -1445,7 +1436,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1826,11 +1816,10 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
-	    PIXI = window.PIXI;
+	    PIXI = window['PIXI'];
 	    PIXI.ticker.shared.stop();
 	}
 	var PIXI$1 = PIXI;
@@ -1883,7 +1872,6 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1919,13 +1907,10 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
-	    createPropertyType('name', 'No name', createPropertyType.string)
+	    Prop('name', 'No name', Prop.string)
 	];
 	var game = null; // only one game at the time
 	var isClient$1 = typeof window !== 'undefined';
@@ -1946,7 +1931,7 @@
 	            }
 	        }
 	        */
-	        _this = _super.apply(this, arguments) || this;
+	        _this = _super.call(this, predefinedId) || this;
 	        if (isClient$1) {
 	            game = _this;
 	        }
@@ -1991,7 +1976,6 @@
 	        { listener(game); }
 	}
 	// jee
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2079,7 +2063,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2212,7 +2195,16 @@
 	        });
 	    }
 	}
-	//# sourceMappingURL=input.js.map
+
+	var GameEvent;
+	(function (GameEvent) {
+	    GameEvent["SCENE_START"] = "scene start";
+	    GameEvent["SCENE_PLAY"] = "scene play";
+	    GameEvent["SCENE_PAUSE"] = "scene pause";
+	    GameEvent["SCENE_RESET"] = "scene reset";
+	    GameEvent["SCENE_DRAW"] = "scene draw";
+	    GameEvent["SCENE_LEVEL_COMPLETED"] = "scene level completed";
+	})(GameEvent || (GameEvent = {}));
 
 	var scene = null;
 	var physicsOptions = {
@@ -2222,6 +2214,8 @@
 	    __extends(Scene, _super);
 	    function Scene(predefinedId) {
 	        var _this = _super.call(this, predefinedId) || this;
+	        _this.layers = {};
+	        _this.resetting = false;
 	        if (scene) {
 	            try {
 	                scene.delete();
@@ -2293,7 +2287,7 @@
 	        if (this.stage)
 	            { this.stage.destroy(); }
 	        this.stage = null;
-	        this.layers = null;
+	        this.layers = {};
 	        this.components.clear();
 	        deleteWorld(this);
 	        events.dispatch('scene unload level', scene, level);
@@ -2340,7 +2334,7 @@
 	        stop('Component updates');
 	        // Update physics
 	        start('Physics');
-	        updateWorld(this, dt, timeInMilliseconds);
+	        updateWorld(this, dt);
 	        stop('Physics');
 	        // Update graphics
 	        start('Draw');
@@ -2349,7 +2343,7 @@
 	        if (this.won) {
 	            this.pause();
 	            this.time = 0;
-	            game.dispatch('levelCompleted');
+	            game.dispatch(GameEvent.SCENE_LEVEL_COMPLETED);
 	            this.reset();
 	        }
 	        this.requestAnimFrame();
@@ -2366,7 +2360,7 @@
 	        this.updateCamera();
 	        [this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 	        this.renderer.render(this.stage, null, false);
-	        events.dispatch('scene draw', scene);
+	        events.dispatch(GameEvent.SCENE_DRAW, scene);
 	        eventHappened('Draws');
 	    };
 	    Scene.prototype.isInInitialState = function () {
@@ -2383,7 +2377,7 @@
 	        // this.draw(); // we might be doing ok even without draw.
 	        // player mode starts mainloop and editor may want to control the drawing more.
 	        delete this.resetting;
-	        this.dispatch('reset');
+	        this.dispatch(GameEvent.SCENE_RESET);
 	    };
 	    Scene.prototype.pause = function () {
 	        if (!this.playing)
@@ -2396,7 +2390,7 @@
 	                { clearTimeout(this.animationFrameId); }
 	        }
 	        this.animationFrameId = null;
-	        this.dispatch('pause');
+	        this.dispatch(GameEvent.SCENE_PAUSE);
 	    };
 	    Scene.prototype.play = function () {
 	        if (this.playing)
@@ -2405,8 +2399,8 @@
 	        this.playing = true;
 	        this.requestAnimFrame();
 	        if (this.time === 0)
-	            { this.dispatch('onStart'); }
-	        this.dispatch('play');
+	            { this.dispatch(GameEvent.SCENE_START); }
+	        this.dispatch(GameEvent.SCENE_PLAY);
 	    };
 	    Scene.prototype.delete = function () {
 	        if (!_super.prototype.delete.call(this))
@@ -2423,15 +2417,15 @@
 	    };
 	    // To make component based entity search fast:
 	    Scene.prototype.addComponent = function (component) {
-	        var set = this.components.get(component.constructor.componentName);
+	        var set = this.components.get(component.componentClass.componentName);
 	        if (!set) {
 	            set = new Set();
-	            this.components.set(component.constructor.componentName, set);
+	            this.components.set(component.componentClass.componentName, set);
 	        }
 	        set.add(component);
 	    };
 	    Scene.prototype.removeComponent = function (component) {
-	        var set = this.components.get(component.constructor.componentName);
+	        var set = this.components.get(component.componentClass.componentName);
 	        assert(set);
 	        assert(set.delete(component));
 	    };
@@ -2456,12 +2450,10 @@
 	    if (scene)
 	        { listener(); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
 	    function ComponentData(componentClassName, predefinedId, predefinedComponentId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
 	        if (predefinedComponentId === void 0) { predefinedComponentId = ''; }
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this.name = componentClassName;
@@ -2592,7 +2584,6 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
-	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = [
@@ -2612,7 +2603,7 @@
 	        return _this;
 	    }
 	    Component.prototype.makeUpAName = function () {
-	        return this.class.componentName;
+	        return this.componentClass.componentName;
 	    };
 	    Component.prototype.delete = function () {
 	        // Component.delete never returns false because entity doesn't have components as children
@@ -2624,7 +2615,7 @@
 	    Component.prototype._addEventListener = function (functionName) {
 	        var func = this[functionName];
 	        var self = this;
-	        var performanceName = 'Component: ' + this.class.componentName;
+	        var performanceName = 'Component: ' + this.componentClass.componentName;
 	        this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
 	            // @ifndef OPTIMIZE
 	            start(performanceName);
@@ -2641,23 +2632,23 @@
 	        var this$1 = this;
 
 	        var _this = this;
-	        this.class.requirements.forEach(function (r) {
+	        this.componentClass.requirements.forEach(function (r) {
 	            _this[r] = _this.entity.getComponent(r);
-	            assert(_this[r], _this.class.componentName + " requires component " + r + " but it is not found");
+	            assert(_this[r], _this.componentClass.componentName + " requires component " + r + " but it is not found");
 	        });
 	        this.forEachChild('com', function (c) { return c._preInit(); });
 	        for (var i = 0; i < automaticSceneEventListeners.length; ++i) {
 	            if (typeof this$1[automaticSceneEventListeners[i]] === 'function')
 	                { this$1._addEventListener(automaticSceneEventListeners[i]); }
 	        }
-	        if (this.class.componentName !== 'Transform' && this.scene)
+	        if (this.componentClass.componentName !== 'Transform' && this.scene)
 	            { this.scene.addComponent(this); }
 	        try {
 	            if (typeof this.preInit === 'function')
 	                { this.preInit(); }
 	        }
 	        catch (e) {
-	            console.error(this.entity, this.class.componentName, 'preInit', e);
+	            console.error(this.entity, this.componentClass.componentName, 'preInit', e);
 	        }
 	    };
 	    // In preInit you can access other components and know that their preInit is done.
@@ -2668,7 +2659,7 @@
 	                { this.init(); }
 	        }
 	        catch (e) {
-	            console.error(this.entity, this.class.componentName, 'init', e);
+	            console.error(this.entity, this.componentClass.componentName, 'init', e);
 	        }
 	    };
 	    Component.prototype._sleep = function () {
@@ -2677,9 +2668,9 @@
 	                { this.sleep(); }
 	        }
 	        catch (e) {
-	            console.error(this.entity, this.class.componentName, 'sleep', e);
+	            console.error(this.entity, this.componentClass.componentName, 'sleep', e);
 	        }
-	        if (this.class.componentName !== 'Transform' && this.scene)
+	        if (this.componentClass.componentName !== 'Transform' && this.scene)
 	            { this.scene.removeComponent(this); }
 	        this.forEachChild('com', function (c) { return c._sleep(); });
 	        this._listenRemoveFunctions.forEach(function (f) { return f(); });
@@ -2690,7 +2681,7 @@
 	    };
 	    Component.prototype.createComponentData = function () {
 	        var _this = this;
-	        var componentName = this.class.componentName;
+	        var componentName = this.componentClass.componentName;
 	        var propertyTypes = this.class._propertyTypes;
 	        var componentData = new ComponentData(componentName);
 	        var children = [];
@@ -2704,7 +2695,7 @@
 	    };
 	    Component.prototype.toJSON = function () {
 	        return Object.assign(_super.prototype.toJSON.call(this), {
-	            n: this.class.componentName,
+	            n: this.componentClass.componentName,
 	            cid: this._componentId
 	        });
 	    };
@@ -2781,7 +2772,7 @@
 	        });
 	        PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
 	        prototype._name = name;
-	        Com.prototype.class = Com;
+	        Com.prototype.componentClass = Com;
 	        Object.assign(Com.prototype, prototype);
 	        componentClasses.set(Com.componentName, Com);
 	        return Com;
@@ -2795,13 +2786,32 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
+
+	var serializables = {};
+	function addSerializable(serializable) {
+	    // @ifndef OPTIMIZE
+	    if (serializables[serializable.id] !== undefined)
+	        { assert(false, ("Serializable id clash " + (serializable.id))); }
+	    // @endif
+	    serializables[serializable.id] = serializable;
+	}
+	changeDispacher.addSerializable = addSerializable;
+	function getSerializable$1(id) {
+	    return serializables[id] || null;
+	}
+	function removeSerializable(id) {
+	    /* When deleting a scene, this function is called a lot of times
+	    if (!serializables[id])
+	        throw new Error('Serializable not found!');
+	    */
+	    delete serializables[id];
+	}
+	changeDispacher.removeSerializable = removeSerializable;
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
 	    __extends(Entity, _super);
 	    function Entity(predefinedId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this.components = new Map(); // name -> array
 	        _this.sleeping = false;
@@ -2960,6 +2970,7 @@
 	            proto: this.prototype.id
 	        });
 	    };
+	    Entity.ENTITY_CREATION_DEBUGGING = false;
 	    return Entity;
 	}(Serializable));
 	Object.defineProperty(Entity.prototype, 'position', {
@@ -2974,7 +2985,7 @@
 	    if (Entity.ENTITY_CREATION_DEBUGGING)
 	        { console.log('creating entity from json', json); }
 	    var entity = new Entity(json.id);
-	    entity.prototype = getSerializable(json.proto);
+	    entity.prototype = getSerializable$1(json.proto);
 	    if (Entity.ENTITY_CREATION_DEBUGGING)
 	        { console.log('created entity from json', entity); }
 	    if (json.comp) {
@@ -2982,16 +2993,14 @@
 	    }
 	    return entity;
 	});
-	Entity.ENTITY_CREATION_DEBUGGING = false;
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
-	    createPropertyType('name', 'No name', createPropertyType.string)
+	    Prop('name', 'No name', Prop.string)
 	];
 	var Prototype = /** @class */ (function (_super) {
 	    __extends(Prototype, _super);
-	    function Prototype() {
-	        var _this = _super.apply(this, arguments) || this;
+	    function Prototype(predefinedId) {
+	        var _this = _super.call(this, predefinedId) || this;
 	        _this.previouslyCreatedEntity = null;
 	        return _this;
 	    }
@@ -2999,9 +3008,11 @@
 	        return this.name || 'Prototype';
 	    };
 	    Prototype.prototype.addChild = function (child) {
-	        if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
+	        // if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
+	        if (child instanceof PropertyOwner && !child.componentClass.allowMultiple)
 	            { assert(this.findChild('cda', function (cda) { return cda.componentId === child.componentId; }) === null, "Can't have multiple " + child.name + " components. See Component.allowMultiple"); }
 	        _super.prototype.addChild.call(this, child);
+	        return this;
 	    };
 	    Prototype.prototype.getParentPrototype = function () {
 	        return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
@@ -3217,40 +3228,16 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
-
-	var serializables = {};
-	function addSerializable(serializable) {
-	    // @ifndef OPTIMIZE
-	    if (serializables[serializable.id] !== undefined)
-	        { assert(false, ("Serializable id clash " + (serializable.id))); }
-	    // @endif
-	    serializables[serializable.id] = serializable;
-	}
-	changeDispacher.addSerializable = addSerializable;
-	function getSerializable$1(id) {
-	    return serializables[id] || null;
-	}
-	function removeSerializable(id) {
-	    /* When deleting a scene, this function is called a lot of times
-	    if (!serializables[id])
-	        throw new Error('Serializable not found!');
-	    */
-	    delete serializables[id];
-	}
-	changeDispacher.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
 	var EntityPrototype = /** @class */ (function (_super) {
 	    __extends(EntityPrototype, _super);
 	    function EntityPrototype(predefinedId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
-	        var _this = _super.apply(this, arguments) || this;
-	        // this._parent is level, not prototype. We need a link to parent-prototype.
+	        var _this = _super.call(this, predefinedId) || this;
 	        _this.prototype = null;
 	        return _this;
+	        // this._parent is level, not prototype. We need a link to parent-prototype.
 	    }
 	    EntityPrototype.prototype.makeUpAName = function () {
 	        var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
@@ -3343,7 +3330,7 @@
 	        });
 	        if (children.length > 0)
 	            { json.c = children.map(function (child) { return child.toJSON(); }); }
-	        var floatToJSON = createPropertyType.float().toJSON;
+	        var floatToJSON = Prop.float().toJSON;
 	        var handleProperty = function (prp) {
 	            if (prp.name === 'name') {
 	                if (prp.value)
@@ -3487,14 +3474,12 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
 	    __extends(Prefab, _super);
 	    function Prefab(predefinedId) {
-	        if (predefinedId === void 0) { predefinedId = false; }
-	        return _super.apply(this, arguments) || this;
+	        return _super.call(this, predefinedId) || this;
 	    }
 	    Prefab.prototype.makeUpAName = function () {
 	        var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
@@ -3549,15 +3534,14 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
-	    createPropertyType('name', 'No name', createPropertyType.string)
+	    Prop('name', 'No name', Prop.string)
 	];
 	var Level = /** @class */ (function (_super) {
 	    __extends(Level, _super);
 	    function Level(predefinedId) {
-	        return _super.apply(this, arguments) || this;
+	        return _super.call(this, predefinedId) || this;
 	    }
 	    Level.prototype.createScene = function (predefinedSceneObject) {
 	        if (predefinedSceneObject === void 0) { predefinedSceneObject = false; }
@@ -3573,18 +3557,15 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
 	    icon: 'fa-dot-circle-o',
 	    allowMultiple: false,
 	    properties: [
-	        createPropertyType('position', new Vector(0, 0), createPropertyType.vector),
-	        createPropertyType('scale', new Vector(1, 1), createPropertyType.vector),
-	        createPropertyType('angle', 0, createPropertyType.float, createPropertyType.float.modulo(0, Math.PI * 2), createPropertyType.flagDegreesInEditor)
+	        Prop('position', new Vector(0, 0), Prop.vector),
+	        Prop('scale', new Vector(1, 1), Prop.vector),
+	        Prop('angle', 0, Prop.float, Prop.float.modulo(0, Math.PI * 2), Prop.flagDegreesInEditor)
 	    ],
 	    prototype: {
 	        constructor: function () {
@@ -3661,7 +3642,6 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3670,9 +3650,9 @@
 	    icon: 'fa-dot-circle-o',
 	    allowMultiple: false,
 	    properties: [
-	        createPropertyType('positionVariance', new Vector(0, 0), createPropertyType.vector),
-	        createPropertyType('scaleVariance', new Vector(0, 0), createPropertyType.vector),
-	        createPropertyType('angleVariance', 0, createPropertyType.float, createPropertyType.float.range(0, Math.PI), createPropertyType.flagDegreesInEditor)
+	        Prop('positionVariance', new Vector(0, 0), Prop.vector),
+	        Prop('scaleVariance', new Vector(0, 0), Prop.vector),
+	        Prop('angleVariance', 0, Prop.float, Prop.float.range(0, Math.PI), Prop.flagDegreesInEditor)
 	    ],
 	    prototype: {
 	        onStart: function () {
@@ -3685,7 +3665,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3694,14 +3673,14 @@
 	    allowMultiple: true,
 	    description: 'Draws shape on the screen.',
 	    properties: [
-	        createPropertyType('type', 'rectangle', createPropertyType.enum, createPropertyType.enum.values('rectangle', 'circle', 'convex')),
-	        createPropertyType('radius', 20, createPropertyType.float, createPropertyType.visibleIf('type', ['circle', 'convex'])),
-	        createPropertyType('size', new Vector(20, 20), createPropertyType.vector, createPropertyType.visibleIf('type', 'rectangle')),
-	        createPropertyType('points', 3, createPropertyType.int, createPropertyType.int.range(3, 16), createPropertyType.visibleIf('type', 'convex')),
-	        createPropertyType('topPointDistance', 0.5, createPropertyType.float, createPropertyType.float.range(0.001, 1), createPropertyType.visibleIf('type', 'convex'), 'Only works with at most 8 points'),
-	        createPropertyType('fillColor', new Color(222, 222, 222), createPropertyType.color),
-	        createPropertyType('borderColor', new Color(255, 255, 255), createPropertyType.color),
-	        createPropertyType('borderWidth', 1, createPropertyType.float, createPropertyType.float.range(0, 30))
+	        Prop('type', 'rectangle', Prop.enum, Prop.enum.values('rectangle', 'circle', 'convex')),
+	        Prop('radius', 20, Prop.float, Prop.visibleIf('type', ['circle', 'convex'])),
+	        Prop('size', new Vector(20, 20), Prop.vector, Prop.visibleIf('type', 'rectangle')),
+	        Prop('points', 3, Prop.int, Prop.int.range(3, 16), Prop.visibleIf('type', 'convex')),
+	        Prop('topPointDistance', 0.5, Prop.float, Prop.float.range(0.001, 1), Prop.visibleIf('type', 'convex'), 'Only works with at most 8 points'),
+	        Prop('fillColor', new Color(222, 222, 222), Prop.color),
+	        Prop('borderColor', new Color(255, 255, 255), Prop.color),
+	        Prop('borderWidth', 1, Prop.float, Prop.float.range(0, 30))
 	    ],
 	    prototype: {
 	        init: function () {
@@ -3711,11 +3690,11 @@
 	                /*
 	                this.sprite.x = transform.globalPosition.x;
 	                this.sprite.y = transform.globalPosition.y;
-	                
+
 	                // rotation setter function has a function call. lets optimize.
 	                if (this.sprite.rotation !== transform.globalAngle)
 	                    this.sprite.rotation = transform.globalAngle;
-	                
+
 	                this.sprite.scale.set(transform.globalScale.x, transform.globalScale.y);
 	                */
 	            });
@@ -3859,7 +3838,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3900,16 +3878,15 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
 	    category: 'Logic',
 	    description: 'Spawns types to world.',
 	    properties: [
-	        createPropertyType('typeName', '', createPropertyType.string),
-	        createPropertyType('trigger', 'start', createPropertyType.enum, createPropertyType.enum.values('start', 'interval')),
-	        createPropertyType('interval', 10, createPropertyType.float, createPropertyType.float.range(0.1, 1000000), createPropertyType.visibleIf('trigger', 'interval'), 'Interval in seconds')
+	        Prop('typeName', '', Prop.string),
+	        Prop('trigger', 'start', Prop.enum, Prop.enum.values('start', 'interval')),
+	        Prop('interval', 10, Prop.float, Prop.float.range(0.1, 1000000), Prop.visibleIf('trigger', 'interval'), 'Interval in seconds')
 	    ],
 	    prototype: {
 	        constructor: function () {
@@ -3951,7 +3928,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -3959,9 +3935,9 @@
 	    category: 'Logic',
 	    allowMultiple: true,
 	    properties: [
-	        createPropertyType('trigger', 'playerComesNear', createPropertyType.enum, createPropertyType.enum.values('playerComesNear')),
-	        createPropertyType('radius', 40, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('trigger', 'playerComesNear')),
-	        createPropertyType('action', 'win', createPropertyType.enum, createPropertyType.enum.values('win'))
+	        Prop('trigger', 'playerComesNear', Prop.enum, Prop.enum.values('playerComesNear')),
+	        Prop('radius', 40, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('trigger', 'playerComesNear')),
+	        Prop('action', 'win', Prop.enum, Prop.enum.values('win'))
 	    ],
 	    prototype: {
 	        preInit: function () {
@@ -3999,7 +3975,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4018,12 +3993,12 @@
 	    icon: 'fa-stop',
 	    allowMultiple: false,
 	    properties: [
-	        createPropertyType('type', 'dynamic', createPropertyType.enum, createPropertyType.enum.values('dynamic', 'static')),
-	        createPropertyType('density', 1, createPropertyType.float, createPropertyType.float.range(0, 100), createPropertyType.visibleIf('type', 'dynamic')),
-	        createPropertyType('drag', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'dynamic')),
-	        createPropertyType('rotationalDrag', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('type', 'dynamic')),
-	        createPropertyType('bounciness', 0, createPropertyType.float, createPropertyType.float.range(0, 1)),
-	        createPropertyType('friction', 0.1, createPropertyType.float, createPropertyType.float.range(0, 1))
+	        Prop('type', 'dynamic', Prop.enum, Prop.enum.values('dynamic', 'static')),
+	        Prop('density', 1, Prop.float, Prop.float.range(0, 100), Prop.visibleIf('type', 'dynamic')),
+	        Prop('drag', 0.1, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'dynamic')),
+	        Prop('rotationalDrag', 0.1, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('type', 'dynamic')),
+	        Prop('bounciness', 0, Prop.float, Prop.float.range(0, 1)),
+	        Prop('friction', 0.1, Prop.float, Prop.float.range(0, 1))
 	    ],
 	    requirements: [
 	        'Shape'
@@ -4196,7 +4171,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4206,7 +4180,7 @@
 	    icon: 'fa-bars',
 	    requirements: ['Transform'],
 	    properties: [
-	        createPropertyType('lifetime', 3, createPropertyType.float, createPropertyType.float.range(0.01, 1000), 'Life time seconds')
+	        Prop('lifetime', 3, Prop.float, Prop.float.range(0.01, 1000), 'Life time seconds')
 	    ],
 	    parentClass: Component,
 	    prototype: {
@@ -4222,7 +4196,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4230,24 +4203,24 @@
 	    description: 'Particle engine gives eye candy.',
 	    allowMultiple: true,
 	    properties: [
-	        createPropertyType('startColor', new Color('#68c07f'), createPropertyType.color),
-	        createPropertyType('endColor', new Color('#59abc0'), createPropertyType.color),
-	        createPropertyType('alpha', 1, createPropertyType.float, createPropertyType.float.range(0, 1)),
-	        createPropertyType('particleSize', 10, createPropertyType.float, createPropertyType.float.range(1, 100)),
-	        createPropertyType('particleCount', 30, createPropertyType.int, createPropertyType.int.range(0, 10000)),
-	        createPropertyType('particleLifetime', 1, createPropertyType.float, createPropertyType.float.range(0.1, 10), 'in seconds'),
-	        createPropertyType('particleHardness', 0.2, createPropertyType.float, createPropertyType.float.range(0, 1)),
-	        createPropertyType('blendMode', 'add', createPropertyType.enum, createPropertyType.enum.values('add', 'normal')),
-	        createPropertyType('spawnType', 'circle', createPropertyType.enum, createPropertyType.enum.values('circle', 'rectangle')),
-	        createPropertyType('spawnRadius', 20, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('spawnType', 'circle')),
-	        createPropertyType('spawnRandom', 0.5, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('spawnType', 'circle')),
-	        createPropertyType('spawnRect', new Vector(50, 50), createPropertyType.vector, createPropertyType.visibleIf('spawnType', 'rectangle')),
-	        createPropertyType('speedToOutside', 50, createPropertyType.float, createPropertyType.float.range(-1000, 1000), createPropertyType.visibleIf('spawnType', 'circle')),
-	        createPropertyType('speed', new Vector(0, 0), createPropertyType.vector),
-	        createPropertyType('speedRandom', 0, createPropertyType.float, createPropertyType.float.range(0, 1000), 'Max random velocity to random direction'),
-	        createPropertyType('acceleration', new Vector(0, 0), createPropertyType.vector),
-	        createPropertyType('globalCoordinates', true, createPropertyType.bool),
-	        createPropertyType('followObject', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('globalCoordinates', true))
+	        Prop('startColor', new Color('#68c07f'), Prop.color),
+	        Prop('endColor', new Color('#59abc0'), Prop.color),
+	        Prop('alpha', 1, Prop.float, Prop.float.range(0, 1)),
+	        Prop('particleSize', 10, Prop.float, Prop.float.range(1, 100)),
+	        Prop('particleCount', 30, Prop.int, Prop.int.range(0, 10000)),
+	        Prop('particleLifetime', 1, Prop.float, Prop.float.range(0.1, 10), 'in seconds'),
+	        Prop('particleHardness', 0.2, Prop.float, Prop.float.range(0, 1)),
+	        Prop('blendMode', 'add', Prop.enum, Prop.enum.values('add', 'normal')),
+	        Prop('spawnType', 'circle', Prop.enum, Prop.enum.values('circle', 'rectangle')),
+	        Prop('spawnRadius', 20, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('spawnType', 'circle')),
+	        Prop('spawnRandom', 0.5, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('spawnType', 'circle')),
+	        Prop('spawnRect', new Vector(50, 50), Prop.vector, Prop.visibleIf('spawnType', 'rectangle')),
+	        Prop('speedToOutside', 50, Prop.float, Prop.float.range(-1000, 1000), Prop.visibleIf('spawnType', 'circle')),
+	        Prop('speed', new Vector(0, 0), Prop.vector),
+	        Prop('speedRandom', 0, Prop.float, Prop.float.range(0, 1000), 'Max random velocity to random direction'),
+	        Prop('acceleration', new Vector(0, 0), Prop.vector),
+	        Prop('globalCoordinates', true, Prop.bool),
+	        Prop('followObject', 0.4, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('globalCoordinates', true))
 	    ],
 	    prototype: {
 	        init: function () {
@@ -4507,7 +4480,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4517,7 +4489,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4526,15 +4497,15 @@
 	    category: 'Dynamics',
 	    allowMultiple: false,
 	    properties: [
-	        createPropertyType('type', 'player', createPropertyType.enum, createPropertyType.enum.values('player', 'AI')),
-	        createPropertyType('keyboardControls', 'arrows or WASD', createPropertyType.enum, createPropertyType.enum.values('arrows', 'WASD', 'arrows or WASD')),
-	        createPropertyType('controlType', 'jumper', createPropertyType.enum, createPropertyType.enum.values('jumper', 'top down' /*, 'space ship'*/)),
-	        createPropertyType('jumpSpeed', 300, createPropertyType.float, createPropertyType.float.range(0, 1000), createPropertyType.visibleIf('controlType', 'jumper')),
-	        createPropertyType('jumpAddedToVelocity', 0.4, createPropertyType.float, createPropertyType.float.range(0, 1), createPropertyType.visibleIf('controlType', 'jumper'), '1 means that jump speed is added to y velocity when object has y velocity.'),
-	        createPropertyType('breakInTheAir', true, createPropertyType.bool, createPropertyType.visibleIf('controlType', 'jumper')),
-	        createPropertyType('speed', 200, createPropertyType.float, createPropertyType.float.range(0, 1000)),
-	        createPropertyType('acceleration', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000)),
-	        createPropertyType('breaking', 2000, createPropertyType.float, createPropertyType.float.range(0, 10000))
+	        Prop('type', 'player', Prop.enum, Prop.enum.values('player', 'AI')),
+	        Prop('keyboardControls', 'arrows or WASD', Prop.enum, Prop.enum.values('arrows', 'WASD', 'arrows or WASD')),
+	        Prop('controlType', 'jumper', Prop.enum, Prop.enum.values('jumper', 'top down' /*, 'space ship'*/)),
+	        Prop('jumpSpeed', 300, Prop.float, Prop.float.range(0, 1000), Prop.visibleIf('controlType', 'jumper')),
+	        Prop('jumpAddedToVelocity', 0.4, Prop.float, Prop.float.range(0, 1), Prop.visibleIf('controlType', 'jumper'), '1 means that jump speed is added to y velocity when object has y velocity.'),
+	        Prop('breakInTheAir', true, Prop.bool, Prop.visibleIf('controlType', 'jumper')),
+	        Prop('speed', 200, Prop.float, Prop.float.range(0, 1000)),
+	        Prop('acceleration', 2000, Prop.float, Prop.float.range(0, 10000)),
+	        Prop('breaking', 2000, Prop.float, Prop.float.range(0, 10000))
 	    ],
 	    prototype: {
 	        init: function () {
@@ -4719,9 +4690,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4764,7 +4732,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -4907,7 +4874,6 @@
 	    });
 	}
 	window.addEventListener('load', connect);
-	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -4944,7 +4910,6 @@
 	window.addEventListener('resize', resizeCanvas);
 	listenSceneCreation(resizeCanvas);
 	var MAX_PIXELS = 1000 * 600;
-	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5020,7 +4985,6 @@
 	    };
 	    return TouchControl;
 	}());
-	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5063,7 +5027,7 @@
 	    return touchCoordinates;
 	}
 	listenSceneCreation(function () {
-	    scene.listen('onStart', function () { return positionControls(); });
+	    scene.listen(GameEvent.SCENE_START, function () { return positionControls(); });
 	});
 	function positionControls() {
 	    if (!scene)
@@ -5155,7 +5119,6 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
-	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5193,7 +5156,6 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

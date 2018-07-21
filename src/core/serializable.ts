@@ -318,6 +318,7 @@ export default class Serializable {
 			obj = fromJSON(json);
 		} catch (e) {
 			if (isClient) {
+				console.error(e);
 				if (!window.force)
 					debugger; // Type 'force = true' in console to ignore failed imports.
 

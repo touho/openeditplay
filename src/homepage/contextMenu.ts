@@ -6,7 +6,6 @@ export class ContextMenu {
 	el: HTMLElement;
 	list: List;
 
-
 	constructor(triggerElement, items) {
 		let triggerBounds = triggerElement.getBoundingClientRect();
 

@@ -11,24 +11,22 @@ export interface PropertyOwnerClass {
 }
 
 export default class PropertyOwner extends Serializable {
-	_properties: { [name: string]: Property };
-	name: string = '';
-	class: PropertyOwnerClass = null;
+	_properties: { [name: string]: Property } = {};
+	_propertyOwnerClass: PropertyOwnerClass; // use prototype's value
 
 	constructor(predefinedId?: string) {
 		super(predefinedId);
-		assert(Array.isArray(this.class._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
-		this._properties = {};
+		assert(Array.isArray(this._propertyOwnerClass._propertyTypes), 'call PropertyOwner.defineProperties after class definition');
 	}
 	makeUpAName() {
-		return this.name || 'PropertyOwner';
+		return (this as any).name || 'PropertyOwner';
 	}
 	// Just a helper
 	initWithPropertyValues(values = {}) {
 		let children = [];
 
 		Object.keys(values).forEach(propName => {
-			let propertyType = this.class._propertyTypesByName[propName];
+			let propertyType = this._propertyOwnerClass._propertyTypesByName[propName];
 			assert(propertyType, 'Invalid property ' + propName);
 			children.push(propertyType.createProperty({
 				value: values[propName]
@@ -72,7 +70,7 @@ export default class PropertyOwner extends Serializable {
 		// Make sure all PropertyTypes have a matching Property
 		let nameToProp = {};
 		propChildren.forEach(c => nameToProp[c.name] = c);
-		this.class._propertyTypes.forEach(propertyType => {
+		this._propertyOwnerClass._propertyTypes.forEach(propertyType => {
 			if (!nameToProp[propertyType.name])
 				propChildren.push(propertyType.createProperty());
 		});
@@ -81,15 +79,15 @@ export default class PropertyOwner extends Serializable {
 		return this;
 	}
 	addChild(child: Serializable): PropertyOwner {
-		assert(this._state & Serializable.STATE_INIT, this.makeUpAName() || this.constructor + ' requires that initWithChildren will be called before addChild');
+		assert(this._state & Serializable.STATE_INIT, this.constructor + ' requires that initWithChildren will be called before addChild');
 		super.addChild(child);
 		if (child.threeLetterType === 'prp') {
 			if (!child.propertyType) {
-				if (!this.class._propertyTypesByName[child.name]) {
+				if (!this._propertyOwnerClass._propertyTypesByName[child.name]) {
 					console.log('Property of that name not defined', this.id, child, this);
 					return;
 				}
-				child.setPropertyType(this.class._propertyTypesByName[child.name]);
+				child.setPropertyType(this._propertyOwnerClass._propertyTypesByName[child.name]);
 			}
 			assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
 			this._properties[child.propertyType.name] = child;
@@ -112,6 +110,7 @@ export default class PropertyOwner extends Serializable {
 	}
 
 	static defineProperties(Class: Function, propertyTypes) {
+		Class.prototype._propertyOwnerClass = Class; // TEST
 		let ClassAsTypeHolder = Class as any as PropertyOwnerClass;
 		ClassAsTypeHolder._propertyTypes = propertyTypes;
 		ClassAsTypeHolder._propertyTypesByName = {};
@@ -121,6 +120,8 @@ export default class PropertyOwner extends Serializable {
 			ClassAsTypeHolder._propertyTypesByName[propertyTypeName] = propertyType;
 			Object.defineProperty(Class.prototype, propertyTypeName, {
 				get() {
+					if  (!this._properties[propertyTypeName])
+					debugger;
 					return this._properties[propertyTypeName].value;
 				},
 				set(value) {

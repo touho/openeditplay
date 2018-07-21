@@ -10,10 +10,10 @@ import Vector from '../util/vector';
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
 export default class EntityPrototype extends Prototype {
-	constructor(predefinedId = false) {
-		super(...arguments);
+	prototype: Prototype = null;
+	constructor(predefinedId?) {
+		super(predefinedId);
 		// this._parent is level, not prototype. We need a link to parent-prototype.
-		this.prototype = null;
 	}
 
 	makeUpAName() {

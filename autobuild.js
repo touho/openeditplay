@@ -270,7 +270,9 @@ function autobuildJs(entry, destination, options) {
 			case 'ERROR':
 				break;
 			case 'END':
-				console.log(`Built ${destination} (${event.duration} ms)`);
+			console.log('event', event);
+				// console.log(`Built ${destination} (${event.duration} ms)`);
+				console.log(`Built ${destination}`);
 				if (options.copyTo) {
 					copy(destination + '*', options.copyTo);
 				}
