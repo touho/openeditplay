@@ -53,7 +53,7 @@ export class Component extends PropertyOwner {
 		super.delete();
 		return true;
 	}
-	_addEventListener(functionName) {
+	_addEventListener(functionName: string) {
 		let func = this[functionName];
 		let self = this;
 		let performanceName = 'Component: ' + this.componentClass.componentName;

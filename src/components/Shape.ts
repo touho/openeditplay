@@ -22,20 +22,19 @@ Component.register({
 	prototype: {
 		init() {
 			this.initSprite();
-
 			this.Transform.listen('globalTransformChanged', transform => {
 				/*
 				this.sprite.x = transform.globalPosition.x;
 				this.sprite.y = transform.globalPosition.y;
-				
+
 				// rotation setter function has a function call. lets optimize.
 				if (this.sprite.rotation !== transform.globalAngle)
 					this.sprite.rotation = transform.globalAngle;
-				
+
 				this.sprite.scale.set(transform.globalScale.x, transform.globalScale.y);
 				*/
 			});
-			
+
 			/*
 			this.listenProperty(this.Transform, 'position', position => {
 				this.sprite.x = position.x;
@@ -50,9 +49,9 @@ Component.register({
 			let redrawGraphics = () => {
 				this.updateTexture();
 			};
-			
+
 			// this.listenProperty(this.Transform, 'scale', redrawGraphics);
-			
+
 			let propertiesThatRequireRedraw = [
 				'type',
 				'radius',
@@ -83,7 +82,7 @@ Component.register({
 		getTextureAndAnchor() {
 			let hash = this.createPropertyHash();// + this.Transform.scale;
 			let textureAndAnchor = getHashedTextureAndAnchor(hash);
-			
+
 			if (!textureAndAnchor) {
 				let graphics = this.createGraphics();
 				textureAndAnchor = generateTextureAndAnchor(graphics, hash);
@@ -94,7 +93,7 @@ Component.register({
 		createGraphics() {
 			let scale = new Vector(1, 1);// this.Transform.scale;
 			let graphics = new PIXI.Graphics();
-			
+
 			if (this.type === 'rectangle') {
 				let
 					x = -this.size.x / 2 * scale.x,
@@ -108,7 +107,7 @@ Component.register({
 				graphics.endFill();
 			} else if (this.type === 'circle') {
 				let averageScale = (scale.x + scale.y) / 2;
-				
+
 				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
 				graphics.beginFill(this.fillColor.toHexNumber());
 				graphics.drawCircle(0, 0, this.radius * averageScale);
@@ -116,19 +115,19 @@ Component.register({
 			} else if (this.type === 'convex') {
 				let path = this.getConvexPoints(PIXI.Point, false);
 				path.push(path[0]); // Close the path
-				
+
 				graphics.lineStyle(this.borderWidth, this.borderColor.toHexNumber(), 1);
 				graphics.beginFill(this.fillColor.toHexNumber());
 				graphics.drawPolygon(path);
 				graphics.endFill();
 			}
-			
+
 			return graphics;
 		},
 		getConvexPoints(vectorClass = Vector, takeScaleIntoAccount = true) {
 			const centerAngle = Math.PI * 2 / this.points;
 			const isNotEventPolygon = this.topPointDistance !== 0.5 && this.points <= 8;
-			
+
 			let minDistanceMultiplier;
 			let maxDistanceMultiplier;
 			if (isNotEventPolygon) {

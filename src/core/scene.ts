@@ -9,8 +9,9 @@ import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
 import events from "../util/events";
 import Level from './level';
+import { GameEvent } from './gameEvents';
 
-let scene = null;
+let scene: Scene = null;
 export { scene };
 
 const physicsOptions = {
@@ -187,7 +188,7 @@ export default class Scene extends Serializable {
 		if (this.won) {
 			this.pause();
 			this.time = 0;
-			game.dispatch('levelCompleted');
+			game.dispatch(GameEvent.SCENE_LEVEL_COMPLETED);
 			this.reset();
 		}
 
@@ -209,7 +210,7 @@ export default class Scene extends Serializable {
 
 		this.renderer.render(this.stage, null, false);
 
-		events.dispatch('scene draw', scene);
+		events.dispatch(GameEvent.SCENE_DRAW, scene);
 		performanceTool.eventHappened('Draws');
 	}
 
@@ -234,7 +235,7 @@ export default class Scene extends Serializable {
 
 		delete this.resetting;
 
-		this.dispatch('reset');
+		this.dispatch(GameEvent.SCENE_RESET);
 	}
 
 	pause() {
@@ -249,7 +250,7 @@ export default class Scene extends Serializable {
 		}
 		this.animationFrameId = null;
 
-		this.dispatch('pause');
+		this.dispatch(GameEvent.SCENE_PAUSE);
 	}
 
 	play() {
@@ -261,9 +262,9 @@ export default class Scene extends Serializable {
 		this.requestAnimFrame();
 
 		if (this.time === 0)
-			this.dispatch('onStart');
+			this.dispatch(GameEvent.SCENE_START);
 
-		this.dispatch('play');
+		this.dispatch(GameEvent.SCENE_PLAY);
 	}
 
 	delete() {

@@ -2,6 +2,7 @@ import assert from '../util/assert';
 import { changeType, addChange } from './change';
 import { isClient } from '../util/environment';
 import * as performanceTool from '../util/performance';
+import { GameEvent } from './gameEvents';
 
 export const changeDispacher = {
 	addSerializable: (serializable: Serializable) => { },
@@ -21,6 +22,8 @@ export function createStringId(threeLetterPrefix = '???', characters = 16) {
 
 let serializableClasses = new Map();
 
+// type Listeners = { [event in GameEvent]: Array<(a?, b?, c?) => void>};
+
 /*
 Serializable lifecycle:
 
@@ -33,7 +36,7 @@ export default class Serializable {
 	threeLetterType: string;
 	isRoot: boolean;
 	_children: Map<string, Array<Serializable>>;
-	_listeners: object;
+	_listeners: { [event in GameEvent]: Array<(a?, b?, c?) => void>};
 	_rootType: string;
 	_parent: Serializable;
 	_alive: boolean;
@@ -245,7 +248,7 @@ export default class Serializable {
 		return obj;
 	}
 	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	listen(event: string, callback: ListenerFunction, priority = 0) {
+	listen(event: GameEvent, callback: (a?, b?, c?) => void, priority = 0) {
 		callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 		if (!this._listeners.hasOwnProperty(event)) {
 			this._listeners[event] = [];
@@ -260,7 +263,7 @@ export default class Serializable {
 				this._listeners[event].splice(index, 1);
 		};
 	}
-	dispatch(event: string, a?, b?, c?) {
+	dispatch(event: GameEvent, a?, b?, c?) {
 		let listeners = this._listeners[event];
 		if (!listeners)
 			return;

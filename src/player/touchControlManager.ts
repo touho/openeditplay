@@ -3,6 +3,7 @@ import {listenSceneCreation, scene} from '../core/scene';
 import Vector from '../util/vector';
 import { default as TouchControl, CONTROL_SIZE } from './TouchControl';
 import debug from './debug'
+import { GameEvent } from '../core/gameEvents';
 
 const ARROW_HITBOX_RADIUS = 110;
 
@@ -54,7 +55,7 @@ function getTouchCoordinates(touchEvent) {
 }
 
 listenSceneCreation(() => {
-	scene.listen('onStart', () => positionControls());
+	scene.listen(GameEvent.SCENE_START, () => positionControls());
 });
 
 function positionControls() {
