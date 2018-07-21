@@ -4,13 +4,13 @@ export const changeGetter = {
 };
 // @endif
 
-export default function assert(condition, message?) {
+export default function assert(condition, ...messages) {
 	// @ifndef OPTIMIZE
 	if (!condition) {
-		console.log('Assert', message, new Error().stack, '\norigin', changeGetter.get());
+		console.log('Assert', ...messages, new Error().stack, '\norigin', changeGetter.get());
 		debugger;
-		if (!window.force)
-			throw new Error(message);
+		if (!window['force'])
+			throw new Error(messages.join('; '));
 	}
 	// @endif
 }

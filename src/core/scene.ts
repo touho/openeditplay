@@ -48,7 +48,7 @@ export default class Scene extends Serializable {
 			}
 		}
 		scene = this;
-		window.scene = this;
+		window['scene'] = this;
 
 		this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 		this.renderer = getRenderer(this.canvas);
@@ -70,7 +70,7 @@ export default class Scene extends Serializable {
 			return 'Scene';
 	}
 
-	loadLevel(level) {
+	loadLevel(level: Level) {
 		this.level = level;
 
 		this.stage = new PIXI.Container();
@@ -197,7 +197,7 @@ export default class Scene extends Serializable {
 		if (this.won) {
 			this.pause();
 			this.time = 0;
-			game.dispatch(GameEvent.SCENE_LEVEL_COMPLETED);
+			game.dispatch(GameEvent.GAME_LEVEL_COMPLETED);
 			this.reset();
 		}
 

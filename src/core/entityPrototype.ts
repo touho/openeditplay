@@ -17,7 +17,7 @@ export default class EntityPrototype extends Prototype {
 	}
 
 	makeUpAName() {
-		let nameProperty = this.findChild('prp', property => property.name === 'name');
+		let nameProperty = this.findChild('prp', (property: Property) => property.name === 'name');
 		if (nameProperty && nameProperty.value)
 			return nameProperty.value;
 		else if (this.prototype)
@@ -27,7 +27,7 @@ export default class EntityPrototype extends Prototype {
 	}
 
 	getTransform() {
-		return this.findChild('cda', cda => cda.name === 'Transform');
+		return this.findChild('cda', (cda: ComponentData) => cda.name === 'Transform');
 	}
 	getParentPrototype() {
 		return this.prototype || null;
@@ -38,25 +38,25 @@ export default class EntityPrototype extends Prototype {
 		let id = obj.id;
 		let children = [];
 		this.forEachChild(null, child => {
-			if (child.threeLetterType === 'prp' && child.name === 'name') {
+			if (child.threeLetterType === 'prp' && (child as Property).name === 'name') {
 				let property = new Property({
-					value: child.propertyType.type.clone(child.value),
-					name: child.name,
-					propertyType: this.propertyType,
+					value: (child as Property).propertyType.type.clone((child as Property).value),
+					name: (child as Property).name,
+					propertyType: (child as Property).propertyType,
 					predefinedId: id + '_n'
 				});
 				children.push(property);
-			} else if (child.threeLetterType === 'cda' && child.name === 'Transform') {
+			} else if (child.threeLetterType === 'cda' && (child as ComponentData).name === 'Transform') {
 				let transform = new ComponentData('Transform', id + '_t');
 
 				// Transform component data always has a position
 				let position = transform.componentClass._propertyTypesByName.position.createProperty({
-					value: child.findChild('prp', prp => prp.name === 'position').value,
+					value: child.findChild('prp', (prp: Property) => prp.name === 'position').value,
 					predefinedId: id + '_p'
 				});
 				transform.addChild(position);
 
-				let oldScaleProperty = child.findChild('prp', prp => prp.name === 'scale');
+				let oldScaleProperty = child.findChild('prp', (prp: Property) => prp.name === 'scale');
 				if (oldScaleProperty) {
 					let scale = transform.componentClass._propertyTypesByName.scale.createProperty({
 						value: oldScaleProperty.value,
@@ -65,7 +65,7 @@ export default class EntityPrototype extends Prototype {
 					transform.addChild(scale);
 				}
 
-				let oldAngleProperty = child.findChild('prp', prp => prp.name === 'angle');
+				let oldAngleProperty = child.findChild('prp', (prp: Property) => prp.name === 'angle');
 				if (oldAngleProperty) {
 					let angle = transform.componentClass._propertyTypesByName.angle.createProperty({
 						value: oldAngleProperty.value,
@@ -76,7 +76,7 @@ export default class EntityPrototype extends Prototype {
 
 				children.push(transform);
 			} else if (child.threeLetterType === 'cda') {
-				children.push(child.clone({ cloneComponentId: true }));
+				children.push((child as ComponentData).clone({ cloneComponentId: true }));
 			} else {
 				children.push(child.clone());
 			}
@@ -96,7 +96,7 @@ export default class EntityPrototype extends Prototype {
 		// Below optimization reduces size 88%. child id's have to be generated based on this.id
 
 		let Transform = this.getTransform();
-		let json = {
+		let json: any = {
 			id: this.id
 		};
 		if (this.prototype)

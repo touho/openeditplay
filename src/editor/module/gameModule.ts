@@ -3,9 +3,9 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { game } from '../../core/game';
 import PropertyOwner from '../../core/propertyOwner'
-import { TopButton } from './topBar'
+import { TopButton } from './topBarModule'
 
-class Game extends Module {
+class GameModule extends Module {
 	propertyEditor: PropertyEditor;
 
 	constructor() {
@@ -22,10 +22,11 @@ class Game extends Module {
 		this.name = 'Game';
 	}
 	update() {
-		if (game)
+		if (game) {
 			this.propertyEditor.update([game], 'gam');
-		else
+		} else {
 			return false;
+		}
 	}
 	activate(command, parameter) {
 		if (command === 'focusOnProperty') {
@@ -34,4 +35,4 @@ class Game extends Module {
 	}
 }
 
-Module.register(Game, 'right');
+Module.register(GameModule, 'right');

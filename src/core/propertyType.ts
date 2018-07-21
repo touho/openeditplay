@@ -87,7 +87,7 @@ export default Prop;
 
 // if value is string, property must be value
 // if value is an array, property must be one of the values
-Prop.visibleIf = function (propertyName, value) {
+Prop.visibleIf = function (propertyName: string, value: any) {
 	assert(typeof propertyName === 'string' && propertyName.length);
 	assert(typeof value !== 'undefined');
 	return {

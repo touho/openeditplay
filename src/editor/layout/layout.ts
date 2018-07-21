@@ -3,8 +3,9 @@ import ModuleContainer from './moduleContainer';
 
 export default class Layout implements RedomComponent {
 	el: HTMLElement;
+	moduleContainers: Array<ModuleContainer> = [];
+
 	constructor() {
-		this.moduleContainers = [];
 		let addContainer = (...args) => {
 			let container = new ModuleContainer(...args);
 			this.moduleContainers.push(container);

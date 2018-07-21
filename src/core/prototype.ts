@@ -1,13 +1,15 @@
 import Serializable from './serializable';
 import assert from '../util/assert';
 import { getSerializable } from './serializableManager';
-import Prop from './propertyType';
+import Prop, { PropertyType } from './propertyType';
 import PropertyOwner from './propertyOwner';
 import ComponentData from './componentData';
 import Entity from './entity';
 import { game } from './game';
 import { Component } from './component';
 import events from "../util/events";
+import EntityPrototype from './entityPrototype';
+import Level from './level';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -15,6 +17,11 @@ let propertyTypes = [
 
 export default class Prototype extends PropertyOwner {
 	previouslyCreatedEntity: Entity;
+	name: string; // Hack to reveal PropertyOwner property
+
+	static _propertyTypes: Array<PropertyType>;
+	static _propertyTypesByName: { [s: string]: PropertyType };
+
 	constructor(predefinedId?: string) {
 		super(predefinedId);
 
@@ -27,13 +34,13 @@ export default class Prototype extends PropertyOwner {
 
 	addChild(child: Serializable): Prototype {
 		// if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
-		if (child instanceof PropertyOwner && !child.componentClass.allowMultiple)
-			assert(this.findChild('cda', cda => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
+		if (child instanceof ComponentData && !(child as ComponentData).componentClass.allowMultiple)
+			assert(this.findChild('cda', (cda: ComponentData) => cda.componentId === child.componentId) === null, `Can't have multiple ${child.name} components. See Component.allowMultiple`);
 		super.addChild(child);
 		return this;
 	}
-	getParentPrototype() {
-		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
+	getParentPrototype() : Prototype {
+		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent as Prototype : null;
 	}
 
 	/*
@@ -80,9 +87,9 @@ export default class Prototype extends PropertyOwner {
 	}
 
 	createAndAddPropertyForComponentData(inheritedComponentData, propertyName, propertyValue) {
-		let propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
+		let propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName] as PropertyType;
 		assert(propertyType, 'Invalid propertyName', propertyName, inheritedComponentData);
-		let componentData = this.findChild('cda', componentData => componentData.componentId === inheritedComponentData.componentId);
+		let componentData = this.findChild('cda', (componentData: ComponentData) => componentData.componentId === inheritedComponentData.componentId);
 		let componentDataIsNew = false;
 		if (!componentData) {
 			console.log('no component data. create one', this, inheritedComponentData);
@@ -107,7 +114,7 @@ export default class Prototype extends PropertyOwner {
 	}
 
 	findComponentDataByComponentId(componentId, alsoFindFromParents = false) {
-		let child = this.findChild('cda', componentData => componentData.componentId === componentId);
+		let child = this.findChild('cda', (componentData: ComponentData) => componentData.componentId === componentId);
 		if (child)
 			return child;
 		if (alsoFindFromParents) {
@@ -154,7 +161,7 @@ export default class Prototype extends PropertyOwner {
 
 		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('create entity', this.makeUpAName());
 
-		this.forEachChild('epr', epr => epr.createEntity(entity, true));
+		this.forEachChild('epr', (epr: EntityPrototype) => epr.createEntity(entity, true));
 		// let childEntityPrototypes = this.getChildren('epr');
 		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
 
@@ -184,7 +191,7 @@ export default class Prototype extends PropertyOwner {
 		let count = 0;
 		let levels = game.getChildren('lvl');
 		for (let i = levels.length-1; i >= 0; i--) {
-			let entityPrototypes = levels[i].getChildren('epr');
+			let entityPrototypes = levels[i].getChildren('epr') as Array<EntityPrototype>;
 			for (let j = entityPrototypes.length-1; j >= 0; j--) {
 				if (entityPrototypes[j].prototype === this)
 					count++;
@@ -192,17 +199,17 @@ export default class Prototype extends PropertyOwner {
 		}
 
 		if (findParents)
-			this.forEachChild('prt', prt => count += prt.countEntityPrototypes(true));
+			this.forEachChild('prt', (prt: Prototype) => count += prt.countEntityPrototypes(true));
 
 		return count;
 	}
 
 	delete() {
-		this._gameRoot = this._gameRoot || this.getRoot();
+		let _gameRoot = this.getRoot();
 		if (!super.delete()) return false;
-		if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
-			this._gameRoot.forEachChild('lvl', lvl => {
-				let items = lvl.getChildren('epr');
+		if (this.threeLetterType === 'prt' && _gameRoot.threeLetterType === 'gam') {
+			_gameRoot.forEachChild('lvl', (lvl: Level) => {
+				let items = lvl.getChildren('epr') as Array<EntityPrototype>;
 				for (let i = items.length-1; i >= 0; i--) {
 					if (items[i].prototype === this) {
 						lvl.deleteChild(items[i], i);
@@ -213,25 +220,24 @@ export default class Prototype extends PropertyOwner {
 		this.previouslyCreatedEntity = null;
 		return true;
 	}
+	static create(name: string) {
+		return new Prototype().initWithPropertyValues({ name });
+	};
 }
 PropertyOwner.defineProperties(Prototype, propertyTypes);
 
-Prototype.create = function(name) {
-	return new Prototype().initWithPropertyValues({ name: name });
-};
-
 Serializable.registerSerializable(Prototype, 'prt');
 
-function getDataFromPrototype(prototype, originalPrototype, filter, _depth = 0) {
+function getDataFromPrototype(prototype: Prototype, originalPrototype: Prototype, filter?: (cda: ComponentData) => boolean, _depth = 0) {
 	let data;
 
-	let parentPrototype = prototype.getParentPrototype();
+	let parentPrototype = prototype.getParentPrototype() as Prototype;
 	if (parentPrototype)
 		data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1);
 	else
 		data = {}; // Top level
 
-	let componentDatas = prototype.getChildren('cda');
+	let componentDatas = prototype.getChildren('cda') as any as Array<ComponentData>;
 	if (filter)
 		componentDatas = componentDatas.filter(filter);
 	let componentData;

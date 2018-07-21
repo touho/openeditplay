@@ -8,7 +8,7 @@ export default class OKPopup extends Popup {
 	- color
 	- icon (fa-plus)
 	*/
-	constructor(title, textContent, buttonOptions, callback) {
+	constructor(title, textContent, buttonOptions?, callback?) {
 		let listView;
 		super({
 			title,

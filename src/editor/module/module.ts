@@ -72,7 +72,7 @@ export default class Module {
 
 
 
-let registerPromise = new Promise(function(resolve) {
+let registerPromise: Promise<void> = new Promise(function(resolve) {
 	events.listen('registerModules', function() {
 		registerPromise.then(() => {
 			events.dispatch('modulesRegistered');

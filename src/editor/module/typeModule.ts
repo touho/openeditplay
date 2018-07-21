@@ -4,7 +4,7 @@ import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import { listenKeyDown, key } from '../../util/input';
 
-class Type extends Module {
+class TypeModule extends Module {
 	propertyEditor: PropertyEditor;
 
 	constructor() {
@@ -49,4 +49,4 @@ class Type extends Module {
 	}
 }
 
-Module.register(Type, 'right');
+Module.register(TypeModule, 'right');

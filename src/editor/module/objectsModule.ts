@@ -12,8 +12,9 @@ import { game } from "../../core/game";
 import Prefab from "../../core/prefab";
 import Serializable from "../../core/serializable";
 import assert from '../../util/assert';
+import { GameEvent } from '../../core/gameEvents';
 
-class Objects extends Module {
+class ObjectsModule extends Module {
 	treeView: TreeView;
 	dirty: boolean;
 	treeType: string;
@@ -38,7 +39,7 @@ class Objects extends Module {
 				editor.select(serializables, this);
 				Module.activateModule('object', false);
 			},
-			moveCallback: (serializableId, parentId) => {
+			moveCallback: (serializableId: string, parentId: string) => {
 				if (serializableId.substring(0, 3) === 'epr') {
 					let serializable = getSerializable(serializableId);
 					let parent = parentId === '#' ? editor.selectedLevel : getSerializable(parentId);
@@ -139,8 +140,8 @@ class Objects extends Module {
 			setTimeout(() => this.update(), 100);
 		};
 		listenSceneCreation(() => {
-			scene.listen('onStart', update);
-			scene.listen('reset', update);
+			scene.listen(GameEvent.SCENE_START, update);
+			scene.listen(GameEvent.SCENE_RESET, update);
 		});
 
 		// Set dirty so that every single serializable deletion and addition won't separately update the tree.
@@ -316,4 +317,4 @@ class Objects extends Module {
 	}
 }
 
-Module.register(Objects, 'left');
+Module.register(ObjectsModule, 'left');

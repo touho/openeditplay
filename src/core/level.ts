@@ -10,7 +10,7 @@ export default class Level extends PropertyOwner {
 	constructor(predefinedId?) {
 		super(predefinedId);
 	}
-	createScene(predefinedSceneObject = false) {
+	createScene(predefinedSceneObject: Scene = null) {
 		if (!predefinedSceneObject)
 			new Scene();
 

@@ -32,7 +32,7 @@ export function createNewLevel() {
 
 events.listen('createBlankLevel', createNewLevel);
 
-class Levels extends Module {
+class LevelsModule extends Module {
 	content: HTMLElement;
 	buttons: List;
 	createButton: Button;
@@ -83,7 +83,7 @@ class Levels extends Module {
 	}
 }
 
-Module.register(Levels, 'left');
+Module.register(LevelsModule, 'left');
 
 class LevelItem implements RedomComponent {
 	el: HTMLElement;

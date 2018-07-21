@@ -7,7 +7,7 @@ import assert from '../../util/assert'
 const MIN_SCALE = 0.1;
 
 export default class MoveWidget extends Widget {
-	constructor(component, directionX, directionY, public globalCoordinates: Vector) {
+	constructor(component, directionX, directionY, public globalCoordinates: boolean) {
 		super({
 			component,
 			relativePosition: new Vector(directionX, -directionY).multiplyScalar(defaultWidgetDistance)

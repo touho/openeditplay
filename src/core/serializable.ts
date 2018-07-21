@@ -35,8 +35,8 @@ export default class Serializable {
 	id: string;
 	threeLetterType: string;
 	isRoot: boolean;
-	_children: Map<string, Array<Serializable>>;
-	_listeners: { [event in GameEvent]: Array<(a?, b?, c?) => void>};
+	_children: Map<string, Array<Serializable>> = new Map();
+	_listeners: { [event in GameEvent]?: Array<ListenerFunction>} = {};
 	_rootType: string;
 	_parent: Serializable;
 	_alive: boolean;
@@ -46,8 +46,6 @@ export default class Serializable {
 		// @ifndef OPTIMIZE
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		// @endif
-		this._children = new Map(); // threeLetterType -> array
-		this._listeners = {};
 		this._rootType = this.isRoot ? this.threeLetterType : null;
 		if (skipSerializableRegistering)
 			return;
@@ -94,7 +92,7 @@ export default class Serializable {
 		}
 	}
 	// this is called right after constructor
-	initWithChildren(children = []) {
+	initWithChildren(children: Array<Serializable> = []) {
 		assert(!(this._state & Serializable.STATE_INIT), 'init already done');
 		this._state |= Serializable.STATE_INIT;
 		if (children.length > 0)
@@ -115,7 +113,7 @@ export default class Serializable {
 			addChange(changeType.addSerializableToTree, child);
 		return this;
 	}
-	_addChild(child) {
+	_addChild(child: Serializable) {
 		assert(child._parent === null);
 
 		let array = this._children.get(child.threeLetterType);
@@ -132,7 +130,7 @@ export default class Serializable {
 
 		return this;
 	}
-	findChild(threeLetterType, filterFunction, deep = false) {
+	findChild(threeLetterType: string, filterFunction: (s: Serializable) => boolean, deep: boolean = false) {
 		let array = this._children.get(threeLetterType);
 		if (!array) return null;
 		if (filterFunction) {
@@ -152,7 +150,7 @@ export default class Serializable {
 			return array[0];
 		}
 	}
-	findParent(threeLetterType, filterFunction = null) {
+	findParent(threeLetterType: string, filterFunction: (Serializable) => boolean = null) {
 		let serializable: Serializable = this;
 		while (serializable) {
 			if (serializable.threeLetterType === threeLetterType && (!filterFunction || filterFunction(serializable)))
@@ -169,14 +167,14 @@ export default class Serializable {
 		return serializable;
 	}
 	// idx is optional
-	deleteChild(child: Serializable, idx?) {
+	deleteChild(child: Serializable, idx?: number) {
 		addChange(changeType.deleteSerializable, child);
 		this._detachChild(child, idx);
 		child.delete();
 		return this;
 	}
 	// idx is optional
-	_detachChild(child, idx = 0) {
+	_detachChild(child: Serializable, idx:number = 0) {
 		let array = this._children.get(child.threeLetterType);
 		assert(array, 'child not found');
 		if (array[idx] !== child)
@@ -190,7 +188,7 @@ export default class Serializable {
 
 		return this;
 	}
-	forEachChild(threeLetterType = null, callback, deep = false) {
+	forEachChild(threeLetterType: string = null, callback: (s: Serializable) => void, deep: boolean = false) {
 		function processArray(array) {
 			array.forEach(child => {
 				callback(child);
@@ -204,7 +202,7 @@ export default class Serializable {
 		}
 		return this;
 	}
-	move(newParent) {
+	move(newParent: Serializable) {
 
 		newParent._addChild(this._detach());
 		addChange(changeType.move, this);
@@ -218,7 +216,7 @@ export default class Serializable {
 	getParent() {
 		return this._parent || null;
 	}
-	getChildren(threeLetterType) {
+	getChildren(threeLetterType: string) {
 		return this._children.get(threeLetterType) || [];
 	}
 	toJSON() {
@@ -238,7 +236,7 @@ export default class Serializable {
 		return JSON.stringify(this.toJSON(), null, 4);
 	}
 	clone() {
-		let obj = new this.constructor();
+		let obj: Serializable = new (this.constructor as any)();
 		let children = [];
 		this.forEachChild(null, child => {
 			children.push(child.clone());
@@ -248,8 +246,8 @@ export default class Serializable {
 		return obj;
 	}
 	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	listen(event: GameEvent, callback: (a?, b?, c?) => void, priority = 0) {
-		callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
+	listen(event: GameEvent, callback: ListenerFunction, priority = 0) {
+		(callback as any).priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 		if (!this._listeners.hasOwnProperty(event)) {
 			this._listeners[event] = [];
 		}
@@ -284,7 +282,7 @@ export default class Serializable {
 			// @endif
 		}
 	}
-	hasDescendant(child) {
+	hasDescendant(child: Serializable) {
 		if (!child) return false;
 		let parent = child._parent;
 		while (parent) {
@@ -293,7 +291,7 @@ export default class Serializable {
 		}
 		return false;
 	}
-	setRootType(rootType) {
+	setRootType(rootType: string) {
 		if (this._rootType === rootType)
 			return;
 		this._rootType = rootType;
@@ -309,7 +307,7 @@ export default class Serializable {
 	isInTree() {
 		return !!this._rootType;
 	}
-	static fromJSON(json) {
+	static fromJSON(json: any) {
 		assert(typeof json.id === 'string' && json.id.length > 5, 'Invalid id.');
 		let fromJSON = serializableClasses.get(json.id.substring(0, 3));
 		assert(fromJSON);
@@ -319,10 +317,10 @@ export default class Serializable {
 		} catch (e) {
 			if (isClient) {
 				console.error(e);
-				if (!window.force)
+				if (!window['force'])
 					debugger; // Type 'force = true' in console to ignore failed imports.
 
-				if (!window.force)
+				if (!window['force'])
 					throw new Error();
 			} else {
 				console.log('Error fromJSON', e);
@@ -337,7 +335,7 @@ export default class Serializable {
 		obj._state |= Serializable.STATE_FROMJSON;
 		return obj;
 	}
-	static registerSerializable(Class, threeLetterType, fromJSON = null) {
+	static registerSerializable(Class: { new(...args): Serializable}, threeLetterType: string, fromJSON: (string) => void = null) {
 		Class.prototype.threeLetterType = threeLetterType;
 		assert(typeof threeLetterType === 'string' && threeLetterType.length === 3);
 		if (!fromJSON)

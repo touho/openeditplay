@@ -202,7 +202,7 @@ function buildCss(sourceEntry, destination, callback) {
 		console.log(`Built ${destination}`);
 		callback && callback();
 	}).catch(err => {
-		console.log('css build error:', err.name, err.reason, err.file);
+		console.log('css build error:', err);
 	});
 }
 
@@ -270,7 +270,6 @@ function autobuildJs(entry, destination, options) {
 			case 'ERROR':
 				break;
 			case 'END':
-			console.log('event', event);
 				// console.log(`Built ${destination} (${event.duration} ms)`);
 				console.log(`Built ${destination}`);
 				if (options.copyTo) {

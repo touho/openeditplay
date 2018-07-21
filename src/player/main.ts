@@ -11,6 +11,8 @@ import './touchControlManager'
 
 
 import * as fullscreen from '../util/fullscreen';
+import { GameEvent } from '../core/gameEvents';
+import Level from '../core/level';
 
 disableAllChanges();
 
@@ -24,7 +26,7 @@ listenGameCreation(game => {
 	let levelIndex = 0;
 
 	function play() {
-		let levels = game.getChildren('lvl');
+		let levels = game.getChildren('lvl') as Array<Level>;
 		if (levelIndex >= levels.length)
 			levelIndex = 0;
 		levels[levelIndex].createScene().play();
@@ -32,7 +34,7 @@ listenGameCreation(game => {
 
 	play();
 
-	game.listen('levelCompleted', () => {
+	game.listen(GameEvent.GAME_LEVEL_COMPLETED, () => {
 		levelIndex++;
 		play();
 	});

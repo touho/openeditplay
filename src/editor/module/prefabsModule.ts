@@ -6,8 +6,9 @@ import {game} from "../../core/game";
 import {getSerializable} from "../../core/serializableManager";
 import {editor} from "../editor";
 
-class Prefabs extends Module {
+class PrefabsModule extends Module {
 	treeView: TreeView;
+	dirty: boolean = true;
 
 	constructor() {
 		super();
@@ -39,8 +40,6 @@ class Prefabs extends Module {
 			else
 				events.dispatch('dragPrefabsToNonScene', prefabs);
 		});
-
-		this.dirty = true;
 	}
 	activate() {
 		this.dirty = true;
@@ -68,4 +67,4 @@ class Prefabs extends Module {
 	}
 }
 
-Module.register(Prefabs, 'left');
+Module.register(PrefabsModule, 'left');

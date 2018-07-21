@@ -4,12 +4,14 @@ import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise 
 import events from '../../util/events';
 import { listenSceneCreation, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
+import { GameEvent } from '../../core/gameEvents';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
 	buttons: HTMLElement;
 	controlButtons: HTMLElement;
 	toolSelectionButtons: HTMLElement;
+	keyboardShortcuts: { [code: number]: () => void };
 
 	constructor() {
 		super();
@@ -82,9 +84,9 @@ export class TopBarModule extends Module {
 		this.addKeyboardShortcut(key.r, stopButton);
 
 		listenSceneCreation(() => {
-			scene.listen('reset', updateButtons);
-			scene.listen('play', updateButtons);
-			scene.listen('pause', updateButtons);
+			scene.listen(GameEvent.SCENE_RESET, updateButtons);
+			scene.listen(GameEvent.SCENE_PLAY, updateButtons);
+			scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
 		});
 
 		mount(this.controlButtons, playButton);

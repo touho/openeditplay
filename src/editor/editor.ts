@@ -1,22 +1,22 @@
 import events from '../util/events';
 import Layout from './layout/layout';
 
-import './module/topBar';
-import './module/scene';
+import './module/topBarModule';
+import './module/sceneModule';
 
-import './module/types';
-import './module/prefabs';
-import './module/objects';
-import './module/levels';
+import './module/typesModule';
+import './module/prefabsModule';
+import './module/objectsModule';
+import './module/levelsModule';
 
-import './module/type';
-import './module/prefab';
-import './module/object';
-import './module/level';
-import './module/game';
+import './module/typeModule';
+import './module/prefabModule';
+import './module/objectModule';
+import './module/levelModule';
+import './module/gameModule';
 
-import './module/performance';
-import './module/perSecond';
+import './module/performanceModule';
+import './module/perSecondModule';
 
 import { el, list, mount } from 'redom';
 import { default as Game, game } from '../core/game';
@@ -35,6 +35,7 @@ import './test';
 import * as performance from '../util/performance'
 import { limit } from '../util/callLimiter';
 import OKPopup from "./views/popup/OKPopup";
+import Level from '../core/level';
 
 let loaded = false;
 
@@ -92,6 +93,8 @@ class Editor {
 	layout: Layout;
 	game: Game;
 	selection: { type: string, items: Array<any>, dirty: boolean };
+	selectedLevel: Level;
+
 	constructor(game) {
 		assert(game);
 

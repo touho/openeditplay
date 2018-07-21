@@ -15,7 +15,7 @@ export default class Prefab extends Prototype {
 	}
 
 	makeUpAName() {
-		let nameProperty = this.findChild('prp', property => property.name === 'name');
+		let nameProperty = this.findChild('prp', (property: Property) => property.name === 'name');
 		return nameProperty && nameProperty.value || 'Prefab';
 	}
 
@@ -27,12 +27,12 @@ export default class Prefab extends Prototype {
 		return null;
 	}
 	// Meant for entityPrototypes, but works theoretically for prototypes
-	static createFromPrototype(prototype) {
+	static createFromPrototype(prototype: Prototype) {
 		let inheritedComponentDatas = prototype.getInheritedComponentDatas();
-		let children = inheritedComponentDatas.map(icd => {
+		let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
 			return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
 				.initWithChildren(icd.properties.map(prp => prp.clone()));
-		});
+		}) as any as Array<Serializable>;
 
 		children.push(prototype._properties.name.clone());
 

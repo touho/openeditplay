@@ -2,10 +2,13 @@ import Serializable, { createStringId } from './serializable';
 import assert from '../util/assert';
 import { componentClasses, Component } from './component';
 import { isClient } from '../util/environment';
+import Property from './property';
+import { PropertyOwnerClass } from './propertyOwner';
+import Prototype from './prototype';
 
 export default class ComponentData extends Serializable {
 	name: string;
-	componentClass: object;
+	componentClass: typeof Component & PropertyOwnerClass;
 	componentId: string;
 
 	constructor(componentClassName, predefinedId?, predefinedComponentId: string = '') {
@@ -34,9 +37,9 @@ export default class ComponentData extends Serializable {
 			}
 		}
 		super.addChild(child);
-		return this;
+		return this as Serializable;
 	}
-	clone(options) {
+	clone(options?) {
 		let newComponentId = (options && options.cloneComponentId) ? this.componentId : '';
 		let obj = new ComponentData(this.name, false, newComponentId);
 		let children = [];
@@ -45,7 +48,7 @@ export default class ComponentData extends Serializable {
 		});
 		obj.initWithChildren(children);
 		this._state |= Serializable.STATE_CLONE;
-		return obj;
+		return obj as Serializable;
 	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {
@@ -67,7 +70,7 @@ export default class ComponentData extends Serializable {
 			parentComponentData.getInheritedProperties(_depth + 1).forEach(prop => properties[prop.name] = prop);
 
 		// properties from this. override properties of parents
-		this.getChildren('prp').forEach(prop => {
+		this.getChildren('prp').forEach((prop: Property) => {
 			if (_depth === 0)
 				properties[prop.name] = prop;
 			else
@@ -87,18 +90,18 @@ export default class ComponentData extends Serializable {
 	}
 	getParentComponentData() {
 		if (!this._parent) return null;
-		let parentPrototype = this._parent.getParentPrototype();
+		let parentPrototype = (this._parent as Prototype).getParentPrototype() as Prototype;
 		while (parentPrototype) {
-			let parentComponentData = parentPrototype.findChild('cda', componentData => componentData.componentId === this.componentId);
+			let parentComponentData = parentPrototype.findChild('cda', (componentData: ComponentData) => componentData.componentId === this.componentId);
 			if (parentComponentData)
 				return parentComponentData;
 			else
-				parentPrototype = parentPrototype.getParentPrototype();
+				parentPrototype = parentPrototype.getParentPrototype() as Prototype;
 		}
 		return null;
 	}
 	getPropertyOrCreate(name) {
-		let property = this.findChild('prp', prp => prp.name === name);
+		let property = this.findChild('prp', (prp: Property) => prp.name === name);
 		if (!property) {
 			property = this.componentClass._propertyTypesByName[name].createProperty();
 			this.addChild(property);
@@ -106,7 +109,7 @@ export default class ComponentData extends Serializable {
 		return property;
 	}
 	getProperty(name) {
-		return this.findChild('prp', prp => prp.name === name);
+		return this.findChild('prp', prp => (prp as Property).name === name);
 	}
 	setValue(propertyName, value) {
 		this.getPropertyOrCreate(propertyName).value = value;

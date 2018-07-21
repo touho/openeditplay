@@ -9,6 +9,7 @@ export { default as Prop } from './propertyType';
 export let componentClasses: Map<string, typeof Component> = new Map();
 import ComponentData from './componentData';
 import * as performance from '../util/performance';
+import { PropertyType } from './propertyType';
 
 const automaticSceneEventListeners = [
 	'onUpdate',
@@ -35,6 +36,9 @@ export class Component extends PropertyOwner {
 	static allowMultiple: boolean;
 	static icon: string;
 	static color: string;
+
+	static _propertyTypes: Array<PropertyType>;
+	static _propertyTypesByName: { [s: string]: PropertyType };
 
 	constructor(predefinedId?: string) {
 		super(predefinedId);
@@ -78,7 +82,7 @@ export class Component extends PropertyOwner {
 			assert(this[r], `${this.componentClass.componentName} requires component ${r} but it is not found`);
 		});
 
-		this.forEachChild('com', c => c._preInit());
+		this.forEachChild('com', (c: Component) => c._preInit());
 
 		for (let i = 0; i < automaticSceneEventListeners.length; ++i) {
 			if (typeof this[automaticSceneEventListeners[i]] === 'function')
@@ -97,7 +101,7 @@ export class Component extends PropertyOwner {
 	}
 	// In preInit you can access other components and know that their preInit is done.
 	_init() {
-		this.forEachChild('com', c => c._init());
+		this.forEachChild('com', (c: Component) => c._init());
 		try {
 			if (typeof (this as ComponentRegisterPrototype).init === 'function')
 			(this as ComponentRegisterPrototype).init();
@@ -116,7 +120,7 @@ export class Component extends PropertyOwner {
 		if (this.componentClass.componentName !== 'Transform' && this.scene)
 			this.scene.removeComponent(this);
 
-		this.forEachChild('com', c => c._sleep());
+		this.forEachChild('com', (c: Component) => c._sleep());
 
 		this._listenRemoveFunctions.forEach(f => f());
 		this._listenRemoveFunctions.length = 0;
@@ -144,7 +148,7 @@ export class Component extends PropertyOwner {
 		});
 	}
 
-	static create(name, values = {}) {
+	static create(name: string, values = {}) {
 		let componentClass = componentClasses.get(name);
 		assert(componentClass);
 		let component = new componentClass();

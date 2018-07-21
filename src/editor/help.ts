@@ -22,7 +22,7 @@ class Help {
 		return scene.getChildren('ent');
 	}
 	get world() {
-		return scene._p2World;
+		return scene['_p2World'];
 	}
 	get Vector() {
 		return Vector;
@@ -45,7 +45,7 @@ class Help {
 	pasteGame(data) {
 		game.getChildren('lvl').forEach(lvl => lvl.delete());
 		game.getChildren('prt').forEach(prt => prt.delete());
-		
+
 		let children = JSON.parse(data).map(Serializable.fromJSON);
 		game.addChildren(children);
 	}
@@ -53,4 +53,4 @@ class Help {
 
 let help = new Help;
 export { help };
-window.help = help;
+window['help'] = help;

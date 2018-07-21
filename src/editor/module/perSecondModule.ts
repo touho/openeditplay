@@ -4,7 +4,7 @@ import events, { dispatch, listen } from '../../util/events';
 import * as performance from '../../util/performance';
 import { scene } from '../../core/scene';
 
-class PerSecond extends Module {
+class PerSecondModule extends Module {
 	constructor() {
 		super();
 		let counterList;
@@ -23,7 +23,7 @@ class PerSecond extends Module {
 		});
 	}
 }
-Module.register(PerSecond, 'bottom');
+Module.register(PerSecondModule, 'bottom');
 
 class PerSecondItem implements RedomComponent {
 	name: HTMLElement;

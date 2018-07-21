@@ -12,7 +12,7 @@ let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
 ];
 
-let game = null; // only one game at the time
+let game: Game = null; // only one game at the time
 export { game };
 
 let isClient = typeof window !== 'undefined';
@@ -44,9 +44,10 @@ export default class Game extends PropertyOwner {
 			gameCreateListeners.forEach(listener => listener(game));
 		}, 1);
 	}
-	initWithChildren() {
-		super.initWithChildren(...arguments);
+	initWithChildren(children: Array<Serializable> = []) {
+		let val = super.initWithChildren(children);
 		addChange(changeType.addSerializableToTree, this);
+		return val;
 	}
 	delete() {
 		addChange(changeType.deleteSerializable, this);
@@ -79,7 +80,7 @@ Serializable.registerSerializable(Game, 'gam', json => {
 });
 
 let gameCreateListeners = [];
-export function listenGameCreation(listener: (object) => void) {
+export function listenGameCreation(listener: (game: Game) => void) {
 	gameCreateListeners.push(listener);
 
 	console.log('real ts');
@@ -87,8 +88,3 @@ export function listenGameCreation(listener: (object) => void) {
 	if (game)
 		listener(game);
 }
-
-
-// jee
-
-

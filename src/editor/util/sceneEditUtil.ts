@@ -230,7 +230,7 @@ export function copyEntitiesToScene(entities) {
 	return null;
 }
 
-export function getWidgetUnderMouse(mousePos) {
+export function getWidgetUnderMouse(mousePos: Vector) : Component {
 	let nearestWidget = null;
 	let nearestDistanceSq = Infinity;
 

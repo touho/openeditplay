@@ -6,6 +6,7 @@ import ScaleWidget from '../widget/scaleWidget';
 import MoveWidget from '../widget/moveWidget';
 import events from "../../util/events";
 import {selectedToolName} from "../editor";
+import { GameEvent } from '../../core/gameEvents';
 
 let primaryColor = 'white';
 let hoverColor = 'yellow';
@@ -94,14 +95,14 @@ export default Component.register({
 			} else if (selectedToolName === 'globalMoveTool') {
 				this.widgets = [
 					this.position = new PositionWidget(this),
-					new MoveWidget(this, 1, 0, 1),
-					new MoveWidget(this, 0, 1, 1)
+					new MoveWidget(this, 1, 0, true),
+					new MoveWidget(this, 0, 1, true)
 				];
 			} else if (selectedToolName === 'localMoveTool') {
 				this.widgets = [
 					this.position = new PositionWidget(this),
-					new MoveWidget(this, 1, 0, 0),
-					new MoveWidget(this, 0, 1, 0),
+					new MoveWidget(this, 1, 0, false),
+					new MoveWidget(this, 0, 1, false),
 					new AngleWidget(this)
 				];
 			} else {
@@ -173,7 +174,7 @@ export default Component.register({
 			this.listenProperty(this.Transform, 'angle', angleListener);
 			this.listeners.push(this.Transform.listen('globalTransformChanged', positionListener));
 
-			this.listeners.push(this.scene.listen('pause', () => {
+			this.listeners.push(this.scene.listen(GameEvent.SCENE_PAUSE, () => {
 				if (this.requiresWidgetUpdate) {
 					this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 					this.updateWidgets();

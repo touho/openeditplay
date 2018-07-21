@@ -8,12 +8,14 @@ import assert from '../../util/assert';
 import { editor } from '../editor';
 import * as performance from '../../util/performance';
 
-class Types extends Module {
+class TypesModule extends Module {
 	addButton: HTMLElement;
 	search: HTMLElement;
 	searchIcon: HTMLElement;
 	jstree: HTMLElement;
 	helperText: HTMLElement;
+
+	externalChange: boolean = false;
 
 	constructor() {
 		super();
@@ -272,4 +274,4 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 });
 
 
-Module.register(Types, 'left');
+Module.register(TypesModule, 'left');

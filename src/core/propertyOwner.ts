@@ -22,7 +22,7 @@ export default class PropertyOwner extends Serializable {
 		return (this as any).name || 'PropertyOwner';
 	}
 	// Just a helper
-	initWithPropertyValues(values = {}) {
+	initWithPropertyValues(values: {[key: string]: any} = {}) {
 		let children = [];
 
 		Object.keys(values).forEach(propName => {
@@ -35,16 +35,16 @@ export default class PropertyOwner extends Serializable {
 		this.initWithChildren(children);
 		return this;
 	}
-	initWithChildren(children = []) {
+	initWithChildren(children: Array<Serializable> = []) {
 		assert(!(this._state & Serializable.STATE_INIT), 'init already done');
 		this._state |= Serializable.STATE_INIT;
 
-		let propChildren = [];
-		let otherChildren = [];
+		let propChildren: Array<Property> = [];
+		let otherChildren: Array<Serializable> = [];
 		// Separate Property children and other children
 		children.forEach(child => {
 			if (child.threeLetterType === 'prp') {
-				propChildren.push(child);
+				propChildren.push(child as Property);
 			} else {
 				otherChildren.push(child);
 			}
@@ -53,19 +53,21 @@ export default class PropertyOwner extends Serializable {
 
 		let invalidPropertiesCount = 0;
 
+		let propertyIdToInvalid = {};
+
 		// Make sure Properties have a PropertyType. They don't work without it.
 		propChildren.filter(prop => !prop.propertyType).forEach(prop => {
 			let propertyType = (this.constructor as any as PropertyOwnerClass)._propertyTypesByName[prop.name];
 			if (!propertyType) {
 				console.log('Property of that name not defined', this.id, prop.name, this);
 				invalidPropertiesCount++;
-				prop.isInvalid = true;
+				propertyIdToInvalid[prop.id] = true;
 				return;
 			}
 			prop.setPropertyType(propertyType);
 		});
 		if (invalidPropertiesCount)
-			propChildren = propChildren.filter(p => !p.isInvalid);
+			propChildren = propChildren.filter(p => !propertyIdToInvalid[p.id]);
 
 		// Make sure all PropertyTypes have a matching Property
 		let nameToProp = {};
@@ -82,15 +84,15 @@ export default class PropertyOwner extends Serializable {
 		assert(this._state & Serializable.STATE_INIT, this.constructor + ' requires that initWithChildren will be called before addChild');
 		super.addChild(child);
 		if (child.threeLetterType === 'prp') {
-			if (!child.propertyType) {
-				if (!this._propertyOwnerClass._propertyTypesByName[child.name]) {
+			if (!(child as Property).propertyType) {
+				if (!this._propertyOwnerClass._propertyTypesByName[(child as Property).name]) {
 					console.log('Property of that name not defined', this.id, child, this);
 					return;
 				}
-				child.setPropertyType(this._propertyOwnerClass._propertyTypesByName[child.name]);
+				(child as Property).setPropertyType(this._propertyOwnerClass._propertyTypesByName[(child as Property).name]);
 			}
-			assert(this._properties[child.propertyType.name] === undefined, 'Property already added');
-			this._properties[child.propertyType.name] = child;
+			assert(this._properties[(child as Property).propertyType.name] === undefined, 'Property already added');
+			this._properties[(child as Property).propertyType.name] = (child as Property);
 		}
 		return this;
 	}
@@ -103,14 +105,14 @@ export default class PropertyOwner extends Serializable {
 		return true;
 	}
 	// idx is optional
-	deleteChild(child, idx) {
+	deleteChild(child: Serializable, idx?: number) {
 		assert(child.threeLetterType !== 'prp', 'Can not delete just one Property child.');
 		super.deleteChild(child, idx);
 		return this;
 	}
 
-	static defineProperties(Class: Function, propertyTypes) {
-		Class.prototype._propertyOwnerClass = Class; // TEST
+	static defineProperties(Class: { new(...args): Serializable }, propertyTypes: Array<PropertyType>) {
+		Class.prototype._propertyOwnerClass = Class;
 		let ClassAsTypeHolder = Class as any as PropertyOwnerClass;
 		ClassAsTypeHolder._propertyTypes = propertyTypes;
 		ClassAsTypeHolder._propertyTypesByName = {};
