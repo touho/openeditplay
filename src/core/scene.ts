@@ -36,6 +36,7 @@ export default class Scene extends Serializable {
 	won: boolean;
 	_prevUpdate: number;
 	resetting: boolean = false;
+	pixelDensity: Vector = new Vector(1, 1);
 
 	constructor(predefinedId?) {
 		super(predefinedId);
@@ -314,17 +315,30 @@ export default class Scene extends Serializable {
 		return this.components.get(componentName) || new Set;
 	}
 
-	mouseToWorld(mousePosition) {
+	mouseToWorld(mousePosition: Vector) {
 		return new Vector(
-			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom,
-			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom
+			this.layers.move.pivot.x + mousePosition.x / this.cameraZoom * this.pixelDensity.x,
+			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom * this.pixelDensity.y
 		);
+	}
+	screenPixelsToWorldPixels(screenPixels: number) {
+		return screenPixels / this.cameraZoom * this.pixelDensity.x;
 	}
 
 	setZoom(zoomLevel) {
 		if (zoomLevel)
 			this.cameraZoom = zoomLevel;
 		this.dispatch('zoomChange', this.cameraZoom);
+	}
+
+	resizeCanvas(gameResolution: Vector, screenResolution?: Vector) {
+		this.renderer.resize(gameResolution.x, gameResolution.y);
+
+		if (screenResolution) {
+			this.pixelDensity.setScalars(gameResolution.x / screenResolution.x, gameResolution.y / screenResolution.y);
+		} else {
+			this.pixelDensity.setScalars(1, 1);
+		}
 	}
 }
 Scene.prototype.isRoot = true;

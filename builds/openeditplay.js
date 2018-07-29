@@ -9,16 +9,23 @@
 	    get: function () { return null; } // override this
 	};
 	// @endif
-	function assert(condition, message) {
+	function assert(condition) {
+	    var arguments$1 = arguments;
+
+	    var messages = [];
+	    for (var _i = 1; _i < arguments.length; _i++) {
+	        messages[_i - 1] = arguments$1[_i];
+	    }
 	    // @ifndef OPTIMIZE
 	    if (!condition) {
-	        console.log('Assert', message, new Error().stack, '\norigin', changeGetter.get());
+	        console.log.apply(console, ['Assert'].concat(messages, [new Error().stack, '\norigin', changeGetter.get()]));
 	        debugger;
-	        if (!window.force)
-	            { throw new Error(message); }
+	        if (!window['force'])
+	            { throw new Error(messages.join('; ')); }
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -218,11 +225,13 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -294,6 +303,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=events.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -320,6 +330,7 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -348,11 +359,11 @@
 	    function Serializable(predefinedId, skipSerializableRegistering) {
 	        if (predefinedId === void 0) { predefinedId = ''; }
 	        if (skipSerializableRegistering === void 0) { skipSerializableRegistering = false; }
+	        this._children = new Map();
+	        this._listeners = {};
 	        // @ifndef OPTIMIZE
 	        assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 	        // @endif
-	        this._children = new Map(); // threeLetterType -> array
-	        this._listeners = {};
 	        this._rootType = this.isRoot ? this.threeLetterType : null;
 	        if (skipSerializableRegistering)
 	            { return; }
@@ -634,9 +645,9 @@
 	        catch (e) {
 	            if (isClient) {
 	                console.error(e);
-	                if (!window.force)
+	                if (!window['force'])
 	                    { debugger; } // Type 'force = true' in console to ignore failed imports.
-	                if (!window.force)
+	                if (!window['force'])
 	                    { throw new Error(); }
 	            }
 	            else {
@@ -758,6 +769,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -852,6 +864,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -987,6 +1000,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1119,6 +1133,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1168,6 +1183,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1314,6 +1330,7 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1359,19 +1376,20 @@
 	        });
 	        _super.prototype.addChildren.call(this, otherChildren);
 	        var invalidPropertiesCount = 0;
+	        var propertyIdToInvalid = {};
 	        // Make sure Properties have a PropertyType. They don't work without it.
 	        propChildren.filter(function (prop) { return !prop.propertyType; }).forEach(function (prop) {
 	            var propertyType = _this.constructor._propertyTypesByName[prop.name];
 	            if (!propertyType) {
 	                console.log('Property of that name not defined', _this.id, prop.name, _this);
 	                invalidPropertiesCount++;
-	                prop.isInvalid = true;
+	                propertyIdToInvalid[prop.id] = true;
 	                return;
 	            }
 	            prop.setPropertyType(propertyType);
 	        });
 	        if (invalidPropertiesCount)
-	            { propChildren = propChildren.filter(function (p) { return !p.isInvalid; }); }
+	            { propChildren = propChildren.filter(function (p) { return !propertyIdToInvalid[p.id]; }); }
 	        // Make sure all PropertyTypes have a matching Property
 	        var nameToProp = {};
 	        propChildren.forEach(function (c) { return nameToProp[c.name] = c; });
@@ -1414,7 +1432,7 @@
 	        return this;
 	    };
 	    PropertyOwner.defineProperties = function (Class, propertyTypes) {
-	        Class.prototype._propertyOwnerClass = Class; // TEST
+	        Class.prototype._propertyOwnerClass = Class;
 	        var ClassAsTypeHolder = Class;
 	        ClassAsTypeHolder._propertyTypes = propertyTypes;
 	        ClassAsTypeHolder._propertyTypesByName = {};
@@ -1436,6 +1454,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1816,6 +1835,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1872,6 +1892,7 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1907,6 +1928,9 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -1940,9 +1964,11 @@
 	        }, 1);
 	        return _this;
 	    }
-	    Game.prototype.initWithChildren = function () {
-	        _super.prototype.initWithChildren.apply(this, arguments);
+	    Game.prototype.initWithChildren = function (children) {
+	        if (children === void 0) { children = []; }
+	        var val = _super.prototype.initWithChildren.call(this, children);
 	        addChange(changeType.addSerializableToTree, this);
+	        return val;
 	    };
 	    Game.prototype.delete = function () {
 	        addChange(changeType.deleteSerializable, this);
@@ -1975,7 +2001,7 @@
 	    if (game)
 	        { listener(game); }
 	}
-	// jee
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2063,6 +2089,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2126,7 +2153,7 @@
 	    questionMark: 191
 	};
 	function listenMouseMove(element, handler) {
-	    element.addEventListener('mousemove', function (event) {
+	    var domHandler = function (event) {
 	        var x = event.pageX;
 	        var y = event.pageY;
 	        var el = element;
@@ -2135,32 +2162,35 @@
 	            y -= el.offsetTop;
 	            el = el.offsetParent;
 	        }
-	        element._mx = x;
-	        element._my = y;
+	        element['_mx'] = x;
+	        element['_my'] = y;
 	        handler && handler(new Vector(x, y));
-	    });
-	    return function () { return element.removeEventListener('mousemove', handler); };
+	    };
+	    element.addEventListener('mousemove', domHandler);
+	    return function () { return element.removeEventListener('mousemove', domHandler); };
 	}
 	// Requires listenMouseMove on the same element to get the mouse position
 	function listenMouseDown(element, handler) {
-	    element.addEventListener('mousedown', function (event) {
-	        if (typeof element._mx === 'number')
-	            { handler(new Vector(element._mx, element._my)); }
+	    var domHandler = function (event) {
+	        if (typeof element['_mx'] === 'number')
+	            { handler(new Vector(element['_mx'], element['_my'])); }
 	        else
 	            { handler(); }
-	    });
-	    return function () { return element.removeEventListener('mousedown', handler); };
+	    };
+	    element.addEventListener('mousedown', domHandler);
+	    return function () { return element.removeEventListener('mousedown', domHandler); };
 	}
 	// Requires listenMouseMove on the same element to get the mouse position
 	function listenMouseUp(element, handler) {
 	    // listen document body because many times mouse is accidentally dragged outside of element
-	    document.body.addEventListener('mouseup', function (event) {
-	        if (typeof element._mx === 'number')
-	            { handler(new Vector(element._mx, element._my)); }
+	    var domHandler = function (event) {
+	        if (typeof element['_mx'] === 'number')
+	            { handler(new Vector(element['_mx'], element['_my'])); }
 	        else
 	            { handler(); }
-	    });
-	    return function () { return element.removeEventListener('mouseup', handler); };
+	    };
+	    document.body.addEventListener('mouseup', domHandler);
+	    return function () { return element.removeEventListener('mouseup', domHandler); };
 	}
 	////////////////////////////////////
 	var keys = {};
@@ -2195,6 +2225,7 @@
 	        });
 	    }
 	}
+	//# sourceMappingURL=input.js.map
 
 	var GameEvent;
 	(function (GameEvent) {
@@ -2203,8 +2234,9 @@
 	    GameEvent["SCENE_PAUSE"] = "scene pause";
 	    GameEvent["SCENE_RESET"] = "scene reset";
 	    GameEvent["SCENE_DRAW"] = "scene draw";
-	    GameEvent["SCENE_LEVEL_COMPLETED"] = "scene level completed";
+	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
 	})(GameEvent || (GameEvent = {}));
+	//# sourceMappingURL=gameEvents.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2216,6 +2248,7 @@
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this.layers = {};
 	        _this.resetting = false;
+	        _this.pixelDensity = new Vector(1, 1);
 	        if (scene) {
 	            try {
 	                scene.delete();
@@ -2225,7 +2258,7 @@
 	            }
 	        }
 	        scene = _this;
-	        window.scene = _this;
+	        window['scene'] = _this;
 	        _this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 	        _this.renderer = getRenderer(_this.canvas);
 	        _this.mouseListeners = [
@@ -2343,7 +2376,7 @@
 	        if (this.won) {
 	            this.pause();
 	            this.time = 0;
-	            game.dispatch(GameEvent.SCENE_LEVEL_COMPLETED);
+	            game.dispatch(GameEvent.GAME_LEVEL_COMPLETED);
 	            this.reset();
 	        }
 	        this.requestAnimFrame();
@@ -2433,12 +2466,24 @@
 	        return this.components.get(componentName) || new Set;
 	    };
 	    Scene.prototype.mouseToWorld = function (mousePosition) {
-	        return new Vector(this.layers.move.pivot.x + mousePosition.x / this.cameraZoom, this.layers.move.pivot.y + mousePosition.y / this.cameraZoom);
+	        return new Vector(this.layers.move.pivot.x + mousePosition.x / this.cameraZoom * this.pixelDensity.x, this.layers.move.pivot.y + mousePosition.y / this.cameraZoom * this.pixelDensity.y);
+	    };
+	    Scene.prototype.screenPixelsToWorldPixels = function (screenPixels) {
+	        return screenPixels / this.cameraZoom * this.pixelDensity.x;
 	    };
 	    Scene.prototype.setZoom = function (zoomLevel) {
 	        if (zoomLevel)
 	            { this.cameraZoom = zoomLevel; }
 	        this.dispatch('zoomChange', this.cameraZoom);
+	    };
+	    Scene.prototype.resizeCanvas = function (gameResolution, screenResolution) {
+	        this.renderer.resize(gameResolution.x, gameResolution.y);
+	        if (screenResolution) {
+	            this.pixelDensity.setScalars(gameResolution.x / screenResolution.x, gameResolution.y / screenResolution.y);
+	        }
+	        else {
+	            this.pixelDensity.setScalars(1, 1);
+	        }
 	    };
 	    return Scene;
 	}(Serializable));
@@ -2450,6 +2495,7 @@
 	    if (scene)
 	        { listener(); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2584,6 +2630,7 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
+	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = [
@@ -2786,6 +2833,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -2807,6 +2855,7 @@
 	    delete serializables[id];
 	}
 	changeDispacher.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -2993,6 +3042,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3009,7 +3059,7 @@
 	    };
 	    Prototype.prototype.addChild = function (child) {
 	        // if (child.threeLetterType === 'cda' && !child.componentClass.allowMultiple)
-	        if (child instanceof PropertyOwner && !child.componentClass.allowMultiple)
+	        if (child instanceof ComponentData && !child.componentClass.allowMultiple)
 	            { assert(this.findChild('cda', function (cda) { return cda.componentId === child.componentId; }) === null, "Can't have multiple " + child.name + " components. See Component.allowMultiple"); }
 	        _super.prototype.addChild.call(this, child);
 	        return this;
@@ -3162,11 +3212,11 @@
 	    };
 	    Prototype.prototype.delete = function () {
 	        var _this = this;
-	        this._gameRoot = this._gameRoot || this.getRoot();
+	        var _gameRoot = this.getRoot();
 	        if (!_super.prototype.delete.call(this))
 	            { return false; }
-	        if (this.threeLetterType === 'prt' && this._gameRoot.threeLetterType === 'gam') {
-	            this._gameRoot.forEachChild('lvl', function (lvl) {
+	        if (this.threeLetterType === 'prt' && _gameRoot.threeLetterType === 'gam') {
+	            _gameRoot.forEachChild('lvl', function (lvl) {
 	                var items = lvl.getChildren('epr');
 	                for (var i = items.length - 1; i >= 0; i--) {
 	                    if (items[i].prototype === _this) {
@@ -3178,12 +3228,12 @@
 	        this.previouslyCreatedEntity = null;
 	        return true;
 	    };
+	    Prototype.create = function (name) {
+	        return new Prototype().initWithPropertyValues({ name: name });
+	    };
 	    return Prototype;
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Prototype, propertyTypes$1);
-	Prototype.create = function (name) {
-	    return new Prototype().initWithPropertyValues({ name: name });
-	};
 	Serializable.registerSerializable(Prototype, 'prt');
 	function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	    if (_depth === void 0) { _depth = 0; }
@@ -3228,6 +3278,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3255,7 +3306,6 @@
 	        return this.prototype || null;
 	    };
 	    EntityPrototype.prototype.clone = function () {
-	        var _this = this;
 	        var obj = new EntityPrototype();
 	        obj.prototype = this.prototype;
 	        var id = obj.id;
@@ -3265,7 +3315,7 @@
 	                var property = new Property({
 	                    value: child.propertyType.type.clone(child.value),
 	                    name: child.name,
-	                    propertyType: _this.propertyType,
+	                    propertyType: child.propertyType,
 	                    predefinedId: id + '_n'
 	                });
 	                children.push(property);
@@ -3474,6 +3524,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3534,6 +3585,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3544,7 +3596,7 @@
 	        return _super.call(this, predefinedId) || this;
 	    }
 	    Level.prototype.createScene = function (predefinedSceneObject) {
-	        if (predefinedSceneObject === void 0) { predefinedSceneObject = false; }
+	        if (predefinedSceneObject === void 0) { predefinedSceneObject = null; }
 	        if (!predefinedSceneObject)
 	            { new Scene(); }
 	        scene.loadLevel(this);
@@ -3557,6 +3609,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3642,6 +3697,7 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3665,6 +3721,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3838,6 +3895,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3878,6 +3936,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -3928,6 +3987,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -3975,6 +4035,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4171,6 +4232,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4196,6 +4258,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4480,6 +4543,7 @@
 	    }
 	    return textureCache[hash];
 	}
+	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4489,6 +4553,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4690,6 +4755,9 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4732,6 +4800,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -4874,6 +4943,7 @@
 	    });
 	}
 	window.addEventListener('load', connect);
+	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -4896,7 +4966,10 @@
 	        if (pixels > MAX_PIXELS) {
 	            quality = Math.sqrt(MAX_PIXELS / pixels);
 	        }
-	        scene.renderer.resize(width * quality, height * quality);
+	        var screenResolution = new Vector(width, height);
+	        var gameResolution = screenResolution.clone().multiplyScalar(quality);
+	        scene.resizeCanvas(gameResolution, screenResolution);
+	        // scene.renderer.resize(width * quality, height * quality);
 	        window.scrollTo(0, 0);
 	        previousWidth = width;
 	        previousHeight = height;
@@ -4909,7 +4982,8 @@
 	}
 	window.addEventListener('resize', resizeCanvas);
 	listenSceneCreation(resizeCanvas);
-	var MAX_PIXELS = 1000 * 600;
+	var MAX_PIXELS = 800 * 600;
+	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -4985,6 +5059,7 @@
 	    };
 	    return TouchControl;
 	}());
+	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5119,6 +5194,7 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
+	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5135,7 +5211,7 @@
 	        levels[levelIndex].createScene().play();
 	    }
 	    play();
-	    game$$1.listen('levelCompleted', function () {
+	    game$$1.listen(GameEvent.GAME_LEVEL_COMPLETED, function () {
 	        levelIndex++;
 	        play();
 	    });
@@ -5156,6 +5232,7 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

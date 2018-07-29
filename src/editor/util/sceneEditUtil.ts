@@ -61,6 +61,7 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 }
 
 // Call setChangeOrigin(this) before calling this
+// Does modifications to entities in editor scene
 export function syncAChangeBetweenSceneAndLevel(change) {
 	if (!scene || !scene.level) return;
 

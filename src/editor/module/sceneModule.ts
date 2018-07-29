@@ -42,6 +42,7 @@ class SceneModule extends Module {
 	copyButton: HTMLElement;
 	deleteButton: HTMLElement;
 	sceneContextButtons: HTMLElement;
+	canvasParentSize: Vector = new Vector(0, 0);
 
 	constructor() {
 		super();
@@ -54,7 +55,7 @@ class SceneModule extends Module {
 		};
 
 		this.addElements(
-			this.canvas = <HTMLCanvasElement>el('canvas.openEditPlayCanvas.select-none', {
+			this.canvas = <HTMLCanvasElement> el('canvas.openEditPlayCanvas.select-none', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -394,7 +395,7 @@ class SceneModule extends Module {
 					this.clearSelectedEntities();
 					let idSet = new Set(change.reference.items.map(item => item.id));
 					let entities = [];
-					scene.forEachChild('ent', ent => {
+					scene.forEachChild('ent', (ent: Entity) => {
 						if (idSet.has(ent.prototype.id)) {
 							entities.push(ent);
 						}
@@ -623,7 +624,7 @@ class SceneModule extends Module {
 
 	redrawSelectionArea() {
 		this.selectionArea.clear();
-		this.selectionArea.lineStyle(2, 0xFFFFFF, 0.7);
+		this.selectionArea.lineStyle(scene.screenPixelsToWorldPixels(2.5), 0xFFFFFF, 0.7);
 		this.selectionArea.beginFill(0xFFFFFF, 0.3);
 		this.selectionArea.drawRect(
 			this.selectionStart.x,
@@ -744,13 +745,15 @@ class SceneModule extends Module {
 	fixAspectRatio() {
 		if (scene && this.canvas) {
 			let change = false;
-			if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
-				|| this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
+			if (this.canvasParentSize.x !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
+				|| this.canvasParentSize.y !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
 
 				// Here you can tweak the game resolution in editor.
 				// scene.renderer.resize(this.canvas.parentElement.offsetWidth / 2, this.canvas.parentElement.offsetHeight / 2);
 				let width = this.canvas.parentElement.offsetWidth;
 				let height = this.canvas.parentElement.offsetHeight;
+
+				this.canvasParentSize.setScalars(width, height);
 
 				// Here you can change the resolution of the canvas
 				let pixels = width * height;
@@ -758,13 +761,16 @@ class SceneModule extends Module {
 
 				/*
 				This doesn't work. Mouse position gets messed up.
-				const MAX_PIXELS = 1000 * 600;
+				*/
+				const MAX_PIXELS = 800 * 400;
 				if (pixels > MAX_PIXELS) {
 					quality = Math.sqrt(MAX_PIXELS / pixels);
 				}
-				*/
 
-				scene.renderer.resize(width * quality, height * quality);
+				let screenResolution = new Vector(width, height);
+				let gameResolution = screenResolution.clone().multiplyScalar(quality);
+
+				scene.resizeCanvas(gameResolution, screenResolution);
 
 				change = true;
 			}

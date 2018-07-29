@@ -25,7 +25,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -225,13 +224,11 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -321,7 +318,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=events.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -404,7 +400,6 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -856,7 +851,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -960,7 +954,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -1096,7 +1089,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1229,7 +1221,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1279,7 +1270,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1426,7 +1416,6 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1550,7 +1539,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -2103,7 +2091,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI$1;
 	if (isClient) {
@@ -2160,7 +2147,6 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2196,9 +2182,6 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -2263,7 +2246,6 @@
 	    return new Game(json.id);
 	});
 	var gameCreateListeners = [];
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2351,7 +2333,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2419,7 +2400,7 @@
 	    questionMark: 191
 	};
 	function listenMouseMove(element, handler) {
-	    element.addEventListener('mousemove', function (event) {
+	    var domHandler = function (event) {
 	        var x = event.pageX;
 	        var y = event.pageY;
 	        var el = element;
@@ -2428,32 +2409,35 @@
 	            y -= el.offsetTop;
 	            el = el.offsetParent;
 	        }
-	        element._mx = x;
-	        element._my = y;
+	        element['_mx'] = x;
+	        element['_my'] = y;
 	        handler && handler(new Vector(x, y));
-	    });
-	    return function () { return element.removeEventListener('mousemove', handler); };
+	    };
+	    element.addEventListener('mousemove', domHandler);
+	    return function () { return element.removeEventListener('mousemove', domHandler); };
 	}
 	// Requires listenMouseMove on the same element to get the mouse position
 	function listenMouseDown(element, handler) {
-	    element.addEventListener('mousedown', function (event) {
-	        if (typeof element._mx === 'number')
-	            { handler(new Vector(element._mx, element._my)); }
+	    var domHandler = function (event) {
+	        if (typeof element['_mx'] === 'number')
+	            { handler(new Vector(element['_mx'], element['_my'])); }
 	        else
 	            { handler(); }
-	    });
-	    return function () { return element.removeEventListener('mousedown', handler); };
+	    };
+	    element.addEventListener('mousedown', domHandler);
+	    return function () { return element.removeEventListener('mousedown', domHandler); };
 	}
 	// Requires listenMouseMove on the same element to get the mouse position
 	function listenMouseUp(element, handler) {
 	    // listen document body because many times mouse is accidentally dragged outside of element
-	    document.body.addEventListener('mouseup', function (event) {
-	        if (typeof element._mx === 'number')
-	            { handler(new Vector(element._mx, element._my)); }
+	    var domHandler = function (event) {
+	        if (typeof element['_mx'] === 'number')
+	            { handler(new Vector(element['_mx'], element['_my'])); }
 	        else
 	            { handler(); }
-	    });
-	    return function () { return element.removeEventListener('mouseup', handler); };
+	    };
+	    document.body.addEventListener('mouseup', domHandler);
+	    return function () { return element.removeEventListener('mouseup', domHandler); };
 	}
 	////////////////////////////////////
 	var keys = {};
@@ -2476,7 +2460,6 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
-	//# sourceMappingURL=input.js.map
 
 	var GameEvent;
 	(function (GameEvent) {
@@ -2487,7 +2470,6 @@
 	    GameEvent["SCENE_DRAW"] = "scene draw";
 	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
 	})(GameEvent || (GameEvent = {}));
-	//# sourceMappingURL=gameEvents.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2499,6 +2481,7 @@
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this.layers = {};
 	        _this.resetting = false;
+	        _this.pixelDensity = new Vector(1, 1);
 	        if (scene) {
 	            try {
 	                scene.delete();
@@ -2717,12 +2700,24 @@
 	        return this.components.get(componentName) || new Set;
 	    };
 	    Scene.prototype.mouseToWorld = function (mousePosition) {
-	        return new Vector(this.layers.move.pivot.x + mousePosition.x / this.cameraZoom, this.layers.move.pivot.y + mousePosition.y / this.cameraZoom);
+	        return new Vector(this.layers.move.pivot.x + mousePosition.x / this.cameraZoom * this.pixelDensity.x, this.layers.move.pivot.y + mousePosition.y / this.cameraZoom * this.pixelDensity.y);
+	    };
+	    Scene.prototype.screenPixelsToWorldPixels = function (screenPixels) {
+	        return screenPixels / this.cameraZoom * this.pixelDensity.x;
 	    };
 	    Scene.prototype.setZoom = function (zoomLevel) {
 	        if (zoomLevel)
 	            { this.cameraZoom = zoomLevel; }
 	        this.dispatch('zoomChange', this.cameraZoom);
+	    };
+	    Scene.prototype.resizeCanvas = function (gameResolution, screenResolution) {
+	        this.renderer.resize(gameResolution.x, gameResolution.y);
+	        if (screenResolution) {
+	            this.pixelDensity.setScalars(gameResolution.x / screenResolution.x, gameResolution.y / screenResolution.y);
+	        }
+	        else {
+	            this.pixelDensity.setScalars(1, 1);
+	        }
 	    };
 	    return Scene;
 	}(Serializable));
@@ -2734,7 +2729,6 @@
 	    if (scene)
 	        { listener(); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2869,7 +2863,6 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
-	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = [
@@ -3072,7 +3065,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3094,7 +3086,6 @@
 	    delete serializables[id];
 	}
 	changeDispacher.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3281,7 +3272,6 @@
 	    }
 	    return entity;
 	});
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3517,7 +3507,6 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3763,7 +3752,6 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3824,7 +3812,6 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3848,9 +3835,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3936,7 +3920,6 @@
 	});
 	var zeroPoint = new PIXI$2.Point();
 	var tempPoint = new PIXI$2.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3960,7 +3943,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4134,7 +4116,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4175,7 +4156,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4226,7 +4206,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4274,7 +4253,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4471,7 +4449,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4497,7 +4474,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4782,7 +4758,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -4798,7 +4773,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5000,9 +4974,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5045,7 +5016,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5188,7 +5158,6 @@
 	    });
 	}
 	window.addEventListener('load', connect);
-	//# sourceMappingURL=net.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -5360,7 +5329,6 @@
 	    };
 	    return ModuleTab;
 	}());
-	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -5384,7 +5352,6 @@
 	    };
 	    return Layout;
 	}());
-	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -5475,7 +5442,6 @@
 	        resolve();
 	    });
 	});
-	//# sourceMappingURL=module.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -5610,7 +5576,6 @@
 	    };
 	    return SceneControlButton;
 	}());
-	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelAndScene() {
 	    return scene && scene.isInInitialState() && editor.selectedLevel;
@@ -5656,6 +5621,7 @@
 	    return entities;
 	}
 	// Call setChangeOrigin(this) before calling this
+	// Does modifications to entities in editor scene
 	function syncAChangeBetweenSceneAndLevel(change) {
 	    if (!scene || !scene.level)
 	        { return; }
@@ -5929,7 +5895,6 @@
 	        editorWidget.position.updateVisibility();
 	    });
 	}
-	//# sourceMappingURL=sceneEditUtil.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -6020,7 +5985,6 @@
 	}());
 	var help = new Help;
 	window['help'] = help;
-	//# sourceMappingURL=help.js.map
 
 	/*
 	Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
@@ -6112,7 +6076,6 @@
 	    };
 	    return Widget;
 	}());
-	//# sourceMappingURL=widget.js.map
 
 	var SHIFT_STEPS = 16;
 	var AngleWidget = /** @class */ (function (_super) {
@@ -6187,7 +6150,6 @@
 	    };
 	    return AngleWidget;
 	}(Widget));
-	//# sourceMappingURL=angleWidget.js.map
 
 	var PositionWidget = /** @class */ (function (_super) {
 	    __extends(PositionWidget, _super);
@@ -6225,7 +6187,6 @@
 	    };
 	    return PositionWidget;
 	}(Widget));
-	//# sourceMappingURL=positionWidget.js.map
 
 	var MIN_SCALE = 0.1;
 	var ScaleWidget = /** @class */ (function (_super) {
@@ -6302,7 +6263,6 @@
 	    };
 	    return ScaleWidget;
 	}(Widget));
-	//# sourceMappingURL=scaleWidget.js.map
 
 	var MoveWidget = /** @class */ (function (_super) {
 	    __extends(MoveWidget, _super);
@@ -6374,7 +6334,6 @@
 	    };
 	    return MoveWidget;
 	}(Widget));
-	//# sourceMappingURL=moveWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -6574,7 +6533,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=EditorWidget.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -6583,6 +6541,7 @@
 	    __extends(SceneModule, _super);
 	    function SceneModule() {
 	        var _this = _super.call(this) || this;
+	        _this.canvasParentSize = new Vector(0, 0);
 	        var disableMouseDown = function (e) {
 	            e.returnValue = false;
 	            e.preventDefault();
@@ -7070,7 +7029,7 @@
 	    };
 	    SceneModule.prototype.redrawSelectionArea = function () {
 	        this.selectionArea.clear();
-	        this.selectionArea.lineStyle(2, 0xFFFFFF, 0.7);
+	        this.selectionArea.lineStyle(scene.screenPixelsToWorldPixels(2.5), 0xFFFFFF, 0.7);
 	        this.selectionArea.beginFill(0xFFFFFF, 0.3);
 	        this.selectionArea.drawRect(this.selectionStart.x, this.selectionStart.y, this.selectionEnd.x - this.selectionStart.x, this.selectionEnd.y - this.selectionStart.y);
 	        this.selectionArea.endFill();
@@ -7168,21 +7127,26 @@
 	    SceneModule.prototype.fixAspectRatio = function () {
 	        if (scene && this.canvas) {
 	            var change = false;
-	            if (this.canvas.width !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
-	                || this.canvas.height !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
+	            if (this.canvasParentSize.x !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
+	                || this.canvasParentSize.y !== this.canvas.parentElement.offsetHeight && this.canvas.parentElement.offsetHeight) {
 	                // Here you can tweak the game resolution in editor.
 	                // scene.renderer.resize(this.canvas.parentElement.offsetWidth / 2, this.canvas.parentElement.offsetHeight / 2);
 	                var width = this.canvas.parentElement.offsetWidth;
 	                var height = this.canvas.parentElement.offsetHeight;
+	                this.canvasParentSize.setScalars(width, height);
+	                // Here you can change the resolution of the canvas
+	                var pixels = width * height;
 	                var quality = 1;
 	                /*
 	                This doesn't work. Mouse position gets messed up.
-	                const MAX_PIXELS = 1000 * 600;
+	                */
+	                var MAX_PIXELS = 800 * 400;
 	                if (pixels > MAX_PIXELS) {
 	                    quality = Math.sqrt(MAX_PIXELS / pixels);
 	                }
-	                */
-	                scene.renderer.resize(width * quality, height * quality);
+	                var screenResolution = new Vector(width, height);
+	                var gameResolution = screenResolution.clone().multiplyScalar(quality);
+	                scene.resizeCanvas(gameResolution, screenResolution);
 	                change = true;
 	            }
 	            // scene.renderer.resize(this.canvas.width, this.canvas.height);
@@ -7345,7 +7309,6 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
-	//# sourceMappingURL=sceneModule.js.map
 
 	var TypesModule = /** @class */ (function (_super) {
 	    __extends(TypesModule, _super);
@@ -7566,7 +7529,6 @@
 	    }, 0);
 	});
 	Module.register(TypesModule, 'left');
-	//# sourceMappingURL=typesModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -7612,7 +7574,6 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
-	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
@@ -7731,7 +7692,6 @@
 	    var event = new DragAndDropStopEvent(idList, targetElement);
 	    events.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
-	//# sourceMappingURL=treeView.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -7789,7 +7749,6 @@
 	    return PrefabsModule;
 	}(Module));
 	Module.register(PrefabsModule, 'left');
-	//# sourceMappingURL=prefabsModule.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7865,7 +7824,6 @@
 	    }
 	    return Layer;
 	}());
-	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7894,7 +7852,6 @@
 	    }
 	    return CreateObject;
 	}(Popup));
-	//# sourceMappingURL=createObject.js.map
 
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
@@ -8176,7 +8133,6 @@
 	    return ObjectsModule;
 	}(Module));
 	Module.register(ObjectsModule, 'left');
-	//# sourceMappingURL=objectsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -8270,7 +8226,6 @@
 	    };
 	    return LevelItem;
 	}());
-	//# sourceMappingURL=levelsModule.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -8347,7 +8302,6 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
-	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -8383,7 +8337,6 @@
 	    };
 	    return Confirmation;
 	}(Popup));
-	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -8513,7 +8466,6 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
-	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -8568,7 +8520,6 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
-	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -8586,7 +8537,6 @@
 	        number: num
 	    };
 	}
-	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -9085,7 +9035,6 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
-	//# sourceMappingURL=propertyEditor.js.map
 
 	var TypeModule = /** @class */ (function (_super) {
 	    __extends(TypeModule, _super);
@@ -9129,7 +9078,6 @@
 	    return TypeModule;
 	}(Module));
 	Module.register(TypeModule, 'right');
-	//# sourceMappingURL=typeModule.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -9164,7 +9112,6 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
-	//# sourceMappingURL=prefabModule.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -9198,7 +9145,6 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
-	//# sourceMappingURL=objectModule.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -9233,7 +9179,6 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
-	//# sourceMappingURL=levelModule.js.map
 
 	var GameModule = /** @class */ (function (_super) {
 	    __extends(GameModule, _super);
@@ -9264,7 +9209,6 @@
 	    return GameModule;
 	}(Module));
 	Module.register(GameModule, 'right');
-	//# sourceMappingURL=gameModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -9374,7 +9318,6 @@
 	    };
 	    return FPSMeter;
 	}());
-	//# sourceMappingURL=performanceModule.js.map
 
 	var PerSecondModule = /** @class */ (function (_super) {
 	    __extends(PerSecondModule, _super);
@@ -9416,11 +9359,9 @@
 	    };
 	    return PerSecondItem;
 	}());
-	//# sourceMappingURL=perSecondModule.js.map
 
 	window.test = function () {
 	};
-	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -9456,7 +9397,6 @@
 	    };
 	    return OKPopup;
 	}(Popup));
-	//# sourceMappingURL=OKPopup.js.map
 
 	var modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
 	var loadedPromise = events.getEventPromise('loaded');
@@ -9588,7 +9528,6 @@
 	    loadOptions();
 	    return options$1[id];
 	}
-	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -9604,7 +9543,6 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map
