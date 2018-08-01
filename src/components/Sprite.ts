@@ -10,38 +10,31 @@ Component.register({
 	allowMultiple: true,
 	description: 'Draws a sprite on the screen.',
 	properties: [
+		Prop('resource', 'character.png', Prop.enum, Prop.enum.values('character.png', 'profile.png', 'sprite.png')),
+		Prop('anchor', new Vector(0.5, 0.5), Prop.vector)
 	],
 	prototype: {
 		init() {
 			this.initSprite();
 
-			this.listenProperty(this.Transform, 'position', position => {
-				// this.sprite.x = position.x;
-				// this.sprite.y = position.y;
+			this.listenProperty(this, 'anchor', anchor => {
+				if (!this.sprite) return;
+				else this.sprite.anchor.set(this.anchor.x, this.anchor.y);
 			});
 
-			this.listenProperty(this.Transform, 'angle', angle => {
-				// this.sprite.rotation = angle;
-			});
-
-			this.listenProperty(this.Transform, 'scale', scale => {
-				// this.sprite.scale.x = scale.x;
-				// this.sprite.scale.y = scale.y;
+			this.listenProperty(this, 'resource', resource => {
+				this.initSprite();
 			});
 		},
 		initSprite() {
-			this.sprite = PIXI.Sprite.fromImage('/img/sprite.png');
-			this.sprite.anchor.set(0.5, 0.5);
-			
-			let T = this.Transform;
+			if (this.sprite) {
+				this.sprite.destroy();
+			}
 
-			// this.sprite.x = T.position.x;
-			// this.sprite.y = T.position.y;
-			// this.sprite.rotation = T.angle;
-			// this.sprite.scale.x = T.scale.x;
-			// this.sprite.scale.y = T.scale.y;
+			this.sprite = PIXI.Sprite.fromImage('/img/' + this.resource);
+			this.sprite.anchor.set(this.anchor.x, this.anchor.y);
 
-			this.scene.layers.main.addChild(this.sprite);
+			this.Transform.container.addChild(this.sprite);
 		},
 		sleep() {
 			this.sprite.destroy();

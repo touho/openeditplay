@@ -339,6 +339,8 @@ export default class Scene extends Serializable {
 		} else {
 			this.pixelDensity.setScalars(1, 1);
 		}
+
+		console.log('resizeCanvas', this.pixelDensity, screenResolution);
 	}
 }
 Scene.prototype.isRoot = true;

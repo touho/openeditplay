@@ -13,6 +13,19 @@ div.editorLayout {
     display: flex;
     flex-direction: row;
 }
+
+div.editorLayout.fullViewMode {
+    display: block;
+}
+div.editorLayout.fullViewMode .fullView {
+    width: 100%;
+    height: 100%;
+}
+
+div.editorLayout.fullViewMode > :not(.fullView) {
+    display: none;
+}
+
 div.packable {
     transition: all 0.3s;
     position: relative;

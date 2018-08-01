@@ -2718,6 +2718,7 @@
 	        else {
 	            this.pixelDensity.setScalars(1, 1);
 	        }
+	        console.log('resizeCanvas', this.pixelDensity, screenResolution);
 	    };
 	    return Scene;
 	}(Serializable));
@@ -4123,32 +4124,31 @@
 	    icon: 'fa-stop',
 	    allowMultiple: true,
 	    description: 'Draws a sprite on the screen.',
-	    properties: [],
+	    properties: [
+	        Prop('resource', 'character.png', Prop.enum, Prop.enum.values('character.png', 'profile.png', 'sprite.png')),
+	        Prop('anchor', new Vector(0.5, 0.5), Prop.vector)
+	    ],
 	    prototype: {
 	        init: function () {
+	            var _this = this;
 	            this.initSprite();
-	            this.listenProperty(this.Transform, 'position', function (position) {
-	                // this.sprite.x = position.x;
-	                // this.sprite.y = position.y;
+	            this.listenProperty(this, 'anchor', function (anchor) {
+	                if (!_this.sprite)
+	                    { return; }
+	                else
+	                    { _this.sprite.anchor.set(_this.anchor.x, _this.anchor.y); }
 	            });
-	            this.listenProperty(this.Transform, 'angle', function (angle) {
-	                // this.sprite.rotation = angle;
-	            });
-	            this.listenProperty(this.Transform, 'scale', function (scale) {
-	                // this.sprite.scale.x = scale.x;
-	                // this.sprite.scale.y = scale.y;
+	            this.listenProperty(this, 'resource', function (resource) {
+	                _this.initSprite();
 	            });
 	        },
 	        initSprite: function () {
-	            this.sprite = PIXI$2.Sprite.fromImage('/img/sprite.png');
-	            this.sprite.anchor.set(0.5, 0.5);
-	            var T = this.Transform;
-	            // this.sprite.x = T.position.x;
-	            // this.sprite.y = T.position.y;
-	            // this.sprite.rotation = T.angle;
-	            // this.sprite.scale.x = T.scale.x;
-	            // this.sprite.scale.y = T.scale.y;
-	            this.scene.layers.main.addChild(this.sprite);
+	            if (this.sprite) {
+	                this.sprite.destroy();
+	            }
+	            this.sprite = PIXI$2.Sprite.fromImage('/img/' + this.resource);
+	            this.sprite.anchor.set(this.anchor.x, this.anchor.y);
+	            this.Transform.container.addChild(this.sprite);
 	        },
 	        sleep: function () {
 	            this.sprite.destroy();
@@ -5837,7 +5837,7 @@
 	    if (property) {
 	        if (!valueCompareFunc(property.value, transform[propertyName])) {
 	            property.value = transform[propertyName];
-	            console.log('updated', propertyName, 'to', transform[propertyName]);
+	            // console.log('updated', propertyName, 'to', transform[propertyName]);
 	        }
 	    }
 	    else {
@@ -5895,6 +5895,24 @@
 	        editorWidget.position.updateVisibility();
 	    });
 	}
+
+	var AnimationView = /** @class */ (function () {
+	    function AnimationView(serializable) {
+	        var _this = this;
+	        this.el = el('div.fullView.animationView', el('div.exitButton', 'X', { onclick: function () { return _this.close(); } }));
+	    }
+	    AnimationView.prototype.close = function () {
+	        var editorLayout = document.querySelector('div.editorLayout');
+	        this.el.parentNode.removeChild(this.el);
+	        editorLayout.classList.remove('fullViewMode');
+	    };
+	    AnimationView.open = function (serializable) {
+	        var editorLayout = document.querySelector('div.editorLayout');
+	        editorLayout.classList.add('fullViewMode');
+	        mount(editorLayout, new AnimationView(serializable));
+	    };
+	    return AnimationView;
+	}());
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -5980,6 +5998,9 @@
 	        game.getChildren('prt').forEach(function (prt) { return prt.delete(); });
 	        var children = JSON.parse(data).map(Serializable.fromJSON);
 	        game.addChildren(children);
+	    };
+	    Help.prototype.openAnimationView = function (s) {
+	        AnimationView.open(s);
 	    };
 	    return Help;
 	}());
@@ -6188,7 +6209,7 @@
 	    return PositionWidget;
 	}(Widget));
 
-	var MIN_SCALE = 0.1;
+	var MIN_SCALE = 0.01;
 	var ScaleWidget = /** @class */ (function (_super) {
 	    __extends(ScaleWidget, _super);
 	    function ScaleWidget(component, scaleX, scaleY) {
@@ -6755,13 +6776,15 @@
 	        });
 	        events.listen('setLevel', function (lvl) {
 	            if (lvl)
-	                { lvl.createScene(false); }
+	                { lvl.createScene(null); }
 	            else if (scene) {
 	                scene.delete();
 	            }
 	            _this.playingModeChanged();
 	            _this.clearState();
 	            _this.draw();
+	            _this.canvasParentSize.setScalars(0, 0); // force aspect ratio fix for new scene
+	            _this.fixAspectRatio();
 	        });
 	        events.listen('scene load level before entities', function (scene$$1, level) {
 	            assert$1(!scene$$1.layers.editorLayer, 'editorLayer should not be there');
@@ -7124,7 +7147,9 @@
 	            this.el.classList.toggle('hideScenePauseInformation', isInitialState);
 	        }
 	    };
-	    SceneModule.prototype.fixAspectRatio = function () {
+	    SceneModule.prototype.fixAspectRatio = function (secondaryCheck) {
+	        var _this = this;
+	        if (secondaryCheck === void 0) { secondaryCheck = false; }
 	        if (scene && this.canvas) {
 	            var change = false;
 	            if (this.canvasParentSize.x !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
@@ -7154,6 +7179,8 @@
 	                events.dispatch('canvas resize', scene);
 	                this.draw();
 	            }
+	            // Lets see if it has changed after 200ms.
+	            setTimeout(function () { return _this.fixAspectRatio(true); }, 200);
 	        }
 	    };
 	    SceneModule.prototype.draw = function () {
@@ -7236,7 +7263,7 @@
 	    SceneModule.prototype.stopAndReset = function () {
 	        this.clearState();
 	        if (editor.selection.type === 'ent') {
-	            editor.select(editor.selection.items.map(function (ent) { return ent.prototype.prototype; }), this);
+	            editor.select(editor.selection.items.map(function (ent) { return ent.prototype; }), this);
 	        }
 	        if (scene) {
 	            scene.reset();
@@ -7785,9 +7812,11 @@
 	var Button = /** @class */ (function () {
 	    function Button() {
 	        var _this = this;
-	        this.el = el('button.button', { onclick: function () {
+	        this.el = el('button.button', {
+	            onclick: function () {
 	                _this.callback();
-	            } });
+	            }
+	        });
 	    }
 	    Button.prototype.update = function (button) {
 	        var newClassName = button.class ? "button " + button.class : 'button';
@@ -7817,10 +7846,12 @@
 	}());
 	var Layer = /** @class */ (function () {
 	    function Layer(popup) {
-	        this.el = el('div.popupLayer', { onclick: function () {
+	        this.el = el('div.popupLayer', {
+	            onclick: function () {
 	                popup.remove();
 	                popup.cancelCallback && popup.cancelCallback();
-	            } });
+	            }
+	        });
 	    }
 	    return Layer;
 	}());
@@ -8349,14 +8380,14 @@
 	    function ComponentAdder(parent) {
 	        var _this = _super.call(this, {
 	            title: 'Add Component',
-	            content: list('div.componentAdderContent', Category, undefined, parent)
+	            content: list('div.componentAdderContent', Category, null, parent)
 	        }) || this;
 	        var componentClassArray = Array.from(componentClasses.values())
 	            .filter(function (cl) { return !HIDDEN_COMPONENTS.includes(cl.componentName); })
 	            .sort(function (a, b) { return a.componentName.localeCompare(b.componentName); });
-	        console.log('before set', componentClassArray.map(function (c) { return c.category; }));
-	        console.log('set', new Set(componentClassArray.map(function (c) { return c.category; })));
-	        console.log('set array', new Set(componentClassArray.map(function (c) { return c.category; })).slice());
+	        // console.log('before set', componentClassArray.map(c => c.category))
+	        // console.log('set', new Set(componentClassArray.map(c => c.category)))
+	        // console.log('set array', Array.from(new Set(componentClassArray.map(c => c.category))))
 	        var categories = Array.from(new Set(componentClassArray.map(function (c) { return c.category; }))).map(function (categoryName) { return ({
 	            categoryName: categoryName,
 	            components: componentClassArray.filter(function (c) { return c.category === categoryName; })
@@ -8386,8 +8417,8 @@
 	}(Popup));
 	var Category = /** @class */ (function () {
 	    function Category(parent) {
-	        this.el = el('div.categoryItem', this.name = el('div.categoryName'), this.list = list('div.categoryButtons', ButtonWithDescription));
 	        this.parent = parent;
+	        this.el = el('div.categoryItem', this.name = el('div.categoryName'), this.list = list('div.categoryButtons', ButtonWithDescription));
 	    }
 	    Category.prototype.addComponentToParent = function (componentClass) {
 	        var _this = this;
@@ -8453,7 +8484,12 @@
 	    }
 	    ButtonWithDescription.prototype.update = function (buttonData) {
 	        this.description.innerHTML = buttonData.description;
-	        this.button.el.disabled = buttonData.disabledReason ? 'disabled' : '';
+	        if (buttonData.disabledReason) {
+	            this.button.el.setAttribute('disabled', 'disabled');
+	        }
+	        else {
+	            this.button.el.removeAttribute('disabled');
+	        }
 	        this.button.el.setAttribute('title', buttonData.disabledReason || '');
 	        this.button.update(buttonData);
 	    };
@@ -9466,6 +9502,7 @@
 	            { items = []; }
 	        else if (!Array.isArray(items))
 	            { items = [items]; }
+	        assert$1(items.filter(function (item) { return item == null; }).length === 0, 'Can not select null');
 	        this.selection.items = [].concat(items);
 	        var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
 	        if (types.length === 0)

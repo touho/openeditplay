@@ -4,6 +4,7 @@ import { scene } from '../core/scene'
 import Vector from '../util/vector'
 import { serializables } from '../core/serializableManager'
 import Serializable from '../core/serializable'
+import AnimationView from './views/animation/animationView';
 
 class Help {
 	get game() {
@@ -48,6 +49,9 @@ class Help {
 
 		let children = JSON.parse(data).map(Serializable.fromJSON);
 		game.addChildren(children);
+	}
+	openAnimationView(s: Serializable) {
+		AnimationView.open(s);
 	}
 }
 

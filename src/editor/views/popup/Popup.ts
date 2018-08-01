@@ -1,12 +1,19 @@
-import { el, mount, list } from 'redom';
+import { el, mount, list, RedomComponent, RedomElement } from 'redom';
 import { listenKeyDown, key } from '../../../util/input';
 
 export let popupDepth = 0;
 
+type PopupParameters = {
+	title?: string,
+	cancelCallback?: Function,
+	width?: number,
+	content?: RedomComponent
+};
+
 export default class Popup {
 	el: HTMLElement;
 	text: HTMLElement;
-	content: HTMLElement;
+	content: RedomElement;
 	depth: number;
 
 	constructor({
@@ -14,12 +21,12 @@ export default class Popup {
 		cancelCallback = null,
 		width = null,
 		content = el('div.genericCustomContent', 'Undefined content')
-	} = {}) {
+	}: PopupParameters = {}) {
 		this.el = el('div.popup', {
-				style: {
-					'z-index': 1000 + popupDepth++
-				}
-			},
+			style: {
+				'z-index': 1000 + popupDepth++
+			}
+		},
 			new Layer(this),
 			el('div.popupContent',
 				{
@@ -58,9 +65,11 @@ export class Button {
 	_prevIcon: string;
 
 	constructor() {
-		this.el = el('button.button', {onclick: () => {
-			this.callback();
-		}});
+		this.el = el('button.button', {
+			onclick: () => {
+				this.callback();
+			}
+		});
 	}
 	update(button) {
 		let newClassName = button.class ? `button ${button.class}` : 'button';
@@ -97,9 +106,11 @@ class Layer {
 	el: HTMLElement;
 
 	constructor(popup) {
-		this.el = el('div.popupLayer', { onclick: () => {
-			popup.remove();
-			popup.cancelCallback && popup.cancelCallback();
-		} });
+		this.el = el('div.popupLayer', {
+			onclick: () => {
+				popup.remove();
+				popup.cancelCallback && popup.cancelCallback();
+			}
+		});
 	}
 }

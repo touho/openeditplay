@@ -25,7 +25,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -225,13 +224,11 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -303,7 +300,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=events.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -330,7 +326,6 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -769,7 +764,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -864,7 +858,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -1000,7 +993,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1133,7 +1125,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1183,7 +1174,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1330,7 +1320,6 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1454,7 +1443,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1835,7 +1823,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1892,7 +1879,6 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1928,9 +1914,6 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -2001,7 +1984,6 @@
 	    if (game)
 	        { listener(game); }
 	}
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2089,7 +2071,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2225,7 +2206,6 @@
 	        });
 	    }
 	}
-	//# sourceMappingURL=input.js.map
 
 	var GameEvent;
 	(function (GameEvent) {
@@ -2236,7 +2216,6 @@
 	    GameEvent["SCENE_DRAW"] = "scene draw";
 	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
 	})(GameEvent || (GameEvent = {}));
-	//# sourceMappingURL=gameEvents.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2484,6 +2463,7 @@
 	        else {
 	            this.pixelDensity.setScalars(1, 1);
 	        }
+	        console.log('resizeCanvas', this.pixelDensity, screenResolution);
 	    };
 	    return Scene;
 	}(Serializable));
@@ -2495,7 +2475,6 @@
 	    if (scene)
 	        { listener(); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2630,7 +2609,6 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
-	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = [
@@ -2833,7 +2811,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -2855,7 +2832,6 @@
 	    delete serializables[id];
 	}
 	changeDispacher.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3042,7 +3018,6 @@
 	    }
 	    return entity;
 	});
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3278,7 +3253,6 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3524,7 +3498,6 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3585,7 +3558,6 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3609,9 +3581,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3697,7 +3666,6 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3721,7 +3689,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3895,7 +3862,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3903,32 +3869,31 @@
 	    icon: 'fa-stop',
 	    allowMultiple: true,
 	    description: 'Draws a sprite on the screen.',
-	    properties: [],
+	    properties: [
+	        Prop('resource', 'character.png', Prop.enum, Prop.enum.values('character.png', 'profile.png', 'sprite.png')),
+	        Prop('anchor', new Vector(0.5, 0.5), Prop.vector)
+	    ],
 	    prototype: {
 	        init: function () {
+	            var _this = this;
 	            this.initSprite();
-	            this.listenProperty(this.Transform, 'position', function (position) {
-	                // this.sprite.x = position.x;
-	                // this.sprite.y = position.y;
+	            this.listenProperty(this, 'anchor', function (anchor) {
+	                if (!_this.sprite)
+	                    { return; }
+	                else
+	                    { _this.sprite.anchor.set(_this.anchor.x, _this.anchor.y); }
 	            });
-	            this.listenProperty(this.Transform, 'angle', function (angle) {
-	                // this.sprite.rotation = angle;
-	            });
-	            this.listenProperty(this.Transform, 'scale', function (scale) {
-	                // this.sprite.scale.x = scale.x;
-	                // this.sprite.scale.y = scale.y;
+	            this.listenProperty(this, 'resource', function (resource) {
+	                _this.initSprite();
 	            });
 	        },
 	        initSprite: function () {
-	            this.sprite = PIXI$1.Sprite.fromImage('/img/sprite.png');
-	            this.sprite.anchor.set(0.5, 0.5);
-	            var T = this.Transform;
-	            // this.sprite.x = T.position.x;
-	            // this.sprite.y = T.position.y;
-	            // this.sprite.rotation = T.angle;
-	            // this.sprite.scale.x = T.scale.x;
-	            // this.sprite.scale.y = T.scale.y;
-	            this.scene.layers.main.addChild(this.sprite);
+	            if (this.sprite) {
+	                this.sprite.destroy();
+	            }
+	            this.sprite = PIXI$1.Sprite.fromImage('/img/' + this.resource);
+	            this.sprite.anchor.set(this.anchor.x, this.anchor.y);
+	            this.Transform.container.addChild(this.sprite);
 	        },
 	        sleep: function () {
 	            this.sprite.destroy();
@@ -3936,7 +3901,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -3987,7 +3951,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4035,7 +3998,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4232,7 +4194,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4258,7 +4219,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4543,7 +4503,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4553,7 +4512,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4755,9 +4713,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4800,7 +4755,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -4943,7 +4897,6 @@
 	    });
 	}
 	window.addEventListener('load', connect);
-	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -4952,6 +4905,7 @@
 	        { return; }
 	    var screen = document.getElementById('screen');
 	    function setSize(force) {
+	        if (force === void 0) { force = false; }
 	        if (!screen)
 	            { return; }
 	        var width = window.innerWidth;
@@ -4974,16 +4928,17 @@
 	        previousWidth = width;
 	        previousHeight = height;
 	        events.dispatch('canvas resize', scene);
+	        // Lets see if it has changed after 200ms.
+	        setTimeout(function () { return setSize(); }, 200);
 	    }
 	    setSize(true);
-	    setTimeout(setSize, 50);
-	    setTimeout(setSize, 400);
-	    setTimeout(setSize, 1000);
+	    // setTimeout(setSize, 50);
+	    // setTimeout(setSize, 400);
+	    // setTimeout(setSize, 1000);
 	}
 	window.addEventListener('resize', resizeCanvas);
 	listenSceneCreation(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
-	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5059,7 +5014,6 @@
 	    };
 	    return TouchControl;
 	}());
-	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5194,7 +5148,6 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
-	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5232,7 +5185,6 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

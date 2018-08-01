@@ -317,7 +317,7 @@ export function setOrCreateTransformDataPropertyValue(transformComponentData, tr
 	if (property) {
 		if (!valueCompareFunc(property.value, transform[propertyName])) {
 			property.value = transform[propertyName];
-			console.log('updated', propertyName, 'to', transform[propertyName]);
+			// console.log('updated', propertyName, 'to', transform[propertyName]);
 		}
 	} else {
 		property = transformComponentData.componentClass._propertyTypesByName[propertyName].createProperty({

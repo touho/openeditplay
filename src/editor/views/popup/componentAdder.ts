@@ -1,11 +1,12 @@
-import Popup, {Button} from './Popup';
-import {componentClasses} from '../../../core/component';
+import Popup, { Button } from './Popup';
+import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
-import {list, el, List} from 'redom';
+import { list, el, List } from 'redom';
 import assert from '../../../util/assert';
-import {setChangeOrigin} from '../../../core/change';
+import { setChangeOrigin } from '../../../core/change';
 import Confirmation from './Confirmation';
 import { dispatch, listen } from '../../../util/events';
+import Serializable from '../../../core/serializable';
 
 const CATEGORY_ORDER = [
 	'Common',
@@ -16,20 +17,21 @@ const CATEGORY_ORDER = [
 const HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
 
 export default class ComponentAdder extends Popup {
-	constructor(parent) {
+	content: List;
+	constructor(parent: Serializable) {
 		super({
 			title: 'Add Component',
-			content: list('div.componentAdderContent', Category, undefined, parent)
+			content: list('div.componentAdderContent', Category, null, parent)
 		});
 
 
 		let componentClassArray = Array.from(componentClasses.values())
-		.filter(cl => !HIDDEN_COMPONENTS.includes(cl.componentName))
-		.sort((a, b) => a.componentName.localeCompare(b.componentName));
+			.filter(cl => !HIDDEN_COMPONENTS.includes(cl.componentName))
+			.sort((a, b) => a.componentName.localeCompare(b.componentName));
 
-		console.log('before set', componentClassArray.map(c => c.category))
-		console.log('set', new Set(componentClassArray.map(c => c.category)))
-		console.log('set array', [...new Set(componentClassArray.map(c => c.category))])
+		// console.log('before set', componentClassArray.map(c => c.category))
+		// console.log('set', new Set(componentClassArray.map(c => c.category)))
+		// console.log('set array', Array.from(new Set(componentClassArray.map(c => c.category))))
 
 		let categories = Array.from(new Set(componentClassArray.map(c => c.category))).map(categoryName => ({
 			categoryName,
@@ -64,12 +66,11 @@ class Category {
 	name: HTMLElement;
 	list: List;
 
-	constructor(parent) {
+	constructor(public parent: Serializable) {
 		this.el = el('div.categoryItem',
 			this.name = el('div.categoryName'),
 			this.list = list('div.categoryButtons', ButtonWithDescription)
 		);
-		this.parent = parent;
 	}
 
 	addComponentToParent(componentClass) {
@@ -104,7 +105,7 @@ class Category {
 		this.name.textContent = category.categoryName;
 
 		let componentCounts = {};
-		this.parent.forEachChild('cda', cda => {
+		this.parent.forEachChild('cda', (cda: ComponentData) => {
 			if (!componentCounts[cda.name])
 				componentCounts[cda.name] = 0;
 			componentCounts[cda.name]++;
@@ -112,7 +113,7 @@ class Category {
 
 		let componentButtonData = category.components.map(comp => {
 			let disabledReason;
-			if (!comp.allowMultiple && this.parent.findChild('cda', cda => cda.name === comp.componentName) !== null) {
+			if (!comp.allowMultiple && this.parent.findChild('cda', (cda: ComponentData) => cda.name === comp.componentName) !== null) {
 				disabledReason = `Only one ${comp.componentName} component is allowed at the time`;
 			}
 			let count = componentCounts[comp.componentName];
@@ -124,7 +125,7 @@ class Category {
 				disabledReason,
 				callback: () => {
 					if ('activeElement' in document)
-						document.activeElement.blur();
+						(document.activeElement as HTMLElement).blur();
 
 					this.addComponentToParent(comp);
 				}
@@ -149,7 +150,11 @@ class ButtonWithDescription {
 
 	update(buttonData) {
 		this.description.innerHTML = buttonData.description;
-		this.button.el.disabled = buttonData.disabledReason ? 'disabled' : '';
+		if (buttonData.disabledReason) {
+			this.button.el.setAttribute('disabled', 'disabled');
+		} else {
+			this.button.el.removeAttribute('disabled');
+		}
 		this.button.el.setAttribute('title', buttonData.disabledReason || '');
 		this.button.update(buttonData);
 	}

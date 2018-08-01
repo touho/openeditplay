@@ -2,7 +2,7 @@ import {default as Widget, defaultWidgetDistance, centerWidgetRadius} from './wi
 import Vector from '../../util/vector';
 import { scene } from '../../core/scene'
 
-const MIN_SCALE = 0.1;
+const MIN_SCALE = 0.01;
 
 export default class ScaleWidget extends Widget {
 	constructor(component, scaleX, scaleY) {
@@ -16,7 +16,7 @@ export default class ScaleWidget extends Widget {
 		let T = this.component.Transform;
 		let globalAngle = T.getGlobalAngle();
 		let globalPosition = T.getGlobalPosition();
-		
+
 		let pos = this.relativePosition.clone().multiplyScalar(1 / scene.cameraZoom).rotate(globalAngle).add(globalPosition);
 		this.x = pos.x;
 		this.y = pos.y;
@@ -38,7 +38,7 @@ export default class ScaleWidget extends Widget {
 		graphics.moveTo(lineEnd.x + 1, lineEnd.y + 1);
 		graphics.lineTo(lineStart.x + 1, lineStart.y + 1);
 		graphics.lineStyle(0, 0x000000, 1);
-		
+
 		graphics.beginFill(0x000000, 1);
 		graphics.drawRect(this.relativePosition.x - RECT_SIDE/2 + 1, this.relativePosition.y - RECT_SIDE/2 + 1, RECT_SIDE, RECT_SIDE);
 		graphics.endFill();
@@ -51,7 +51,7 @@ export default class ScaleWidget extends Widget {
 		graphics.beginFill(0xFFFFFF, 1);
 		graphics.drawRect(this.relativePosition.x - RECT_SIDE/2, this.relativePosition.y - RECT_SIDE/2, RECT_SIDE, RECT_SIDE);
 		graphics.endFill();
-		
+
 		return graphics;
 	}
 
@@ -67,7 +67,7 @@ export default class ScaleWidget extends Widget {
 		}
 
 		let entityGlobalPosition = masterEntity.getComponent('Transform').getGlobalPosition();
-		
+
 		let oldMousePosition = mousePosition.clone().subtract(mousePositionChange);
 		let widgetPosition = Vector.fromObject(this);
 

@@ -69,17 +69,17 @@ export function createMaterial(owner, options) {
 		options.frictionRelaxation,
 		options.surfaceVelocity
 	].join(';');
-	
+
 	if (materials[hash])
 		return materials[hash];
-	
+
 	let material = new p2.Material();
 	material.options = options;
 	materials[hash] = material;
-	
+
 	// TODO: When physics entities are edited, new materials are created.
 	// Should somehow remove old unused materials and contact materials.
-	
+
 	for (var h in materials) {
 		let m = materials[h];
 		let o1 = material.options;
@@ -95,6 +95,6 @@ export function createMaterial(owner, options) {
 		});
 		owner._p2World.addContactMaterial(contactMaterial);
 	}
-	
+
 	return material;
 }

@@ -73,14 +73,15 @@ export function listenMouseMove(element: HTMLElement, handler: (vec: Vector) => 
 		let x = event.pageX;
 		let y = event.pageY;
 		let el = element;
-		while( el != null ) {
+		while (el != null) {
 			x -= el.offsetLeft;
 			y -= el.offsetTop;
-			el = <HTMLElement> el.offsetParent;
+			el = <HTMLElement>el.offsetParent;
 		}
 
 		element['_mx'] = x;
 		element['_my'] = y;
+
 		handler && handler(new Vector(x, y));
 	};
 	element.addEventListener('mousemove', domHandler);

@@ -11,7 +11,7 @@ function resizeCanvas() {
 
 	let screen = document.getElementById('screen');
 
-	function setSize(force) {
+	function setSize(force: boolean = false) {
 		if (!screen)
 			return;
 
@@ -43,13 +43,16 @@ function resizeCanvas() {
 		previousHeight = height;
 
 		events.dispatch('canvas resize', scene);
+
+		// Lets see if it has changed after 200ms.
+		setTimeout(() => setSize(), 200);
 	}
 
 	setSize(true);
 
-	setTimeout(setSize, 50);
-	setTimeout(setSize, 400);
-	setTimeout(setSize, 1000);
+	// setTimeout(setSize, 50);
+	// setTimeout(setSize, 400);
+	// setTimeout(setSize, 1000);
 }
 
 window.addEventListener('resize', resizeCanvas);

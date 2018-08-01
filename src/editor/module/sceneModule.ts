@@ -13,12 +13,11 @@ import {
 import Scene, { scene } from '../../core/scene';
 import { game } from '../../core/game';
 import EntityPrototype from '../../core/entityPrototype';
-import ComponentData from '../../core/componentData';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
 import { editor } from '../editor';
-import { changeType, setChangeOrigin } from '../../core/change';
+import { setChangeOrigin } from '../../core/change';
 import * as sceneEdit from '../util/sceneEditUtil';
 import Vector from '../../util/vector';
 import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
@@ -30,6 +29,7 @@ import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../c
 import '../components/EditorWidget';
 import { filterChildren } from "../../core/serializable";
 import { limit } from "../../util/callLimiter";
+import Level from '../../core/level';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -302,9 +302,9 @@ class SceneModule extends Module {
 			this.draw();
 		});
 
-		events.listen('setLevel', lvl => {
+		events.listen('setLevel', (lvl: Level) => {
 			if (lvl)
-				lvl.createScene(false);
+				lvl.createScene(null);
 			else if (scene) {
 				scene.delete();
 			}
@@ -313,6 +313,9 @@ class SceneModule extends Module {
 
 			this.clearState();
 			this.draw();
+
+			this.canvasParentSize.setScalars(0, 0); // force aspect ratio fix for new scene
+			this.fixAspectRatio();
 		});
 
 		events.listen('scene load level before entities', (scene, level) => {
@@ -742,7 +745,7 @@ class SceneModule extends Module {
 		}
 	}
 
-	fixAspectRatio() {
+	fixAspectRatio(secondaryCheck? = false) {
 		if (scene && this.canvas) {
 			let change = false;
 			if (this.canvasParentSize.x !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
@@ -781,6 +784,9 @@ class SceneModule extends Module {
 				events.dispatch('canvas resize', scene);
 				this.draw();
 			}
+
+			// Lets see if it has changed after 200ms.
+			setTimeout(() => this.fixAspectRatio(true), 200);
 		}
 	}
 
@@ -871,7 +877,7 @@ class SceneModule extends Module {
 	stopAndReset() {
 		this.clearState();
 		if (editor.selection.type === 'ent') {
-			editor.select(editor.selection.items.map(ent => ent.prototype.prototype), this);
+			editor.select(editor.selection.items.map((ent: Entity) => ent.prototype), this);
 		}
 		if (scene) {
 			scene.reset();

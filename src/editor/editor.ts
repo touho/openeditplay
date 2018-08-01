@@ -127,6 +127,9 @@ class Editor {
 			items = [];
 		else if (!Array.isArray(items))
 			items = [items];
+
+		assert(items.filter(item => item == null).length === 0, 'Can not select null');
+
 		this.selection.items = [].concat(items);
 
 		let types = Array.from(new Set(items.map(i => i.threeLetterType)));
