@@ -3,6 +3,7 @@ import { addChange, changeType, setChangeOrigin } from './change';
 import assert from '../util/assert';
 import * as performanceTool from '../util/performance';
 import { PropertyType } from './propertyType';
+import { GameEvent } from './eventDispatcher';
 
 let changesEnabled = true;
 let scenePropertyFilter = null;
@@ -27,13 +28,14 @@ export default class Property extends Serializable {
 	_initialValue: any;
 	name: any;
 	propertyType: PropertyType;
+	_initialValueIsJSON: boolean = false;
 
 	// set skipSerializableRegistering=true if you are not planning to add this property to the hierarchy
 	// if you give propertyType, value in real value form
 	// if you don't give propertyType (give it later), value as JSON form
-	constructor({ value, predefinedId, name, propertyType, skipSerializableRegistering = false }) {
-		assert(name, 'Property without a name can not exist');
+	constructor({ value, predefinedId = '', name, propertyType = null, skipSerializableRegistering = false }) {
 		super(predefinedId, skipSerializableRegistering);
+		assert(name, 'Property without a name can not exist');
 		this._initialValue = value;
 		if (propertyType)
 			this.setPropertyType(propertyType);
@@ -72,18 +74,16 @@ export default class Property extends Serializable {
 			n: this.propertyType.name
 		});
 	}
-}
-Property.prototype.propertyType = null;
-Object.defineProperty(Property.prototype, 'type', {
-	get() {
+
+	get type() {
 		return this.propertyType.type;
 	}
-});
-Object.defineProperty(Property.prototype, 'value', {
-	set(newValue) {
+
+	set value(newValue) {
+		let oldValue = this._value;
 		this._value = this.propertyType.validator.validate(newValue);
 
-		this.dispatch('change', this._value);
+		this.dispatch(GameEvent.PROPERTY_VALUE_CHANGE, this._value, oldValue);
 		if (changesEnabled && this._rootType) { // not scene or empty
 			if (scenePropertyFilter === null
 				|| this._rootType !== 'sce'
@@ -92,11 +92,12 @@ Object.defineProperty(Property.prototype, 'value', {
 				addChange(changeType.setPropertyValue, this);
 			}
 		}
-	},
-	get() {
+	}
+	get value() {
 		return this._value;
 	}
-});
+}
+Property.prototype.propertyType = null;
 
 Serializable.registerSerializable(Property, 'prp', json => {
 	return new Property({

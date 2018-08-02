@@ -1,10 +1,9 @@
 import assert from '../util/assert';
 import { changeType, addChange } from './change';
 import { isClient } from '../util/environment';
-import * as performanceTool from '../util/performance';
-import { GameEvent } from './gameEvents';
+import EventDispatcher from './eventDispatcher';
 
-export const changeDispacher = {
+export const serializableCallbacks = {
 	addSerializable: (serializable: Serializable) => { },
 	removeSerializable: (serializableId: string) => { },
 };
@@ -22,27 +21,18 @@ export function createStringId(threeLetterPrefix = '???', characters = 16) {
 
 let serializableClasses = new Map();
 
-// type Listeners = { [event in GameEvent]: Array<(a?, b?, c?) => void>};
-
-/*
-Serializable lifecycle:
-
-fromJSON()
-
- */
-
-export default class Serializable {
+export default class Serializable extends EventDispatcher {
 	id: string;
 	threeLetterType: string;
 	isRoot: boolean;
 	_children: Map<string, Array<Serializable>> = new Map();
-	_listeners: { [event in GameEvent]?: Array<ListenerFunction>} = {};
 	_rootType: string;
 	_parent: Serializable;
 	_alive: boolean;
 	_state: number;
 
 	constructor(predefinedId: string = '', skipSerializableRegistering = false) {
+		super();
 		// @ifndef OPTIMIZE
 		assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 		// @endif
@@ -58,12 +48,13 @@ export default class Serializable {
 		if (this.id.startsWith('?'))
 			throw new Error('?');
 			*/
-		changeDispacher.addSerializable(this);
+		serializableCallbacks.addSerializable(this);
 	}
 	makeUpAName() {
 		return 'Serializable';
 	}
 	delete() {
+		super.delete();
 		if (this._parent) {
 			this._parent.deleteChild(this);
 			return false;
@@ -71,8 +62,7 @@ export default class Serializable {
 		this.deleteChildren();
 		this._alive = false;
 		this._rootType = null;
-		this._listeners = {};
-		changeDispacher.removeSerializable(this.id);
+		serializableCallbacks.removeSerializable(this.id);
 		this._state |= Serializable.STATE_DESTROY;
 		return true;
 	}
@@ -245,43 +235,6 @@ export default class Serializable {
 		this._state |= Serializable.STATE_CLONE;
 		return obj;
 	}
-	// priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	listen(event: GameEvent, callback: ListenerFunction, priority = 0) {
-		(callback as any).priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
-		if (!this._listeners.hasOwnProperty(event)) {
-			this._listeners[event] = [];
-		}
-		let index = indexOfListener(this._listeners[event], callback);
-		this._listeners[event].splice(index, 0, callback);
-		return () => {
-			if (!this._alive)
-				return; // listeners already deleted
-			let index = this._listeners[event].indexOf(callback);
-			if (index >= 0)
-				this._listeners[event].splice(index, 1);
-		};
-	}
-	dispatch(event: GameEvent, a?, b?, c?) {
-		let listeners = this._listeners[event];
-		if (!listeners)
-			return;
-
-		performanceTool.eventHappened('Event ' + event, listeners.length);
-
-		for (let i = 0; i < listeners.length; i++) {
-			// @ifndef OPTIMIZE
-			try {
-				// @endif
-
-				listeners[i](a, b, c);
-
-				// @ifndef OPTIMIZE
-			} catch (e) {
-				console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
-			}
-			// @endif
-		}
-	}
 	hasDescendant(child: Serializable) {
 		if (!child) return false;
 		let parent = child._parent;
@@ -444,21 +397,3 @@ export function filterChildren(serializables) {
 		return true;
 	});
 }
-
-let listenerCounter = 0;
-const NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
-
-function indexOfListener(array, callback) {
-	let low = 0,
-		high = array.length,
-		priority = callback.priority;
-
-	while (low < high) {
-		let mid = low + high >>> 1;
-		if (array[mid].priority < priority) low = mid + 1;
-		else high = mid;
-	}
-	return low;
-}
-
-type ListenerFunction = Function & { priority?: number };

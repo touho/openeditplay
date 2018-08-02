@@ -19,11 +19,11 @@ Component.register({
 			if (this.trigger === 'playerComesNear') {
 				let componentSet = this.scene.getComponents('CharacterController');
 				let entities = [];
-				componentSet.forEach(c => entities.push(c.entity));	
+				componentSet.forEach(c => entities.push(c.entity));
 				let distSq = this.radius * this.radius;
-				let pos = this.Transform.position;
+				let pos = this.Transform.getGlobalPosition();
 				for (let i = 0; i < entities.length; ++i) {
-					if (entities[i].position.distanceSq(pos) < distSq) {
+					if (entities[i].Transform.getGlobalPosition().distanceSq(pos) < distSq) {
 						if (!entities[i][this.storeProp] && this.launchTrigger(entities[i]) !== false)
 							break;
 						entities[i][this.storeProp] = true;
@@ -33,7 +33,7 @@ Component.register({
 				}
 			}
 		},
-		
+
 		// Return false if other triggers should not be checked
 		// Note: check this return false logic. Looks weird.
 		launchTrigger(entity) {

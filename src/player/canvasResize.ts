@@ -1,4 +1,4 @@
-import { scene, listenSceneCreation } from '../core/scene';
+import { scene, forEachScene } from '../core/scene';
 import debug from './debug'
 import events from "../util/events";
 import Vector from '../util/vector';
@@ -56,6 +56,6 @@ function resizeCanvas() {
 }
 
 window.addEventListener('resize', resizeCanvas);
-listenSceneCreation(resizeCanvas);
+forEachScene(resizeCanvas);
 
 const MAX_PIXELS = 800 * 600;

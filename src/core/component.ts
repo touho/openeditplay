@@ -1,15 +1,14 @@
 import Serializable from './serializable';
 import Entity from './entity';
 import assert from '../util/assert';
-import Property from './property';
 import PropertyOwner from './propertyOwner';
 import Scene, { scene } from './scene';
 import Game, { game } from './game';
 export { default as Prop } from './propertyType';
 export let componentClasses: Map<string, typeof Component> = new Map();
-import ComponentData from './componentData';
 import * as performance from '../util/performance';
 import { PropertyType } from './propertyType';
+import { GameEvent } from './eventDispatcher';
 
 const automaticSceneEventListeners = [
 	'onUpdate',
@@ -126,20 +125,7 @@ export class Component extends PropertyOwner {
 		this._listenRemoveFunctions.length = 0;
 	}
 	listenProperty(component: Component, propertyName: string, callback: Function) {
-		this._listenRemoveFunctions.push(component._properties[propertyName].listen('change', callback));
-	}
-	createComponentData() {
-		let componentName = this.componentClass.componentName;
-		let propertyTypes = this.class._propertyTypes;
-		let componentData = new ComponentData(componentName);
-		let children = [];
-		propertyTypes.forEach(pt => {
-			children.push(pt.createProperty({
-				value: this[pt.name]
-			}));
-		});
-		componentData.initWithChildren(children);
-		return componentData;
+		this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {

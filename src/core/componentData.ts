@@ -140,3 +140,24 @@ export default class ComponentData extends Serializable {
 Serializable.registerSerializable(ComponentData, 'cda', json => {
 	return new ComponentData(json.n, json.id, json.cid);
 });
+
+
+/*
+
+From Component? Is this needed?
+
+	createComponentData() {
+		let componentName = this.componentClass.componentName;
+		let propertyTypes = this.class._propertyTypes;
+		let componentData = new ComponentData(componentName);
+		let children = [];
+		propertyTypes.forEach(pt => {
+			children.push(pt.createProperty({
+				value: this[pt.name]
+			}));
+		});
+		componentData.initWithChildren(children);
+		return componentData;
+	}
+
+*/

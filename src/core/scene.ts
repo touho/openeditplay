@@ -9,9 +9,9 @@ import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
 import events from "../util/events";
 import Level from './level';
-import { GameEvent } from './gameEvents';
 import { Component } from './component';
 import EntityPrototype from './entityPrototype';
+import { GameEvent, globalEventDispatcher } from './eventDispatcher';
 
 let scene: Scene = null;
 export { scene };
@@ -62,7 +62,7 @@ export default class Scene extends Serializable {
 
 		addChange(changeType.addSerializableToTree, this);
 
-		sceneCreateListeners.forEach(listener => listener());
+		globalEventDispatcher.dispatch(GameEvent.GLOBAL_SCENE_CREATED, this);
 	}
 	makeUpAName() {
 		if (this.level)
@@ -189,6 +189,11 @@ export default class Scene extends Serializable {
 		performanceTool.start('Physics');
 		updateWorld(this, dt);
 		performanceTool.stop('Physics');
+
+		// // Update logic
+		// performanceTool.start('Component post updates');
+		// this.dispatch('onPostPhysicsUpdate', dt, this.time);
+		// performanceTool.stop('Component post updates');
 
 		// Update graphics
 		performanceTool.start('Draw');
@@ -328,7 +333,7 @@ export default class Scene extends Serializable {
 	setZoom(zoomLevel) {
 		if (zoomLevel)
 			this.cameraZoom = zoomLevel;
-		this.dispatch('zoomChange', this.cameraZoom);
+		this.dispatch(GameEvent.SCENE_ZOOM_CHANGED, this.cameraZoom);
 	}
 
 	resizeCanvas(gameResolution: Vector, screenResolution?: Vector) {
@@ -339,18 +344,15 @@ export default class Scene extends Serializable {
 		} else {
 			this.pixelDensity.setScalars(1, 1);
 		}
-
-		console.log('resizeCanvas', this.pixelDensity, screenResolution);
 	}
 }
 Scene.prototype.isRoot = true;
 
 Serializable.registerSerializable(Scene, 'sce');
 
-let sceneCreateListeners = [];
-export function listenSceneCreation(listener) {
-	sceneCreateListeners.push(listener);
+export function forEachScene(listener) {
+	globalEventDispatcher.listen(GameEvent.GLOBAL_SCENE_CREATED, listener);
 
 	if (scene)
-		listener();
+		listener(scene);
 }

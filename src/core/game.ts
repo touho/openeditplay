@@ -7,6 +7,7 @@ import assert from '../util/assert'
 import PropertyOwner, { Prop, PropertyOwnerClass } from './propertyOwner';
 import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
+import { globalEventDispatcher, GameEvent } from './eventDispatcher';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -41,7 +42,7 @@ export default class Game extends PropertyOwner {
 		}
 
 		setTimeout(() => {
-			gameCreateListeners.forEach(listener => listener(game));
+			globalEventDispatcher.dispatch(GameEvent.GLOBAL_GAME_CREATED, this);
 		}, 1);
 	}
 	initWithChildren(children: Array<Serializable> = []) {
@@ -80,10 +81,8 @@ Serializable.registerSerializable(Game, 'gam', json => {
 });
 
 let gameCreateListeners = [];
-export function listenGameCreation(listener: (game: Game) => void) {
-	gameCreateListeners.push(listener);
-
-	console.log('real ts');
+export function forEachGame(listener: (game: Game) => void) {
+	globalEventDispatcher.listen(GameEvent.GLOBAL_GAME_CREATED, listener);
 
 	if (game)
 		listener(game);

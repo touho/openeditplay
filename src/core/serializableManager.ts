@@ -1,5 +1,5 @@
 import assert, { changeGetter as assertChangeGetter } from '../util/assert';
-import Serializable, { changeDispacher } from './serializable';
+import Serializable, { serializableCallbacks } from './serializable';
 
 export let serializables = {};
 
@@ -10,7 +10,7 @@ export function addSerializable(serializable: Serializable) {
 // @endif
 	serializables[serializable.id] = serializable;
 }
-changeDispacher.addSerializable = addSerializable;
+serializableCallbacks.addSerializable = addSerializable;
 
 export function getSerializable(id: string) {
 	return serializables[id] || null;
@@ -27,4 +27,4 @@ export function removeSerializable(id: string) {
 	*/
 	delete serializables[id];
 }
-changeDispacher.removeSerializable = removeSerializable;
+serializableCallbacks.removeSerializable = removeSerializable;

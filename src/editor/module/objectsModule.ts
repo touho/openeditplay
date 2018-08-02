@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import TreeView from "../views/treeView";
 import { editor } from '../editor';
-import { listenSceneCreation, scene } from '../../core/scene';
+import { forEachScene, scene } from '../../core/scene';
 import { getSerializable } from "../../core/serializableManager";
 import { changeType } from "../../core/change";
 import events from "../../util/events";
@@ -12,7 +12,7 @@ import { game } from "../../core/game";
 import Prefab from "../../core/prefab";
 import Serializable from "../../core/serializable";
 import assert from '../../util/assert';
-import { GameEvent } from '../../core/gameEvents';
+import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 
 class ObjectsModule extends Module {
 	treeView: TreeView;
@@ -139,7 +139,7 @@ class ObjectsModule extends Module {
 			this.dirty = true;
 			setTimeout(() => this.update(), 100);
 		};
-		listenSceneCreation(() => {
+		forEachScene(() => {
 			scene.listen(GameEvent.SCENE_START, update);
 			scene.listen(GameEvent.SCENE_RESET, update);
 		});

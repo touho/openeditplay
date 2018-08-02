@@ -22,9 +22,6 @@ import { el, list, mount } from 'redom';
 import { default as Game, game } from '../core/game';
 import Serializable from '../core/serializable';
 import {
-	addChangeListener,
-	executeExternal,
-	setChangeOrigin,
 	changeType
 } from '../core/change';
 import { serializables } from '../core/serializableManager';
@@ -36,6 +33,7 @@ import * as performance from '../util/performance'
 import { limit } from '../util/callLimiter';
 import OKPopup from "./views/popup/OKPopup";
 import Level from '../core/level';
+import { GameEvent, globalEventDispatcher } from '../core/eventDispatcher';
 
 let loaded = false;
 
@@ -68,7 +66,7 @@ let editorUpdateLimited = limit(200, 'soon', () => {
 	editor.update();
 });
 
-addChangeListener(change => {
+globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	performance.start('Editor: General');
 	events.dispatch('change', change);
 	if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {

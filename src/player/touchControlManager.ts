@@ -1,9 +1,9 @@
 import {keyPressed, key, listenKeyDown, simulateKeyEvent} from '../util/input'
-import {listenSceneCreation, scene} from '../core/scene';
+import {forEachScene, scene} from '../core/scene';
 import Vector from '../util/vector';
 import { default as TouchControl, CONTROL_SIZE } from './TouchControl';
 import debug from './debug'
-import { GameEvent } from '../core/gameEvents';
+import { GameEvent } from '../core/eventDispatcher';
 
 const ARROW_HITBOX_RADIUS = 110;
 
@@ -54,7 +54,7 @@ function getTouchCoordinates(touchEvent) {
 	return touchCoordinates;
 }
 
-listenSceneCreation(() => {
+forEachScene(() => {
 	scene.listen(GameEvent.SCENE_START, () => positionControls());
 });
 

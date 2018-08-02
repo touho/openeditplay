@@ -194,15 +194,16 @@ export default class Entity extends Serializable {
 			proto: this.prototype.id
 		});
 	}
-}
-Object.defineProperty(Entity.prototype, 'position', {
-	get() {
+	get position() {
 		return this.getComponent('Transform').position;
-	},
-	set(position) {
+	}
+	set position(position) {
 		this.getComponent('Transform').position = position;
 	}
-});
+	get Transform() {
+		return this.getComponent('Transform');
+	}
+}
 
 Serializable.registerSerializable(Entity, 'ent', json => {
 	if (Entity.ENTITY_CREATION_DEBUGGING) console.log('creating entity from json', json);

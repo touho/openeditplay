@@ -5,6 +5,7 @@ import { default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor } 
 import { isClient } from '../util/environment';
 
 import { PHYSICS_SCALE } from './Physics';
+import { GameEvent } from '../core/eventDispatcher';
 
 Component.register({
 	name: 'Particles',
@@ -100,7 +101,8 @@ Component.register({
 				});
 				this.container.position.set(0, 0);
 			} else {
-				this.positionListener = this.Transform._properties.position.listen('change', position => {
+				this.positionListener = this.Transform.listen('globalTransformChanged', Transform => {
+					let position = Transform.getGlobalPosition();
 					this.container.position.set(position.x, position.y);
 				});
 				this.container.position.set(this.Transform.position.x, this.Transform.position.y);
@@ -167,7 +169,7 @@ Component.register({
 					p.vx += Math.cos(angle) * this.speedToOutside;
 					p.vy += Math.sin(angle) * this.speedToOutside;
 				}
-			} else {
+			} else if (this.spawnType === 'rectangle') {
 				// Rectangle
 				p.sprite.x = -this.spawnRect.x / 2 + Math.random() * this.spawnRect.x;
 				p.sprite.y = -this.spawnRect.y / 2 + Math.random() * this.spawnRect.y;
@@ -177,8 +179,9 @@ Component.register({
 			p.nextBirth += this.particleLifetime;
 
 			if (this.globalCoordinates) {
-				p.sprite.x += this.Transform.position.x;
-				p.sprite.y += this.Transform.position.y;
+				let pos = Vector.fromObject(this.container.toLocal(zeroPoint, this.Transform.container, tempPoint));
+				p.sprite.x += pos.x;
+				p.sprite.y += pos.y;
 
 				if (this.Physics && this.Physics.body) {
 					let vel = this.Physics.body.velocity;
@@ -324,3 +327,6 @@ function getParticleTexture(size, gradientHardness = 0, rgb = { r: 255, g: 255, 
 	}
 	return textureCache[hash];
 }
+
+let zeroPoint = new PIXI.Point();
+let tempPoint = new PIXI.Point();

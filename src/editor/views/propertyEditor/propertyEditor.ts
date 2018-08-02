@@ -18,6 +18,7 @@ import { listenKeyDown, key } from '../../../util/input';
 import { parseTextAndNumber, skipTransitions } from './util';
 import Serializable from '../../../core/serializable';
 import Property from '../../../core/property';
+import { GameEvent } from '../../../core/eventDispatcher';
 
 /*
 Reference: Unbounce
@@ -552,7 +553,7 @@ class PropertyElement {
 		this.setValueFromProperty();
 		if (property._editorVisibleIfTarget) {
 			this.updateVisibleIf();
-			this.visibleIfListener = property._editorVisibleIfTarget.listen('change', _ => {
+			this.visibleIfListener = property._editorVisibleIfTarget.listen(GameEvent.PROPERTY_VALUE_CHANGE, _ => {
 				if (!isInDom(this.el)) {
 					this.visibleIfListener();
 					this.visibleIfListener = null;

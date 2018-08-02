@@ -30,6 +30,7 @@ import '../components/EditorWidget';
 import { filterChildren } from "../../core/serializable";
 import { limit } from "../../util/callLimiter";
 import Level from '../../core/level';
+import { GameEvent } from '../../core/eventDispatcher';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -362,21 +363,21 @@ class SceneModule extends Module {
 					Component.create('EditorWidget')
 				]);
 				let transform = entity.getComponent('Transform');
-				transform._properties.position.listen('change', position => {
+				transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, position => {
 					if (sceneEdit.shouldSyncLevelAndScene()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
 						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'position', '_p', (a, b) => a.isEqualTo(b));
 					}
 				});
-				transform._properties.scale.listen('change', scale => {
+				transform._properties.scale.listen(GameEvent.PROPERTY_VALUE_CHANGE, scale => {
 					if (sceneEdit.shouldSyncLevelAndScene()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
 						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'scale', '_s', (a, b) => a.isEqualTo(b));
 					}
 				});
-				transform._properties.angle.listen('change', angle => {
+				transform._properties.angle.listen(GameEvent.PROPERTY_VALUE_CHANGE, angle => {
 					if (sceneEdit.shouldSyncLevelAndScene()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();

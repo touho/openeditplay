@@ -1,8 +1,20 @@
 import assert, { changeGetter as assertChangeGetter } from '../util/assert';
-import Serializable, { changeDispacher } from './serializable';
+import Serializable, { serializableCallbacks } from './serializable';
+import Property from './property';
+import EventDispatcher, { GameEvent, globalEventDispatcher } from './eventDispatcher';
 
 let DEBUG_CHANGES = 0;
 let CHECK_FOR_INVALID_ORIGINS = 0;
+
+export type Change = {
+	type: string;
+	reference: Serializable;
+	id: string;
+	external: boolean; // caused by network
+	origin?: any; // exists in editor, but not in optimized release
+	value?: any;
+	parent?: Serializable;
+}
 
 // reference parameters are not sent over net. they are helpers in local game instance
 export let changeType = {
@@ -12,16 +24,6 @@ export let changeType = {
 	move: 'm', // id, parentId
 	deleteAllChildren: 'c', // id
 };
-let keyToShortKey = {
-	id: 'i', // obj.id
-	type: 't', // changeType.*
-	value: 'v', // value after toJSON
-	parentId: 'p' // obj._parent.id
-};
-let shortKeyToKey = {};
-Object.keys(keyToShortKey).forEach(k => {
-	shortKeyToKey[keyToShortKey[k]] = k;
-});
 
 let origin;
 
@@ -53,14 +55,14 @@ export function setChangeOrigin(_origin) {
 let externalChange = false;
 
 // addChange needs to be called if editor, server or net game needs to share changes
-export function addChange(type: string, reference: { id: string }) {
+export function addChange(type: string, reference: Serializable) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
 	// @endif
 
 	if (!reference.id) return;
 
-	let change = {
+	let change: Change = {
 		type,
 		reference,
 		id: reference.id,
@@ -68,7 +70,7 @@ export function addChange(type: string, reference: { id: string }) {
 		origin // exists in editor, but not in optimized release
 	};
 	if (type === changeType.setPropertyValue) {
-		change.value = reference._value;
+		change.value = (reference as Property)._value;
 	} else if (type === changeType.move) {
 		change.parent = reference._parent;
 	} else if (type === changeType.addSerializableToTree) {
@@ -83,9 +85,7 @@ export function addChange(type: string, reference: { id: string }) {
 	let previousOrigin = origin;
 	// @endif
 
-	for (let i = 0; i < listeners.length; ++i) {
-		listeners[i](change);
-	}
+	globalEventDispatcher.dispatch(GameEvent.GLOBAL_CHANGE_OCCURED, change);
 
 	// @ifndef OPTIMIZE
 	if (origin !== previousOrigin) {
@@ -102,102 +102,4 @@ export function executeExternal(callback) {
 	externalChange = true;
 	callback();
 	externalChange = false;
-}
-
-let listeners = [];
-
-export function addChangeListener(callback) {
-	assert(typeof callback === 'function');
-	listeners.push(callback);
-}
-
-export function packChange(change) {
-	if (change.packedChange)
-		return change.packedChange; // optimization
-
-	let packed = {};
-	try {
-		if (change.parent)
-			change.parentId = change.parent.id;
-
-		if (change.type === changeType.addSerializableToTree) {
-			if (change.reference) {
-				change.value = change.reference.toJSON();
-			} else {
-				assert(false, 'invalid change of type addSerializableToTree', change);
-			}
-		} else if (change.value !== undefined) {
-			change.value = change.reference.propertyType.type.toJSON(change.value);
-		}
-
-		Object.keys(keyToShortKey).forEach(key => {
-			if (change[key] !== undefined) {
-				if (key === 'type' && change[key] === changeType.setPropertyValue) return; // optimize most common type
-				packed[keyToShortKey[key]] = change[key];
-			}
-		});
-	} catch (e) {
-		console.log('PACK ERROR', e);
-	}
-	return packed;
-}
-
-export function unpackChange(packedChange) {
-	let change = {
-		packedChange // optimization
-	};
-	Object.keys(packedChange).forEach(shortKey => {
-		let key = shortKeyToKey[shortKey];
-		change[key] = packedChange[shortKey];
-	});
-	if (!change.type)
-		change.type = changeType.setPropertyValue;
-
-	if (change.type === changeType.addSerializableToTree) {
-		// reference does not exist because it has not been created yet
-		change.id = change.value.id;
-	} else {
-		change.reference = getSerializable(change.id);
-		if (change.reference) {
-			change.id = change.reference.id;
-		} else {
-			console.error('received a change with unknown id', change, 'packed:', packedChange);
-			return null;
-		}
-	}
-
-	if (change.parentId)
-		change.parent = getSerializable(change.parentId);
-	return change;
-}
-
-export function executeChange(change) {
-	let newScene;
-
-	executeExternal(() => {
-		if (change.type === changeType.setPropertyValue) {
-			change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
-		} else if (change.type === changeType.addSerializableToTree) {
-			if (change.parent) {
-				let obj = Serializable.fromJSON(change.value);
-				change.parent.addChild(obj);
-				if (obj.threeLetterType === 'ent') {
-					obj.localMaster = false;
-				}
-			} else {
-				let obj = Serializable.fromJSON(change.value); // Scene does not need a parent
-				if (obj.threeLetterType === 'sce')
-					newScene = obj;
-			}
-		} else if (change.type === changeType.deleteAllChildren) {
-			change.reference.deleteChildren();
-		} else if (change.type === changeType.deleteSerializable) {
-			change.reference.delete();
-		} else if (change.type === changeType.move) {
-			change.reference.move(change.parent);
-		}
-	});
-
-	if (newScene)
-		newScene.play();
 }

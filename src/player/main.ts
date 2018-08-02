@@ -1,8 +1,8 @@
 import '../core/index'
 import '../components'
 import { keyPressed, key, listenKeyDown, simulateKeyEvent } from '../util/input'
-import { scene, listenSceneCreation } from '../core/scene';
-import { listenGameCreation } from '../core/game';
+import { scene, forEachScene } from '../core/scene';
+import { forEachGame } from '../core/game';
 import { configureNetSync } from '../core/net'
 import { disableAllChanges } from '../core/property';
 
@@ -11,8 +11,8 @@ import './touchControlManager'
 
 
 import * as fullscreen from '../util/fullscreen';
-import { GameEvent } from '../core/gameEvents';
 import Level from '../core/level';
+import { GameEvent } from '../core/eventDispatcher';
 
 disableAllChanges();
 
@@ -22,7 +22,7 @@ configureNetSync({
 	context: 'play'
 });
 
-listenGameCreation(game => {
+forEachGame(game => {
 	let levelIndex = 0;
 
 	function play() {

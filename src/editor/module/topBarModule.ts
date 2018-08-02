@@ -2,9 +2,9 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise } from '../editor';
 import events from '../../util/events';
-import { listenSceneCreation, scene } from '../../core/scene';
+import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
-import { GameEvent } from '../../core/gameEvents';
+import { GameEvent } from '../../core/eventDispatcher';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -83,7 +83,7 @@ export class TopBarModule extends Module {
 		this.addKeyboardShortcut(key.p, playButton);
 		this.addKeyboardShortcut(key.r, stopButton);
 
-		listenSceneCreation(() => {
+		forEachScene(() => {
 			scene.listen(GameEvent.SCENE_RESET, updateButtons);
 			scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 			scene.listen(GameEvent.SCENE_PAUSE, updateButtons);

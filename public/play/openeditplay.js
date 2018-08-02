@@ -25,6 +25,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -51,6 +52,28 @@
 	    function __() { this.constructor = d; }
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
+
+	var serializables = {};
+	function addSerializable(serializable) {
+	    // @ifndef OPTIMIZE
+	    if (serializables[serializable.id] !== undefined)
+	        { assert(false, ("Serializable id clash " + (serializable.id))); }
+	    // @endif
+	    serializables[serializable.id] = serializable;
+	}
+	changeDispacher.addSerializable = addSerializable;
+	function getSerializable(id) {
+	    return serializables[id] || null;
+	}
+	function removeSerializable(id) {
+	    /* When deleting a scene, this function is called a lot of times
+	    if (!serializables[id])
+	        throw new Error('Serializable not found!');
+	    */
+	    delete serializables[id];
+	}
+	changeDispacher.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -224,11 +247,13 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	/*
 	 Global event system
@@ -300,6 +325,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=events.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -326,6 +352,7 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var changeDispacher = {
 	    addSerializable: function (serializable) { },
@@ -764,6 +791,19 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=serializable.js.map
+
+	var GameEvent;
+	(function (GameEvent) {
+	    GameEvent["SCENE_START"] = "scene start";
+	    GameEvent["SCENE_PLAY"] = "scene play";
+	    GameEvent["SCENE_PAUSE"] = "scene pause";
+	    GameEvent["SCENE_RESET"] = "scene reset";
+	    GameEvent["SCENE_DRAW"] = "scene draw";
+	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
+	    GameEvent["PROPERTY_VALUE_CHANGE"] = "property change";
+	})(GameEvent || (GameEvent = {}));
+	//# sourceMappingURL=gameEvents.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -777,10 +817,10 @@
 	    // if you give propertyType, value in real value form
 	    // if you don't give propertyType (give it later), value as JSON form
 	    function Property(_a) {
-	        var value = _a.value, predefinedId = _a.predefinedId, name = _a.name, propertyType = _a.propertyType, _b = _a.skipSerializableRegistering, skipSerializableRegistering = _b === void 0 ? false : _b;
-	        var _this = this;
+	        var value = _a.value, _b = _a.predefinedId, predefinedId = _b === void 0 ? '' : _b, name = _a.name, _c = _a.propertyType, propertyType = _c === void 0 ? null : _c, _d = _a.skipSerializableRegistering, skipSerializableRegistering = _d === void 0 ? false : _d;
+	        var _this = _super.call(this, predefinedId, skipSerializableRegistering) || this;
+	        _this._initialValueIsJSON = false;
 	        assert(name, 'Property without a name can not exist');
-	        _this = _super.call(this, predefinedId, skipSerializableRegistering) || this;
 	        _this._initialValue = value;
 	        if (propertyType)
 	            { _this.setPropertyType(propertyType); }
@@ -822,30 +862,34 @@
 	            n: this.propertyType.name
 	        });
 	    };
+	    Object.defineProperty(Property.prototype, "type", {
+	        get: function () {
+	            return this.propertyType.type;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Property.prototype, "value", {
+	        get: function () {
+	            return this._value;
+	        },
+	        set: function (newValue) {
+	            this._value = this.propertyType.validator.validate(newValue);
+	            this.dispatch(GameEvent.PROPERTY_VALUE_CHANGE, this._value);
+	            if (changesEnabled && this._rootType) { // not scene or empty
+	                if (scenePropertyFilter === null
+	                    || this._rootType !== 'sce'
+	                    || scenePropertyFilter(this)) {
+	                    addChange(changeType.setPropertyValue, this);
+	                }
+	            }
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
 	    return Property;
 	}(Serializable));
 	Property.prototype.propertyType = null;
-	Object.defineProperty(Property.prototype, 'type', {
-	    get: function () {
-	        return this.propertyType.type;
-	    }
-	});
-	Object.defineProperty(Property.prototype, 'value', {
-	    set: function (newValue) {
-	        this._value = this.propertyType.validator.validate(newValue);
-	        this.dispatch('change', this._value);
-	        if (changesEnabled && this._rootType) { // not scene or empty
-	            if (scenePropertyFilter === null
-	                || this._rootType !== 'sce'
-	                || scenePropertyFilter(this)) {
-	                addChange(changeType.setPropertyValue, this);
-	            }
-	        }
-	    },
-	    get: function () {
-	        return this._value;
-	    }
-	});
 	Serializable.registerSerializable(Property, 'prp', function (json) {
 	    return new Property({
 	        value: json.v,
@@ -858,6 +902,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -993,6 +1038,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1125,6 +1171,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1174,6 +1221,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1320,6 +1368,7 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1443,6 +1492,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1823,6 +1873,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1879,6 +1930,7 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1914,6 +1966,9 @@
 	    scene.backgroundGradient.width = scene.canvas.width;
 	    scene.backgroundGradient.height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -1984,6 +2039,7 @@
 	    if (game)
 	        { listener(game); }
 	}
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2071,6 +2127,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2206,16 +2263,7 @@
 	        });
 	    }
 	}
-
-	var GameEvent;
-	(function (GameEvent) {
-	    GameEvent["SCENE_START"] = "scene start";
-	    GameEvent["SCENE_PLAY"] = "scene play";
-	    GameEvent["SCENE_PAUSE"] = "scene pause";
-	    GameEvent["SCENE_RESET"] = "scene reset";
-	    GameEvent["SCENE_DRAW"] = "scene draw";
-	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
-	})(GameEvent || (GameEvent = {}));
+	//# sourceMappingURL=input.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2475,6 +2523,7 @@
 	    if (scene)
 	        { listener(); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2609,6 +2658,7 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
+	//# sourceMappingURL=componentData.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = [
@@ -2702,7 +2752,7 @@
 	        this._listenRemoveFunctions.length = 0;
 	    };
 	    Component.prototype.listenProperty = function (component, propertyName, callback) {
-	        this._listenRemoveFunctions.push(component._properties[propertyName].listen('change', callback));
+	        this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	    };
 	    Component.prototype.createComponentData = function () {
 	        var _this = this;
@@ -2811,27 +2861,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-
-	var serializables = {};
-	function addSerializable(serializable) {
-	    // @ifndef OPTIMIZE
-	    if (serializables[serializable.id] !== undefined)
-	        { assert(false, ("Serializable id clash " + (serializable.id))); }
-	    // @endif
-	    serializables[serializable.id] = serializable;
-	}
-	changeDispacher.addSerializable = addSerializable;
-	function getSerializable$1(id) {
-	    return serializables[id] || null;
-	}
-	function removeSerializable(id) {
-	    /* When deleting a scene, this function is called a lot of times
-	    if (!serializables[id])
-	        throw new Error('Serializable not found!');
-	    */
-	    delete serializables[id];
-	}
-	changeDispacher.removeSerializable = removeSerializable;
+	//# sourceMappingURL=component.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3010,7 +3040,7 @@
 	    if (Entity.ENTITY_CREATION_DEBUGGING)
 	        { console.log('creating entity from json', json); }
 	    var entity = new Entity(json.id);
-	    entity.prototype = getSerializable$1(json.proto);
+	    entity.prototype = getSerializable(json.proto);
 	    if (Entity.ENTITY_CREATION_DEBUGGING)
 	        { console.log('created entity from json', entity); }
 	    if (json.comp) {
@@ -3018,6 +3048,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3253,6 +3284,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3465,7 +3497,7 @@
 	};
 	Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	    var entityPrototype = new EntityPrototype(json.id);
-	    entityPrototype.prototype = json.t ? getSerializable$1(json.t) : null;
+	    entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
 	    // assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
 	    if (json.t && !entityPrototype.prototype)
 	        { console.warn("EntityPrototype thougt it had a prototype or prefab " + json.t + " but it was not found."); }
@@ -3498,6 +3530,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3558,6 +3591,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3581,6 +3615,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3666,6 +3703,7 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3689,6 +3727,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3862,6 +3901,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3901,6 +3941,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -3951,6 +3992,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -3998,6 +4040,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4194,6 +4237,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4219,6 +4263,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4306,7 +4351,7 @@
 	                this.container.position.set(0, 0);
 	            }
 	            else {
-	                this.positionListener = this.Transform._properties.position.listen('change', function (position) {
+	                this.positionListener = this.Transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (position) {
 	                    _this.container.position.set(position.x, position.y);
 	                });
 	                this.container.position.set(this.Transform.position.x, this.Transform.position.y);
@@ -4503,6 +4548,7 @@
 	    }
 	    return textureCache[hash];
 	}
+	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4512,6 +4558,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4713,6 +4760,9 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4755,6 +4805,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -4897,6 +4948,7 @@
 	    });
 	}
 	window.addEventListener('load', connect);
+	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -4939,6 +4991,7 @@
 	window.addEventListener('resize', resizeCanvas);
 	listenSceneCreation(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
+	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5014,6 +5067,7 @@
 	    };
 	    return TouchControl;
 	}());
+	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5148,6 +5202,7 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
+	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5185,6 +5240,7 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

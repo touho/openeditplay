@@ -76,7 +76,7 @@ Component.register({
 			}
 			return angle;
 		},
-		setGlobalPosition(position) {
+		setGlobalPosition(position: Vector) {
 			this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
 		},
 		sleep() {

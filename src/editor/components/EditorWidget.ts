@@ -6,7 +6,7 @@ import ScaleWidget from '../widget/scaleWidget';
 import MoveWidget from '../widget/moveWidget';
 import events from "../../util/events";
 import {selectedToolName} from "../editor";
-import { GameEvent } from '../../core/gameEvents';
+import { GameEvent } from '../../core/eventDispatcher';
 
 let primaryColor = 'white';
 let hoverColor = 'yellow';
@@ -196,7 +196,7 @@ export default Component.register({
 			this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 			this.scene.layers.positionHelperLayer.addChild(this.positionHelper);
 
-			this.listeners.push(this.scene.listen('zoomChange', () => this.updateZoomLevel()));
+			this.listeners.push(this.scene.listen(GameEvent.SCENE_ZOOM_CHANGED, () => this.updateZoomLevel()));
 			this.updateZoomLevel();
 
 			this.updateWidgets();
