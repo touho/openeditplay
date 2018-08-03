@@ -1,7 +1,8 @@
 import { scene, forEachScene } from '../core/scene';
 import debug from './debug'
-import events from "../util/events";
+"../util/redomEvents";
 import Vector from '../util/vector';
+import { globalEventDispatcher } from '../core/eventDispatcher';
 
 let previousWidth = null;
 let previousHeight = null;
@@ -42,7 +43,7 @@ function resizeCanvas() {
 		previousWidth = width;
 		previousHeight = height;
 
-		events.dispatch('canvas resize', scene);
+		globalEventDispatcher.dispatch('canvas resize', scene);
 
 		// Lets see if it has changed after 200ms.
 		setTimeout(() => setSize(), 200);

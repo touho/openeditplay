@@ -7,7 +7,7 @@ import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, ke
 import { default as PIXI, getRenderer, sortDisplayObjects } from '../features/graphics';
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
-import events from "../util/events";
+"../util/redomEvents";
 import Level from './level';
 import { Component } from './component';
 import EntityPrototype from './entityPrototype';
@@ -107,11 +107,11 @@ export default class Scene extends Serializable {
 
 		createWorld(this, physicsOptions);
 
-		events.dispatch('scene load level before entities', scene, level);
+		globalEventDispatcher.dispatch('scene load level before entities', scene, level);
 
 		this.level.getChildren('epr').map((epr: EntityPrototype) => epr.createEntity(this));
 
-		events.dispatch('scene load level', scene, level);
+		globalEventDispatcher.dispatch('scene load level', scene, level);
 
 		// this.draw();
 	}
@@ -133,7 +133,7 @@ export default class Scene extends Serializable {
 
 		deleteWorld(this);
 
-		events.dispatch('scene unload level', scene, level);
+		globalEventDispatcher.dispatch('scene unload level', scene, level);
 	}
 
 	setCameraPositionToPlayer() {
@@ -225,7 +225,7 @@ export default class Scene extends Serializable {
 
 		this.renderer.render(this.stage, null, false);
 
-		events.dispatch(GameEvent.SCENE_DRAW, scene);
+		this.dispatch(GameEvent.SCENE_DRAW, scene);
 		performanceTool.eventHappened('Draws');
 	}
 

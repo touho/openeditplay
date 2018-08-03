@@ -1,5 +1,5 @@
 import { el, list, mount, List } from 'redom';
-import events, { listen, dispatch } from '../../../util/events';
+import events, { listen, dispatch } from '../../../util/redomEvents';
 import showPopup from '../popup/Popup';
 import ComponentData from '../../../core/componentData';
 import assert from '../../../util/assert';
@@ -19,6 +19,8 @@ import { parseTextAndNumber, skipTransitions } from './util';
 import Serializable from '../../../core/serializable';
 import Property from '../../../core/property';
 import { GameEvent } from '../../../core/eventDispatcher';
+import { editorEventDispacher, EditorEvent } from '../../editorEventDispatcher';
+import { selectInEditor } from '../../editorSelection';
 
 /*
 Reference: Unbounce
@@ -40,14 +42,13 @@ export default class PropertyEditor {
 		this.editingProperty = false;
 
 		// Change in serializable tree
-		events.listen('change', change => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (change.type === 'editorSelection') {
 				this.dirty = true;
 			} else if (change.type === changeType.setPropertyValue) {
 				if (this.item && this.item.hasDescendant(change.reference)) {
 					if (change.origin === this) {
 						if (this.item.threeLetterType === 'ent') {
-							this.item.dispatch('changedInEditor');
 							sceneEdit.entityModifiedInEditor(this.item, change);
 						}
 					} else {
@@ -78,7 +79,7 @@ export default class PropertyEditor {
 		});
 
 		listen(this, 'propertyEditorSelect', items => {
-			editor.select(items, this);
+			selectInEditor(items, this);
 		});
 
 		listenKeyDown(keyCode => {
@@ -234,7 +235,7 @@ class Container {
 				} else {
 					this.item.delete();
 				}
-				editor.select();
+				selectInEditor([], this);
 			}
 		}));
 	}

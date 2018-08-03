@@ -14,7 +14,7 @@ export enum GameEvent {
     GLOBAL_GAME_CREATED = 'game created',
 }
 
-type ListenerFunction = Function & { priority?: number };
+export type ListenerFunction = Function & { priority?: number };
 
 export default class EventDispatcher {
     _listeners: { [event in GameEvent]?: Array<ListenerFunction> } = {};

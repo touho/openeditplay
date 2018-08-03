@@ -1,8 +1,9 @@
 import { el, list, mount, List, RedomComponent } from 'redom';
-import events, { dispatch, listen } from '../../util/events';
+import events, { dispatch, listen } from '../../util/redomEvents';
 import { setOption, getOption } from '../editor';
 import * as performance from '../../util/performance';
 import Module from '../module/module';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 export default class ModuleContainer {
 	el: HTMLElement;
@@ -29,21 +30,21 @@ export default class ModuleContainer {
 
 			this.el.onclick = () => {
 				setOption(packId, '');
-				events.dispatch('layoutResize');
+				editorEventDispacher.dispatch('layoutResize');
 				this.el.classList.contains('packed') && this.el.classList.remove('packed');
 				this.update();
 				return;
 			};
 			this.packButton.onclick = e => {
 				this.el.classList.add('packed');
-				events.dispatch('layoutResize');
+				editorEventDispacher.dispatch('layoutResize');
 				setOption(packId, 'true');
 				e.stopPropagation();
 				return false;
 			};
 		}
 
-		events.listen('registerModule_' + moduleContainerName.split('.')[0], (moduleClass, editor) => {
+		editorEventDispacher.listen('registerModule_' + moduleContainerName.split('.')[0], (moduleClass, editor) => {
 			let module = new moduleClass(editor);
 			module.el.classList.add('module-' + module.id);
 			module.moduleContainer = this;
@@ -90,14 +91,14 @@ export default class ModuleContainer {
 	activateModule(module, unpackModuleView = true, ...args) {
 		if (unpackModuleView) {
 			this.el.classList.remove('packed');
-			events.dispatch('layoutResize');
+			editorEventDispacher.dispatch('layoutResize');
 		}
 		this._activateModule(module, args);
 	}
 	activateOneOfModules(modules, unpackModuleView = true, ...args) {
 		if (unpackModuleView) {
 			this.el.classList.remove('packed');
-			events.dispatch('layoutResize');
+			editorEventDispacher.dispatch('layoutResize');
 		}
 
 		for (let i = 0; i < this.modules.length; ++i) {

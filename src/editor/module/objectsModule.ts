@@ -5,14 +5,16 @@ import { editor } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { getSerializable } from "../../core/serializableManager";
 import { changeType } from "../../core/change";
-import events from "../../util/events";
+"../../util/redomEvents";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
-import { game } from "../../core/game";
+import Game, { game } from "../../core/game";
 import Prefab from "../../core/prefab";
 import Serializable from "../../core/serializable";
 import assert from '../../util/assert';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import { selectInEditor } from '../editorSelection';
 
 class ObjectsModule extends Module {
 	treeView: TreeView;
@@ -36,7 +38,7 @@ class ObjectsModule extends Module {
 			id: 'objects-tree',
 			selectionChangedCallback: selectedIds => {
 				let serializables = selectedIds.map(getSerializable).filter(Boolean);
-				editor.select(serializables, this);
+				selectInEditor(serializables, this);
 				Module.activateModule('object', false);
 			},
 			moveCallback: (serializableId: string, parentId: string) => {
@@ -76,22 +78,22 @@ class ObjectsModule extends Module {
 			doubleClickCallback: serializableId => {
 				let serializable = getSerializable(serializableId);
 				if (serializable)
-					events.dispatch('locate serializable', serializable);
+					editorEventDispacher.dispatch('locate serializable', serializable);
 				else
 					throw new Error(`Locate serializable ${serializableId} not found`);
 			}
 		});
 		mount(this.el, this.treeView);
 
-		events.listen('treeView drag start objects-tree', event => {
+		editorEventDispacher.listen('treeView drag start objects-tree', event => {
 		});
-		events.listen('treeView drag move objects-tree', event => {
+		editorEventDispacher.listen('treeView drag move objects-tree', event => {
 			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs')
 				event.hideValidationIndicator();
 			// if (event.targetElement.classList.contains('openEditPlayCanvas'))
 			// 	event.hideValidationIndicator();
 		});
-		events.listen('treeView drag stop objects-tree', event => {
+		editorEventDispacher.listen('treeView drag stop objects-tree', event => {
 			console.log('event', event)
 			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 				let entityPrototypes = event.idList.map(getSerializable);
@@ -148,9 +150,9 @@ class ObjectsModule extends Module {
 		let setDirty = () => {
 			this.dirty = true;
 		};
-		events.listen('play', setDirty, -1);
-		events.listen('reset', setDirty, -1);
-		game.listen('levelCompleted', setDirty, -1);
+		editorEventDispacher.listen('play', setDirty, -1);
+		editorEventDispacher.listen('reset', setDirty, -1);
+		game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 
 		let tasks = [];
 		let taskTimeout = null;
@@ -180,8 +182,7 @@ class ObjectsModule extends Module {
 			}, delay);
 		};
 
-		// events.listen()
-		events.listen('change', change => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (this.dirty || !this._selected)
 				return;
 

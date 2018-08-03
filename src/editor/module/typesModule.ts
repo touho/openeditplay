@@ -1,12 +1,14 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import events from '../../util/events';
+'../../util/redomEvents';
 import Prototype from '../../core/prototype';
 import { getSerializable } from '../../core/serializableManager';
 import { changeType, setChangeOrigin } from '../../core/change';
 import assert from '../../util/assert';
 import { editor } from '../editor';
 import * as performance from '../../util/performance';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import { selectInEditor } from '../editorSelection';
 
 class TypesModule extends Module {
 	addButton: HTMLElement;
@@ -38,13 +40,13 @@ class TypesModule extends Module {
 			setChangeOrigin(this);
 			let prototype = Prototype.create(' New type');
 			editor.game.addChild(prototype);
-			editor.select(prototype);
+			selectInEditor(prototype, this);
 			setTimeout(() => {
 				Module.activateModule('type', true, 'focusOnProperty', 'name');
 			}, 100);
 		};
 
-		let searchTimeout = false;
+		let searchTimeout = null;
 		this.search.addEventListener('keyup', () => {
 			if (searchTimeout)
 				clearTimeout(searchTimeout);
@@ -56,7 +58,7 @@ class TypesModule extends Module {
 
 		this.externalChange = false;
 
-		events.listen('change', change => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (change.reference._rootType === 'sce')
 				return;
 
@@ -149,10 +151,10 @@ class TypesModule extends Module {
 
 				// selection changed
 				let prototypes = data.selected.map(getSerializable);
-				editor.select(prototypes, this);
+				selectInEditor(prototypes, this);
 				Module.activateModule('type', false);
 				if (prototypes.length === 1)
-					events.dispatch('prototypeClicked', prototypes[0]);
+					editorEventDispacher.dispatch('prototypeClicked', prototypes[0]);
 
 			}).on('loaded.jstree refresh.jstree', () => {
 				let jstree = $(this.jstree).jstree(true);
@@ -206,7 +208,7 @@ $(document).on('dnd_start.vakata', function (e, data) {
 		return;
 
 	let nodeObjects = data.data.nodes.map(getSerializable);
-	events.dispatch('dragPrototypeStarted', nodeObjects);
+	editorEventDispacher.dispatch('dragPrototypeStarted', nodeObjects);
 });
 
 
@@ -245,7 +247,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 		if (data.event.target.nodeName === 'CANVAS') {
 			// Drag entity to scene
 			let nodeObjects = data.data.nodes.map(getSerializable);
-			events.dispatch('dragPrototypeToCanvas', nodeObjects);
+			editorEventDispacher.dispatch('dragPrototypeToCanvas', nodeObjects);
 		} else {
 			// Drag prototype in types view
 
@@ -266,7 +268,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 				prototype.move(newParent);
 			});
 
-			events.dispatch('dragPrototypeToNonCanvas', nodeObjects);
+			editorEventDispacher.dispatch('dragPrototypeToNonCanvas', nodeObjects);
 
 			// console.log('dnd stopped from', nodes, 'to', newParent);
 		}

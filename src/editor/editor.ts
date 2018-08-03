@@ -1,4 +1,4 @@
-import events from '../util/events';
+'../util/redomEvents';
 import Layout from './layout/layout';
 
 import './module/topBarModule';
@@ -34,22 +34,24 @@ import { limit } from '../util/callLimiter';
 import OKPopup from "./views/popup/OKPopup";
 import Level from '../core/level';
 import { GameEvent, globalEventDispatcher } from '../core/eventDispatcher';
+import { editorEventDispacher, EditorEvent } from './editorEventDispatcher';
+import { editorSelection, selectInEditor } from './editorSelection';
 
 let loaded = false;
 
-export let modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
-export let loadedPromise = events.getEventPromise('loaded');
+export let modulesRegisteredPromise = editorEventDispacher.getEventPromise('modulesRegistered');
+export let loadedPromise = editorEventDispacher.getEventPromise('loaded');
 export let selectedToolName = 'multiTool'; // in top bar
 export function changeSelectedTool(newToolName) {
 	if (selectedToolName !== newToolName) {
 		selectedToolName = newToolName;
-		events.dispatch('selectedToolChanged', newToolName);
+		editorEventDispacher.dispatch('selectedToolChanged', newToolName);
 	}
 }
 
 modulesRegisteredPromise.then(() => {
 	loaded = true;
-	events.dispatch('loaded');
+	editorEventDispacher.dispatch('loaded');
 });
 
 configureNetSync({
@@ -68,11 +70,11 @@ let editorUpdateLimited = limit(200, 'soon', () => {
 
 globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	performance.start('Editor: General');
-	events.dispatch('change', change);
+	editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, change);
 	if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 		let game = change.reference;
 		editor = new Editor(game);
-		events.dispatch('registerModules', editor);
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
 	}
 	if (editor) {
 		if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
@@ -83,6 +85,11 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 		editorUpdateLimited();
 	}
 	performance.stop('Editor: General');
+});
+
+editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, () => {
+	// editor && editor.update();
+	editor && editorUpdateLimited();
 });
 
 export let editor = null;
@@ -116,38 +123,8 @@ class Editor {
 		else
 			this.selectedLevel = null;
 
-		this.select([], this);
-		events.dispatch('setLevel', this.selectedLevel);
-	}
-
-	select(items: Array<Serializable>, origin) {
-		if (!items)
-			items = [];
-		else if (!Array.isArray(items))
-			items = [items];
-
-		assert(items.filter(item => item == null).length === 0, 'Can not select null');
-
-		this.selection.items = [].concat(items);
-
-		let types = Array.from(new Set(items.map(i => i.threeLetterType)));
-		if (types.length === 0)
-			this.selection.type = 'none';
-		else if (types.length === 1)
-			this.selection.type = types[0];
-		else
-			this.selection.type = 'mixed';
-
-		// console.log('selectedIds', this.selection)
-
-		events.dispatch('change', {
-			type: 'editorSelection',
-			reference: this.selection,
-			origin
-		});
-
-		// editorUpdateLimited(); // doesn't work for some reason
-		this.update();
+		selectInEditor([], this);
+		editorEventDispacher.dispatch('setLevel', this.selectedLevel);
 	}
 
 	update() {
@@ -156,7 +133,7 @@ class Editor {
 	}
 }
 
-events.listen('noEditAccess', () => {
+globalEventDispatcher.listen('noEditAccess', () => {
 	loadedPromise.then(() => {
 		document.body.classList.add('noEditAccess');
 		new OKPopup('No edit access',

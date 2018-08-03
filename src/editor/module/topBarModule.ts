@@ -1,10 +1,11 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
 import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise } from '../editor';
-import events from '../../util/events';
+'../../util/redomEvents';
 import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
 import { GameEvent } from '../../core/eventDispatcher';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -51,13 +52,13 @@ export class TopBarModule extends Module {
 			title: 'Play (P)',
 			icon: 'fa-play',
 			type: 'play',
-			callback: () => events.dispatch('play')
+			callback: () => editorEventDispacher.dispatch('play')
 		};
 		let pauseButtonData = {
 			title: 'Pause (P)',
 			icon: 'fa-pause',
 			type: 'pause',
-			callback: () => events.dispatch('pause')
+			callback: () => editorEventDispacher.dispatch('pause')
 		};
 
 		let playButton = new SceneControlButton(playButtonData);
@@ -65,7 +66,7 @@ export class TopBarModule extends Module {
 			title: 'Reset (R)',
 			icon: 'fa-stop',
 			type: 'reset',
-			callback: () => events.dispatch('reset')
+			callback: () => editorEventDispacher.dispatch('reset')
 		});
 
 		const updateButtons = () => {
@@ -96,7 +97,7 @@ export class TopBarModule extends Module {
 	initToolSelectionButtons() {
 		const createCallback = (callback) => {
 			return (element) => {
-				this.toolSelectionButtons.querySelectorAll('.topSceneControlButton').forEach(button => {
+				this.toolSelectionButtons.querySelectorAll('.topSceneControlButton').forEach((button: HTMLElement) => {
 					button.classList.remove('selected');
 				});
 				element.classList.add('selected');
@@ -190,7 +191,7 @@ export class TopButton {
 		};
 
 		modulesRegisteredPromise.then(() => {
-			events.dispatch('addTopButtonToTopBar', this);
+			editorEventDispacher.dispatch('addTopButtonToTopBar', this);
 		});
 	}
 	click() {

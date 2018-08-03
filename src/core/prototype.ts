@@ -7,9 +7,10 @@ import ComponentData from './componentData';
 import Entity from './entity';
 import { game } from './game';
 import { Component } from './component';
-import events from "../util/events";
+"../util/redomEvents";
 import EntityPrototype from './entityPrototype';
 import Level from './level';
+import { globalEventDispatcher } from './eventDispatcher';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -171,7 +172,7 @@ export default class Prototype extends PropertyOwner {
 		this.previouslyCreatedEntity = entity;
 
 		if (!_skipNewEntityEvent)
-			events.dispatch('new entity created', entity);
+			globalEventDispatcher.dispatch('new entity created', entity);
 
 		return entity;
 	}

@@ -25,6 +25,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -52,99 +53,39 @@
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
 
-	/*
-	 Global event system
-
-	 let unlisten = events.listen('event name', function(params, ...) {});
-	 eventManager.dispatch('event name', paramOrParamArray);
-	 unlisten();
-	 */
-	var listeners = {};
-	var events = {
-	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	    listen: function (event, callback, priority) {
-	        if (priority === void 0) { priority = 0; }
-	        callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
-	        if (!listeners.hasOwnProperty(event)) {
-	            listeners[event] = [];
-	        }
-	        // listeners[event].push(callback);
-	        // if (!this._listeners.hasOwnProperty(event)) {
-	        // 	this._listeners[event] = [];
-	        // }
-	        var index = indexOfListener(listeners[event], callback);
-	        listeners[event].splice(index, 0, callback);
-	        return function () {
-	            var index = listeners[event].indexOf(callback);
-	            listeners[event].splice(index, 1);
-	        };
-	    },
-	    dispatch: function (event) {
-	        var arguments$1 = arguments;
-
-	        var args = [];
-	        for (var _i = 1; _i < arguments.length; _i++) {
-	            args[_i - 1] = arguments$1[_i];
-	        }
-	        if (listeners.hasOwnProperty(event)) {
-	            var listener = listeners[event];
-	            for (var i = 0; i < listener.length; ++i) {
-	                listener[i].apply(null, args);
-	                /*
-	                try {
-	                    listeners[event][i].apply(null, args);
-	                } catch (e) {
-	                    if (console && console.sendError) {
-	                        console.sendError(e);
-	                    }
-	                }
-	                */
-	            }
-	        }
-	    },
-	    // Promise is resolved when next event if this type is sent
-	    getEventPromise: function (event) {
-	        return new Promise(function (res) {
-	            events.listen(event, res);
-	        });
-	    }
-	};
-	// DOM / ReDom event system
-	function dispatch(view, type, data) {
-	    var el = view === window ? view : view.el || view;
-	    var debug = 'Debug info ' + new Error().stack;
-	    el.dispatchEvent(new CustomEvent(type, {
-	        detail: { data: data, debug: debug, view: view },
-	        bubbles: true
-	    }));
-	}
-	function listen(view, type, handler) {
-	    var el = view === window ? view : view.el || view;
-	    el.addEventListener(type, function (event) {
-	        if (event instanceof CustomEvent)
-	            { handler(event.detail.data, event.detail.view); }
-	        else
-	            { handler(event); }
-	    });
-	}
-	var listenerCounter = 0;
-	var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
-	function indexOfListener(array, callback) {
-	    var low = 0, high = array.length, priority = callback.priority;
-	    while (low < high) {
-	        var mid = low + high >>> 1;
-	        if (array[mid].priority < priority)
-	            { low = mid + 1; }
-	        else
-	            { high = mid; }
-	    }
-	    return low;
-	}
-
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
+
+	var EditorEvent;
+	(function (EditorEvent) {
+	    EditorEvent["EDITOR_CHANGE"] = "editor change";
+	    EditorEvent["EDITOR_REGISTER_MODULES"] = "registerModules";
+	})(EditorEvent || (EditorEvent = {}));
+	// Wrapper that takes only EditorEvents
+	var EditorEventDispatcher = /** @class */ (function () {
+	    function EditorEventDispatcher() {
+	        this.dispatcher = new EventDispatcher();
+	    }
+	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	    EditorEventDispatcher.prototype.listen = function (event, callback, priority) {
+	        if (priority === void 0) { priority = 0; }
+	        this.dispatcher.listen(event, callback, priority);
+	    };
+	    EditorEventDispatcher.prototype.dispatch = function (event, a, b, c) {
+	        this.dispatcher.dispatch(event, a, b, c);
+	    };
+	    EditorEventDispatcher.prototype.getEventPromise = function (event) {
+	        return new Promise(function (res) {
+	            editorEventDispacher$1.listen(event, res);
+	        });
+	    };
+	    return EditorEventDispatcher;
+	}());
+	var editorEventDispacher$1 = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -180,10 +121,10 @@
 	        printPrivatePerformance(cumulativePerformance);
 	        snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
 	        cumulativePerformance = {};
-	        events.dispatch('performance snapshot', snapshotPerformance);
+	        editorEventDispacher$1.dispatch('performance snapshot', snapshotPerformance);
 	        perSecondSnapshot = perSecondObjectToPublicArray(currentPerSecondMeters);
 	        currentPerSecondMeters = {};
-	        events.dispatch('perSecond snapshot', perSecondSnapshot);
+	        editorEventDispacher$1.dispatch('perSecond snapshot', perSecondSnapshot);
 	    }, UPDATE_INTERVAL);
 	}
 	function printPrivatePerformance(object) {
@@ -227,6 +168,7 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var GameEvent;
 	(function (GameEvent) {
@@ -250,7 +192,7 @@
 	    EventDispatcher.prototype.listen = function (event, callback, priority) {
 	        var _this = this;
 	        if (priority === void 0) { priority = 0; }
-	        callback.priority = priority + (listenerCounter$1++ / NUMBER_BIGGER_THAN_LISTENER_COUNT$1);
+	        callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
 	        if (!this._listeners.hasOwnProperty(event)) {
 	            this._listeners[event] = [];
 	        }
@@ -291,8 +233,8 @@
 	    return EventDispatcher;
 	}());
 	var globalEventDispatcher = new EventDispatcher();
-	var listenerCounter$1 = 0;
-	var NUMBER_BIGGER_THAN_LISTENER_COUNT$1 = 10000000000;
+	var listenerCounter = 0;
+	var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
 	function decideIndexOfListener(array, callback) {
 	    var low = 0, high = array.length, priority = callback.priority;
 	    while (low < high) {
@@ -304,6 +246,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -368,6 +311,7 @@
 	    callback();
 	    externalChange = false;
 	}
+	//# sourceMappingURL=change.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -763,6 +707,7 @@
 	        return true;
 	    });
 	}
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -871,6 +816,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -1006,6 +952,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1138,6 +1085,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1187,6 +1135,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1333,6 +1282,7 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1456,6 +1406,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -2008,6 +1959,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI$1;
 	if (isClient) {
@@ -2064,6 +2016,7 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2080,25 +2033,28 @@
 	    ctx.fillRect(0, 0, 1, RESOLUTION);
 	    return canvas;
 	}
-	events.listen('scene load level', function (scene) {
+	globalEventDispatcher.listen('scene load level', function (scene) {
 	    var gradientCanvas = createCanvas();
 	    var sprite = new PIXI$2.Sprite(PIXI$2.Texture.fromCanvas(gradientCanvas));
-	    scene.backgroundGradient = sprite;
+	    scene['backgroundGradient'] = sprite;
 	    updateSceneBackgroundGradient(scene);
 	    scene.layers.static.addChild(sprite);
 	});
-	events.listen('scene unload level', function (scene) {
-	    delete scene.backgroundGradient;
+	globalEventDispatcher.listen('scene unload level', function (scene) {
+	    delete scene['backgroundGradient'];
 	});
-	events.listen('canvas resize', function (scene) {
+	globalEventDispatcher.listen('canvas resize', function (scene) {
 	    updateSceneBackgroundGradient(scene);
 	});
 	function updateSceneBackgroundGradient(scene) {
-	    if (!scene.canvas || !scene.backgroundGradient)
+	    if (!scene.canvas || !scene['backgroundGradient'])
 	        { return; }
-	    scene.backgroundGradient.width = scene.canvas.width;
-	    scene.backgroundGradient.height = scene.canvas.height;
+	    scene['backgroundGradient'].width = scene.canvas.width;
+	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	var propertyTypes = [
@@ -2162,6 +2118,7 @@
 	    }
 	    return new Game(json.id);
 	});
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2249,6 +2206,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2376,6 +2334,7 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
+	//# sourceMappingURL=input.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2446,9 +2405,9 @@
 	        this.time = 0;
 	        this.won = false;
 	        createWorld(this, physicsOptions);
-	        events.dispatch('scene load level before entities', scene, level);
+	        globalEventDispatcher.dispatch('scene load level before entities', scene, level);
 	        this.level.getChildren('epr').map(function (epr) { return epr.createEntity(_this); });
-	        events.dispatch('scene load level', scene, level);
+	        globalEventDispatcher.dispatch('scene load level', scene, level);
 	        // this.draw();
 	    };
 	    Scene.prototype.unloadLevel = function () {
@@ -2462,7 +2421,7 @@
 	        this.layers = {};
 	        this.components.clear();
 	        deleteWorld(this);
-	        events.dispatch('scene unload level', scene, level);
+	        globalEventDispatcher.dispatch('scene unload level', scene, level);
 	    };
 	    Scene.prototype.setCameraPositionToPlayer = function () {
 	        var pos = new Vector(0, 0);
@@ -2537,7 +2496,7 @@
 	        this.updateCamera();
 	        [this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 	        this.renderer.render(this.stage, null, false);
-	        events.dispatch(GameEvent.SCENE_DRAW, scene);
+	        this.dispatch(GameEvent.SCENE_DRAW, scene);
 	        eventHappened('Draws');
 	    };
 	    Scene.prototype.isInInitialState = function () {
@@ -2638,6 +2597,7 @@
 	    if (scene)
 	        { listener(scene); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = [
@@ -2826,6 +2786,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2979,6 +2940,7 @@
 	    }
 
 	*/
+	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3000,6 +2962,7 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3195,6 +3158,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3333,7 +3297,7 @@
 	        Entity.initComponents(components);
 	        this.previouslyCreatedEntity = entity;
 	        if (!_skipNewEntityEvent)
-	            { events.dispatch('new entity created', entity); }
+	            { globalEventDispatcher.dispatch('new entity created', entity); }
 	        return entity;
 	    };
 	    Prototype.prototype.getValue = function (componentId, propertyName) {
@@ -3430,6 +3394,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3675,6 +3640,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3735,6 +3701,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$2 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3758,6 +3725,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$2);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3843,6 +3813,7 @@
 	});
 	var zeroPoint = new PIXI$2.Point();
 	var tempPoint = new PIXI$2.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3866,6 +3837,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4039,6 +4011,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4078,6 +4051,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4128,6 +4102,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4175,6 +4150,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4371,6 +4347,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4396,6 +4373,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4684,6 +4662,7 @@
 	}
 	var zeroPoint$1 = new PIXI$2.Point();
 	var tempPoint$1 = new PIXI$2.Point();
+	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -4699,6 +4678,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4900,6 +4880,9 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4942,6 +4925,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5018,13 +5002,13 @@
 	    else
 	        { socket.emit(data); }
 	}
-	var listeners$1 = {
+	var listeners = {
 	    data: function (result) {
 	        var profile = result.profile, gameData = result.gameData, editAccess = result.editAccess;
 	        localStorage.openEditPlayUserId = profile.id;
 	        localStorage.openEditPlayUserToken = profile.userToken;
 	        if (!editAccess) {
-	            events.dispatch('noEditAccess');
+	            globalEventDispatcher.dispatch('noEditAccess');
 	        }
 	        delete profile.userToken;
 	        window.user = profile;
@@ -5068,7 +5052,7 @@
 	        socket.onevent = function (packet) {
 	            var param1 = packet.data[0];
 	            if (typeof param1 === 'string') {
-	                listeners$1[param1](packet.data[1]);
+	                listeners[param1](packet.data[1]);
 	            }
 	            else {
 	                // Optimized change-event
@@ -5186,6 +5170,27 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=net.js.map
+
+	// DOM / ReDom event system
+	function dispatch(view, type, data) {
+	    var el = view === window ? view : view.el || view;
+	    var debug = 'Debug info ' + new Error().stack;
+	    el.dispatchEvent(new CustomEvent(type, {
+	        detail: { data: data, debug: debug, view: view },
+	        bubbles: true
+	    }));
+	}
+	function listen(view, type, handler) {
+	    var el = view === window ? view : view.el || view;
+	    el.addEventListener(type, function (event) {
+	        if (event instanceof CustomEvent)
+	            { handler(event.detail.data, event.detail.view); }
+	        else
+	            { handler(event); }
+	    });
+	}
+	//# sourceMappingURL=events.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -5202,20 +5207,20 @@
 	            }
 	            this.el.onclick = function () {
 	                setOption(packId_1, '');
-	                events.dispatch('layoutResize');
+	                editorEventDispacher$1.dispatch('layoutResize');
 	                _this.el.classList.contains('packed') && _this.el.classList.remove('packed');
 	                _this.update();
 	                return;
 	            };
 	            this.packButton.onclick = function (e) {
 	                _this.el.classList.add('packed');
-	                events.dispatch('layoutResize');
+	                editorEventDispacher$1.dispatch('layoutResize');
 	                setOption(packId_1, 'true');
 	                e.stopPropagation();
 	                return false;
 	            };
 	        }
-	        events.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor$$1) {
+	        editorEventDispacher$1.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor$$1) {
 	            var module = new moduleClass(editor$$1);
 	            module.el.classList.add('module-' + module.id);
 	            module.moduleContainer = _this;
@@ -5267,7 +5272,7 @@
 	        }
 	        if (unpackModuleView) {
 	            this.el.classList.remove('packed');
-	            events.dispatch('layoutResize');
+	            editorEventDispacher$1.dispatch('layoutResize');
 	        }
 	        this._activateModule(module, args);
 	    };
@@ -5282,7 +5287,7 @@
 	        }
 	        if (unpackModuleView) {
 	            this.el.classList.remove('packed');
-	            events.dispatch('layoutResize');
+	            editorEventDispacher$1.dispatch('layoutResize');
 	        }
 	        for (var i = 0; i < this.modules.length; ++i) {
 	            var m = this$1.modules[i];
@@ -5357,6 +5362,7 @@
 	    };
 	    return ModuleTab;
 	}());
+	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -5380,6 +5386,7 @@
 	    };
 	    return Layout;
 	}());
+	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -5457,19 +5464,20 @@
 	    // moduleContainerName = left | middle | right | bottom
 	    Module.register = function (moduleClass, moduleContainerName) {
 	        registerPromise = registerPromise.then(function () {
-	            events.dispatch('registerModule_' + moduleContainerName, moduleClass);
+	            editorEventDispacher$1.dispatch('registerModule_' + moduleContainerName, moduleClass);
 	        });
 	    };
 	    return Module;
 	}());
 	var registerPromise = new Promise(function (resolve) {
-	    events.listen('registerModules', function () {
+	    editorEventDispacher$1.listen('registerModules', function () {
 	        registerPromise.then(function () {
-	            events.dispatch('modulesRegistered');
+	            editorEventDispacher$1.dispatch('modulesRegistered');
 	        });
 	        resolve();
 	    });
 	});
+	//# sourceMappingURL=module.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -5503,20 +5511,20 @@
 	            title: 'Play (P)',
 	            icon: 'fa-play',
 	            type: 'play',
-	            callback: function () { return events.dispatch('play'); }
+	            callback: function () { return editorEventDispacher$1.dispatch('play'); }
 	        };
 	        var pauseButtonData = {
 	            title: 'Pause (P)',
 	            icon: 'fa-pause',
 	            type: 'pause',
-	            callback: function () { return events.dispatch('pause'); }
+	            callback: function () { return editorEventDispacher$1.dispatch('pause'); }
 	        };
 	        var playButton = new SceneControlButton(playButtonData);
 	        var stopButton = new SceneControlButton({
 	            title: 'Reset (R)',
 	            icon: 'fa-stop',
 	            type: 'reset',
-	            callback: function () { return events.dispatch('reset'); }
+	            callback: function () { return editorEventDispacher$1.dispatch('reset'); }
 	        });
 	        var updateButtons = function () {
 	            setTimeout(function () {
@@ -5604,6 +5612,7 @@
 	    };
 	    return SceneControlButton;
 	}());
+	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelAndScene() {
 	    return scene && scene.isInInitialState() && editor.selectedLevel;
@@ -5914,7 +5923,6 @@
 	        entityPrototypeProperty.value = property.value;
 	        console.log('after', entityPrototype);
 	    }
-	    entity.dispatch('changedInEditor', change);
 	}
 	function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	    entities.forEach(function (entity) {
@@ -5923,6 +5931,7 @@
 	        editorWidget.position.updateVisibility();
 	    });
 	}
+	//# sourceMappingURL=sceneEditUtil.js.map
 
 	var AnimationView = /** @class */ (function () {
 	    function AnimationView(serializable) {
@@ -5941,6 +5950,7 @@
 	    };
 	    return AnimationView;
 	}());
+	//# sourceMappingURL=animationView.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -6034,6 +6044,7 @@
 	}());
 	var help = new Help;
 	window['help'] = help;
+	//# sourceMappingURL=help.js.map
 
 	/*
 	Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
@@ -6125,6 +6136,7 @@
 	    };
 	    return Widget;
 	}());
+	//# sourceMappingURL=widget.js.map
 
 	var SHIFT_STEPS = 16;
 	var AngleWidget = /** @class */ (function (_super) {
@@ -6199,6 +6211,7 @@
 	    };
 	    return AngleWidget;
 	}(Widget));
+	//# sourceMappingURL=angleWidget.js.map
 
 	var PositionWidget = /** @class */ (function (_super) {
 	    __extends(PositionWidget, _super);
@@ -6236,6 +6249,7 @@
 	    };
 	    return PositionWidget;
 	}(Widget));
+	//# sourceMappingURL=positionWidget.js.map
 
 	var MIN_SCALE = 0.01;
 	var ScaleWidget = /** @class */ (function (_super) {
@@ -6312,6 +6326,7 @@
 	    };
 	    return ScaleWidget;
 	}(Widget));
+	//# sourceMappingURL=scaleWidget.js.map
 
 	var MoveWidget = /** @class */ (function (_super) {
 	    __extends(MoveWidget, _super);
@@ -6383,6 +6398,7 @@
 	    };
 	    return MoveWidget;
 	}(Widget));
+	//# sourceMappingURL=moveWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -6431,7 +6447,7 @@
 	            // ];
 	            // return;
 	            this.createWidgets();
-	            events.listen('selectedToolChanged', function () {
+	            editorEventDispacher.listen('selectedToolChanged', function () {
 	                _this.createWidgets();
 	            });
 	        },
@@ -6582,6 +6598,35 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=EditorWidget.js.map
+
+	var editorSelection = {
+	    type: 'none',
+	    items: [],
+	    dirty: true
+	};
+	function selectInEditor(items, origin) {
+	    if (!items)
+	        { items = []; }
+	    else if (!Array.isArray(items))
+	        { items = [items]; }
+	    assert$1(items.filter(function (item) { return item == null; }).length === 0, 'Can not select null');
+	    editorSelection.items = [].concat(items);
+	    var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
+	    if (types.length === 0)
+	        { editorSelection.type = 'none'; }
+	    else if (types.length === 1)
+	        { editorSelection.type = types[0]; }
+	    else
+	        { editorSelection.type = 'mixed'; }
+	    // console.log('selectedIds', this.selection)
+	    editorEventDispacher$1.dispatch(EditorEvent.EDITOR_CHANGE, {
+	        type: 'editorSelection',
+	        reference: editorSelection,
+	        origin: origin
+	    });
+	}
+	//# sourceMappingURL=editorSelection.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -6672,7 +6717,7 @@
 	            title: 'Delete selected objects (Backspace)'
 	        }))));
 	        _this.el.classList.add('hideScenePauseInformation');
-	        events.listen('locate serializable', function (serializable) {
+	        editorEventDispacher$1.listen('locate serializable', function (serializable) {
 	            if (serializable.threeLetterType === 'epr') {
 	                var entityPrototype = serializable;
 	                if (entityPrototype.previouslyCreatedEntity) {
@@ -6684,7 +6729,7 @@
 	                }
 	            }
 	        });
-	        events.listen('selectedToolChanged', function () {
+	        editorEventDispacher$1.listen('selectedToolChanged', function () {
 	            if (_this.widgetUnderMouse) {
 	                _this.widgetUnderMouse.unhover();
 	                _this.widgetUnderMouse = null;
@@ -6695,7 +6740,7 @@
 	        });
 	        var fixAspectRatio = function () { return _this.fixAspectRatio(); };
 	        window.addEventListener("resize", fixAspectRatio);
-	        events.listen('layoutResize', function () {
+	        editorEventDispacher$1.listen('layoutResize', function () {
 	            setTimeout(fixAspectRatio, 500);
 	        });
 	        setTimeout(fixAspectRatio, 0);
@@ -6725,13 +6770,13 @@
 	        _this.selectionEnd = null;
 	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
-	        events.listen('reset', function () {
+	        editorEventDispacher$1.listen('reset', function () {
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
 	            if (scene.layers.editorLayer)
 	                { scene.layers.editorLayer.visible = true; }
 	        });
-	        events.listen('play', function () {
+	        editorEventDispacher$1.listen('play', function () {
 	            if (!scene || !scene.level)
 	                { return; }
 	            setChangeOrigin(_this);
@@ -6743,7 +6788,7 @@
 	            _this.playingModeChanged();
 	            _this.updatePropertyChangeCreationFilter();
 	        });
-	        events.listen('pause', function () {
+	        editorEventDispacher$1.listen('pause', function () {
 	            if (!scene || !scene.level)
 	                { return; }
 	            setChangeOrigin(_this);
@@ -6798,11 +6843,11 @@
 	                });
 
 	                */
-	        game.listen('levelCompleted', function () {
+	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, function () {
 	            _this.playingModeChanged();
 	            _this.draw();
 	        });
-	        events.listen('setLevel', function (lvl) {
+	        editorEventDispacher$1.listen('setLevel', function (lvl) {
 	            if (lvl)
 	                { lvl.createScene(null); }
 	            else if (scene) {
@@ -6814,7 +6859,7 @@
 	            _this.canvasParentSize.setScalars(0, 0); // force aspect ratio fix for new scene
 	            _this.fixAspectRatio();
 	        });
-	        events.listen('scene load level before entities', function (scene$$1, level) {
+	        globalEventDispatcher.listen('scene load level before entities', function (scene$$1, level) {
 	            assert$1(!scene$$1.layers.editorLayer, 'editorLayer should not be there');
 	            scene$$1.layers.editorLayer = new PIXI$2.Container();
 	            scene$$1.layers.move.addChild(scene$$1.layers.editorLayer);
@@ -6824,7 +6869,7 @@
 	            scene$$1.layers.editorLayer.addChild(scene$$1.widgetLayer, scene$$1.layers.positionHelperLayer, scene$$1.selectionLayer);
 	        });
 	        // Change in serializable tree
-	        events.listen('prototypeClicked', function (prototype) {
+	        editorEventDispacher$1.listen('prototypeClicked', function (prototype) {
 	            if (!scene)
 	                { return; }
 	            start('Editor: Scene');
@@ -6838,7 +6883,7 @@
 	            _this.draw();
 	            stop('Editor: Scene');
 	        });
-	        events.listen('new entity created', function (entity) {
+	        globalEventDispatcher.listen('new entity created', function (entity) {
 	            var handleEntity = function (entity) {
 	                entity.addComponents([
 	                    Component.create('EditorWidget')
@@ -6869,7 +6914,7 @@
 	            handleEntity(entity);
 	            entity.forEachChild('ent', handleEntity, true);
 	        });
-	        events.listen('change', function (change) {
+	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            start('Editor: Scene');
 	            if (change.type === 'editorSelection') {
 	                _this.updatePropertyChangeCreationFilter();
@@ -6994,10 +7039,10 @@
 	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        });
-	        events.listen('dragPrefabsStarted', function (prefabs) {
+	        editorEventDispacher$1.listen('dragPrefabsStarted', function (prefabs) {
 	            _this.newEntities = prefabs.map(function (pfa) { return pfa.createEntity(); });
 	        });
-	        events.listen('dragPrototypeStarted', function (prototypes) {
+	        editorEventDispacher$1.listen('dragPrototypeStarted', function (prototypes) {
 	            var entityPrototypes = prototypes.map(function (prototype) {
 	                var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
 	                // entityPrototype.position = this.previousMousePosInWorldCoordinates;
@@ -7014,12 +7059,12 @@
 	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        };
-	        events.listen('dragPrototypeToCanvas', entityDragEnd);
-	        events.listen('dragPrefabsToScene', entityDragEnd);
-	        events.listen('dragPrototypeToNonCanvas', function () {
+	        editorEventDispacher$1.listen('dragPrototypeToCanvas', entityDragEnd);
+	        editorEventDispacher$1.listen('dragPrefabsToScene', entityDragEnd);
+	        editorEventDispacher$1.listen('dragPrototypeToNonCanvas', function () {
 	            _this.clearState();
 	        });
-	        events.listen('dragPrefabsToNonScene', function () {
+	        editorEventDispacher$1.listen('dragPrefabsToNonScene', function () {
 	            _this.clearState();
 	        });
 	        return _this;
@@ -7204,7 +7249,7 @@
 	            }
 	            // scene.renderer.resize(this.canvas.width, this.canvas.height);
 	            if (change) {
-	                events.dispatch('canvas resize', scene);
+	                globalEventDispatcher.dispatch('canvas resize', scene);
 	                this.draw();
 	            }
 	            // Lets see if it has changed after 200ms.
@@ -7223,7 +7268,7 @@
 	            setTimeout(function () {
 	                if (game.getChildren('lvl').length === 0) {
 	                    setChangeOrigin(_this);
-	                    events.dispatch('createBlankLevel');
+	                    editorEventDispacher$1.dispatch('createBlankLevel');
 	                }
 	            }, 500);
 	        }
@@ -7280,18 +7325,18 @@
 	    };
 	    SceneModule.prototype.selectSelectedEntitiesInEditor = function () {
 	        if (shouldSyncLevelAndScene()) {
-	            editor.select(this.selectedEntities.map(function (ent) { return ent.prototype; }), this);
+	            selectInEditor(this.selectedEntities.map(function (ent) { return ent.prototype; }), this);
 	            Module.activateOneOfModules(['type', 'object'], false);
 	        }
 	        else {
-	            editor.select(this.selectedEntities, this);
+	            selectInEditor(this.selectedEntities, this);
 	            Module.activateOneOfModules(['object'], false);
 	        }
 	    };
 	    SceneModule.prototype.stopAndReset = function () {
 	        this.clearState();
 	        if (editor.selection.type === 'ent') {
-	            editor.select(editor.selection.items.map(function (ent) { return ent.prototype; }), this);
+	            selectInEditor(editor.selection.items.map(function (ent) { return ent.prototype; }), this);
 	        }
 	        if (scene) {
 	            scene.reset();
@@ -7364,6 +7409,7 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
+	//# sourceMappingURL=sceneModule.js.map
 
 	var TypesModule = /** @class */ (function (_super) {
 	    __extends(TypesModule, _super);
@@ -7377,12 +7423,12 @@
 	            setChangeOrigin(_this);
 	            var prototype = Prototype.create(' New type');
 	            editor.game.addChild(prototype);
-	            editor.select(prototype);
+	            selectInEditor(prototype, _this);
 	            setTimeout(function () {
 	                Module.activateModule('type', true, 'focusOnProperty', 'name');
 	            }, 100);
 	        };
-	        var searchTimeout = false;
+	        var searchTimeout = null;
 	        _this.search.addEventListener('keyup', function () {
 	            if (searchTimeout)
 	                { clearTimeout(searchTimeout); }
@@ -7391,7 +7437,7 @@
 	            }, 200);
 	        });
 	        _this.externalChange = false;
-	        events.listen('change', function (change) {
+	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.reference._rootType === 'sce')
 	                { return; }
 	            var jstree = $(_this.jstree).jstree(true);
@@ -7477,10 +7523,10 @@
 	                    { return; }
 	                // selection changed
 	                var prototypes = data.selected.map(getSerializable);
-	                editor.select(prototypes, _this);
+	                selectInEditor(prototypes, _this);
 	                Module.activateModule('type', false);
 	                if (prototypes.length === 1)
-	                    { events.dispatch('prototypeClicked', prototypes[0]); }
+	                    { editorEventDispacher$1.dispatch('prototypeClicked', prototypes[0]); }
 	            }).on('loaded.jstree refresh.jstree', function () {
 	                var jstree = $(_this.jstree).jstree(true);
 	                // let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
@@ -7527,7 +7573,7 @@
 	    if (data.data.nodes.find(function (node) { return !node.startsWith('prt'); }))
 	        { return; }
 	    var nodeObjects = data.data.nodes.map(getSerializable);
-	    events.dispatch('dragPrototypeStarted', nodeObjects);
+	    editorEventDispacher$1.dispatch('dragPrototypeStarted', nodeObjects);
 	});
 	// This doesn't work. types.js should use treeView.js instead. objects.js has done this the right way.
 	// $(document).on('dnd_move.vakata', function (e, data) {
@@ -7559,7 +7605,7 @@
 	        if (data.event.target.nodeName === 'CANVAS') {
 	            // Drag entity to scene
 	            var nodeObjects = data.data.nodes.map(getSerializable);
-	            events.dispatch('dragPrototypeToCanvas', nodeObjects);
+	            editorEventDispacher$1.dispatch('dragPrototypeToCanvas', nodeObjects);
 	        }
 	        else {
 	            // Drag prototype in types view
@@ -7578,12 +7624,13 @@
 	                setChangeOrigin(jstree);
 	                prototype.move(newParent_1);
 	            });
-	            events.dispatch('dragPrototypeToNonCanvas', nodeObjects);
+	            editorEventDispacher$1.dispatch('dragPrototypeToNonCanvas', nodeObjects);
 	            // console.log('dnd stopped from', nodes, 'to', newParent);
 	        }
 	    }, 0);
 	});
 	Module.register(TypesModule, 'left');
+	//# sourceMappingURL=typesModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -7629,6 +7676,7 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
+	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
@@ -7730,7 +7778,7 @@
 	    var idList = data.data.nodes;
 	    var targetElement = data.event.target;
 	    var event = new DragAndDropStartEvent(idList, targetElement);
-	    events.dispatch('treeView drag start ' + data.data.origin.element[0].id, event);
+	    editorEventDispacher.dispatch('treeView drag start ' + data.data.origin.element[0].id, event);
 	});
 	$(document).on('dnd_move.vakata', function (e, data) {
 	    data.helper.find('.jstree-icon').css({
@@ -7739,14 +7787,15 @@
 	    var idList = data.data.nodes;
 	    var targetElement = data.event.target;
 	    var event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
-	    events.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
+	    editorEventDispacher.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
 	});
 	$(document).on('dnd_stop.vakata', function (e, data) {
 	    var idList = data.data.nodes;
 	    var targetElement = data.event.target;
 	    var event = new DragAndDropStopEvent(idList, targetElement);
-	    events.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
+	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
+	//# sourceMappingURL=treeView.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -7759,25 +7808,25 @@
 	            id: 'prefabs-tree',
 	            selectionChangedCallback: function (selectedIds) {
 	                var serializables$$1 = selectedIds.map(getSerializable).filter(Boolean);
-	                editor.select(serializables$$1, _this);
+	                selectInEditor(serializables$$1, _this);
 	                Module.activateModule('prefab', false);
 	            },
 	        });
 	        mount(_this.el, _this.treeView);
-	        events.listen('treeView drag start prefabs-tree', function (event) {
+	        editorEventDispacher$1.listen('treeView drag start prefabs-tree', function (event) {
 	            var prefabs = event.idList.map(getSerializable);
-	            events.dispatch('dragPrefabsStarted', prefabs);
+	            editorEventDispacher$1.dispatch('dragPrefabsStarted', prefabs);
 	        });
-	        events.listen('treeView drag move prefabs-tree', function (event) {
+	        editorEventDispacher$1.listen('treeView drag move prefabs-tree', function (event) {
 	            if (event.targetElement.tagName === 'CANVAS' && event.targetElement.classList.contains('openEditPlayCanvas'))
 	                { event.hideValidationIndicator(); }
 	        });
-	        events.listen('treeView drag stop prefabs-tree', function (event) {
+	        editorEventDispacher$1.listen('treeView drag stop prefabs-tree', function (event) {
 	            var prefabs = event.idList.map(getSerializable);
 	            if (event.targetElement.tagName === 'CANVAS' && event.targetElement.classList.contains('openEditPlayCanvas'))
-	                { events.dispatch('dragPrefabsToScene', prefabs); }
+	                { editorEventDispacher$1.dispatch('dragPrefabsToScene', prefabs); }
 	            else
-	                { events.dispatch('dragPrefabsToNonScene', prefabs); }
+	                { editorEventDispacher$1.dispatch('dragPrefabsToNonScene', prefabs); }
 	        });
 	        return _this;
 	    }
@@ -7804,6 +7853,7 @@
 	    return PrefabsModule;
 	}(Module));
 	Module.register(PrefabsModule, 'left');
+	//# sourceMappingURL=prefabsModule.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7883,6 +7933,7 @@
 	    }
 	    return Layer;
 	}());
+	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7911,6 +7962,7 @@
 	    }
 	    return CreateObject;
 	}(Popup));
+	//# sourceMappingURL=createObject.js.map
 
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
@@ -7928,7 +7980,7 @@
 	            id: 'objects-tree',
 	            selectionChangedCallback: function (selectedIds) {
 	                var serializables$$1 = selectedIds.map(getSerializable).filter(Boolean);
-	                editor.select(serializables$$1, _this);
+	                selectInEditor(serializables$$1, _this);
 	                Module.activateModule('object', false);
 	            },
 	            moveCallback: function (serializableId, parentId) {
@@ -7968,21 +8020,21 @@
 	            doubleClickCallback: function (serializableId) {
 	                var serializable = getSerializable(serializableId);
 	                if (serializable)
-	                    { events.dispatch('locate serializable', serializable); }
+	                    { editorEventDispacher$1.dispatch('locate serializable', serializable); }
 	                else
 	                    { throw new Error("Locate serializable " + serializableId + " not found"); }
 	            }
 	        });
 	        mount(_this.el, _this.treeView);
-	        events.listen('treeView drag start objects-tree', function (event) {
+	        editorEventDispacher$1.listen('treeView drag start objects-tree', function (event) {
 	        });
-	        events.listen('treeView drag move objects-tree', function (event) {
+	        editorEventDispacher$1.listen('treeView drag move objects-tree', function (event) {
 	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs')
 	                { event.hideValidationIndicator(); }
 	            // if (event.targetElement.classList.contains('openEditPlayCanvas'))
 	            // 	event.hideValidationIndicator();
 	        });
-	        events.listen('treeView drag stop objects-tree', function (event) {
+	        editorEventDispacher$1.listen('treeView drag stop objects-tree', function (event) {
 	            console.log('event', event);
 	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 	                var entityPrototypes = event.idList.map(getSerializable);
@@ -8034,9 +8086,9 @@
 	        var setDirty = function () {
 	            _this.dirty = true;
 	        };
-	        events.listen('play', setDirty, -1);
-	        events.listen('reset', setDirty, -1);
-	        game.listen('levelCompleted', setDirty, -1);
+	        editorEventDispacher$1.listen('play', setDirty, -1);
+	        editorEventDispacher$1.listen('reset', setDirty, -1);
+	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 	        var tasks = [];
 	        var taskTimeout = null;
 	        var addTask = function (task) {
@@ -8060,8 +8112,7 @@
 	                tasks.length = 0;
 	            }, delay);
 	        };
-	        // events.listen()
-	        events.listen('change', function (change) {
+	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (_this.dirty || !_this._selected)
 	                { return; }
 	            start('Editor: Objects');
@@ -8192,6 +8243,7 @@
 	    return ObjectsModule;
 	}(Module));
 	Module.register(ObjectsModule, 'left');
+	//# sourceMappingURL=objectsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -8211,7 +8263,7 @@
 	    editor.setLevel(lvl);
 	    return lvl;
 	}
-	events.listen('createBlankLevel', createNewLevel);
+	editorEventDispacher$1.listen('createBlankLevel', createNewLevel);
 	var LevelsModule = /** @class */ (function (_super) {
 	    __extends(LevelsModule, _super);
 	    function LevelsModule() {
@@ -8225,7 +8277,7 @@
 	            callback: function () {
 	                setChangeOrigin(_this);
 	                var lvl = createNewLevel();
-	                editor.select(lvl, _this);
+	                selectInEditor(lvl, _this);
 	                setTimeout(function () {
 	                    Module.activateModule('level', true, 'focusOnProperty', 'name');
 	                }, 100);
@@ -8233,7 +8285,7 @@
 	        });
 	        listen(_this.el, 'selectLevel', function (level) {
 	            editor.setLevel(level);
-	            editor.select(level, _this);
+	            selectInEditor(level, _this);
 	        });
 	        return _this;
 	        /*
@@ -8285,6 +8337,7 @@
 	    };
 	    return LevelItem;
 	}());
+	//# sourceMappingURL=levelsModule.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -8361,6 +8414,7 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
+	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -8396,6 +8450,7 @@
 	    };
 	    return Confirmation;
 	}(Popup));
+	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -8530,6 +8585,7 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
+	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -8584,6 +8640,7 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
+	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -8601,6 +8658,7 @@
 	        number: num
 	    };
 	}
+	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -8613,7 +8671,7 @@
 	        this.dirty = true;
 	        this.editingProperty = false;
 	        // Change in serializable tree
-	        events.listen('change', function (change) {
+	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.type === 'editorSelection') {
 	                _this.dirty = true;
 	            }
@@ -8621,7 +8679,6 @@
 	                if (_this.item && _this.item.hasDescendant(change.reference)) {
 	                    if (change.origin === _this) {
 	                        if (_this.item.threeLetterType === 'ent') {
-	                            _this.item.dispatch('changedInEditor');
 	                            entityModifiedInEditor(_this.item, change);
 	                        }
 	                    }
@@ -8653,7 +8710,7 @@
 	            _this.dirty = true;
 	        });
 	        listen(this, 'propertyEditorSelect', function (items) {
-	            editor.select(items, _this);
+	            selectInEditor(items, _this);
 	        });
 	        listenKeyDown(function (keyCode) {
 	            if (keyCode === key.esc) {
@@ -8788,7 +8845,7 @@
 	                else {
 	                    _this.item.delete();
 	                }
-	                editor.select();
+	                selectInEditor([], _this);
 	            }
 	        }));
 	    };
@@ -9099,6 +9156,7 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
+	//# sourceMappingURL=propertyEditor.js.map
 
 	var TypeModule = /** @class */ (function (_super) {
 	    __extends(TypeModule, _super);
@@ -9142,6 +9200,7 @@
 	    return TypeModule;
 	}(Module));
 	Module.register(TypeModule, 'right');
+	//# sourceMappingURL=typeModule.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -9176,6 +9235,7 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
+	//# sourceMappingURL=prefabModule.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -9209,6 +9269,7 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
+	//# sourceMappingURL=objectModule.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -9243,6 +9304,7 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
+	//# sourceMappingURL=levelModule.js.map
 
 	var GameModule = /** @class */ (function (_super) {
 	    __extends(GameModule, _super);
@@ -9273,6 +9335,7 @@
 	    return GameModule;
 	}(Module));
 	Module.register(GameModule, 'right');
+	//# sourceMappingURL=gameModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -9284,7 +9347,7 @@
 	        _this.name = 'Performance';
 	        _this.id = 'performance';
 	        startPerformanceUpdates();
-	        events.listen('performance snapshot', function (snapshot) {
+	        editorEventDispacher$1.listen('performance snapshot', function (snapshot) {
 	            if (_this.moduleContainer.isPacked())
 	                { return; }
 	            start('Editor: Performance');
@@ -9382,6 +9445,7 @@
 	    };
 	    return FPSMeter;
 	}());
+	//# sourceMappingURL=performanceModule.js.map
 
 	var PerSecondModule = /** @class */ (function (_super) {
 	    __extends(PerSecondModule, _super);
@@ -9391,7 +9455,7 @@
 	        _this.addElements(el('div.perSecond', new PerSecondItem({ name: 'Name', count: '/ sec' }), counterList = list('div.perSecondList', PerSecondItem)));
 	        _this.name = 'Per second';
 	        _this.id = 'perSecond';
-	        events.listen('perSecond snapshot', function (snapshot) {
+	        editorEventDispacher$1.listen('perSecond snapshot', function (snapshot) {
 	            counterList.update(snapshot);
 	        });
 	        return _this;
@@ -9423,9 +9487,11 @@
 	    };
 	    return PerSecondItem;
 	}());
+	//# sourceMappingURL=perSecondModule.js.map
 
 	window.test = function () {
 	};
+	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -9461,18 +9527,19 @@
 	    };
 	    return OKPopup;
 	}(Popup));
+	//# sourceMappingURL=OKPopup.js.map
 
-	var modulesRegisteredPromise = events.getEventPromise('modulesRegistered');
-	var loadedPromise = events.getEventPromise('loaded');
+	var modulesRegisteredPromise = editorEventDispacher$1.getEventPromise('modulesRegistered');
+	var loadedPromise = editorEventDispacher$1.getEventPromise('loaded');
 	var selectedToolName = 'multiTool'; // in top bar
 	function changeSelectedTool(newToolName) {
 	    if (selectedToolName !== newToolName) {
 	        selectedToolName = newToolName;
-	        events.dispatch('selectedToolChanged', newToolName);
+	        editorEventDispacher$1.dispatch('selectedToolChanged', newToolName);
 	    }
 	}
 	modulesRegisteredPromise.then(function () {
-	    events.dispatch('loaded');
+	    editorEventDispacher$1.dispatch('loaded');
 	});
 	configureNetSync({
 	    serverToClientEnabled: true,
@@ -9487,11 +9554,11 @@
 	});
 	globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, function (change) {
 	    start('Editor: General');
-	    events.dispatch('change', change);
+	    editorEventDispacher$1.dispatch(EditorEvent.EDITOR_CHANGE, change);
 	    if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 	        var game_1 = change.reference;
 	        editor = new Editor(game_1);
-	        events.dispatch('registerModules', editor);
+	        editorEventDispacher$1.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
 	    }
 	    if (editor) {
 	        if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
@@ -9502,6 +9569,10 @@
 	        editorUpdateLimited();
 	    }
 	    stop('Editor: General');
+	});
+	editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function () {
+	    // editor && editor.update();
+	    editor && editorUpdateLimited();
 	});
 	var editor = null;
 	var Editor = /** @class */ (function () {
@@ -9522,31 +9593,8 @@
 	            { this.selectedLevel = level; }
 	        else
 	            { this.selectedLevel = null; }
-	        this.select([], this);
-	        events.dispatch('setLevel', this.selectedLevel);
-	    };
-	    Editor.prototype.select = function (items, origin) {
-	        if (!items)
-	            { items = []; }
-	        else if (!Array.isArray(items))
-	            { items = [items]; }
-	        assert$1(items.filter(function (item) { return item == null; }).length === 0, 'Can not select null');
-	        this.selection.items = [].concat(items);
-	        var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
-	        if (types.length === 0)
-	            { this.selection.type = 'none'; }
-	        else if (types.length === 1)
-	            { this.selection.type = types[0]; }
-	        else
-	            { this.selection.type = 'mixed'; }
-	        // console.log('selectedIds', this.selection)
-	        events.dispatch('change', {
-	            type: 'editorSelection',
-	            reference: this.selection,
-	            origin: origin
-	        });
-	        // editorUpdateLimited(); // doesn't work for some reason
-	        this.update();
+	        selectInEditor([], this);
+	        editorEventDispacher$1.dispatch('setLevel', this.selectedLevel);
 	    };
 	    Editor.prototype.update = function () {
 	        if (!this.game)
@@ -9555,7 +9603,7 @@
 	    };
 	    return Editor;
 	}());
-	events.listen('noEditAccess', function () {
+	globalEventDispatcher.listen('noEditAccess', function () {
 	    loadedPromise.then(function () {
 	        document.body.classList.add('noEditAccess');
 	        new OKPopup('No edit access', "Since you don't have edit access to this game, your changes are not saved. Feel free to play around, though!");
@@ -9593,6 +9641,7 @@
 	    loadOptions();
 	    return options$1[id];
 	}
+	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -9608,6 +9657,7 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

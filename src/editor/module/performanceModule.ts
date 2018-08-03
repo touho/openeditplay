@@ -1,8 +1,9 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import events, { dispatch, listen } from '../../util/events';
+import events, { dispatch, listen } from '../../util/redomEvents';
 import * as performance from '../../util/performance';
 import { scene } from '../../core/scene';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 class PerformanceModule extends Module {
 	constructor() {
@@ -23,7 +24,7 @@ class PerformanceModule extends Module {
 
 
 		performance.startPerformanceUpdates();
-		events.listen('performance snapshot', snapshot => {
+		editorEventDispacher.listen('performance snapshot', snapshot => {
 			if (this.moduleContainer.isPacked())
 				return;
 

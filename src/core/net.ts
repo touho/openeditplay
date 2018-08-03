@@ -7,7 +7,7 @@ import Serializable from './serializable';
 import {game} from './game';
 import {limit} from '../util/callLimiter';
 import {stickyNonModalErrorPopup} from "../util/popup";
-import events from '../util/events';
+'../util/redomEvents';
 import assert from '../util/assert';
 import { getSerializable } from './serializableManager';
 import Property from './property';
@@ -120,7 +120,7 @@ let listeners = {
 		localStorage.openEditPlayUserToken = profile.userToken;
 
 		if (!editAccess) {
-			events.dispatch('noEditAccess');
+			globalEventDispatcher.dispatch('noEditAccess');
 		}
 
 		delete profile.userToken;

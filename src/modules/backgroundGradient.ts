@@ -1,5 +1,7 @@
-import events from '../util/events';
+'../util/redomEvents';
 import PIXI from '../features/graphics';
+import Scene from '../core/scene';
+import { globalEventDispatcher } from '../core/eventDispatcher';
 
 function createCanvas() {
 	const RESOLUTION = 10;
@@ -17,26 +19,26 @@ function createCanvas() {
 	return canvas;
 }
 
-events.listen('scene load level', scene => {
+globalEventDispatcher.listen('scene load level', (scene: Scene) => {
 	let gradientCanvas = createCanvas();
 	let sprite = new PIXI.Sprite(PIXI.Texture.fromCanvas(gradientCanvas));
-	scene.backgroundGradient = sprite;
+	scene['backgroundGradient'] = sprite;
 	updateSceneBackgroundGradient(scene);
 	scene.layers.static.addChild(sprite);
 });
 
-events.listen('scene unload level', scene => {
-	delete scene.backgroundGradient;
+globalEventDispatcher.listen('scene unload level', (scene: Scene) => {
+	delete scene['backgroundGradient'];
 });
 
-events.listen('canvas resize', scene => {
+globalEventDispatcher.listen('canvas resize', (scene: Scene) => {
 	updateSceneBackgroundGradient(scene);
 });
 
-function updateSceneBackgroundGradient(scene) {
-	if (!scene.canvas || !scene.backgroundGradient)
+function updateSceneBackgroundGradient(scene: Scene) {
+	if (!scene.canvas || !scene['backgroundGradient'])
 		return;
-	
-	scene.backgroundGradient.width = scene.canvas.width;
-	scene.backgroundGradient.height = scene.canvas.height;
+
+	scene['backgroundGradient'].width = scene.canvas.width;
+	scene['backgroundGradient'].height = scene.canvas.height;
 };

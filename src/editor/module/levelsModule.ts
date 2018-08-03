@@ -4,9 +4,10 @@ import { game } from '../../core/game';
 import { editor } from '../editor';
 import Level from '../../core/level';
 import { Button } from '../views/popup/Popup';
-import { dispatch, listen } from '../../util/events';
-import events from "../../util/events";
+import { dispatch, listen } from '../../util/redomEvents';
 import { setChangeOrigin } from "../../core/change";
+import { selectInEditor } from '../editorSelection';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 export function createNewLevel() {
 	let lvl = new Level();
@@ -30,7 +31,7 @@ export function createNewLevel() {
 	return lvl;
 }
 
-events.listen('createBlankLevel', createNewLevel);
+editorEventDispacher.listen('createBlankLevel', createNewLevel);
 
 class LevelsModule extends Module {
 	content: HTMLElement;
@@ -56,7 +57,7 @@ class LevelsModule extends Module {
 			callback: () => {
 				setChangeOrigin(this);
 				let lvl = createNewLevel();
-				editor.select(lvl, this);
+				selectInEditor(lvl, this);
 
 				setTimeout(() => {
 					Module.activateModule('level', true, 'focusOnProperty', 'name');
@@ -66,7 +67,7 @@ class LevelsModule extends Module {
 
 		listen(this.el, 'selectLevel', level => {
 			editor.setLevel(level);
-			editor.select(level, this);
+			selectInEditor(level, this);
 		});
 		/*
 				listen(this.el, 'deleteLevel', level => {

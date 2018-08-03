@@ -14,6 +14,7 @@
         //"strictNullChecks": true
         "lib": ["es7", "dom"],
         "sourceMap": true,
+        "types" : ["redom"]
     },
     "include": [
         "src/**/*"

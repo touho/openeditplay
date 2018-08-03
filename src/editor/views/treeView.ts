@@ -1,5 +1,5 @@
 import {el, list, mount} from 'redom';
-import events from "../../util/events";
+"../../util/redomEvents";
 import {DragAndDropMoveEvent, DragAndDropStartEvent, DragAndDropStopEvent} from "../util/dragAndDrop";
 
 declare var $: any;
@@ -121,7 +121,7 @@ $(document).on('dnd_start.vakata', function (e, data) {
 	let idList = data.data.nodes;
 	let targetElement = data.event.target;
 	let event = new DragAndDropStartEvent(idList, targetElement);
-	events.dispatch('treeView drag start ' + data.data.origin.element[0].id, event);
+	editorEventDispacher.dispatch('treeView drag start ' + data.data.origin.element[0].id, event);
 });
 
 $(document).on('dnd_move.vakata', function (e, data) {
@@ -131,12 +131,12 @@ $(document).on('dnd_move.vakata', function (e, data) {
 	let idList = data.data.nodes;
 	let targetElement = data.event.target;
 	let event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
-	events.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
+	editorEventDispacher.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
 });
 
 $(document).on('dnd_stop.vakata', function (e, data) {
 	let idList = data.data.nodes;
 	let targetElement = data.event.target;
 	let event = new DragAndDropStopEvent(idList, targetElement);
-	events.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
+	editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 });

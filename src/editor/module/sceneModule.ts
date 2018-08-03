@@ -1,6 +1,6 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import events, { dispatch, listen } from '../../util/events';
+import events, { dispatch, listen } from '../../util/redomEvents';
 import {
 	listenMouseMove,
 	listenMouseDown,
@@ -30,7 +30,9 @@ import '../components/EditorWidget';
 import { filterChildren } from "../../core/serializable";
 import { limit } from "../../util/callLimiter";
 import Level from '../../core/level';
-import { GameEvent } from '../../core/eventDispatcher';
+import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import { selectInEditor } from '../editorSelection';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -151,7 +153,7 @@ class SceneModule extends Module {
 		);
 		this.el.classList.add('hideScenePauseInformation');
 
-		events.listen('locate serializable', serializable => {
+		editorEventDispacher.listen('locate serializable', serializable => {
 			if (serializable.threeLetterType === 'epr') {
 				let entityPrototype = serializable;
 				if (entityPrototype.previouslyCreatedEntity) {
@@ -163,7 +165,7 @@ class SceneModule extends Module {
 			}
 		});
 
-		events.listen('selectedToolChanged', () => {
+		editorEventDispacher.listen('selectedToolChanged', () => {
 			if (this.widgetUnderMouse) {
 				this.widgetUnderMouse.unhover();
 				this.widgetUnderMouse = null;
@@ -176,7 +178,7 @@ class SceneModule extends Module {
 		let fixAspectRatio = () => this.fixAspectRatio();
 
 		window.addEventListener("resize", fixAspectRatio);
-		events.listen('layoutResize', () => {
+		editorEventDispacher.listen('layoutResize', () => {
 			setTimeout(fixAspectRatio, 500);
 		});
 		setTimeout(fixAspectRatio, 0);
@@ -214,7 +216,7 @@ class SceneModule extends Module {
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
 
-		events.listen('reset', () => {
+		editorEventDispacher.listen('reset', () => {
 			setChangeOrigin(this);
 			this.stopAndReset();
 
@@ -222,7 +224,7 @@ class SceneModule extends Module {
 				scene.layers.editorLayer.visible = true;
 		});
 
-		events.listen('play', () => {
+		editorEventDispacher.listen('play', () => {
 			if (!scene || !scene.level)
 				return;
 
@@ -238,7 +240,7 @@ class SceneModule extends Module {
 			this.updatePropertyChangeCreationFilter();
 		});
 
-		events.listen('pause', () => {
+		editorEventDispacher.listen('pause', () => {
 			if (!scene || !scene.level)
 				return;
 
@@ -298,12 +300,12 @@ class SceneModule extends Module {
 
 				*/
 
-		game.listen('levelCompleted', () => {
+		game.listen(GameEvent.GAME_LEVEL_COMPLETED, () => {
 			this.playingModeChanged();
 			this.draw();
 		});
 
-		events.listen('setLevel', (lvl: Level) => {
+		editorEventDispacher.listen('setLevel', (lvl: Level) => {
 			if (lvl)
 				lvl.createScene(null);
 			else if (scene) {
@@ -319,7 +321,7 @@ class SceneModule extends Module {
 			this.fixAspectRatio();
 		});
 
-		events.listen('scene load level before entities', (scene, level) => {
+		globalEventDispatcher.listen('scene load level before entities', (scene, level) => {
 			assert(!scene.layers.editorLayer, 'editorLayer should not be there');
 
 			scene.layers.editorLayer = new PIXI.Container();
@@ -337,7 +339,7 @@ class SceneModule extends Module {
 		});
 
 		// Change in serializable tree
-		events.listen('prototypeClicked', prototype => {
+		editorEventDispacher.listen('prototypeClicked', prototype => {
 			if (!scene)
 				return;
 
@@ -357,7 +359,7 @@ class SceneModule extends Module {
 			performanceTool.stop('Editor: Scene');
 		});
 
-		events.listen('new entity created', entity => {
+		globalEventDispatcher.listen('new entity created', entity => {
 			let handleEntity = entity => {
 				entity.addComponents([
 					Component.create('EditorWidget')
@@ -390,7 +392,7 @@ class SceneModule extends Module {
 			entity.forEachChild('ent', handleEntity, true);
 		});
 
-		events.listen('change', change => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			performanceTool.start('Editor: Scene');
 
 			if (change.type === 'editorSelection') {
@@ -527,10 +529,10 @@ class SceneModule extends Module {
 			this.draw();
 		});
 
-		events.listen('dragPrefabsStarted', prefabs => {
+		editorEventDispacher.listen('dragPrefabsStarted', prefabs => {
 			this.newEntities = prefabs.map(pfa => pfa.createEntity());
 		});
-		events.listen('dragPrototypeStarted', prototypes => {
+		editorEventDispacher.listen('dragPrototypeStarted', prototypes => {
 			let entityPrototypes = prototypes.map(prototype => {
 				let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
 				// entityPrototype.position = this.previousMousePosInWorldCoordinates;
@@ -549,13 +551,13 @@ class SceneModule extends Module {
 
 			this.draw();
 		};
-		events.listen('dragPrototypeToCanvas', entityDragEnd);
-		events.listen('dragPrefabsToScene', entityDragEnd);
+		editorEventDispacher.listen('dragPrototypeToCanvas', entityDragEnd);
+		editorEventDispacher.listen('dragPrefabsToScene', entityDragEnd);
 
-		events.listen('dragPrototypeToNonCanvas', () => {
+		editorEventDispacher.listen('dragPrototypeToNonCanvas', () => {
 			this.clearState();
 		});
-		events.listen('dragPrefabsToNonScene', () => {
+		editorEventDispacher.listen('dragPrefabsToNonScene', () => {
 			this.clearState();
 		});
 	}
@@ -782,7 +784,7 @@ class SceneModule extends Module {
 			// scene.renderer.resize(this.canvas.width, this.canvas.height);
 
 			if (change) {
-				events.dispatch('canvas resize', scene);
+				globalEventDispatcher.dispatch('canvas resize', scene);
 				this.draw();
 			}
 
@@ -801,7 +803,7 @@ class SceneModule extends Module {
 			setTimeout(() => {
 				if (game.getChildren('lvl').length === 0) {
 					setChangeOrigin(this);
-					events.dispatch('createBlankLevel');
+					editorEventDispacher.dispatch('createBlankLevel');
 				}
 			}, 500)
 		}
@@ -867,10 +869,10 @@ class SceneModule extends Module {
 
 	selectSelectedEntitiesInEditor() {
 		if (sceneEdit.shouldSyncLevelAndScene()) {
-			editor.select(this.selectedEntities.map(ent => ent.prototype), this);
+			selectInEditor(this.selectedEntities.map(ent => ent.prototype), this);
 			Module.activateOneOfModules(['type', 'object'], false);
 		} else {
-			editor.select(this.selectedEntities, this);
+			selectInEditor(this.selectedEntities, this);
 			Module.activateOneOfModules(['object'], false);
 		}
 	}
@@ -878,7 +880,7 @@ class SceneModule extends Module {
 	stopAndReset() {
 		this.clearState();
 		if (editor.selection.type === 'ent') {
-			editor.select(editor.selection.items.map((ent: Entity) => ent.prototype), this);
+			selectInEditor(editor.selection.items.map((ent: Entity) => ent.prototype), this);
 		}
 		if (scene) {
 			scene.reset();

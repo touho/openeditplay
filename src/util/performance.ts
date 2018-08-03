@@ -1,8 +1,10 @@
-import events from "./events";
+"./redomEvents";
 
 const UPDATE_INTERVAL = 1000; //ms
 
 import { isClient } from './environment';
+import { editorEventDispacher } from "../editor/editorEventDispatcher";
+import { editorEventDispacher } from "../editor/editorEventDispatcher";
 
 let performance;
 performance = isClient ? window.performance : { now: Date.now };
@@ -42,11 +44,11 @@ export function startPerformanceUpdates() {
 
 		snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
 		cumulativePerformance = {};
-		events.dispatch('performance snapshot', snapshotPerformance);
+		editorEventDispacher.dispatch('performance snapshot', snapshotPerformance);
 
 		perSecondSnapshot = perSecondObjectToPublicArray(currentPerSecondMeters);
 		currentPerSecondMeters = {};
-		events.dispatch('perSecond snapshot', perSecondSnapshot);
+		editorEventDispacher.dispatch('perSecond snapshot', perSecondSnapshot);
 	}, UPDATE_INTERVAL);
 }
 

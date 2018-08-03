@@ -2,6 +2,8 @@ import assert from '../util/assert';
 import { changeType, addChange } from './change';
 import { isClient } from '../util/environment';
 import EventDispatcher from './eventDispatcher';
+import { element } from '../../example/source';
+console.log(element);
 
 export const serializableCallbacks = {
 	addSerializable: (serializable: Serializable) => { },

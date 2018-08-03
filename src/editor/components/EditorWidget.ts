@@ -4,7 +4,7 @@ import AngleWidget from '../widget/angleWidget';
 import PositionWidget from '../widget/positionWidget';
 import ScaleWidget from '../widget/scaleWidget';
 import MoveWidget from '../widget/moveWidget';
-import events from "../../util/events";
+"../../util/redomEvents";
 import {selectedToolName} from "../editor";
 import { GameEvent } from '../../core/eventDispatcher';
 
@@ -71,7 +71,7 @@ export default Component.register({
 			// return;
 
 			this.createWidgets();
-			events.listen('selectedToolChanged', () => {
+			editorEventDispacher.listen('selectedToolChanged', () => {
 				this.createWidgets();
 			});
 		},

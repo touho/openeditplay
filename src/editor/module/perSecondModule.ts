@@ -1,8 +1,9 @@
 import { el, list, mount, RedomComponent } from 'redom';
 import Module from './module';
-import events, { dispatch, listen } from '../../util/events';
+import events, { dispatch, listen } from '../../util/redomEvents';
 import * as performance from '../../util/performance';
 import { scene } from '../../core/scene';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 class PerSecondModule extends Module {
 	constructor() {
@@ -18,7 +19,7 @@ class PerSecondModule extends Module {
 		this.name = 'Per second';
 		this.id = 'perSecond';
 
-		events.listen('perSecond snapshot', snapshot => {
+		editorEventDispacher.listen('perSecond snapshot', snapshot => {
 			counterList.update(snapshot);
 		});
 	}

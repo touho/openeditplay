@@ -1,6 +1,7 @@
 import { el, list, mount } from 'redom';
-import events from '../../util/events';
+'../../util/redomEvents';
 import ModuleContainer from '../layout/moduleContainer';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 let moduleIdToModule = {};
 
@@ -65,7 +66,7 @@ export default class Module {
 	// moduleContainerName = left | middle | right | bottom
 	static register(moduleClass, moduleContainerName) {
 		registerPromise = registerPromise.then(() => {
-			events.dispatch('registerModule_' + moduleContainerName, moduleClass);
+			editorEventDispacher.dispatch('registerModule_' + moduleContainerName, moduleClass);
 		});
 	};
 }
@@ -73,9 +74,9 @@ export default class Module {
 
 
 let registerPromise: Promise<void> = new Promise(function(resolve) {
-	events.listen('registerModules', function() {
+	editorEventDispacher.listen('registerModules', function() {
 		registerPromise.then(() => {
-			events.dispatch('modulesRegistered');
+			editorEventDispacher.dispatch('modulesRegistered');
 		});
 		resolve();
 	});

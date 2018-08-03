@@ -384,7 +384,6 @@ export function entityModifiedInEditor(entity, change) {
 		entityPrototypeProperty.value = property.value;
 		console.log('after', entityPrototype);
 	}
-	entity.dispatch('changedInEditor', change);
 }
 
 export function setEntitiesInSelectionArea(entities, inSelectionArea) {

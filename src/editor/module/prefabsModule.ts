@@ -1,10 +1,12 @@
 import { el, list, mount } from 'redom';
 import TreeView from "../views/treeView";
 import Module from './module';
-import events from "../../util/events";
+"../../util/redomEvents";
 import {game} from "../../core/game";
 import {getSerializable} from "../../core/serializableManager";
 import {editor} from "../editor";
+import { selectInEditor } from '../editorSelection';
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 class PrefabsModule extends Module {
 	treeView: TreeView;
@@ -19,26 +21,26 @@ class PrefabsModule extends Module {
 			id: 'prefabs-tree',
 			selectionChangedCallback: selectedIds => {
 				let serializables = selectedIds.map(getSerializable).filter(Boolean);
-				editor.select(serializables, this);
+				selectInEditor(serializables, this);
 				Module.activateModule('prefab', false);
 			},
 		});
 		mount(this.el, this.treeView);
 
-		events.listen('treeView drag start prefabs-tree', event => {
+		editorEventDispacher.listen('treeView drag start prefabs-tree', event => {
 			let prefabs = event.idList.map(getSerializable);
-			events.dispatch('dragPrefabsStarted', prefabs);
+			editorEventDispacher.dispatch('dragPrefabsStarted', prefabs);
 		});
-		events.listen('treeView drag move prefabs-tree', event => {
+		editorEventDispacher.listen('treeView drag move prefabs-tree', event => {
 			if (event.targetElement.tagName === 'CANVAS' && event.targetElement.classList.contains('openEditPlayCanvas'))
 				event.hideValidationIndicator();
 		});
-		events.listen('treeView drag stop prefabs-tree', event => {
+		editorEventDispacher.listen('treeView drag stop prefabs-tree', event => {
 			let prefabs = event.idList.map(getSerializable);
 			if (event.targetElement.tagName === 'CANVAS' && event.targetElement.classList.contains('openEditPlayCanvas'))
-				events.dispatch('dragPrefabsToScene', prefabs);
+				editorEventDispacher.dispatch('dragPrefabsToScene', prefabs);
 			else
-				events.dispatch('dragPrefabsToNonScene', prefabs);
+				editorEventDispacher.dispatch('dragPrefabsToNonScene', prefabs);
 		});
 	}
 	activate() {

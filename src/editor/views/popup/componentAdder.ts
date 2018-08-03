@@ -5,7 +5,7 @@ import { list, el, List } from 'redom';
 import assert from '../../../util/assert';
 import { setChangeOrigin } from '../../../core/change';
 import Confirmation from './Confirmation';
-import { dispatch, listen } from '../../../util/events';
+import { dispatch, listen } from '../../../util/redomEvents';
 import Serializable from '../../../core/serializable';
 
 const CATEGORY_ORDER = [
