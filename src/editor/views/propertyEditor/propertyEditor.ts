@@ -1,5 +1,5 @@
 import { el, list, mount, List } from 'redom';
-import events, { listen, dispatch } from '../../../util/redomEvents';
+import { redomListen, redomDispatch } from '../../../util/redomEvents';
 import showPopup from '../popup/Popup';
 import ComponentData from '../../../core/componentData';
 import assert from '../../../util/assert';
@@ -7,7 +7,6 @@ import editors from './propertyEditorTypes';
 import ComponentAdder from '../popup/componentAdder';
 import { changeType, setChangeOrigin } from '../../../core/change';
 import { Prop } from '../../../core/component';
-import { setOption, getOption, editor } from '../../editor';
 import { scene } from '../../../core/scene';
 import * as sceneEdit from '../../util/sceneEditUtil';
 import PropertyOwner from '../../../core/propertyOwner';
@@ -21,6 +20,7 @@ import Property from '../../../core/property';
 import { GameEvent } from '../../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../../editorEventDispatcher';
 import { selectInEditor } from '../../editorSelection';
+import { setOption, getOption } from '../../util/options';
 
 /*
 Reference: Unbounce
@@ -69,16 +69,16 @@ export default class PropertyEditor {
 			}
 		});
 
-		listen(this, 'makingChanges', () => {
+		redomListen(this, 'makingChanges', () => {
 			setChangeOrigin(this);
 		});
 
 		// Change in this editor
-		listen(this, 'markPropertyEditorDirty', () => {
+		redomListen(this, 'markPropertyEditorDirty', () => {
 			this.dirty = true;
 		});
 
-		listen(this, 'propertyEditorSelect', items => {
+		redomListen(this, 'propertyEditorSelect', items => {
 			selectInEditor(items, this);
 		});
 
@@ -161,7 +161,7 @@ class Container {
 			this.titleClickedCallback && this.titleClickedCallback();
 		};
 
-		listen(this, 'propertyInherited', (property, view) => {
+		redomListen(this, 'propertyInherited', (property, view) => {
 			if (this.item.threeLetterType !== 'icd') return;
 			// this.item is inheritedComponentData
 			let proto = this.item.generatedForPrototype;
@@ -213,7 +213,7 @@ class Container {
 
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
 			onclick: () => {
-				dispatch(this, 'makingChanges');
+				redomDispatch(this, 'makingChanges');
 				let clone = this.item.clone();
 				let { text, number } = parseTextAndNumber(clone.name);
 				let nameSuggestion = text + number++;
@@ -222,12 +222,12 @@ class Container {
 				}
 				clone.name = nameSuggestion;
 				this.item.getParent().addChild(clone);
-				dispatch(this, 'propertyEditorSelect', clone);
+				redomDispatch(this, 'propertyEditorSelect', clone);
 			}
 		}));
 		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', {
 			onclick: () => {
-				dispatch(this, 'makingChanges');
+				redomDispatch(this, 'makingChanges');
 				let entityPrototypeCount = this.item.countEntityPrototypes(true);
 				if (entityPrototypeCount) {
 					if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} objects that are using it?`))
@@ -300,8 +300,8 @@ class Container {
 			mount(this.controls, el('button.button', 'Show Parent', {
 				onclick: () => {
 					let componentData = this.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(this.item.componentId, true);
-					dispatch(this, 'propertyEditorSelect', componentData.getParent());
-					dispatch(this, 'markPropertyEditorDirty');
+					redomDispatch(this, 'propertyEditorSelect', componentData.getParent());
+					redomDispatch(this, 'markPropertyEditorDirty');
 				}
 			}));
 		}
@@ -313,7 +313,7 @@ class Container {
 		if (this.item.componentClass.allowMultiple) {
 			mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 				onclick: () => {
-					dispatch(this, 'makingChanges');
+					redomDispatch(this, 'makingChanges');
 					if (this.item.ownComponentData) {
 						let clone = this.item.ownComponentData.clone();
 						this.item.generatedForPrototype.addChild(clone);
@@ -323,15 +323,15 @@ class Container {
 						componentData.initWithChildren();
 						this.item.generatedForPrototype.addChild(componentData);
 					}
-					dispatch(this, 'markPropertyEditorDirty');
+					redomDispatch(this, 'markPropertyEditorDirty');
 				}
 			}));
 		}
 		if (hasOwnProperties) {
 			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
 				onclick: () => {
-					dispatch(this, 'makingChanges');
-					dispatch(this, 'markPropertyEditorDirty', 'fromReset');
+					redomDispatch(this, 'makingChanges');
+					redomDispatch(this, 'markPropertyEditorDirty', 'fromReset');
 					if (this.item.ownComponentData.getParentComponentData()) {
 						this.item.ownComponentData.delete();
 					} else {
@@ -344,8 +344,8 @@ class Container {
 			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
 				onclick: () => {
 					let deleteOperation = () => {
-						dispatch(this, 'makingChanges');
-						dispatch(this, 'markPropertyEditorDirty');
+						redomDispatch(this, 'makingChanges');
+						redomDispatch(this, 'markPropertyEditorDirty');
 						this.item.ownComponentData.delete();
 					}
 
@@ -359,8 +359,8 @@ class Container {
 								text: `Delete all (${componentsThatRequire.length + 1}) components`,
 								color: '#cd4148'
 							}, () => {
-								dispatch(this, 'makingChanges');
-								dispatch(this, 'markPropertyEditorDirty');
+								redomDispatch(this, 'makingChanges');
+								redomDispatch(this, 'markPropertyEditorDirty');
 								componentsThatRequire.forEach(cda => {
 									cda.delete();
 								});
@@ -369,8 +369,8 @@ class Container {
 							return;
 						}
 					}
-					dispatch(this, 'makingChanges');
-					dispatch(this, 'markPropertyEditorDirty');
+					redomDispatch(this, 'makingChanges');
+					redomDispatch(this, 'markPropertyEditorDirty');
 					this.item.ownComponentData.delete();
 				}
 			}));
@@ -439,7 +439,7 @@ class PropertyElement {
 				componentData.delete();
 		}
 
-		dispatch(this, 'markPropertyEditorDirty');
+		redomDispatch(this, 'markPropertyEditorDirty');
 	}
 	focus() {
 		this.el.querySelector('input').focus();
@@ -455,10 +455,10 @@ class PropertyElement {
 	onchange(val) {
 		let originalValue = this.property.value;
 		try {
-			dispatch(this, 'makingChanges');
+			redomDispatch(this, 'makingChanges');
 			this.property.value = this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
 			if (!this.property.id) {
-				dispatch(this, 'propertyInherited', this.property);
+				redomDispatch(this, 'propertyInherited', this.property);
 			}
 		} catch (e) {
 			// console.log('Error while changing property value', this.property, this.input.value);
@@ -535,7 +535,7 @@ class PropertyElement {
 
 					mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
 						onclick: () => {
-							dispatch(this, 'makingChanges');
+							redomDispatch(this, 'makingChanges');
 							this.reset();
 						}
 					}));

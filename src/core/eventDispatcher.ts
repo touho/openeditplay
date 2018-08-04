@@ -1,5 +1,3 @@
-import * as performanceTool from '../util/performance';
-
 export enum GameEvent {
     SCENE_START = 'scene start',
     SCENE_PLAY = 'scene play',
@@ -15,6 +13,10 @@ export enum GameEvent {
 }
 
 export type ListenerFunction = Function & { priority?: number };
+
+export let eventDispatcherCallbacks = {
+    eventDispatchedCallback: null // (eventName, listenerCount) => void
+};
 
 export default class EventDispatcher {
     _listeners: { [event in GameEvent]?: Array<ListenerFunction> } = {};
@@ -41,7 +43,9 @@ export default class EventDispatcher {
         if (!listeners)
             return;
 
-        performanceTool.eventHappened('Event ' + event, listeners.length);
+        if (eventDispatcherCallbacks.eventDispatchedCallback)
+            eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length);
+        // performanceTool.eventHappened('Event ' + event, listeners.length);
 
         for (let i = 0; i < listeners.length; i++) {
             // @ifndef OPTIMIZE

@@ -1,11 +1,11 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import { editor, changeSelectedTool, selectedToolName, modulesRegisteredPromise } from '../editor';
-'../../util/redomEvents';
+import { modulesRegisteredPromise } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
 import { GameEvent } from '../../core/eventDispatcher';
-import { editorEventDispacher } from '../editorEventDispatcher';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import { setSceneTool, sceneToolName } from '../editorSelection';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -109,21 +109,21 @@ export class TopBarModule extends Module {
 				title: 'Global move tool (1)',
 				icon: 'fa-arrows',
 				callback: createCallback(() => {
-					changeSelectedTool('globalMoveTool');
+					setSceneTool('globalMoveTool');
 				})
 			}),
 			localMoveTool: new SceneControlButton({
 				title: 'Local move tool (2)',
 				icon: 'fa-arrows-alt',
 				callback: createCallback(() => {
-					changeSelectedTool('localMoveTool');
+					setSceneTool('localMoveTool');
 				})
 			}),
 			multiTool: new SceneControlButton({
 				title: 'Multitool tool (3)',
 				icon: 'fa-dot-circle-o',
 				callback: createCallback(() => {
-					changeSelectedTool('multiTool');
+					setSceneTool('multiTool');
 				})
 			})
 		};
@@ -136,7 +136,7 @@ export class TopBarModule extends Module {
 		mount(this.toolSelectionButtons, tools.localMoveTool);
 		mount(this.toolSelectionButtons, tools.multiTool);
 
-		tools[selectedToolName].click();
+		tools[sceneToolName].click();
 		// this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	}
 }
@@ -189,10 +189,6 @@ export class TopButton {
 		this.el.onclick = () => {
 			this.click();
 		};
-
-		modulesRegisteredPromise.then(() => {
-			editorEventDispacher.dispatch('addTopButtonToTopBar', this);
-		});
 	}
 	click() {
 		if (this.callback) {

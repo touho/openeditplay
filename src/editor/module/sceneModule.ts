@@ -1,6 +1,5 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import events, { dispatch, listen } from '../../util/redomEvents';
 import {
 	listenMouseMove,
 	listenMouseDown,
@@ -16,12 +15,10 @@ import EntityPrototype from '../../core/entityPrototype';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
-import { editor } from '../editor';
 import { setChangeOrigin } from '../../core/change';
 import * as sceneEdit from '../util/sceneEditUtil';
 import Vector from '../../util/vector';
 import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
-import { help } from '../help';
 import PIXI from '../../features/graphics';
 import * as performanceTool from '../../util/performance';
 import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../core/property';
@@ -32,7 +29,7 @@ import { limit } from "../../util/callLimiter";
 import Level from '../../core/level';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { selectInEditor } from '../editorSelection';
+import { selectInEditor, editorSelection } from '../editorSelection';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -46,6 +43,8 @@ class SceneModule extends Module {
 	deleteButton: HTMLElement;
 	sceneContextButtons: HTMLElement;
 	canvasParentSize: Vector = new Vector(0, 0);
+
+	newEntities: Array<Entity> = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 
 	constructor() {
 		super();
@@ -165,7 +164,7 @@ class SceneModule extends Module {
 			}
 		});
 
-		editorEventDispacher.listen('selectedToolChanged', () => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, () => {
 			if (this.widgetUnderMouse) {
 				this.widgetUnderMouse.unhover();
 				this.widgetUnderMouse = null;
@@ -173,6 +172,12 @@ class SceneModule extends Module {
 			setTimeout(() => {
 				this.draw();
 			}, 0);
+		});
+
+		editorEventDispacher.listen(EditorEvent.EDITOR_PRE_DELETE_SELECTION, () => {
+			if (editorSelection.type === 'ent' && sceneEdit.shouldSyncLevelAndScene()) {
+				editorSelection.items.forEach((e: Entity) => e.prototype.delete());
+			}
 		});
 
 		let fixAspectRatio = () => this.fixAspectRatio();
@@ -186,21 +191,9 @@ class SceneModule extends Module {
 		this.id = 'scene';
 		this.name = 'Scene';
 
-		Object.defineProperty(help, 'sceneModule', {
-			get: () => this
-		});
-
-		/*
-		 loadedPromise.then(() => {
-		 if (editor.selectedLevel)
-		 editor.selectedLevel.createScene();
-		 else
-		 this.drawNoLevel();
-		 });
-		 */
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'sceneModule', this);
 
 		this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
-		this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
 		this.previousMousePosInMouseCoordinates = null;
@@ -410,12 +403,17 @@ class SceneModule extends Module {
 				}
 			}
 
+
 			if (scene && scene.resetting)
-				return performanceTool.stop('Editor: Scene');
+			return performanceTool.stop('Editor: Scene');
+
+			console.log('here sceneEdit.3', change.origin);
 
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
+				console.log('here sceneEdit.syncAChangeBetweenSceneAndLevel');
+
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
 				this.draw();
 			}
@@ -432,9 +430,9 @@ class SceneModule extends Module {
 			if (k === key.esc) {
 				this.clearState();
 				this.draw();
-			} else if (k === key.backspace) {
+			} /*else if (k === key.backspace) {
 				this.deleteButton.click();
-			} else if (k === key.c) {
+			}*/ else if (k === key.c) {
 				this.copyButton.click();
 			} else if (k === key.v) {
 				this.pasteEntities();
@@ -539,7 +537,6 @@ class SceneModule extends Module {
 				return entityPrototype;
 			});
 
-			// editor.selectedLevel.addChildren(entityPrototypes);
 			this.newEntities = entityPrototypes.map(epr => epr.createEntity());
 		});
 		let entityDragEnd = () => {
@@ -879,8 +876,8 @@ class SceneModule extends Module {
 
 	stopAndReset() {
 		this.clearState();
-		if (editor.selection.type === 'ent') {
-			selectInEditor(editor.selection.items.map((ent: Entity) => ent.prototype), this);
+		if (editorSelection.type === 'ent') {
+			selectInEditor(editorSelection.items.map((ent: Entity) => ent.prototype), this);
 		}
 		if (scene) {
 			scene.reset();
@@ -914,9 +911,9 @@ class SceneModule extends Module {
 
 		if (scene.isInInitialState()) {
 			enableAllChanges();
-		} else if (editor.selection.type === 'ent') {
+		} else if (editorSelection.type === 'ent') {
 			filterSceneChanges(property => {
-				let selectedEntities = editor.selection.items;
+				let selectedEntities = editorSelection.items;
 				return !!property.findParent('ent', serializable => selectedEntities.includes(serializable));
 			});
 		} else {

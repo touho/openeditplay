@@ -53,123 +53,6 @@
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
 
-	var isClient = typeof window !== 'undefined';
-	var isServer = typeof module !== 'undefined';
-	if (isClient && isServer)
-	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
-
-	var EditorEvent;
-	(function (EditorEvent) {
-	    EditorEvent["EDITOR_CHANGE"] = "editor change";
-	    EditorEvent["EDITOR_REGISTER_MODULES"] = "registerModules";
-	})(EditorEvent || (EditorEvent = {}));
-	// Wrapper that takes only EditorEvents
-	var EditorEventDispatcher = /** @class */ (function () {
-	    function EditorEventDispatcher() {
-	        this.dispatcher = new EventDispatcher();
-	    }
-	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	    EditorEventDispatcher.prototype.listen = function (event, callback, priority) {
-	        if (priority === void 0) { priority = 0; }
-	        this.dispatcher.listen(event, callback, priority);
-	    };
-	    EditorEventDispatcher.prototype.dispatch = function (event, a, b, c) {
-	        this.dispatcher.dispatch(event, a, b, c);
-	    };
-	    EditorEventDispatcher.prototype.getEventPromise = function (event) {
-	        return new Promise(function (res) {
-	            editorEventDispacher$1.listen(event, res);
-	        });
-	    };
-	    return EditorEventDispatcher;
-	}());
-	var editorEventDispacher$1 = new EditorEventDispatcher();
-	//# sourceMappingURL=editorEventDispatcher.js.map
-
-	var UPDATE_INTERVAL = 1000; //ms
-	var performance$1;
-	performance$1 = isClient ? window.performance : { now: Date.now };
-	var snapshotPerformance = []; // is static data for UPDATE_INTERVAL. then it changes.
-	var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
-	var currentPerformanceMeters = {}; // very short term
-	var perSecondSnapshot = [];
-	var currentPerSecondMeters = {};
-	function eventHappened(name, count) {
-	    if (count === void 0) { count = 1; }
-	    // @ifndef OPTIMIZE
-	    currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
-	    // @endif
-	}
-	function start(name) {
-	    // @ifndef OPTIMIZE
-	    currentPerformanceMeters[name] = performance$1.now();
-	    // @endif
-	}
-	function stop(name) {
-	    // @ifndef OPTIMIZE
-	    var millis = performance$1.now() - currentPerformanceMeters[name];
-	    if (cumulativePerformance[name])
-	        { cumulativePerformance[name] += millis; }
-	    else
-	        { cumulativePerformance[name] = millis; }
-	    // @endif
-	}
-	var performanceInterval = null;
-	function startPerformanceUpdates() {
-	    performanceInterval = setInterval(function () {
-	        printPrivatePerformance(cumulativePerformance);
-	        snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
-	        cumulativePerformance = {};
-	        editorEventDispacher$1.dispatch('performance snapshot', snapshotPerformance);
-	        perSecondSnapshot = perSecondObjectToPublicArray(currentPerSecondMeters);
-	        currentPerSecondMeters = {};
-	        editorEventDispacher$1.dispatch('perSecond snapshot', perSecondSnapshot);
-	    }, UPDATE_INTERVAL);
-	}
-	function printPrivatePerformance(object) {
-	    var msg = '';
-	    Object.keys(object).filter(function (key) { return key.startsWith('#'); }).map(function (key) { return ({
-	        name: key,
-	        value: object[key] / UPDATE_INTERVAL
-	    }); }).sort(function (a, b) {
-	        return a.value < b.value ? 1 : -1;
-	    }).forEach(function (perf) {
-	        msg += "\n   " + perf.name.substring(1) + ": " + perf.value * 100;
-	    });
-	    if (msg)
-	        { console.log('#Performance:' + msg); }
-	}
-	function performanceObjectToPublicArray(object) {
-	    return Object.keys(object).filter(function (key) { return !key.startsWith('#'); }).map(function (key) { return ({
-	        name: key,
-	        value: object[key] / UPDATE_INTERVAL
-	    }); }).sort(function (a, b) {
-	        return a.value < b.value ? 1 : -1;
-	    });
-	}
-	function perSecondObjectToPublicArray(object) {
-	    return Object.keys(object).map(function (key) { return ({
-	        name: key,
-	        count: object[key]
-	    }); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
-	}
-	var FRAME_MEMORY_LENGTH = 60 * 8;
-	var frameTimes = [];
-	for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
-	    frameTimes.push(0);
-	}
-	function setFrameTime(seconds) {
-	    // @ifndef OPTIMIZE
-	    frameTimes.shift();
-	    frameTimes.push(seconds);
-	    // @endif
-	}
-	function getFrameTimes() {
-	    return frameTimes;
-	}
-	//# sourceMappingURL=performance.js.map
-
 	var GameEvent;
 	(function (GameEvent) {
 	    GameEvent["SCENE_START"] = "scene start";
@@ -184,6 +67,9 @@
 	    GameEvent["GLOBAL_SCENE_CREATED"] = "scene created";
 	    GameEvent["GLOBAL_GAME_CREATED"] = "game created";
 	})(GameEvent || (GameEvent = {}));
+	var eventDispatcherCallbacks = {
+	    eventDispatchedCallback: null // (eventName, listenerCount) => void
+	};
 	var EventDispatcher = /** @class */ (function () {
 	    function EventDispatcher() {
 	        this._listeners = {};
@@ -213,7 +99,9 @@
 	        var listeners = this._listeners[event];
 	        if (!listeners)
 	            { return; }
-	        eventHappened('Event ' + event, listeners.length);
+	        if (eventDispatcherCallbacks.eventDispatchedCallback)
+	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
+	        // performanceTool.eventHappened('Event ' + event, listeners.length);
 	        for (var i = 0; i < listeners.length; i++) {
 	            // @ifndef OPTIMIZE
 	            try {
@@ -312,6 +200,12 @@
 	    externalChange = false;
 	}
 	//# sourceMappingURL=change.js.map
+
+	var isClient = typeof window !== 'undefined';
+	var isServer = typeof module !== 'undefined';
+	if (isClient && isServer)
+	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -694,7 +588,9 @@
 	        return children;
 	    }
 	});
-	// If a serializable is a ancestor of another serializable, it is filtered out from the list
+	/**
+	 * If a serializable is a ancestor of another serializable, it is filtered out from the list
+	 */
 	function filterChildren(serializables) {
 	    var idSet = new Set(serializables.map(function (s) { return s.id; }));
 	    return serializables.filter(function (serializable) {
@@ -2335,6 +2231,121 @@
 	    };
 	}
 	//# sourceMappingURL=input.js.map
+
+	var EditorEvent;
+	(function (EditorEvent) {
+	    EditorEvent["EDITOR_CHANGE"] = "editor change";
+	    EditorEvent["EDITOR_REGISTER_MODULES"] = "registerModules";
+	    EditorEvent["EDITOR_SCENE_TOOL_CHANGED"] = "scene tool changed";
+	    EditorEvent["EDITOR_REGISTER_HELP_VARIABLE"] = "define help variable";
+	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
+	})(EditorEvent || (EditorEvent = {}));
+	// Wrapper that takes only EditorEvents
+	var EditorEventDispatcher = /** @class */ (function () {
+	    function EditorEventDispatcher() {
+	        this.dispatcher = new EventDispatcher();
+	    }
+	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	    EditorEventDispatcher.prototype.listen = function (event, callback, priority) {
+	        if (priority === void 0) { priority = 0; }
+	        this.dispatcher.listen(event, callback, priority);
+	    };
+	    EditorEventDispatcher.prototype.dispatch = function (event, a, b, c) {
+	        this.dispatcher.dispatch(event, a, b, c);
+	    };
+	    EditorEventDispatcher.prototype.getEventPromise = function (event) {
+	        return new Promise(function (res) {
+	            editorEventDispacher.listen(event, res);
+	        });
+	    };
+	    return EditorEventDispatcher;
+	}());
+	var editorEventDispacher = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
+
+	var UPDATE_INTERVAL = 1000; //ms
+	var performance$1;
+	performance$1 = isClient ? window.performance : { now: Date.now };
+	var snapshotPerformance = []; // is static data for UPDATE_INTERVAL. then it changes.
+	var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
+	var currentPerformanceMeters = {}; // very short term
+	var perSecondSnapshot = [];
+	var currentPerSecondMeters = {};
+	function eventHappened(name, count) {
+	    if (count === void 0) { count = 1; }
+	    // @ifndef OPTIMIZE
+	    currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
+	    // @endif
+	}
+	eventDispatcherCallbacks.eventDispatchedCallback = function (eventName, count) { return eventHappened("Event " + eventName, count); };
+	function start(name) {
+	    // @ifndef OPTIMIZE
+	    currentPerformanceMeters[name] = performance$1.now();
+	    // @endif
+	}
+	function stop(name) {
+	    // @ifndef OPTIMIZE
+	    var millis = performance$1.now() - currentPerformanceMeters[name];
+	    if (cumulativePerformance[name])
+	        { cumulativePerformance[name] += millis; }
+	    else
+	        { cumulativePerformance[name] = millis; }
+	    // @endif
+	}
+	var performanceInterval = null;
+	function startPerformanceUpdates() {
+	    performanceInterval = setInterval(function () {
+	        printPrivatePerformance(cumulativePerformance);
+	        snapshotPerformance = performanceObjectToPublicArray(cumulativePerformance);
+	        cumulativePerformance = {};
+	        editorEventDispacher.dispatch('performance snapshot', snapshotPerformance);
+	        perSecondSnapshot = perSecondObjectToPublicArray(currentPerSecondMeters);
+	        currentPerSecondMeters = {};
+	        editorEventDispacher.dispatch('perSecond snapshot', perSecondSnapshot);
+	    }, UPDATE_INTERVAL);
+	}
+	function printPrivatePerformance(object) {
+	    var msg = '';
+	    Object.keys(object).filter(function (key) { return key.startsWith('#'); }).map(function (key) { return ({
+	        name: key,
+	        value: object[key] / UPDATE_INTERVAL
+	    }); }).sort(function (a, b) {
+	        return a.value < b.value ? 1 : -1;
+	    }).forEach(function (perf) {
+	        msg += "\n   " + perf.name.substring(1) + ": " + perf.value * 100;
+	    });
+	    if (msg)
+	        { console.log('#Performance:' + msg); }
+	}
+	function performanceObjectToPublicArray(object) {
+	    return Object.keys(object).filter(function (key) { return !key.startsWith('#'); }).map(function (key) { return ({
+	        name: key,
+	        value: object[key] / UPDATE_INTERVAL
+	    }); }).sort(function (a, b) {
+	        return a.value < b.value ? 1 : -1;
+	    });
+	}
+	function perSecondObjectToPublicArray(object) {
+	    return Object.keys(object).map(function (key) { return ({
+	        name: key,
+	        count: object[key]
+	    }); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+	}
+	var FRAME_MEMORY_LENGTH = 60 * 8;
+	var frameTimes = [];
+	for (var i = 0; i < FRAME_MEMORY_LENGTH; ++i) {
+	    frameTimes.push(0);
+	}
+	function setFrameTime(seconds) {
+	    // @ifndef OPTIMIZE
+	    frameTimes.shift();
+	    frameTimes.push(seconds);
+	    // @endif
+	}
+	function getFrameTimes() {
+	    return frameTimes;
+	}
+	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -5173,7 +5184,7 @@
 	//# sourceMappingURL=net.js.map
 
 	// DOM / ReDom event system
-	function dispatch(view, type, data) {
+	function redomDispatch(view, type, data) {
 	    var el = view === window ? view : view.el || view;
 	    var debug = 'Debug info ' + new Error().stack;
 	    el.dispatchEvent(new CustomEvent(type, {
@@ -5181,7 +5192,7 @@
 	        bubbles: true
 	    }));
 	}
-	function listen(view, type, handler) {
+	function redomListen(view, type, handler) {
 	    var el = view === window ? view : view.el || view;
 	    el.addEventListener(type, function (event) {
 	        if (event instanceof CustomEvent)
@@ -5190,7 +5201,36 @@
 	            { handler(event); }
 	    });
 	}
-	//# sourceMappingURL=events.js.map
+	//# sourceMappingURL=redomEvents.js.map
+
+	var options$1 = null;
+	function loadOptions() {
+	    if (!options$1) {
+	        try {
+	            options$1 = JSON.parse(localStorage['openEditPlayOptions']);
+	        }
+	        catch (e) {
+	            // default options
+	            options$1 = {
+	                moduleContainerPacked_bottom: true
+	            };
+	        }
+	    }
+	}
+	function setOption(id, stringValue) {
+	    loadOptions();
+	    options$1[id] = stringValue;
+	    try {
+	        localStorage['openEditPlayOptions'] = JSON.stringify(options$1);
+	    }
+	    catch (e) {
+	    }
+	}
+	function getOption(id) {
+	    loadOptions();
+	    return options$1[id];
+	}
+	//# sourceMappingURL=options.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -5207,21 +5247,21 @@
 	            }
 	            this.el.onclick = function () {
 	                setOption(packId_1, '');
-	                editorEventDispacher$1.dispatch('layoutResize');
+	                editorEventDispacher.dispatch('layoutResize');
 	                _this.el.classList.contains('packed') && _this.el.classList.remove('packed');
 	                _this.update();
 	                return;
 	            };
 	            this.packButton.onclick = function (e) {
 	                _this.el.classList.add('packed');
-	                editorEventDispacher$1.dispatch('layoutResize');
+	                editorEventDispacher.dispatch('layoutResize');
 	                setOption(packId_1, 'true');
 	                e.stopPropagation();
 	                return false;
 	            };
 	        }
-	        editorEventDispacher$1.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor$$1) {
-	            var module = new moduleClass(editor$$1);
+	        editorEventDispacher.listen('registerModule_' + moduleContainerName.split('.')[0], function (moduleClass, editor) {
+	            var module = new moduleClass(editor);
 	            module.el.classList.add('module-' + module.id);
 	            module.moduleContainer = _this;
 	            _this.modules.push(module);
@@ -5232,7 +5272,7 @@
 	            mount(_this.moduleElements, module.el);
 	            _this._updateTabs();
 	        });
-	        listen(this, 'moduleClicked', function (module) {
+	        redomListen(this, 'moduleClicked', function (module) {
 	            _this.activateModule(module);
 	        });
 	        this._updateTabs();
@@ -5272,7 +5312,7 @@
 	        }
 	        if (unpackModuleView) {
 	            this.el.classList.remove('packed');
-	            editorEventDispacher$1.dispatch('layoutResize');
+	            editorEventDispacher.dispatch('layoutResize');
 	        }
 	        this._activateModule(module, args);
 	    };
@@ -5287,7 +5327,7 @@
 	        }
 	        if (unpackModuleView) {
 	            this.el.classList.remove('packed');
-	            editorEventDispacher$1.dispatch('layoutResize');
+	            editorEventDispacher.dispatch('layoutResize');
 	        }
 	        for (var i = 0; i < this.modules.length; ++i) {
 	            var m = this$1.modules[i];
@@ -5345,7 +5385,7 @@
 	        this.el = el('span.moduleTab.button');
 	        this.module = null;
 	        this.el.onclick = function () {
-	            dispatch(_this, 'moduleClicked', _this.module);
+	            redomDispatch(_this, 'moduleClicked', _this.module);
 	        };
 	    }
 	    ModuleTab.prototype.update = function (module) {
@@ -5464,20 +5504,69 @@
 	    // moduleContainerName = left | middle | right | bottom
 	    Module.register = function (moduleClass, moduleContainerName) {
 	        registerPromise = registerPromise.then(function () {
-	            editorEventDispacher$1.dispatch('registerModule_' + moduleContainerName, moduleClass);
+	            editorEventDispacher.dispatch('registerModule_' + moduleContainerName, moduleClass);
 	        });
 	    };
 	    return Module;
 	}());
 	var registerPromise = new Promise(function (resolve) {
-	    editorEventDispacher$1.listen('registerModules', function () {
+	    editorEventDispacher.listen('registerModules', function () {
 	        registerPromise.then(function () {
-	            editorEventDispacher$1.dispatch('modulesRegistered');
+	            editorEventDispacher.dispatch('modulesRegistered');
 	        });
 	        resolve();
 	    });
 	});
 	//# sourceMappingURL=module.js.map
+
+	var selectedLevel = null;
+	var editorSelection = {
+	    type: 'none',
+	    items: [],
+	    dirty: true
+	};
+	/**
+	 *
+	 * @param items These items will be selected in editor.
+	 * @param origin
+	 */
+	function selectInEditor(items, origin) {
+	    if (!items)
+	        { items = []; }
+	    else if (!Array.isArray(items))
+	        { items = [items]; }
+	    assert$1(items.filter(function (item) { return item == null; }).length === 0, 'Can not select null');
+	    editorSelection.items = [].concat(items);
+	    var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
+	    if (types.length === 0)
+	        { editorSelection.type = 'none'; }
+	    else if (types.length === 1)
+	        { editorSelection.type = types[0]; }
+	    else
+	        { editorSelection.type = 'mixed'; }
+	    // console.log('selectedIds', this.selection)
+	    editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, {
+	        type: 'editorSelection',
+	        reference: editorSelection,
+	        origin: origin
+	    });
+	}
+	function setLevel(level) {
+	    if (level && level.threeLetterType === 'lvl')
+	        { selectedLevel = level; }
+	    else
+	        { selectedLevel = null; }
+	    selectInEditor([], this);
+	    editorEventDispacher.dispatch('setLevel', selectedLevel);
+	}
+	var sceneToolName = 'multiTool'; // in top bar
+	function setSceneTool(newToolName) {
+	    if (sceneToolName !== newToolName) {
+	        sceneToolName = newToolName;
+	        editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newToolName);
+	    }
+	}
+	//# sourceMappingURL=editorSelection.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -5511,20 +5600,20 @@
 	            title: 'Play (P)',
 	            icon: 'fa-play',
 	            type: 'play',
-	            callback: function () { return editorEventDispacher$1.dispatch('play'); }
+	            callback: function () { return editorEventDispacher.dispatch('play'); }
 	        };
 	        var pauseButtonData = {
 	            title: 'Pause (P)',
 	            icon: 'fa-pause',
 	            type: 'pause',
-	            callback: function () { return editorEventDispacher$1.dispatch('pause'); }
+	            callback: function () { return editorEventDispacher.dispatch('pause'); }
 	        };
 	        var playButton = new SceneControlButton(playButtonData);
 	        var stopButton = new SceneControlButton({
 	            title: 'Reset (R)',
 	            icon: 'fa-stop',
 	            type: 'reset',
-	            callback: function () { return editorEventDispacher$1.dispatch('reset'); }
+	            callback: function () { return editorEventDispacher.dispatch('reset'); }
 	        });
 	        var updateButtons = function () {
 	            setTimeout(function () {
@@ -5562,21 +5651,21 @@
 	                title: 'Global move tool (1)',
 	                icon: 'fa-arrows',
 	                callback: createCallback(function () {
-	                    changeSelectedTool('globalMoveTool');
+	                    setSceneTool('globalMoveTool');
 	                })
 	            }),
 	            localMoveTool: new SceneControlButton({
 	                title: 'Local move tool (2)',
 	                icon: 'fa-arrows-alt',
 	                callback: createCallback(function () {
-	                    changeSelectedTool('localMoveTool');
+	                    setSceneTool('localMoveTool');
 	                })
 	            }),
 	            multiTool: new SceneControlButton({
 	                title: 'Multitool tool (3)',
 	                icon: 'fa-dot-circle-o',
 	                callback: createCallback(function () {
-	                    changeSelectedTool('multiTool');
+	                    setSceneTool('multiTool');
 	                })
 	            })
 	        };
@@ -5586,7 +5675,7 @@
 	        mount(this.toolSelectionButtons, tools.globalMoveTool);
 	        mount(this.toolSelectionButtons, tools.localMoveTool);
 	        mount(this.toolSelectionButtons, tools.multiTool);
-	        tools[selectedToolName].click();
+	        tools[sceneToolName].click();
 	        // this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	    };
 	    return TopBarModule;
@@ -5615,7 +5704,7 @@
 	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelAndScene() {
-	    return scene && scene.isInInitialState() && editor.selectedLevel;
+	    return scene && scene.isInInitialState() && selectedLevel;
 	}
 	function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
 	    var component = entity.getComponents(componentName)
@@ -5674,7 +5763,7 @@
 	    if (change.type === changeType.addSerializableToTree) {
 	        if (threeLetterType === 'epr') {
 	            var epr = ref;
-	            if (epr.findParent('lvl') === editor.selectedLevel)
+	            if (epr.findParent('lvl') === selectedLevel)
 	                { epr.createEntity(scene); }
 	        }
 	        else if (threeLetterType === 'cda') {
@@ -5813,7 +5902,7 @@
 	                epr.position = entity.position;
 	                return epr;
 	            });
-	            editor.selectedLevel.addChildren(entityPrototypes);
+	            selectedLevel.addChildren(entityPrototypes);
 	            return entityPrototypes.map(function (epr) { return epr.createEntity(scene); });
 	        }
 	        else {
@@ -5889,7 +5978,7 @@
 	function setEntityPositions(entities, position) {
 	    if (entities.length === 0)
 	        { return; }
-	    var averagePosition = new Vector();
+	    var averagePosition = new Vector(0, 0);
 	    entities.forEach(function (entity) {
 	        averagePosition.add(entity.position);
 	    });
@@ -5932,119 +6021,6 @@
 	    });
 	}
 	//# sourceMappingURL=sceneEditUtil.js.map
-
-	var AnimationView = /** @class */ (function () {
-	    function AnimationView(serializable) {
-	        var _this = this;
-	        this.el = el('div.fullView.animationView', el('div.exitButton', 'X', { onclick: function () { return _this.close(); } }));
-	    }
-	    AnimationView.prototype.close = function () {
-	        var editorLayout = document.querySelector('div.editorLayout');
-	        this.el.parentNode.removeChild(this.el);
-	        editorLayout.classList.remove('fullViewMode');
-	    };
-	    AnimationView.open = function (serializable) {
-	        var editorLayout = document.querySelector('div.editorLayout');
-	        editorLayout.classList.add('fullViewMode');
-	        mount(editorLayout, new AnimationView(serializable));
-	    };
-	    return AnimationView;
-	}());
-	//# sourceMappingURL=animationView.js.map
-
-	var Help = /** @class */ (function () {
-	    function Help() {
-	    }
-	    Object.defineProperty(Help.prototype, "game", {
-	        get: function () {
-	            return game;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "editor", {
-	        get: function () {
-	            return editor;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "level", {
-	        get: function () {
-	            return editor.selectedLevel;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "scene", {
-	        get: function () {
-	            return scene;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "entities", {
-	        get: function () {
-	            return scene.getChildren('ent');
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "world", {
-	        get: function () {
-	            return scene['_p2World'];
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "Vector", {
-	        get: function () {
-	            return Vector;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "serializables", {
-	        get: function () {
-	            return serializables;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "serializablesArray", {
-	        get: function () {
-	            return Object.keys(serializables).map(function (k) { return serializables[k]; });
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Object.defineProperty(Help.prototype, "selectedEntity", {
-	        get: function () {
-	            if (this.sceneModule && this.sceneModule.selectedEntities.length > 0)
-	                { return this.sceneModule.selectedEntities[0]; }
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    Help.prototype.copyGame = function () {
-	        var prototypes = game.getChildren('prt').map(function (prt) { return prt.toJSON(); });
-	        var levels = game.getChildren('lvl').map(function (lvl) { return lvl.toJSON(); });
-	        return JSON.stringify([].concat(prototypes, levels));
-	    };
-	    Help.prototype.pasteGame = function (data) {
-	        game.getChildren('lvl').forEach(function (lvl) { return lvl.delete(); });
-	        game.getChildren('prt').forEach(function (prt) { return prt.delete(); });
-	        var children = JSON.parse(data).map(Serializable.fromJSON);
-	        game.addChildren(children);
-	    };
-	    Help.prototype.openAnimationView = function (s) {
-	        AnimationView.open(s);
-	    };
-	    return Help;
-	}());
-	var help = new Help;
-	window['help'] = help;
-	//# sourceMappingURL=help.js.map
 
 	/*
 	Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
@@ -6447,7 +6423,7 @@
 	            // ];
 	            // return;
 	            this.createWidgets();
-	            editorEventDispacher.listen('selectedToolChanged', function () {
+	            editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, function () {
 	                _this.createWidgets();
 	            });
 	        },
@@ -6458,7 +6434,7 @@
 	                this.widgets = null;
 	                this.position = null;
 	            }
-	            if (selectedToolName === 'multiTool') {
+	            if (sceneToolName === 'multiTool') {
 	                this.widgets = [
 	                    this.position = new PositionWidget(this),
 	                    new ScaleWidget(this, 1, 0),
@@ -6467,14 +6443,14 @@
 	                    new AngleWidget(this)
 	                ];
 	            }
-	            else if (selectedToolName === 'globalMoveTool') {
+	            else if (sceneToolName === 'globalMoveTool') {
 	                this.widgets = [
 	                    this.position = new PositionWidget(this),
 	                    new MoveWidget(this, 1, 0, true),
 	                    new MoveWidget(this, 0, 1, true)
 	                ];
 	            }
-	            else if (selectedToolName === 'localMoveTool') {
+	            else if (sceneToolName === 'localMoveTool') {
 	                this.widgets = [
 	                    this.position = new PositionWidget(this),
 	                    new MoveWidget(this, 1, 0, false),
@@ -6483,7 +6459,7 @@
 	                ];
 	            }
 	            else {
-	                throw new Error('selectedToolName invalid: ' + selectedToolName);
+	                throw new Error('sceneToolName invalid: ' + sceneToolName);
 	            }
 	            if (this.entity && !this.entity.sleeping) {
 	                if (positionWasInited)
@@ -6600,34 +6576,6 @@
 	});
 	//# sourceMappingURL=EditorWidget.js.map
 
-	var editorSelection = {
-	    type: 'none',
-	    items: [],
-	    dirty: true
-	};
-	function selectInEditor(items, origin) {
-	    if (!items)
-	        { items = []; }
-	    else if (!Array.isArray(items))
-	        { items = [items]; }
-	    assert$1(items.filter(function (item) { return item == null; }).length === 0, 'Can not select null');
-	    editorSelection.items = [].concat(items);
-	    var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
-	    if (types.length === 0)
-	        { editorSelection.type = 'none'; }
-	    else if (types.length === 1)
-	        { editorSelection.type = types[0]; }
-	    else
-	        { editorSelection.type = 'mixed'; }
-	    // console.log('selectedIds', this.selection)
-	    editorEventDispacher$1.dispatch(EditorEvent.EDITOR_CHANGE, {
-	        type: 'editorSelection',
-	        reference: editorSelection,
-	        origin: origin
-	    });
-	}
-	//# sourceMappingURL=editorSelection.js.map
-
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
 	var MAX_ZOOM = 10;
@@ -6636,6 +6584,7 @@
 	    function SceneModule() {
 	        var _this = _super.call(this) || this;
 	        _this.canvasParentSize = new Vector(0, 0);
+	        _this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 	        var disableMouseDown = function (e) {
 	            e.returnValue = false;
 	            e.preventDefault();
@@ -6717,7 +6666,7 @@
 	            title: 'Delete selected objects (Backspace)'
 	        }))));
 	        _this.el.classList.add('hideScenePauseInformation');
-	        editorEventDispacher$1.listen('locate serializable', function (serializable) {
+	        editorEventDispacher.listen('locate serializable', function (serializable) {
 	            if (serializable.threeLetterType === 'epr') {
 	                var entityPrototype = serializable;
 	                if (entityPrototype.previouslyCreatedEntity) {
@@ -6729,7 +6678,7 @@
 	                }
 	            }
 	        });
-	        editorEventDispacher$1.listen('selectedToolChanged', function () {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, function () {
 	            if (_this.widgetUnderMouse) {
 	                _this.widgetUnderMouse.unhover();
 	                _this.widgetUnderMouse = null;
@@ -6738,27 +6687,21 @@
 	                _this.draw();
 	            }, 0);
 	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_PRE_DELETE_SELECTION, function () {
+	            if (editorSelection.type === 'ent' && shouldSyncLevelAndScene()) {
+	                editorSelection.items.forEach(function (e) { return e.prototype.delete(); });
+	            }
+	        });
 	        var fixAspectRatio = function () { return _this.fixAspectRatio(); };
 	        window.addEventListener("resize", fixAspectRatio);
-	        editorEventDispacher$1.listen('layoutResize', function () {
+	        editorEventDispacher.listen('layoutResize', function () {
 	            setTimeout(fixAspectRatio, 500);
 	        });
 	        setTimeout(fixAspectRatio, 0);
 	        _this.id = 'scene';
 	        _this.name = 'Scene';
-	        Object.defineProperty(help, 'sceneModule', {
-	            get: function () { return _this; }
-	        });
-	        /*
-	         loadedPromise.then(() => {
-	         if (editor.selectedLevel)
-	         editor.selectedLevel.createScene();
-	         else
-	         this.drawNoLevel();
-	         });
-	         */
+	        editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'sceneModule', _this);
 	        _this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
-	        _this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
 	        _this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 	        _this.previousMousePosInWorldCoordinates = null;
 	        _this.previousMousePosInMouseCoordinates = null;
@@ -6770,13 +6713,13 @@
 	        _this.selectionEnd = null;
 	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
-	        editorEventDispacher$1.listen('reset', function () {
+	        editorEventDispacher.listen('reset', function () {
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
 	            if (scene.layers.editorLayer)
 	                { scene.layers.editorLayer.visible = true; }
 	        });
-	        editorEventDispacher$1.listen('play', function () {
+	        editorEventDispacher.listen('play', function () {
 	            if (!scene || !scene.level)
 	                { return; }
 	            setChangeOrigin(_this);
@@ -6788,7 +6731,7 @@
 	            _this.playingModeChanged();
 	            _this.updatePropertyChangeCreationFilter();
 	        });
-	        editorEventDispacher$1.listen('pause', function () {
+	        editorEventDispacher.listen('pause', function () {
 	            if (!scene || !scene.level)
 	                { return; }
 	            setChangeOrigin(_this);
@@ -6847,7 +6790,7 @@
 	            _this.playingModeChanged();
 	            _this.draw();
 	        });
-	        editorEventDispacher$1.listen('setLevel', function (lvl) {
+	        editorEventDispacher.listen('setLevel', function (lvl) {
 	            if (lvl)
 	                { lvl.createScene(null); }
 	            else if (scene) {
@@ -6869,7 +6812,7 @@
 	            scene$$1.layers.editorLayer.addChild(scene$$1.widgetLayer, scene$$1.layers.positionHelperLayer, scene$$1.selectionLayer);
 	        });
 	        // Change in serializable tree
-	        editorEventDispacher$1.listen('prototypeClicked', function (prototype) {
+	        editorEventDispacher.listen('prototypeClicked', function (prototype) {
 	            if (!scene)
 	                { return; }
 	            start('Editor: Scene');
@@ -6914,7 +6857,7 @@
 	            handleEntity(entity);
 	            entity.forEachChild('ent', handleEntity, true);
 	        });
-	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            start('Editor: Scene');
 	            if (change.type === 'editorSelection') {
 	                _this.updatePropertyChangeCreationFilter();
@@ -6932,9 +6875,11 @@
 	            }
 	            if (scene && scene.resetting)
 	                { return stop('Editor: Scene'); }
+	            console.log('here sceneEdit.3', change.origin);
 	            // console.log('sceneModule change', change);
 	            if (change.origin !== _this) {
 	                setChangeOrigin(_this);
+	                console.log('here sceneEdit.syncAChangeBetweenSceneAndLevel');
 	                syncAChangeBetweenSceneAndLevel(change);
 	                _this.draw();
 	            }
@@ -6948,10 +6893,9 @@
 	            if (k === key.esc) {
 	                _this.clearState();
 	                _this.draw();
-	            }
-	            else if (k === key.backspace) {
-	                _this.deleteButton.click();
-	            }
+	            } /*else if (k === key.backspace) {
+	                this.deleteButton.click();
+	            }*/
 	            else if (k === key.c) {
 	                _this.copyButton.click();
 	            }
@@ -7039,16 +6983,15 @@
 	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        });
-	        editorEventDispacher$1.listen('dragPrefabsStarted', function (prefabs) {
+	        editorEventDispacher.listen('dragPrefabsStarted', function (prefabs) {
 	            _this.newEntities = prefabs.map(function (pfa) { return pfa.createEntity(); });
 	        });
-	        editorEventDispacher$1.listen('dragPrototypeStarted', function (prototypes) {
+	        editorEventDispacher.listen('dragPrototypeStarted', function (prototypes) {
 	            var entityPrototypes = prototypes.map(function (prototype) {
 	                var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
 	                // entityPrototype.position = this.previousMousePosInWorldCoordinates;
 	                return entityPrototype;
 	            });
-	            // editor.selectedLevel.addChildren(entityPrototypes);
 	            _this.newEntities = entityPrototypes.map(function (epr) { return epr.createEntity(); });
 	        });
 	        var entityDragEnd = function () {
@@ -7059,12 +7002,12 @@
 	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        };
-	        editorEventDispacher$1.listen('dragPrototypeToCanvas', entityDragEnd);
-	        editorEventDispacher$1.listen('dragPrefabsToScene', entityDragEnd);
-	        editorEventDispacher$1.listen('dragPrototypeToNonCanvas', function () {
+	        editorEventDispacher.listen('dragPrototypeToCanvas', entityDragEnd);
+	        editorEventDispacher.listen('dragPrefabsToScene', entityDragEnd);
+	        editorEventDispacher.listen('dragPrototypeToNonCanvas', function () {
 	            _this.clearState();
 	        });
-	        editorEventDispacher$1.listen('dragPrefabsToNonScene', function () {
+	        editorEventDispacher.listen('dragPrefabsToNonScene', function () {
 	            _this.clearState();
 	        });
 	        return _this;
@@ -7268,7 +7211,7 @@
 	            setTimeout(function () {
 	                if (game.getChildren('lvl').length === 0) {
 	                    setChangeOrigin(_this);
-	                    editorEventDispacher$1.dispatch('createBlankLevel');
+	                    editorEventDispacher.dispatch('createBlankLevel');
 	                }
 	            }, 500);
 	        }
@@ -7335,8 +7278,8 @@
 	    };
 	    SceneModule.prototype.stopAndReset = function () {
 	        this.clearState();
-	        if (editor.selection.type === 'ent') {
-	            selectInEditor(editor.selection.items.map(function (ent) { return ent.prototype; }), this);
+	        if (editorSelection.type === 'ent') {
+	            selectInEditor(editorSelection.items.map(function (ent) { return ent.prototype; }), this);
 	        }
 	        if (scene) {
 	            scene.reset();
@@ -7368,9 +7311,9 @@
 	        if (scene.isInInitialState()) {
 	            enableAllChanges();
 	        }
-	        else if (editor.selection.type === 'ent') {
+	        else if (editorSelection.type === 'ent') {
 	            filterSceneChanges(function (property) {
-	                var selectedEntities = editor.selection.items;
+	                var selectedEntities = editorSelection.items;
 	                return !!property.findParent('ent', function (serializable) { return selectedEntities.includes(serializable); });
 	            });
 	        }
@@ -7422,7 +7365,7 @@
 	        _this.addButton.onclick = function () {
 	            setChangeOrigin(_this);
 	            var prototype = Prototype.create(' New type');
-	            editor.game.addChild(prototype);
+	            game.addChild(prototype);
 	            selectInEditor(prototype, _this);
 	            setTimeout(function () {
 	                Module.activateModule('type', true, 'focusOnProperty', 'name');
@@ -7437,7 +7380,7 @@
 	            }, 200);
 	        });
 	        _this.externalChange = false;
-	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.reference._rootType === 'sce')
 	                { return; }
 	            var jstree = $(_this.jstree).jstree(true);
@@ -7504,7 +7447,7 @@
 	        if (!this.dirty)
 	            { return; }
 	        var data = [];
-	        editor.game.forEachChild('prt', function (prototype) {
+	        game.forEachChild('prt', function (prototype) {
 	            var parent = prototype.getParent();
 	            data.push({
 	                text: prototype.name,
@@ -7516,7 +7459,7 @@
 	        this.helperText.classList.toggle('hidden', data.length === 0);
 	        if (!this.jstreeInited) {
 	            $(this.jstree).attr('id', 'types-jstree').on('changed.jstree', function (e, data) {
-	                var noPrototypes = editor.game.getChildren('prt').length === 0;
+	                var noPrototypes = game.getChildren('prt').length === 0;
 	                _this.addButton.classList.toggle('clickMeEffect', noPrototypes);
 	                _this.helperText.classList.toggle('hidden', noPrototypes);
 	                if (_this.externalChange || data.selected.length === 0)
@@ -7526,13 +7469,9 @@
 	                selectInEditor(prototypes, _this);
 	                Module.activateModule('type', false);
 	                if (prototypes.length === 1)
-	                    { editorEventDispacher$1.dispatch('prototypeClicked', prototypes[0]); }
+	                    { editorEventDispacher.dispatch('prototypeClicked', prototypes[0]); }
 	            }).on('loaded.jstree refresh.jstree', function () {
 	                var jstree = $(_this.jstree).jstree(true);
-	                // let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
-	                // console.log(jstree, selNode);
-	                if (editor.selection.type === 'none') ;
-	                if (editor.selection.type === 'prt') ;
 	            }).jstree({
 	                core: {
 	                    check_callback: true,
@@ -7573,7 +7512,7 @@
 	    if (data.data.nodes.find(function (node) { return !node.startsWith('prt'); }))
 	        { return; }
 	    var nodeObjects = data.data.nodes.map(getSerializable);
-	    editorEventDispacher$1.dispatch('dragPrototypeStarted', nodeObjects);
+	    editorEventDispacher.dispatch('dragPrototypeStarted', nodeObjects);
 	});
 	// This doesn't work. types.js should use treeView.js instead. objects.js has done this the right way.
 	// $(document).on('dnd_move.vakata', function (e, data) {
@@ -7605,7 +7544,7 @@
 	        if (data.event.target.nodeName === 'CANVAS') {
 	            // Drag entity to scene
 	            var nodeObjects = data.data.nodes.map(getSerializable);
-	            editorEventDispacher$1.dispatch('dragPrototypeToCanvas', nodeObjects);
+	            editorEventDispacher.dispatch('dragPrototypeToCanvas', nodeObjects);
 	        }
 	        else {
 	            // Drag prototype in types view
@@ -7615,7 +7554,7 @@
 	            var nodes = data.data.nodes; // these prototypes will move
 	            var newParent_1;
 	            if (node.parent === '#')
-	                { newParent_1 = editor.game; }
+	                { newParent_1 = game; }
 	            else
 	                { newParent_1 = getSerializable(node.parent); }
 	            var nodeObjects = nodes.map(getSerializable);
@@ -7624,7 +7563,7 @@
 	                setChangeOrigin(jstree);
 	                prototype.move(newParent_1);
 	            });
-	            editorEventDispacher$1.dispatch('dragPrototypeToNonCanvas', nodeObjects);
+	            editorEventDispacher.dispatch('dragPrototypeToNonCanvas', nodeObjects);
 	            // console.log('dnd stopped from', nodes, 'to', newParent);
 	        }
 	    }, 0);
@@ -7750,18 +7689,18 @@
 	            var node = document.getElementById(idOrList[0]);
 	            if (!node)
 	                { return console.warn("id " + idOrList[0] + " not found from the tree"); }
-	            var module_1 = this.el.parentNode;
-	            while (module_1 && !module_1.classList.contains('module')) {
-	                module_1 = module_1.parentNode;
+	            var module = this.el.parentNode;
+	            while (module && !module.classList.contains('module')) {
+	                module = module.parentNode;
 	            }
 	            var NODE_HEIGHT = 24;
 	            var SAFETY_MARGIN = 15;
-	            var minScroll = node.offsetTop - module_1.offsetHeight + NODE_HEIGHT + SAFETY_MARGIN;
+	            var minScroll = node.offsetTop - module.offsetHeight + NODE_HEIGHT + SAFETY_MARGIN;
 	            var maxScroll = node.offsetTop - SAFETY_MARGIN;
-	            if (module_1.scrollTop < minScroll)
-	                { module_1.scrollTop = minScroll; }
-	            else if (module_1.scrollTop > maxScroll)
-	                { module_1.scrollTop = maxScroll; }
+	            if (module.scrollTop < minScroll)
+	                { module.scrollTop = minScroll; }
+	            else if (module.scrollTop > maxScroll)
+	                { module.scrollTop = maxScroll; }
 	        }
 	    };
 	    TreeView.prototype.search = function (query) {
@@ -7770,7 +7709,10 @@
 	    TreeView.prototype.update = function (data) {
 	        var jstree = $(this.el).jstree(true);
 	        jstree.settings.core.data = data;
-	        jstree.refresh(true);
+	        jstree.refresh(true, function (state) {
+	            delete state.core.selected;
+	            return state;
+	        });
 	    };
 	    return TreeView;
 	}());
@@ -7813,20 +7755,35 @@
 	            },
 	        });
 	        mount(_this.el, _this.treeView);
-	        editorEventDispacher$1.listen('treeView drag start prefabs-tree', function (event) {
-	            var prefabs = event.idList.map(getSerializable);
-	            editorEventDispacher$1.dispatch('dragPrefabsStarted', prefabs);
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	            if (change.type === changeType.addSerializableToTree) {
+	                if (change.reference.threeLetterType === 'pfa') {
+	                    var serializable = change.reference;
+	                    _this.treeView.createNode(serializable.id, serializable.makeUpAName(), '#');
+	                }
+	            }
+	            else if (change.type === changeType.deleteSerializable) {
+	                if (change.reference.threeLetterType === 'pfa') {
+	                    var serializable = change.reference;
+	                    _this.treeView.deleteNode(serializable.id);
+	                }
+	            }
+	            else if (change.type === 'editorSelection') ;
 	        });
-	        editorEventDispacher$1.listen('treeView drag move prefabs-tree', function (event) {
+	        editorEventDispacher.listen('treeView drag start prefabs-tree', function (event) {
+	            var prefabs = event.idList.map(getSerializable);
+	            editorEventDispacher.dispatch('dragPrefabsStarted', prefabs);
+	        });
+	        editorEventDispacher.listen('treeView drag move prefabs-tree', function (event) {
 	            if (event.targetElement.tagName === 'CANVAS' && event.targetElement.classList.contains('openEditPlayCanvas'))
 	                { event.hideValidationIndicator(); }
 	        });
-	        editorEventDispacher$1.listen('treeView drag stop prefabs-tree', function (event) {
+	        editorEventDispacher.listen('treeView drag stop prefabs-tree', function (event) {
 	            var prefabs = event.idList.map(getSerializable);
 	            if (event.targetElement.tagName === 'CANVAS' && event.targetElement.classList.contains('openEditPlayCanvas'))
-	                { editorEventDispacher$1.dispatch('dragPrefabsToScene', prefabs); }
+	                { editorEventDispacher.dispatch('dragPrefabsToScene', prefabs); }
 	            else
-	                { editorEventDispacher$1.dispatch('dragPrefabsToNonScene', prefabs); }
+	                { editorEventDispacher.dispatch('dragPrefabsToNonScene', prefabs); }
 	        });
 	        return _this;
 	    }
@@ -7968,6 +7925,8 @@
 	    __extends(ObjectsModule, _super);
 	    function ObjectsModule() {
 	        var _this = _super.call(this) || this;
+	        _this.tasks = [];
+	        _this.taskTimeout = null;
 	        _this.name = 'Objects';
 	        _this.id = 'objects';
 	        var createButton = el('button.button', 'Create', {
@@ -7979,6 +7938,8 @@
 	        _this.treeView = new TreeView({
 	            id: 'objects-tree',
 	            selectionChangedCallback: function (selectedIds) {
+	                if (_this.externalChange)
+	                    { return; }
 	                var serializables$$1 = selectedIds.map(getSerializable).filter(Boolean);
 	                selectInEditor(serializables$$1, _this);
 	                Module.activateModule('object', false);
@@ -7986,7 +7947,7 @@
 	            moveCallback: function (serializableId, parentId) {
 	                if (serializableId.substring(0, 3) === 'epr') {
 	                    var serializable = getSerializable(serializableId);
-	                    var parent_1 = parentId === '#' ? editor.selectedLevel : getSerializable(parentId);
+	                    var parent_1 = parentId === '#' ? selectedLevel : getSerializable(parentId);
 	                    serializable.move(parent_1);
 	                    /*
 	                    let target = event.targetElement;
@@ -8020,21 +7981,21 @@
 	            doubleClickCallback: function (serializableId) {
 	                var serializable = getSerializable(serializableId);
 	                if (serializable)
-	                    { editorEventDispacher$1.dispatch('locate serializable', serializable); }
+	                    { editorEventDispacher.dispatch('locate serializable', serializable); }
 	                else
 	                    { throw new Error("Locate serializable " + serializableId + " not found"); }
 	            }
 	        });
 	        mount(_this.el, _this.treeView);
-	        editorEventDispacher$1.listen('treeView drag start objects-tree', function (event) {
+	        editorEventDispacher.listen('treeView drag start objects-tree', function (event) {
 	        });
-	        editorEventDispacher$1.listen('treeView drag move objects-tree', function (event) {
+	        editorEventDispacher.listen('treeView drag move objects-tree', function (event) {
 	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs')
 	                { event.hideValidationIndicator(); }
 	            // if (event.targetElement.classList.contains('openEditPlayCanvas'))
 	            // 	event.hideValidationIndicator();
 	        });
-	        editorEventDispacher$1.listen('treeView drag stop objects-tree', function (event) {
+	        editorEventDispacher.listen('treeView drag stop objects-tree', function (event) {
 	            console.log('event', event);
 	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 	                var entityPrototypes = event.idList.map(getSerializable);
@@ -8074,45 +8035,22 @@
 	        _this.dirty = true;
 	        _this.treeType = null;
 	        // This will be called when play and reset has already happened. After all the
-	        var update = function () {
+	        var updateWithDelay = function () {
 	            _this.dirty = true;
 	            setTimeout(function () { return _this.update(); }, 100);
 	        };
 	        forEachScene(function () {
-	            scene.listen(GameEvent.SCENE_START, update);
-	            scene.listen(GameEvent.SCENE_RESET, update);
+	            scene.listen(GameEvent.SCENE_START, updateWithDelay);
+	            scene.listen(GameEvent.SCENE_RESET, updateWithDelay);
 	        });
 	        // Set dirty so that every single serializable deletion and addition won't separately update the tree.
 	        var setDirty = function () {
 	            _this.dirty = true;
 	        };
-	        editorEventDispacher$1.listen('play', setDirty, -1);
-	        editorEventDispacher$1.listen('reset', setDirty, -1);
+	        editorEventDispacher.listen('play', setDirty, -1);
+	        editorEventDispacher.listen('reset', setDirty, -1);
 	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
-	        var tasks = [];
-	        var taskTimeout = null;
-	        var addTask = function (task) {
-	            tasks.push(task);
-	            if (taskTimeout)
-	                { clearTimeout(taskTimeout); }
-	            if (tasks.length > 1000) {
-	                tasks.length = 0;
-	                _this.dirty = true;
-	                return;
-	            }
-	            var delay = scene.playing ? 500 : 50;
-	            taskTimeout = setTimeout(function () {
-	                taskTimeout = null;
-	                if (tasks.length < 5) {
-	                    tasks.forEach(function (task) { return task(); });
-	                }
-	                else {
-	                    _this.dirty = true;
-	                }
-	                tasks.length = 0;
-	            }, delay);
-	        };
-	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (_this.dirty || !_this._selected)
 	                { return; }
 	            start('Editor: Objects');
@@ -8136,72 +8074,77 @@
 	            }
 	            else if (change.type === 'editorSelection') {
 	                if (change.origin != _this) {
-	                    if (change.reference.type === _this.treeType) {
-	                        newTask = function () {
-	                            _this.treeView.select(change.reference.items.map(function (item) { return item.id; }));
-	                        };
-	                    }
-	                    else {
-	                        newTask = function () {
-	                            _this.treeView.select(null);
-	                        };
-	                    }
+	                    _this.selectBasedOnEditorSelection();
 	                }
 	            }
 	            if (newTask) {
-	                addTask(newTask);
+	                _this.addTask(newTask);
 	            }
-	            /*
-	                        if (change.reference.threeLetterType === 'prt') {
-	                            if (change.type === changeType.addSerializableToTree) {
-	                                let parent = change.parent;
-	                                let parentNode;
-	                                if (parent.threeLetterType === 'gam')
-	                                    parentNode = '#';
-	                                else
-	                                    parentNode = jstree.get_node(parent.id);
-
-	                                jstree.create_node(parentNode, {
-	                                    text: change.reference.getChildren('prp')[0].value,
-	                                    id: change.reference.id
-	                                });
-	                            } else
-	                                this.dirty = true; // prototypes added, removed, moved or something
-	                        } else if (change.type === changeType.setPropertyValue) {
-	                            let propParent = change.reference._parent;
-	                            if (propParent && propParent.threeLetterType === 'prt') {
-	                                let node = jstree.get_node(propParent.id);
-	                                jstree.rename_node(node, change.value);
-	                            }
-	                        } else if (change.type === 'editorSelection') {
-	                            if (change.origin != this) {
-	                                if (change.reference.type === 'prt') {
-	                                    let node = jstree.get_node(change.reference.items[0].id);
-	                                    jstree.deselect_all();
-	                                    jstree.select_node(node);
-	                                } else if (change.reference.type === 'epr') {
-	                                    let jstree = $(this.jstree).jstree(true);
-	                                    let node = jstree.get_node(change.reference.items[0].getParentPrototype().id);
-	                                    jstree.deselect_all();
-	                                    jstree.select_node(node);
-	                                } else if (change.reference.type === 'ent') {
-	                                    let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
-	                                    jstree.deselect_all();
-	                                    jstree.select_node(node);
-	                                }
-	                            }
-	                        }
-	            */
 	            _this.externalChange = false;
 	            stop('Editor: Objects');
 	        });
 	        return _this;
 	    }
+	    /**
+	     * Runs task with delay for optimization. If small amount of tasks is added, they are just added.
+	     * If big number of tasks is added, they are ignored and this module is flagged as dirty.
+	     * @param task function to run in delay
+	     */
+	    ObjectsModule.prototype.addTask = function (task) {
+	        var _this = this;
+	        this.tasks.push(task);
+	        if (this.taskTimeout)
+	            { clearTimeout(this.taskTimeout); }
+	        if (this.tasks.length > 1000) {
+	            this.tasks.length = 0;
+	            this.dirty = true;
+	            return;
+	        }
+	        var delay = scene.playing ? 500 : 50;
+	        this.taskTimeout = setTimeout(function () {
+	            _this.taskTimeout = null;
+	            if (_this.tasks.length < 5) {
+	                _this.tasks.forEach(function (task) { return task(); });
+	            }
+	            else {
+	                _this.dirty = true;
+	            }
+	            _this.tasks.length = 0;
+	        }, delay);
+	    };
+	    ObjectsModule.prototype.selectBasedOnEditorSelection = function (runInstantly) {
+	        var _this = this;
+	        if (runInstantly === void 0) { runInstantly = false; }
+	        var task = null;
+	        if (editorSelection.type === this.treeType) {
+	            task = function () {
+	                var oldExternalState = _this.externalChange;
+	                _this.externalChange = true;
+	                _this.treeView.select(editorSelection.items.map(function (item) { return item.id; }));
+	                _this.externalChange = oldExternalState;
+	            };
+	        }
+	        else {
+	            task = function () {
+	                var oldExternalState = _this.externalChange;
+	                _this.externalChange = true;
+	                _this.treeView.select(null);
+	                _this.externalChange = oldExternalState;
+	            };
+	        }
+	        if (runInstantly) {
+	            task();
+	        }
+	        else {
+	            this.addTask(task);
+	        }
+	    };
 	    ObjectsModule.prototype.activate = function () {
 	        this.dirty = true;
 	    };
 	    ObjectsModule.prototype.update = function () {
-	        if (!scene || !editor.selectedLevel)
+	        var _this = this;
+	        if (!scene || !selectedLevel)
 	            { return false; }
 	        if (!this._selected)
 	            { return true; }
@@ -8217,7 +8160,7 @@
 	        this.treeType = newTreeType;
 	        var data = [];
 	        if (this.treeType === 'epr') {
-	            editor.selectedLevel.forEachChild('epr', function (epr) {
+	            selectedLevel.forEachChild('epr', function (epr) {
 	                var parent = epr.getParent();
 	                data.push({
 	                    text: epr.makeUpAName(),
@@ -8237,6 +8180,12 @@
 	            }, true);
 	        }
 	        this.treeView.update(data);
+	        // Sometimes treeView.update takes a bit time. Therefore hacky timeout.
+	        setTimeout(function () {
+	            _this.externalChange = true;
+	            _this.selectBasedOnEditorSelection();
+	            _this.externalChange = false;
+	        }, 30);
 	        this.dirty = false;
 	        return true;
 	    };
@@ -8251,7 +8200,7 @@
 	    var newLevelName;
 	    while (true) {
 	        newLevelName = 'Level ' + levelNumber;
-	        if (!editor.game.findChild('lvl', function (lvl) { return lvl.name === newLevelName; }, false)) {
+	        if (!game.findChild('lvl', function (lvl) { return lvl.name === newLevelName; }, false)) {
 	            break;
 	        }
 	        levelNumber++;
@@ -8259,11 +8208,11 @@
 	    lvl.initWithPropertyValues({
 	        name: newLevelName
 	    });
-	    editor.game.addChild(lvl);
-	    editor.setLevel(lvl);
+	    game.addChild(lvl);
+	    setLevel(lvl);
 	    return lvl;
 	}
-	editorEventDispacher$1.listen('createBlankLevel', createNewLevel);
+	editorEventDispacher.listen('createBlankLevel', createNewLevel);
 	var LevelsModule = /** @class */ (function (_super) {
 	    __extends(LevelsModule, _super);
 	    function LevelsModule() {
@@ -8283,8 +8232,8 @@
 	                }, 100);
 	            }
 	        });
-	        listen(_this.el, 'selectLevel', function (level) {
-	            editor.setLevel(level);
+	        redomListen(_this.el, 'selectLevel', function (level) {
+	            setLevel(level);
 	            selectInEditor(level, _this);
 	        });
 	        return _this;
@@ -8310,7 +8259,7 @@
 	        );
 	    }
 	    LevelItem.prototype.selectClicked = function () {
-	        dispatch(this, 'selectLevel', this.level);
+	        redomDispatch(this, 'selectLevel', this.level);
 	    };
 	    /*
 	    deleteClicked() {
@@ -8488,7 +8437,7 @@
 	                { return 1; }
 	        });
 	        _this.update(categories);
-	        listen(_this, 'refresh', function () {
+	        redomListen(_this, 'refresh', function () {
 	            _this.update(categories);
 	        });
 	        return _this;
@@ -8513,7 +8462,7 @@
 	            var missingRequirements_1 = getMissingRequirements(this.parent, componentClass.requirements);
 	            if (missingRequirements_1.length === 0) {
 	                addComponentDatas(this.parent, [componentClass.componentName]);
-	                dispatch(this, 'refresh');
+	                redomDispatch(this, 'refresh');
 	            }
 	            else {
 	                new Confirmation("<b>" + componentClass.componentName + "</b> needs these components in order to work: <b>" + missingRequirements_1.join(', ') + "</b>", {
@@ -8522,7 +8471,7 @@
 	                    icon: 'fa-plus'
 	                }, function () {
 	                    addComponentDatas(_this.parent, missingRequirements_1.concat(componentClass.componentName));
-	                    dispatch(_this, 'refresh');
+	                    redomDispatch(_this, 'refresh');
 	                });
 	            }
 	            return;
@@ -8593,8 +8542,9 @@
 	        var _this = _super.call(this, {
 	            title: 'Object Property: ' + property.name,
 	            width: '500px',
-	            content: _this.buttons = list('div', Button)
+	            content: list('div', Button)
 	        }) || this;
+	        _this.buttons = _this.content;
 	        var value = property.value;
 	        var component = property.getParent();
 	        var componentId = component._componentId;
@@ -8671,7 +8621,7 @@
 	        this.dirty = true;
 	        this.editingProperty = false;
 	        // Change in serializable tree
-	        editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.type === 'editorSelection') {
 	                _this.dirty = true;
 	            }
@@ -8702,14 +8652,14 @@
 	                }
 	            }
 	        });
-	        listen(this, 'makingChanges', function () {
+	        redomListen(this, 'makingChanges', function () {
 	            setChangeOrigin(_this);
 	        });
 	        // Change in this editor
-	        listen(this, 'markPropertyEditorDirty', function () {
+	        redomListen(this, 'markPropertyEditorDirty', function () {
 	            _this.dirty = true;
 	        });
-	        listen(this, 'propertyEditorSelect', function (items) {
+	        redomListen(this, 'propertyEditorSelect', function (items) {
 	            selectInEditor(items, _this);
 	        });
 	        listenKeyDown(function (keyCode) {
@@ -8768,7 +8718,7 @@
 	        this.title.onclick = function () {
 	            _this.titleClickedCallback && _this.titleClickedCallback();
 	        };
-	        listen(this, 'propertyInherited', function (property, view) {
+	        redomListen(this, 'propertyInherited', function (property, view) {
 	            if (_this.item.threeLetterType !== 'icd')
 	                { return; }
 	            // this.item is inheritedComponentData
@@ -8822,7 +8772,7 @@
 	            { addButton.classList.add('clickMeEffect'); }
 	        mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
 	            onclick: function () {
-	                dispatch(_this, 'makingChanges');
+	                redomDispatch(_this, 'makingChanges');
 	                var clone = _this.item.clone();
 	                var _a = parseTextAndNumber(clone.name), text$$1 = _a.text, number = _a.number;
 	                var nameSuggestion = text$$1 + number++;
@@ -8831,12 +8781,12 @@
 	                }
 	                clone.name = nameSuggestion;
 	                _this.item.getParent().addChild(clone);
-	                dispatch(_this, 'propertyEditorSelect', clone);
+	                redomDispatch(_this, 'propertyEditorSelect', clone);
 	            }
 	        }));
 	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', {
 	            onclick: function () {
-	                dispatch(_this, 'makingChanges');
+	                redomDispatch(_this, 'makingChanges');
 	                var entityPrototypeCount = _this.item.countEntityPrototypes(true);
 	                if (entityPrototypeCount) {
 	                    if (confirm("Type " + _this.item.name + " is used in levels " + entityPrototypeCount + " times. Are you sure you want to delete this type and all " + entityPrototypeCount + " objects that are using it?"))
@@ -8911,8 +8861,8 @@
 	            mount(this.controls, el('button.button', 'Show Parent', {
 	                onclick: function () {
 	                    var componentData = _this.item.generatedForPrototype.getParentPrototype().findComponentDataByComponentId(_this.item.componentId, true);
-	                    dispatch(_this, 'propertyEditorSelect', componentData.getParent());
-	                    dispatch(_this, 'markPropertyEditorDirty');
+	                    redomDispatch(_this, 'propertyEditorSelect', componentData.getParent());
+	                    redomDispatch(_this, 'markPropertyEditorDirty');
 	                }
 	            }));
 	        }
@@ -8922,7 +8872,7 @@
 	        if (this.item.componentClass.allowMultiple) {
 	            mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
 	                onclick: function () {
-	                    dispatch(_this, 'makingChanges');
+	                    redomDispatch(_this, 'makingChanges');
 	                    if (_this.item.ownComponentData) {
 	                        var clone = _this.item.ownComponentData.clone();
 	                        _this.item.generatedForPrototype.addChild(clone);
@@ -8933,15 +8883,15 @@
 	                        componentData.initWithChildren();
 	                        _this.item.generatedForPrototype.addChild(componentData);
 	                    }
-	                    dispatch(_this, 'markPropertyEditorDirty');
+	                    redomDispatch(_this, 'markPropertyEditorDirty');
 	                }
 	            }));
 	        }
 	        if (hasOwnProperties) {
 	            mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
 	                onclick: function () {
-	                    dispatch(_this, 'makingChanges');
-	                    dispatch(_this, 'markPropertyEditorDirty', 'fromReset');
+	                    redomDispatch(_this, 'makingChanges');
+	                    redomDispatch(_this, 'markPropertyEditorDirty', 'fromReset');
 	                    if (_this.item.ownComponentData.getParentComponentData()) {
 	                        _this.item.ownComponentData.delete();
 	                    }
@@ -8964,8 +8914,8 @@
 	                                text: "Delete all (" + (componentsThatRequire_1.length + 1) + ") components",
 	                                color: '#cd4148'
 	                            }, function () {
-	                                dispatch(_this, 'makingChanges');
-	                                dispatch(_this, 'markPropertyEditorDirty');
+	                                redomDispatch(_this, 'makingChanges');
+	                                redomDispatch(_this, 'markPropertyEditorDirty');
 	                                componentsThatRequire_1.forEach(function (cda) {
 	                                    cda.delete();
 	                                });
@@ -8974,8 +8924,8 @@
 	                            return;
 	                        }
 	                    }
-	                    dispatch(_this, 'makingChanges');
-	                    dispatch(_this, 'markPropertyEditorDirty');
+	                    redomDispatch(_this, 'makingChanges');
+	                    redomDispatch(_this, 'markPropertyEditorDirty');
 	                    _this.item.ownComponentData.delete();
 	                }
 	            }));
@@ -9025,7 +8975,7 @@
 	            if (componentData.getParentComponentData())
 	                { componentData.delete(); }
 	        }
-	        dispatch(this, 'markPropertyEditorDirty');
+	        redomDispatch(this, 'markPropertyEditorDirty');
 	    };
 	    PropertyElement.prototype.focus = function () {
 	        this.el.querySelector('input').focus();
@@ -9042,10 +8992,10 @@
 	    PropertyElement.prototype.onchange = function (val) {
 	        var originalValue = this.property.value;
 	        try {
-	            dispatch(this, 'makingChanges');
+	            redomDispatch(this, 'makingChanges');
 	            this.property.value = this.property.propertyType.validator.validate(this.convertFromInputToPropertyValue(val));
 	            if (!this.property.id) {
-	                dispatch(this, 'propertyInherited', this.property);
+	                redomDispatch(this, 'propertyInherited', this.property);
 	            }
 	        }
 	        catch (e) {
@@ -9117,7 +9067,7 @@
 	                    this.name.style.color = parent_1.componentClass.color;
 	                    mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
 	                        onclick: function () {
-	                            dispatch(_this, 'makingChanges');
+	                            redomDispatch(_this, 'makingChanges');
 	                            _this.reset();
 	                        }
 	                    }));
@@ -9173,19 +9123,19 @@
 	        return _this;
 	    }
 	    TypeModule.prototype.update = function () {
-	        if (editor.selection.items.length != 1)
+	        if (editorSelection.items.length != 1)
 	            { return false; }
 	        // if the tab is not visible, do not waste CPU
 	        var skipUpdate = !this._selected || this.moduleContainer.isPacked();
-	        if (editor.selection.type === 'prt') {
+	        if (editorSelection.type === 'prt') {
 	            if (skipUpdate)
 	                { return; }
-	            this.propertyEditor.update(editor.selection.items, editor.selection.type);
+	            this.propertyEditor.update(editorSelection.items, editorSelection.type);
 	        }
-	        else if (editor.selection.type === 'ent') {
+	        else if (editorSelection.type === 'ent') {
 	            if (skipUpdate)
 	                { return; }
-	            this.propertyEditor.update(editor.selection.items.map(function (e) { return e.prototype.prototype; }), editor.selection.type);
+	            this.propertyEditor.update(editorSelection.items.map(function (e) { return e.prototype.prototype; }), editorSelection.type);
 	        }
 	        else {
 	            return false; // hide
@@ -9218,13 +9168,13 @@
 	    }
 	    PrefabModule.prototype.update = function () {
 	        // return true;
-	        if (editor.selection.items.length != 1)
+	        if (editorSelection.items.length != 1)
 	            { return false; } // multiedit not supported yet
-	        if (editor.selection.type === 'pfa') {
+	        if (editorSelection.type === 'pfa') {
 	            if (!this._selected || this.moduleContainer.isPacked()) {
 	                return true; // if the tab is not visible, do not waste CPU
 	            }
-	            this.propertyEditor.update(editor.selection.items, editor.selection.type);
+	            this.propertyEditor.update(editorSelection.items, editorSelection.type);
 	        }
 	        else {
 	            return false;
@@ -9252,13 +9202,13 @@
 	        return _this;
 	    }
 	    ObjectModule.prototype.update = function () {
-	        if (editor.selection.items.length != 1)
+	        if (editorSelection.items.length != 1)
 	            { return false; } // multiedit not supported yet
-	        if (editor.selection.type === 'ent' || editor.selection.type === 'epr') {
+	        if (editorSelection.type === 'ent' || editorSelection.type === 'epr') {
 	            if (!this._selected || this.moduleContainer.isPacked()) {
 	                return; // if the tab is not visible, do not waste CPU
 	            }
-	            this.propertyEditor.update(editor.selection.items, editor.selection.type);
+	            this.propertyEditor.update(editorSelection.items, editorSelection.type);
 	        }
 	        else {
 	            return false;
@@ -9289,9 +9239,9 @@
 	    }
 	    LevelModule.prototype.update = function () {
 	        this.level = null;
-	        if (editor.selectedLevel) {
-	            this.level = editor.selectedLevel;
-	            this.propertyEditor.update([editor.selectedLevel], 'lvl');
+	        if (selectedLevel) {
+	            this.level = selectedLevel;
+	            this.propertyEditor.update([selectedLevel], 'lvl');
 	        }
 	        else
 	            { return false; }
@@ -9347,7 +9297,7 @@
 	        _this.name = 'Performance';
 	        _this.id = 'performance';
 	        startPerformanceUpdates();
-	        editorEventDispacher$1.listen('performance snapshot', function (snapshot) {
+	        editorEventDispacher.listen('performance snapshot', function (snapshot) {
 	            if (_this.moduleContainer.isPacked())
 	                { return; }
 	            start('Editor: Performance');
@@ -9455,7 +9405,7 @@
 	        _this.addElements(el('div.perSecond', new PerSecondItem({ name: 'Name', count: '/ sec' }), counterList = list('div.perSecondList', PerSecondItem)));
 	        _this.name = 'Per second';
 	        _this.id = 'perSecond';
-	        editorEventDispacher$1.listen('perSecond snapshot', function (snapshot) {
+	        editorEventDispacher.listen('perSecond snapshot', function (snapshot) {
 	            counterList.update(snapshot);
 	        });
 	        return _this;
@@ -9488,6 +9438,116 @@
 	    return PerSecondItem;
 	}());
 	//# sourceMappingURL=perSecondModule.js.map
+
+	var AnimationView = /** @class */ (function () {
+	    function AnimationView(serializable) {
+	        var _this = this;
+	        this.el = el('div.fullView.animationView', el('div.exitButton', 'X', { onclick: function () { return _this.close(); } }));
+	    }
+	    AnimationView.prototype.close = function () {
+	        var editorLayout = document.querySelector('div.editorLayout');
+	        this.el.parentNode.removeChild(this.el);
+	        editorLayout.classList.remove('fullViewMode');
+	    };
+	    AnimationView.open = function (serializable) {
+	        var editorLayout = document.querySelector('div.editorLayout');
+	        editorLayout.classList.add('fullViewMode');
+	        mount(editorLayout, new AnimationView(serializable));
+	    };
+	    return AnimationView;
+	}());
+	//# sourceMappingURL=animationView.js.map
+
+	var Help = /** @class */ (function () {
+	    function Help() {
+	        this.sceneModule = null;
+	    }
+	    Object.defineProperty(Help.prototype, "game", {
+	        get: function () {
+	            return game;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "level", {
+	        get: function () {
+	            return selectedLevel;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "scene", {
+	        get: function () {
+	            return scene;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "entities", {
+	        get: function () {
+	            return scene.getChildren('ent');
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "world", {
+	        get: function () {
+	            return scene['_p2World'];
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "Vector", {
+	        get: function () {
+	            return Vector;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "serializables", {
+	        get: function () {
+	            return serializables;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "serializablesArray", {
+	        get: function () {
+	            return Object.keys(serializables).map(function (k) { return serializables[k]; });
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Help.prototype, "selectedEntity", {
+	        get: function () {
+	            if (this.sceneModule && this.sceneModule.selectedEntities.length > 0)
+	                { return this.sceneModule.selectedEntities[0]; }
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Help.prototype.copyGame = function () {
+	        var prototypes = game.getChildren('prt').map(function (prt) { return prt.toJSON(); });
+	        var levels = game.getChildren('lvl').map(function (lvl) { return lvl.toJSON(); });
+	        return JSON.stringify([].concat(prototypes, levels));
+	    };
+	    Help.prototype.pasteGame = function (data) {
+	        game.getChildren('lvl').forEach(function (lvl) { return lvl.delete(); });
+	        game.getChildren('prt').forEach(function (prt) { return prt.delete(); });
+	        var children = JSON.parse(data).map(Serializable.fromJSON);
+	        game.addChildren(children);
+	    };
+	    Help.prototype.openAnimationView = function (s) {
+	        AnimationView.open(s);
+	    };
+	    return Help;
+	}());
+	var help = new Help;
+	window['help'] = help;
+	editorEventDispacher.listen(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, function (name, value) {
+	    help[name] = value;
+	});
+	//# sourceMappingURL=help.js.map
 
 	window.test = function () {
 	};
@@ -9529,17 +9589,10 @@
 	}(Popup));
 	//# sourceMappingURL=OKPopup.js.map
 
-	var modulesRegisteredPromise = editorEventDispacher$1.getEventPromise('modulesRegistered');
-	var loadedPromise = editorEventDispacher$1.getEventPromise('loaded');
-	var selectedToolName = 'multiTool'; // in top bar
-	function changeSelectedTool(newToolName) {
-	    if (selectedToolName !== newToolName) {
-	        selectedToolName = newToolName;
-	        editorEventDispacher$1.dispatch('selectedToolChanged', newToolName);
-	    }
-	}
+	var modulesRegisteredPromise = editorEventDispacher.getEventPromise('modulesRegistered');
+	var loadedPromise = editorEventDispacher.getEventPromise('loaded');
 	modulesRegisteredPromise.then(function () {
-	    editorEventDispacher$1.dispatch('loaded');
+	    editorEventDispacher.dispatch('loaded');
 	});
 	configureNetSync({
 	    serverToClientEnabled: true,
@@ -9547,55 +9600,54 @@
 	    context: 'edit'
 	});
 	loadedPromise.then(function () {
-	    editor.setLevel(game.getChildren('lvl')[0]);
+	    setLevel(game.getChildren('lvl')[0]);
 	});
 	var editorUpdateLimited = limit(200, 'soon', function () {
 	    editor.update();
 	});
 	globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, function (change) {
 	    start('Editor: General');
-	    editorEventDispacher$1.dispatch(EditorEvent.EDITOR_CHANGE, change);
+	    editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, change);
 	    if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 	        var game_1 = change.reference;
 	        editor = new Editor(game_1);
-	        editorEventDispacher$1.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
+	        editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
+	        editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
 	    }
 	    if (editor) {
 	        if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
-	            if (editor.selectedLevel === change.reference) {
-	                editor.setLevel(null);
+	            if (selectedLevel === change.reference) {
+	                setLevel(null);
 	            }
 	        }
 	        editorUpdateLimited();
 	    }
 	    stop('Editor: General');
 	});
-	editorEventDispacher$1.listen(EditorEvent.EDITOR_CHANGE, function () {
+	editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function () {
 	    // editor && editor.update();
 	    editor && editorUpdateLimited();
 	});
 	var editor = null;
 	var Editor = /** @class */ (function () {
 	    function Editor(game$$1) {
+	        var _this = this;
 	        assert$1(game$$1);
 	        this.layout = new Layout();
 	        this.game = game$$1;
-	        this.selectedLevel = null;
-	        this.selection = {
-	            type: 'none',
-	            items: [],
-	            dirty: true
-	        };
 	        mount(document.body, this.layout);
+	        listenKeyDown(function (k) {
+	            if (k === key.backspace && editorSelection.items.length > 0) {
+	                if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
+	                    editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
+	                    var serializables_1 = filterChildren(editorSelection.items);
+	                    setChangeOrigin(_this);
+	                    serializables_1.forEach(function (s$$1) { return s$$1.delete(); });
+	                    editorUpdateLimited();
+	                }
+	            }
+	        });
 	    }
-	    Editor.prototype.setLevel = function (level) {
-	        if (level && level.threeLetterType === 'lvl')
-	            { this.selectedLevel = level; }
-	        else
-	            { this.selectedLevel = null; }
-	        selectInEditor([], this);
-	        editorEventDispacher$1.dispatch('setLevel', this.selectedLevel);
-	    };
 	    Editor.prototype.update = function () {
 	        if (!this.game)
 	            { return; }
@@ -9614,33 +9666,6 @@
 	        serverToClientEnabled: false
 	    });
 	});
-	var options$1 = null;
-	function loadOptions() {
-	    if (!options$1) {
-	        try {
-	            options$1 = JSON.parse(localStorage.openEditPlayOptions);
-	        }
-	        catch (e) {
-	            // default options
-	            options$1 = {
-	                moduleContainerPacked_bottom: true
-	            };
-	        }
-	    }
-	}
-	function setOption(id, stringValue) {
-	    loadOptions();
-	    options$1[id] = stringValue;
-	    try {
-	        localStorage.openEditPlayOptions = JSON.stringify(options$1);
-	    }
-	    catch (e) {
-	    }
-	}
-	function getOption(id) {
-	    loadOptions();
-	    return options$1[id];
-	}
 	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';

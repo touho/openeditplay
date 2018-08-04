@@ -5,7 +5,7 @@ import { list, el, List } from 'redom';
 import assert from '../../../util/assert';
 import { setChangeOrigin } from '../../../core/change';
 import Confirmation from './Confirmation';
-import { dispatch, listen } from '../../../util/redomEvents';
+import { redomDispatch, redomListen } from '../../../util/redomEvents';
 import Serializable from '../../../core/serializable';
 
 const CATEGORY_ORDER = [
@@ -51,7 +51,7 @@ export default class ComponentAdder extends Popup {
 
 		this.update(categories);
 
-		listen(this, 'refresh', () => {
+		redomListen(this, 'refresh', () => {
 			this.update(categories);
 		})
 	}
@@ -85,7 +85,7 @@ class Category {
 
 			if (missingRequirements.length === 0) {
 				addComponentDatas(this.parent, [componentClass.componentName]);
-				dispatch(this, 'refresh');
+				redomDispatch(this, 'refresh');
 			} else {
 				new Confirmation(`<b>${componentClass.componentName}</b> needs these components in order to work: <b>${missingRequirements.join(', ')}</b>`, {
 					text: `Add all (${missingRequirements.length + 1}) components`,
@@ -93,7 +93,7 @@ class Category {
 					icon: 'fa-plus'
 				}, () => {
 					addComponentDatas(this.parent, missingRequirements.concat(componentClass.componentName));
-					dispatch(this, 'refresh');
+					redomDispatch(this, 'refresh');
 				});
 			}
 			return;

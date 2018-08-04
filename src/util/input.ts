@@ -141,14 +141,14 @@ if (typeof window !== 'undefined') {
 	};
 }
 
-export function simulateKeyEvent(eventName: string, keyCode: number) {
+export function simulateKeyEvent(eventName: 'keydown' | 'keyup', keyCode: number) {
 	if (eventName === 'keydown') {
 		window.onkeydown({
 			keyCode
-		});
+		} as any);
 	} else if (eventName === 'keyup') {
 		window.onkeyup({
 			keyCode
-		});
+		} as any);
 	}
 }

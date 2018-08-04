@@ -7,6 +7,8 @@ let propertyTypes = [
 ];
 
 export default class Level extends PropertyOwner {
+	name: string;
+
 	constructor(predefinedId?) {
 		super(predefinedId);
 	}

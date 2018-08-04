@@ -1,6 +1,6 @@
 import { scene, forEachScene } from '../core/scene';
 import debug from './debug'
-"../util/redomEvents";
+
 import Vector from '../util/vector';
 import { globalEventDispatcher } from '../core/eventDispatcher';
 

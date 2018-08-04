@@ -4,9 +4,10 @@ import AngleWidget from '../widget/angleWidget';
 import PositionWidget from '../widget/positionWidget';
 import ScaleWidget from '../widget/scaleWidget';
 import MoveWidget from '../widget/moveWidget';
-"../../util/redomEvents";
-import {selectedToolName} from "../editor";
+"../../util/";
 import { GameEvent } from '../../core/eventDispatcher';
+import { sceneToolName } from '../editorSelection';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 
 let primaryColor = 'white';
 let hoverColor = 'yellow';
@@ -71,7 +72,7 @@ export default Component.register({
 			// return;
 
 			this.createWidgets();
-			editorEventDispacher.listen('selectedToolChanged', () => {
+			editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, () => {
 				this.createWidgets();
 			});
 		},
@@ -84,7 +85,7 @@ export default Component.register({
 				this.position = null;
 			}
 
-			if (selectedToolName === 'multiTool') {
+			if (sceneToolName === 'multiTool') {
 				this.widgets = [
 					this.position = new PositionWidget(this),
 					new ScaleWidget(this, 1, 0),
@@ -92,13 +93,13 @@ export default Component.register({
 					new ScaleWidget(this, 1, 1),
 					new AngleWidget(this)
 				];
-			} else if (selectedToolName === 'globalMoveTool') {
+			} else if (sceneToolName === 'globalMoveTool') {
 				this.widgets = [
 					this.position = new PositionWidget(this),
 					new MoveWidget(this, 1, 0, true),
 					new MoveWidget(this, 0, 1, true)
 				];
-			} else if (selectedToolName === 'localMoveTool') {
+			} else if (sceneToolName === 'localMoveTool') {
 				this.widgets = [
 					this.position = new PositionWidget(this),
 					new MoveWidget(this, 1, 0, false),
@@ -106,7 +107,7 @@ export default Component.register({
 					new AngleWidget(this)
 				];
 			} else {
-				throw new Error('selectedToolName invalid: ' + selectedToolName);
+				throw new Error('sceneToolName invalid: ' + sceneToolName);
 			}
 
 			if (this.entity && !this.entity.sleeping) {

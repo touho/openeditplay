@@ -1,10 +1,9 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
 import PropertyEditor from '../views/propertyEditor/propertyEditor';
-import { editor } from '../editor';
-import PropertyOwner from '../../core/propertyOwner'
 import { setChangeOrigin } from '../../core/change';
 import Level from '../../core/level';
+import { selectedLevel } from '../editorSelection';
 
 class LevelModule extends Module {
 	propertyEditor: PropertyEditor;
@@ -31,9 +30,9 @@ class LevelModule extends Module {
 	}
 	update() {
 		this.level = null;
-		if (editor.selectedLevel) {
-			this.level = editor.selectedLevel;
-			this.propertyEditor.update([editor.selectedLevel], 'lvl');
+		if (selectedLevel) {
+			this.level = selectedLevel;
+			this.propertyEditor.update([selectedLevel], 'lvl');
 		} else
 			return false;
 	}

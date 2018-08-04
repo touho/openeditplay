@@ -1,14 +1,13 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-'../../util/redomEvents';
 import Prototype from '../../core/prototype';
 import { getSerializable } from '../../core/serializableManager';
 import { changeType, setChangeOrigin } from '../../core/change';
 import assert from '../../util/assert';
-import { editor } from '../editor';
 import * as performance from '../../util/performance';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { selectInEditor } from '../editorSelection';
+import { selectInEditor, editorSelection } from '../editorSelection';
+import { game } from '../../core/game';
 
 class TypesModule extends Module {
 	addButton: HTMLElement;
@@ -39,7 +38,7 @@ class TypesModule extends Module {
 		this.addButton.onclick = () => {
 			setChangeOrigin(this);
 			let prototype = Prototype.create(' New type');
-			editor.game.addChild(prototype);
+			game.addChild(prototype);
 			selectInEditor(prototype, this);
 			setTimeout(() => {
 				Module.activateModule('type', true, 'focusOnProperty', 'name');
@@ -128,7 +127,7 @@ class TypesModule extends Module {
 
 
 		let data = [];
-		editor.game.forEachChild('prt', prototype => {
+		game.forEachChild('prt', prototype => {
 			let parent = prototype.getParent();
 			data.push({
 				text: prototype.name,
@@ -142,7 +141,7 @@ class TypesModule extends Module {
 
 		if (!this.jstreeInited) {
 			$(this.jstree).attr('id', 'types-jstree').on('changed.jstree', (e, data) => {
-				let noPrototypes = editor.game.getChildren('prt').length === 0;
+				let noPrototypes = game.getChildren('prt').length === 0;
 				this.addButton.classList.toggle('clickMeEffect', noPrototypes);
 				this.helperText.classList.toggle('hidden', noPrototypes);
 
@@ -160,11 +159,11 @@ class TypesModule extends Module {
 				let jstree = $(this.jstree).jstree(true);
 				// let selNode = jstree.get_node('prtF21ZLL0vsLdQI5z');
 				// console.log(jstree, selNode);
-				if (editor.selection.type === 'none') {
+				if (editorSelection.type === 'none') {
 					//jstree.select_node();
 				}
-				if (editor.selection.type === 'prt') {
-					// jstree.select_node(editor.selection.items.map(i => i.id));
+				if (editorSelection.type === 'prt') {
+					// jstree.select_node(editorSelection.items.map(i => i.id));
 				}
 			}).jstree({
 				core: {
@@ -257,7 +256,7 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 			let nodes = data.data.nodes; // these prototypes will move
 			let newParent;
 			if (node.parent === '#')
-				newParent = editor.game;
+				newParent = game;
 			else
 				newParent = getSerializable(node.parent);
 

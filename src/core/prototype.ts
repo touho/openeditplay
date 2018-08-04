@@ -7,7 +7,6 @@ import ComponentData from './componentData';
 import Entity from './entity';
 import { game } from './game';
 import { Component } from './component';
-"../util/redomEvents";
 import EntityPrototype from './entityPrototype';
 import Level from './level';
 import { globalEventDispatcher } from './eventDispatcher';

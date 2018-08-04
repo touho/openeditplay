@@ -2,8 +2,6 @@ import assert from '../util/assert';
 import { changeType, addChange } from './change';
 import { isClient } from '../util/environment';
 import EventDispatcher from './eventDispatcher';
-import { element } from '../../example/source';
-console.log(element);
 
 export const serializableCallbacks = {
 	addSerializable: (serializable: Serializable) => { },
@@ -386,8 +384,10 @@ Object.defineProperty(Serializable.prototype, 'debugChildren', {
 	}
 });
 
-// If a serializable is a ancestor of another serializable, it is filtered out from the list
-export function filterChildren(serializables) {
+/**
+ * If a serializable is a ancestor of another serializable, it is filtered out from the list
+ */
+export function filterChildren(serializables: Array<Serializable>) {
 	let idSet = new Set(serializables.map(s => s.id));
 	return serializables.filter(serializable => {
 		let parent = serializable.getParent();

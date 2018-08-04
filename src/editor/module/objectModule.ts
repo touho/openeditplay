@@ -4,6 +4,7 @@ import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import { scene } from '../../core/scene';
 import { listenKeyDown, key } from '../../util/input';
+import { editorSelection } from '../editorSelection';
 
 class ObjectModule extends Module {
 	propertyEditor: PropertyEditor;
@@ -23,15 +24,15 @@ class ObjectModule extends Module {
 		});
 	}
 	update() {
-		if (editor.selection.items.length != 1)
+		if (editorSelection.items.length != 1)
 			return false; // multiedit not supported yet
 
-		if (editor.selection.type === 'ent' || editor.selection.type === 'epr') {
+		if (editorSelection.type === 'ent' || editorSelection.type === 'epr') {
 			if (!this._selected || this.moduleContainer.isPacked()) {
 				return; // if the tab is not visible, do not waste CPU
 			}
 
-			this.propertyEditor.update(editor.selection.items, editor.selection.type);
+			this.propertyEditor.update(editorSelection.items, editorSelection.type);
 		} else {
 			return false;
 		}

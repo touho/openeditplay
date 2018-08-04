@@ -7,7 +7,7 @@ import { listenMouseMove, listenMouseDown, listenMouseUp, listenKeyDown, key, ke
 import { default as PIXI, getRenderer, sortDisplayObjects } from '../features/graphics';
 import * as performanceTool from '../util/performance';
 import Vector from '../util/vector';
-"../util/redomEvents";
+
 import Level from './level';
 import { Component } from './component';
 import EntityPrototype from './entityPrototype';

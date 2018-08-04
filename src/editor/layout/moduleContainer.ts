@@ -1,9 +1,9 @@
 import { el, list, mount, List, RedomComponent } from 'redom';
-import events, { dispatch, listen } from '../../util/redomEvents';
-import { setOption, getOption } from '../editor';
+import { redomDispatch, redomListen } from '../../util/redomEvents';
 import * as performance from '../../util/performance';
 import Module from '../module/module';
 import { editorEventDispacher } from '../editorEventDispatcher';
+import { getOption, setOption } from '../util/options';
 
 export default class ModuleContainer {
 	el: HTMLElement;
@@ -57,7 +57,7 @@ export default class ModuleContainer {
 			this._updateTabs();
 		});
 
-		listen(this, 'moduleClicked', module => {
+		redomListen(this, 'moduleClicked', module => {
 			this.activateModule(module);
 		});
 
@@ -162,7 +162,7 @@ class ModuleTab implements RedomComponent {
 		this.el = el('span.moduleTab.button');
 		this.module = null;
 		this.el.onclick = () => {
-			dispatch(this, 'moduleClicked', this.module);
+			redomDispatch(this, 'moduleClicked', this.module);
 		};
 	}
 	update(module) {

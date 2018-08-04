@@ -3,6 +3,7 @@ import Module from './module';
 import PropertyEditor from '../views/propertyEditor/propertyEditor';
 import { editor } from '../editor';
 import { listenKeyDown, key } from '../../util/input';
+import { editorSelection } from '../editorSelection';
 
 class TypeModule extends Module {
 	propertyEditor: PropertyEditor;
@@ -22,20 +23,20 @@ class TypeModule extends Module {
 		});
 	}
 	update() {
-		if (editor.selection.items.length != 1)
+		if (editorSelection.items.length != 1)
 			return false;
 
 		// if the tab is not visible, do not waste CPU
 		let skipUpdate = !this._selected || this.moduleContainer.isPacked();
 
-		if (editor.selection.type === 'prt') {
+		if (editorSelection.type === 'prt') {
 			if (skipUpdate)
 				return;
-			this.propertyEditor.update(editor.selection.items, editor.selection.type);
-		} else if (editor.selection.type === 'ent') {
+			this.propertyEditor.update(editorSelection.items, editorSelection.type);
+		} else if (editorSelection.type === 'ent') {
 			if (skipUpdate)
 				return;
-			this.propertyEditor.update(editor.selection.items.map(e => e.prototype.prototype), editor.selection.type);
+			this.propertyEditor.update(editorSelection.items.map(e => e.prototype.prototype), editorSelection.type);
 		} else {
 			return false; // hide
 		}

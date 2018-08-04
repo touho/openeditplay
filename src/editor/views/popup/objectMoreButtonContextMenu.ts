@@ -11,8 +11,10 @@ export default class ObjectMoreButtonContextMenu extends Popup {
 		super({
 			title: 'Object Property: ' + property.name,
 			width: '500px',
-			content: this.buttons = list('div', Button)
+			content: list('div', Button)
 		});
+
+		this.buttons = this.content;
 
 		let value = property.value;
 		let component = property.getParent();

@@ -1,4 +1,3 @@
-'../util/redomEvents';
 import Layout from './layout/layout';
 
 import './module/topBarModule';
@@ -20,9 +19,9 @@ import './module/perSecondModule';
 
 import { el, list, mount } from 'redom';
 import { default as Game, game } from '../core/game';
-import Serializable from '../core/serializable';
+import Serializable, { filterChildren } from '../core/serializable';
 import {
-	changeType
+	changeType, setChangeOrigin
 } from '../core/change';
 import { serializables } from '../core/serializableManager';
 import assert from '../util/assert';
@@ -35,19 +34,14 @@ import OKPopup from "./views/popup/OKPopup";
 import Level from '../core/level';
 import { GameEvent, globalEventDispatcher } from '../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from './editorEventDispatcher';
-import { editorSelection, selectInEditor } from './editorSelection';
+import { editorSelection, selectInEditor, setLevel, selectedLevel } from './editorSelection';
+import { listenKeyDown, key } from '../util/input';
 
 let loaded = false;
 
 export let modulesRegisteredPromise = editorEventDispacher.getEventPromise('modulesRegistered');
 export let loadedPromise = editorEventDispacher.getEventPromise('loaded');
 export let selectedToolName = 'multiTool'; // in top bar
-export function changeSelectedTool(newToolName) {
-	if (selectedToolName !== newToolName) {
-		selectedToolName = newToolName;
-		editorEventDispacher.dispatch('selectedToolChanged', newToolName);
-	}
-}
 
 modulesRegisteredPromise.then(() => {
 	loaded = true;
@@ -61,7 +55,7 @@ configureNetSync({
 });
 
 loadedPromise.then(() => {
-	editor.setLevel(game.getChildren('lvl')[0]);
+	setLevel(game.getChildren('lvl')[0] as Level);
 });
 
 let editorUpdateLimited = limit(200, 'soon', () => {
@@ -74,12 +68,13 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 		let game = change.reference;
 		editor = new Editor(game);
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
 		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
 	}
 	if (editor) {
 		if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
-			if (editor.selectedLevel === change.reference) {
-				editor.setLevel(null);
+			if (selectedLevel === change.reference) {
+				setLevel(null);
 			}
 		}
 		editorUpdateLimited();
@@ -97,34 +92,24 @@ export let editor = null;
 class Editor {
 	layout: Layout;
 	game: Game;
-	selection: { type: string, items: Array<any>, dirty: boolean };
-	selectedLevel: Level;
 
 	constructor(game) {
 		assert(game);
-
 		this.layout = new Layout();
-
 		this.game = game;
-		this.selectedLevel = null;
-
-		this.selection = {
-			type: 'none',
-			items: [],
-			dirty: true
-		};
-
 		mount(document.body, this.layout);
-	}
 
-	setLevel(level) {
-		if (level && level.threeLetterType === 'lvl')
-			this.selectedLevel = level;
-		else
-			this.selectedLevel = null;
-
-		selectInEditor([], this);
-		editorEventDispacher.dispatch('setLevel', this.selectedLevel);
+		listenKeyDown(k => {
+			if (k === key.backspace && editorSelection.items.length > 0) {
+				if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
+					editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
+					let serializables = filterChildren(editorSelection.items);
+					setChangeOrigin(this);
+					serializables.forEach(s => s.delete());
+					editorUpdateLimited();
+				}
+			}
+		});
 	}
 
 	update() {
@@ -147,32 +132,3 @@ globalEventDispatcher.listen('noEditAccess', () => {
 		serverToClientEnabled: false
 	});
 });
-
-let options = null;
-
-function loadOptions() {
-	if (!options) {
-		try {
-			options = JSON.parse(localStorage.openEditPlayOptions);
-		} catch (e) {
-			// default options
-			options = {
-				moduleContainerPacked_bottom: true
-			};
-		}
-	}
-}
-
-export function setOption(id, stringValue) {
-	loadOptions();
-	options[id] = stringValue;
-	try {
-		localStorage.openEditPlayOptions = JSON.stringify(options);
-	} catch (e) {
-	}
-}
-
-export function getOption(id) {
-	loadOptions();
-	return options[id];
-}

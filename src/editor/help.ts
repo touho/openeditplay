@@ -1,20 +1,22 @@
 import { game } from '../core/game'
-import { editor } from './editor'
 import { scene } from '../core/scene'
 import Vector from '../util/vector'
 import { serializables } from '../core/serializableManager'
 import Serializable from '../core/serializable'
 import AnimationView from './views/animation/animationView';
+import { selectedLevel } from './editorSelection';
+import { editorEventDispacher, EditorEvent } from './editorEventDispatcher';
 
 class Help {
+	sceneModule = null;
+	editor: null;
+	editorSelection: null;
+
 	get game() {
 		return game;
 	}
-	get editor() {
-		return editor;
-	}
 	get level() {
-		return editor.selectedLevel;
+		return selectedLevel;
 	}
 	get scene() {
 		return scene;
@@ -58,3 +60,7 @@ class Help {
 let help = new Help;
 export { help };
 window['help'] = help;
+
+editorEventDispacher.listen(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, (name: string, value) => {
+	help[name] = value;
+});

@@ -7,7 +7,6 @@ import Serializable from './serializable';
 import {game} from './game';
 import {limit} from '../util/callLimiter';
 import {stickyNonModalErrorPopup} from "../util/popup";
-'../util/redomEvents';
 import assert from '../util/assert';
 import { getSerializable } from './serializableManager';
 import Property from './property';

@@ -1,10 +1,8 @@
-"./redomEvents";
-
-const UPDATE_INTERVAL = 1000; //ms
-
 import { isClient } from './environment';
 import { editorEventDispacher } from "../editor/editorEventDispatcher";
-import { editorEventDispacher } from "../editor/editorEventDispatcher";
+import { eventDispatcherCallbacks } from '../core/eventDispatcher';
+
+const UPDATE_INTERVAL = 1000; //ms
 
 let performance;
 performance = isClient ? window.performance : { now: Date.now };
@@ -20,6 +18,7 @@ export function eventHappened(name, count = 1) {
 	currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
 	// @endif
 }
+eventDispatcherCallbacks.eventDispatchedCallback = (eventName, count) => eventHappened(`Event ${eventName}`, count);
 
 export function start(name) {
 	// @ifndef OPTIMIZE

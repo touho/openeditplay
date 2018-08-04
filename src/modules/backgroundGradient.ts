@@ -1,4 +1,3 @@
-'../util/redomEvents';
 import PIXI from '../features/graphics';
 import Scene from '../core/scene';
 import { globalEventDispatcher } from '../core/eventDispatcher';

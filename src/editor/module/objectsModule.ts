@@ -5,7 +5,6 @@ import { editor } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { getSerializable } from "../../core/serializableManager";
 import { changeType } from "../../core/change";
-"../../util/redomEvents";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import Game, { game } from "../../core/game";
@@ -14,13 +13,21 @@ import Serializable from "../../core/serializable";
 import assert from '../../util/assert';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { selectInEditor } from '../editorSelection';
+import { selectInEditor, selectedLevel, editorSelection } from '../editorSelection';
+import Entity from '../../core/entity';
 
 class ObjectsModule extends Module {
 	treeView: TreeView;
 	dirty: boolean;
 	treeType: string;
+
+	/**
+	 * Don't send selection changes outside of this module if the selection has been done outside of this module.
+	 */
 	externalChange: boolean;
+
+	tasks: Array<any> = [];
+	taskTimeout = null;
 
 	constructor() {
 		super();
@@ -37,6 +44,7 @@ class ObjectsModule extends Module {
 		this.treeView = new TreeView({
 			id: 'objects-tree',
 			selectionChangedCallback: selectedIds => {
+				if (this.externalChange) return;
 				let serializables = selectedIds.map(getSerializable).filter(Boolean);
 				selectInEditor(serializables, this);
 				Module.activateModule('object', false);
@@ -44,7 +52,7 @@ class ObjectsModule extends Module {
 			moveCallback: (serializableId: string, parentId: string) => {
 				if (serializableId.substring(0, 3) === 'epr') {
 					let serializable = getSerializable(serializableId);
-					let parent = parentId === '#' ? editor.selectedLevel : getSerializable(parentId);
+					let parent = parentId === '#' ? selectedLevel : getSerializable(parentId);
 					serializable.move(parent);
 					/*
 					let target = event.targetElement;
@@ -137,13 +145,13 @@ class ObjectsModule extends Module {
 		this.treeType = null;
 
 		// This will be called when play and reset has already happened. After all the
-		let update = () => {
+		let updateWithDelay = () => {
 			this.dirty = true;
 			setTimeout(() => this.update(), 100);
 		};
 		forEachScene(() => {
-			scene.listen(GameEvent.SCENE_START, update);
-			scene.listen(GameEvent.SCENE_RESET, update);
+			scene.listen(GameEvent.SCENE_START, updateWithDelay);
+			scene.listen(GameEvent.SCENE_RESET, updateWithDelay);
 		});
 
 		// Set dirty so that every single serializable deletion and addition won't separately update the tree.
@@ -153,34 +161,6 @@ class ObjectsModule extends Module {
 		editorEventDispacher.listen('play', setDirty, -1);
 		editorEventDispacher.listen('reset', setDirty, -1);
 		game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
-
-		let tasks = [];
-		let taskTimeout = null;
-
-		let addTask = (task) => {
-			tasks.push(task);
-
-			if (taskTimeout)
-				clearTimeout(taskTimeout);
-
-			if (tasks.length > 1000) {
-				tasks.length = 0;
-				this.dirty = true;
-				return;
-			}
-
-			let delay = scene.playing ? 500 : 50;
-
-			taskTimeout = setTimeout(() => {
-				taskTimeout = null;
-				if (tasks.length < 5) {
-					tasks.forEach(task => task());
-				} else {
-					this.dirty = true;
-				}
-				tasks.length = 0;
-			}, delay);
-		};
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (this.dirty || !this._selected)
@@ -208,72 +188,78 @@ class ObjectsModule extends Module {
 				}
 			} else if (change.type === 'editorSelection') {
 				if (change.origin != this) {
-					if (change.reference.type === this.treeType) {
-						newTask = () => {
-							this.treeView.select(change.reference.items.map(item => item.id));
-						};
-					} else {
-						newTask = () => {
-							this.treeView.select(null);
-						};
-					}
+					this.selectBasedOnEditorSelection();
 				}
 			}
 
 			if (newTask) {
-				addTask(newTask);
+				this.addTask(newTask);
 			}
-			/*
-						if (change.reference.threeLetterType === 'prt') {
-							if (change.type === changeType.addSerializableToTree) {
-								let parent = change.parent;
-								let parentNode;
-								if (parent.threeLetterType === 'gam')
-									parentNode = '#';
-								else
-									parentNode = jstree.get_node(parent.id);
 
-								jstree.create_node(parentNode, {
-									text: change.reference.getChildren('prp')[0].value,
-									id: change.reference.id
-								});
-							} else
-								this.dirty = true; // prototypes added, removed, moved or something
-						} else if (change.type === changeType.setPropertyValue) {
-							let propParent = change.reference._parent;
-							if (propParent && propParent.threeLetterType === 'prt') {
-								let node = jstree.get_node(propParent.id);
-								jstree.rename_node(node, change.value);
-							}
-						} else if (change.type === 'editorSelection') {
-							if (change.origin != this) {
-								if (change.reference.type === 'prt') {
-									let node = jstree.get_node(change.reference.items[0].id);
-									jstree.deselect_all();
-									jstree.select_node(node);
-								} else if (change.reference.type === 'epr') {
-									let jstree = $(this.jstree).jstree(true);
-									let node = jstree.get_node(change.reference.items[0].getParentPrototype().id);
-									jstree.deselect_all();
-									jstree.select_node(node);
-								} else if (change.reference.type === 'ent') {
-									let node = jstree.get_node(change.reference.items[0].prototype.getParentPrototype().id);
-									jstree.deselect_all();
-									jstree.select_node(node);
-								}
-							}
-						}
-			*/
 			this.externalChange = false;
 
 			performance.stop('Editor: Objects');
 		});
 	}
+	/**
+	 * Runs task with delay for optimization. If small amount of tasks is added, they are just added.
+	 * If big number of tasks is added, they are ignored and this module is flagged as dirty.
+	 * @param task function to run in delay
+	 */
+	addTask(task) {
+		this.tasks.push(task);
+
+		if (this.taskTimeout)
+			clearTimeout(this.taskTimeout);
+
+		if (this.tasks.length > 1000) {
+			this.tasks.length = 0;
+			this.dirty = true;
+			return;
+		}
+
+		let delay = scene.playing ? 500 : 50;
+
+		this.taskTimeout = setTimeout(() => {
+			this.taskTimeout = null;
+			if (this.tasks.length < 5) {
+				this.tasks.forEach(task => task());
+			} else {
+				this.dirty = true;
+			}
+			this.tasks.length = 0;
+		}, delay);
+	}
+	selectBasedOnEditorSelection(runInstantly = false) {
+		let task = null;
+
+		if (editorSelection.type === this.treeType) {
+			task = () => {
+				let oldExternalState = this.externalChange;
+				this.externalChange = true;
+				this.treeView.select(editorSelection.items.map((item: Serializable) => item.id));
+				this.externalChange = oldExternalState;
+			};
+		} else {
+			task = () => {
+				let oldExternalState = this.externalChange;
+				this.externalChange = true;
+				this.treeView.select(null);
+				this.externalChange = oldExternalState;
+			};
+		}
+
+		if (runInstantly) {
+			task();
+		} else {
+			this.addTask(task);
+		}
+	}
 	activate() {
 		this.dirty = true;
 	}
 	update() {
-		if (!scene || !editor.selectedLevel)
+		if (!scene || !selectedLevel)
 			return false;
 
 		if (!this._selected)
@@ -293,7 +279,7 @@ class ObjectsModule extends Module {
 
 		let data = [];
 		if (this.treeType === 'epr') {
-			editor.selectedLevel.forEachChild('epr', epr => {
+			selectedLevel.forEachChild('epr', epr => {
 				let parent = epr.getParent();
 				data.push({
 					text: epr.makeUpAName(),
@@ -302,7 +288,7 @@ class ObjectsModule extends Module {
 				});
 			}, true);
 		} else if (this.treeType === 'ent') {
-			scene.forEachChild('ent', ent => {
+			scene.forEachChild('ent', (ent: Entity) => {
 				let parent = ent.getParent();
 				data.push({
 					text: ent.prototype ? ent.prototype.makeUpAName() : 'Object',
@@ -312,6 +298,13 @@ class ObjectsModule extends Module {
 			}, true);
 		}
 		this.treeView.update(data);
+
+		// Sometimes treeView.update takes a bit time. Therefore hacky timeout.
+		setTimeout(() => {
+			this.externalChange = true;
+			this.selectBasedOnEditorSelection();
+			this.externalChange = false;
+		}, 30);
 		this.dirty = false;
 
 		return true;

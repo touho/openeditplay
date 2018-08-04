@@ -1,6 +1,6 @@
 // DOM / ReDom event system
 
-export function dispatch(view, type, data?) {
+export function redomDispatch(view, type, data?) {
 	const el = view === window ? view : view.el || view;
 	const debug = 'Debug info ' + new Error().stack;
 	el.dispatchEvent(new CustomEvent(type, {
@@ -8,7 +8,7 @@ export function dispatch(view, type, data?) {
 		bubbles: true
 	}));
 }
-export function listen(view, type, handler) {
+export function redomListen(view, type, handler) {
 	let el = view === window ? view : view.el || view;
 	el.addEventListener(type, event => {
 		if (event instanceof CustomEvent)

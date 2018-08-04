@@ -1,6 +1,6 @@
 import {el, list, mount} from 'redom';
-"../../util/redomEvents";
 import {DragAndDropMoveEvent, DragAndDropStartEvent, DragAndDropStopEvent} from "../util/dragAndDrop";
+import { editorEventDispacher } from '../editorEventDispatcher';
 
 declare var $: any;
 
@@ -113,7 +113,10 @@ export default class TreeView {
 	update(data) {
 		let jstree = $(this.el).jstree(true);
 		jstree.settings.core.data = data;
-		jstree.refresh(true);
+		jstree.refresh(true, state => {
+			delete state.core.selected;
+			return state;
+		});
 	}
 }
 

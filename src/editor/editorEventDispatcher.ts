@@ -3,6 +3,9 @@ import EventDispatcher, { GameEvent, ListenerFunction } from "../core/eventDispa
 export enum EditorEvent {
     EDITOR_CHANGE = 'editor change',
     EDITOR_REGISTER_MODULES = 'registerModules', // parameters(editor)
+    EDITOR_SCENE_TOOL_CHANGED = 'scene tool changed', // parameters(editor)
+    EDITOR_REGISTER_HELP_VARIABLE = 'define help variable', // parameters(name, value)
+    EDITOR_PRE_DELETE_SELECTION = 'pre delete selection'
 };
 
 // Wrapper that takes only EditorEvents

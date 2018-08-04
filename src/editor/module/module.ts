@@ -1,5 +1,4 @@
 import { el, list, mount } from 'redom';
-'../../util/redomEvents';
 import ModuleContainer from '../layout/moduleContainer';
 import { editorEventDispacher } from '../editorEventDispatcher';
 
@@ -9,8 +8,17 @@ export default class Module {
 	id: string;
 	type: string;
 	name: string;
+
+	/**
+	 * Wether this module is selected in this module container.
+	 */
 	_selected: boolean;
+
+	/**
+	 * Wether this module can be accessed in this module container.
+	 */
 	_enabled: boolean;
+
 	el: HTMLElement;
 	moduleContainer: ModuleContainer;
 

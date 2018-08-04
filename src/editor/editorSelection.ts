@@ -1,16 +1,25 @@
 import Serializable from "../core/serializable";
 import assert from "../util/assert";
 import { editorEventDispacher, EditorEvent } from "./editorEventDispatcher";
+import Level from "../core/level";
 
 type EditorSelection = { type: string, items: Array<any>, dirty: boolean };
 
+
+export let selectedLevel: Level = null;
+export let selectedTool: string = null;
 export let editorSelection: EditorSelection = {
     type: 'none',
     items: [],
     dirty: true
 };
 
-export function selectInEditor(items: Array<Serializable> | Serializable, origin) {
+/**
+ *
+ * @param items These items will be selected in editor.
+ * @param origin
+ */
+export function selectInEditor(items: Array<Serializable> | Serializable, origin: any) {
     if (!items)
         items = [];
     else if (!Array.isArray(items))
@@ -22,7 +31,7 @@ export function selectInEditor(items: Array<Serializable> | Serializable, origin
 
     let types = Array.from(new Set(items.map(i => i.threeLetterType)));
     if (types.length === 0)
-    editorSelection.type = 'none';
+        editorSelection.type = 'none';
     else if (types.length === 1)
         editorSelection.type = types[0];
     else
@@ -35,4 +44,22 @@ export function selectInEditor(items: Array<Serializable> | Serializable, origin
         reference: editorSelection,
         origin
     });
+}
+
+export function setLevel(level: Level) {
+    if (level && level.threeLetterType === 'lvl')
+        selectedLevel = level;
+    else
+        selectedLevel = null;
+
+    selectInEditor([], this);
+    editorEventDispacher.dispatch('setLevel', selectedLevel);
+}
+
+export let sceneToolName = 'multiTool'; // in top bar
+export function setSceneTool(newToolName: string) {
+	if (sceneToolName !== newToolName) {
+		sceneToolName = newToolName;
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newToolName);
+	}
 }

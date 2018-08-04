@@ -1,12 +1,13 @@
 import { el, list, mount } from 'redom';
 import TreeView from "../views/treeView";
 import Module from './module';
-"../../util/redomEvents";
 import {game} from "../../core/game";
 import {getSerializable} from "../../core/serializableManager";
 import {editor} from "../editor";
 import { selectInEditor } from '../editorSelection';
-import { editorEventDispacher } from '../editorEventDispatcher';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import { changeType } from '../../core/change';
+import Prefab from '../../core/prefab';
 
 class PrefabsModule extends Module {
 	treeView: TreeView;
@@ -26,6 +27,24 @@ class PrefabsModule extends Module {
 			},
 		});
 		mount(this.el, this.treeView);
+
+		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
+			if (change.type === changeType.addSerializableToTree) {
+				if (change.reference.threeLetterType === 'pfa') {
+					let serializable = change.reference as Prefab;
+					this.treeView.createNode(serializable.id, serializable.makeUpAName(), '#');
+				}
+			} else if (change.type === changeType.deleteSerializable) {
+				if (change.reference.threeLetterType === 'pfa') {
+					let serializable = change.reference as Prefab;
+					this.treeView.deleteNode(serializable.id);
+				}
+			} else if (change.type === 'editorSelection') {
+				// if (change.origin != this) {
+				// 	this.selectBasedOnEditorSelection();
+				// }
+			}
+		});
 
 		editorEventDispacher.listen('treeView drag start prefabs-tree', event => {
 			let prefabs = event.idList.map(getSerializable);

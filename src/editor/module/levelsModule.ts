@@ -1,12 +1,11 @@
 import { el, list, mount, List, RedomComponent } from 'redom';
 import Module from './module';
 import { game } from '../../core/game';
-import { editor } from '../editor';
 import Level from '../../core/level';
 import { Button } from '../views/popup/Popup';
-import { dispatch, listen } from '../../util/redomEvents';
+import { redomDispatch, redomListen } from '../../util/redomEvents';
 import { setChangeOrigin } from "../../core/change";
-import { selectInEditor } from '../editorSelection';
+import { selectInEditor, setLevel } from '../editorSelection';
 import { editorEventDispacher } from '../editorEventDispatcher';
 
 export function createNewLevel() {
@@ -16,7 +15,7 @@ export function createNewLevel() {
 	let newLevelName;
 	while (true) {
 		newLevelName = 'Level ' + levelNumber;
-		if (!editor.game.findChild('lvl', lvl => lvl.name === newLevelName, false)) {
+		if (!game.findChild('lvl', (lvl: Level) => lvl.name === newLevelName, false)) {
 			break;
 		}
 		levelNumber++;
@@ -25,8 +24,8 @@ export function createNewLevel() {
 	lvl.initWithPropertyValues({
 		name: newLevelName
 	});
-	editor.game.addChild(lvl);
-	editor.setLevel(lvl);
+	game.addChild(lvl);
+	setLevel(lvl);
 
 	return lvl;
 }
@@ -65,8 +64,8 @@ class LevelsModule extends Module {
 			}
 		});
 
-		listen(this.el, 'selectLevel', level => {
-			editor.setLevel(level);
+		redomListen(this.el, 'selectLevel', level => {
+			setLevel(level);
 			selectInEditor(level, this);
 		});
 		/*
@@ -101,7 +100,7 @@ class LevelItem implements RedomComponent {
 	}
 
 	selectClicked() {
-		dispatch(this, 'selectLevel', this.level);
+		redomDispatch(this, 'selectLevel', this.level);
 	}
 
 	/*

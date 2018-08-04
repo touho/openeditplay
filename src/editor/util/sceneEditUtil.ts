@@ -6,11 +6,14 @@ import Vector from '../../util/vector';
 import { centerWidgetRadius } from '../widget/widget'
 import {filterChildren} from "../../core/serializable";
 import {Component} from "../../core/component";
+import { selectedLevel } from '../editorSelection';
+import Entity from '../../core/entity';
+import EntityPrototype from '../../core/entityPrototype';
 
 let radius = 10;
 
 export function shouldSyncLevelAndScene() {
-	return scene && scene.isInInitialState() && editor.selectedLevel;
+	return scene && scene.isInInitialState() && selectedLevel;
 }
 
 function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
@@ -53,10 +56,10 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 	affectedPrototypes.add(prototypeOrEntityPrototype);
 	goThroughChildren(prototypeOrEntityPrototype);
 
-	let entities = scene.level.getChildren('epr').filter(epr => {
+	let entities = scene.level.getChildren('epr').filter((epr: EntityPrototype) => {
 		return affectedPrototypes.has(epr.prototype)
 			&& (!prototypeFilter || prototypeFilter(epr));
-	}).map(epr => epr.previouslyCreatedEntity).filter(ent => ent && ent._alive);
+	}).map((epr: EntityPrototype) => epr.previouslyCreatedEntity).filter(ent => ent && ent._alive);
 	return entities;
 }
 
@@ -81,7 +84,7 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 	if (change.type === changeType.addSerializableToTree) {
 		if (threeLetterType === 'epr') {
 			let epr = ref;
-			if (epr.findParent('lvl') === editor.selectedLevel)
+			if (epr.findParent('lvl') === selectedLevel)
 				epr.createEntity(scene);
 		} else if (threeLetterType === 'cda') {
 			let parent = ref.getParent();
@@ -220,7 +223,7 @@ export function copyEntitiesToScene(entities) {
 				epr.position = entity.position;
 				return epr;
 			});
-			editor.selectedLevel.addChildren(entityPrototypes);
+			selectedLevel.addChildren(entityPrototypes);
 			return entityPrototypes.map(epr => epr.createEntity(scene));
 		} else {
 			let newEntities = entities.map(e => e.clone());
@@ -264,7 +267,7 @@ export function getEntitiesInSelection(start, end) {
 	let minY = Math.min(start.y, end.y);
 	let maxY = Math.max(start.y, end.y);
 
-	scene.forEachChild('ent', ent => {
+	scene.forEachChild('ent', (ent: Entity) => {
 		let p = ent.getComponent('EditorWidget').positionHelper;
 		if (p.x < minX) return;
 		if (p.x > maxX) return;
@@ -343,7 +346,7 @@ export function setEntityPositions(entities, position) {
 	if (entities.length === 0)
 		return;
 
-	let averagePosition = new Vector();
+	let averagePosition = new Vector(0, 0);
 
 	entities.forEach(entity => {
 		averagePosition.add(entity.position);
