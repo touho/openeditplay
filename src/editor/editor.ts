@@ -37,16 +37,10 @@ import { editorEventDispacher, EditorEvent } from './editorEventDispatcher';
 import { editorSelection, selectInEditor, setLevel, selectedLevel } from './editorSelection';
 import { listenKeyDown, key } from '../util/input';
 
-let loaded = false;
-
-export let modulesRegisteredPromise = editorEventDispacher.getEventPromise('modulesRegistered');
-export let loadedPromise = editorEventDispacher.getEventPromise('loaded');
-export let selectedToolName = 'multiTool'; // in top bar
-
-modulesRegisteredPromise.then(() => {
-	loaded = true;
-	editorEventDispacher.dispatch('loaded');
+editorEventDispacher.getEventPromise('modulesRegistered').then(() => {
+	editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
 });
+export let loadedPromise = editorEventDispacher.getEventPromise(EditorEvent.EDITOR_LOADED);
 
 configureNetSync({
 	serverToClientEnabled: true,
@@ -102,11 +96,25 @@ class Editor {
 		listenKeyDown(k => {
 			if (k === key.backspace && editorSelection.items.length > 0) {
 				if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
-					editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
-					let serializables = filterChildren(editorSelection.items);
-					setChangeOrigin(this);
-					serializables.forEach(s => s.delete());
-					editorUpdateLimited();
+					editorEventDispacher.dispatchWithResults(EditorEvent.EDITOR_DELETE_CONFIRMATION).then(results => {
+						console.log('results', results);
+
+						// return;
+						if (results.filter(res => res !== true).length === 0) {
+							// It is ok for everyone to delete
+
+							editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
+
+							let serializables = filterChildren(editorSelection.items);
+							setChangeOrigin(this);
+							serializables.forEach(s => s.delete());
+							editorUpdateLimited();
+						} else {
+							console.log('Not deleting. Results:', results);
+						}
+					}).catch(e => {
+						console.log('Not deleting because:', e);
+					});
 				}
 			}
 		});

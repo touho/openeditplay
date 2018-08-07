@@ -9,7 +9,7 @@ import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import Game, { game } from "../../core/game";
 import Prefab from "../../core/prefab";
-import Serializable from "../../core/serializable";
+import Serializable, { filterChildren } from "../../core/serializable";
 import assert from '../../util/assert';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
@@ -105,6 +105,7 @@ class ObjectsModule extends Module {
 			console.log('event', event)
 			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 				let entityPrototypes = event.idList.map(getSerializable);
+				entityPrototypes = filterChildren(entityPrototypes);
 				entityPrototypes.forEach(epr => {
 					let prefab = Prefab.createFromPrototype(epr);
 					game.addChild(prefab);

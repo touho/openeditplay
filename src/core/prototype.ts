@@ -39,7 +39,7 @@ export default class Prototype extends PropertyOwner {
 		super.addChild(child);
 		return this;
 	}
-	getParentPrototype() : Prototype {
+	getParentPrototype(): Prototype {
 		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent as Prototype : null;
 	}
 
@@ -184,24 +184,84 @@ export default class Prototype extends PropertyOwner {
 			return undefined;
 	}
 
-	countEntityPrototypes(findParents = false) {
-		if (this.threeLetterType !== 'prt')
-			return 0;
+	countEntityPrototypes(findChildren = false) {
+		let entityPrototypeCount = 0;
+		let levelIds = new Set();
 
-		let count = 0;
+		if (this.threeLetterType !== 'prt') {
+			return {
+				entityPrototypeCount,
+				levelIds
+			};
+		}
+
 		let levels = game.getChildren('lvl');
-		for (let i = levels.length-1; i >= 0; i--) {
+		for (let i = levels.length - 1; i >= 0; i--) {
 			let entityPrototypes = levels[i].getChildren('epr') as Array<EntityPrototype>;
-			for (let j = entityPrototypes.length-1; j >= 0; j--) {
-				if (entityPrototypes[j].prototype === this)
-					count++;
+			let foundInThisLevel = false;
+			for (let j = entityPrototypes.length - 1; j >= 0; j--) {
+				if (entityPrototypes[j].prototype === this) {
+					entityPrototypeCount++;
+					foundInThisLevel = true;
+				}
+			}
+			if (foundInThisLevel) {
+				levelIds.add(levels[i].id);
 			}
 		}
 
-		if (findParents)
-			this.forEachChild('prt', (prt: Prototype) => count += prt.countEntityPrototypes(true));
+		if (findChildren)
+			this.forEachChild('prt', (prt: Prototype) => {
+				let results = prt.countEntityPrototypes(true);
+				entityPrototypeCount += results.entityPrototypeCount;
+				results.levelIds.forEach(levelId => levelIds.add(levelId));
+			});
 
-		return count;
+		return {
+			entityPrototypeCount,
+			levelIds
+		};
+	}
+
+	/**
+	 * Only works for Prefabs and Prototypes. Not for EntityPrototypes.
+	 */
+	getEntityPrototypesThatUseThisPrototype() {
+		let entityPrototypes: EntityPrototype[] = [];
+		let levels: Set<Level> = new Set();
+
+		if (this.threeLetterType !== 'prt' && this.threeLetterType !== 'pfa') {
+			return {
+				entityPrototypes,
+				levels
+			};
+		}
+
+		let levelArray = game.getChildren('lvl') as Level[];
+		for (let i = levelArray.length - 1; i >= 0; i--) {
+			let levelEntityPrototypes = levelArray[i].getChildren('epr') as Array<EntityPrototype>;
+			let foundInThisLevel = false;
+			for (let j = levelEntityPrototypes.length - 1; j >= 0; j--) {
+				if (levelEntityPrototypes[j].prototype === this) {
+					entityPrototypes.push(levelEntityPrototypes[j]);
+					foundInThisLevel = true;
+				}
+			}
+			if (foundInThisLevel) {
+				levels.add(levelArray[i]);
+			}
+		}
+
+		this.forEachChild(this.threeLetterType, (prt: Prototype) => {
+			let results = prt.getEntityPrototypesThatUseThisPrototype();
+			entityPrototypes.push(...entityPrototypes);
+			results.levels.forEach((level: Level) => levels.add(level));
+		});
+
+		return {
+			entityPrototypes,
+			levels
+		};
 	}
 
 	delete() {
@@ -210,7 +270,7 @@ export default class Prototype extends PropertyOwner {
 		if (this.threeLetterType === 'prt' && _gameRoot.threeLetterType === 'gam') {
 			_gameRoot.forEachChild('lvl', (lvl: Level) => {
 				let items = lvl.getChildren('epr') as Array<EntityPrototype>;
-				for (let i = items.length-1; i >= 0; i--) {
+				for (let i = items.length - 1; i >= 0; i--) {
 					if (items[i].prototype === this) {
 						lvl.deleteChild(items[i], i);
 					}

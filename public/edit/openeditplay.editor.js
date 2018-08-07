@@ -101,7 +101,6 @@
 	            { return; }
 	        if (eventDispatcherCallbacks.eventDispatchedCallback)
 	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
-	        // performanceTool.eventHappened('Event ' + event, listeners.length);
 	        for (var i = 0; i < listeners.length; i++) {
 	            // @ifndef OPTIMIZE
 	            try {
@@ -114,6 +113,37 @@
 	            }
 	            // @endif
 	        }
+	    };
+	    /**
+	     * This is separate function for optimization.
+	     * Returns promise that has value array, containing all results from listeners.
+	     * Promise can reject.
+	     *
+	     * Handler of this kind of events should return either a value or a Promise.
+	     */
+	    EventDispatcher.prototype.dispatchWithResults = function (event, a, b, c) {
+	        var this$1 = this;
+
+	        var listeners = this._listeners[event];
+	        if (!listeners)
+	            { return Promise.all([]); }
+	        var results = [];
+	        if (eventDispatcherCallbacks.eventDispatchedCallback)
+	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
+	        for (var i = 0; i < listeners.length; i++) {
+	            // @ifndef OPTIMIZE
+	            try {
+	                // @endif
+	                results.push(listeners[i](a, b, c));
+	                // @ifndef OPTIMIZE
+	            }
+	            catch (e) {
+	                console.error("Event " + event + " listener crashed.", this$1._listeners[event][i], e);
+	            }
+	            // @endif
+	        }
+	        var promises = results.map(function (res) { return res instanceof Promise ? res : Promise.resolve(res); });
+	        return Promise.all(promises);
 	    };
 	    EventDispatcher.prototype.delete = function () {
 	        this._listeners = {};
@@ -2238,7 +2268,9 @@
 	    EditorEvent["EDITOR_REGISTER_MODULES"] = "registerModules";
 	    EditorEvent["EDITOR_SCENE_TOOL_CHANGED"] = "scene tool changed";
 	    EditorEvent["EDITOR_REGISTER_HELP_VARIABLE"] = "define help variable";
+	    EditorEvent["EDITOR_DELETE_CONFIRMATION"] = "delete confirmation";
 	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
+	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2248,10 +2280,13 @@
 	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
 	    EditorEventDispatcher.prototype.listen = function (event, callback, priority) {
 	        if (priority === void 0) { priority = 0; }
-	        this.dispatcher.listen(event, callback, priority);
+	        return this.dispatcher.listen(event, callback, priority);
 	    };
 	    EditorEventDispatcher.prototype.dispatch = function (event, a, b, c) {
 	        this.dispatcher.dispatch(event, a, b, c);
+	    };
+	    EditorEventDispatcher.prototype.dispatchWithResults = function (event, a, b, c) {
+	        return this.dispatcher.dispatchWithResults(event, a, b, c);
 	    };
 	    EditorEventDispatcher.prototype.getEventPromise = function (event) {
 	        return new Promise(function (res) {
@@ -3318,24 +3353,80 @@
 	        else
 	            { return undefined; }
 	    };
-	    Prototype.prototype.countEntityPrototypes = function (findParents) {
+	    Prototype.prototype.countEntityPrototypes = function (findChildren) {
 	        var this$1 = this;
 
-	        if (findParents === void 0) { findParents = false; }
-	        if (this.threeLetterType !== 'prt')
-	            { return 0; }
-	        var count = 0;
+	        if (findChildren === void 0) { findChildren = false; }
+	        var entityPrototypeCount = 0;
+	        var levelIds = new Set();
+	        if (this.threeLetterType !== 'prt') {
+	            return {
+	                entityPrototypeCount: entityPrototypeCount,
+	                levelIds: levelIds
+	            };
+	        }
 	        var levels = game.getChildren('lvl');
 	        for (var i = levels.length - 1; i >= 0; i--) {
 	            var entityPrototypes = levels[i].getChildren('epr');
+	            var foundInThisLevel = false;
 	            for (var j = entityPrototypes.length - 1; j >= 0; j--) {
-	                if (entityPrototypes[j].prototype === this$1)
-	                    { count++; }
+	                if (entityPrototypes[j].prototype === this$1) {
+	                    entityPrototypeCount++;
+	                    foundInThisLevel = true;
+	                }
+	            }
+	            if (foundInThisLevel) {
+	                levelIds.add(levels[i].id);
 	            }
 	        }
-	        if (findParents)
-	            { this.forEachChild('prt', function (prt) { return count += prt.countEntityPrototypes(true); }); }
-	        return count;
+	        if (findChildren)
+	            { this.forEachChild('prt', function (prt) {
+	                var results = prt.countEntityPrototypes(true);
+	                entityPrototypeCount += results.entityPrototypeCount;
+	                results.levelIds.forEach(function (levelId) { return levelIds.add(levelId); });
+	            }); }
+	        return {
+	            entityPrototypeCount: entityPrototypeCount,
+	            levelIds: levelIds
+	        };
+	    };
+	    /**
+	     * Only works for Prefabs and Prototypes. Not for EntityPrototypes.
+	     */
+	    Prototype.prototype.getEntityPrototypesThatUseThisPrototype = function () {
+	        var this$1 = this;
+
+	        var entityPrototypes = [];
+	        var levels = new Set();
+	        if (this.threeLetterType !== 'prt' && this.threeLetterType !== 'pfa') {
+	            return {
+	                entityPrototypes: entityPrototypes,
+	                levels: levels
+	            };
+	        }
+	        var levelArray = game.getChildren('lvl');
+	        for (var i = levelArray.length - 1; i >= 0; i--) {
+	            var levelEntityPrototypes = levelArray[i].getChildren('epr');
+	            var foundInThisLevel = false;
+	            for (var j = levelEntityPrototypes.length - 1; j >= 0; j--) {
+	                if (levelEntityPrototypes[j].prototype === this$1) {
+	                    entityPrototypes.push(levelEntityPrototypes[j]);
+	                    foundInThisLevel = true;
+	                }
+	            }
+	            if (foundInThisLevel) {
+	                levels.add(levelArray[i]);
+	            }
+	        }
+	        this.forEachChild(this.threeLetterType, function (prt) {
+	            var results = prt.getEntityPrototypesThatUseThisPrototype();
+	            entityPrototypes.push.apply(entityPrototypes, entityPrototypes);
+	            results.levels.forEach(function (level) { return levels.add(level); });
+	        });
+	        return {
+	            entityPrototypes: entityPrototypes,
+	            levels: levels
+	        };
 	    };
 	    Prototype.prototype.delete = function () {
 	        var _this = this;
@@ -3538,6 +3629,25 @@
 	        }
 	        this.createEntity(scene);
 	    };
+	    EntityPrototype.prototype.detachFromPrototype = function () {
+	        this.name = this.makeUpAName();
+	        var inheritedComponentDatas = this.getInheritedComponentDatas(function (cda) {
+	            return cda.name !== 'Transform';
+	        });
+	        var children = inheritedComponentDatas.map(function (icd) {
+	            return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
+	        });
+	        var componentDatas = this.getChildren('cda');
+	        componentDatas.forEach(function (cda) {
+	            if (cda.name !== 'Transform')
+	                { cda.delete(); }
+	        });
+	        debugger;
+	        // TODO: For some reason all non-Transform components have not been removed yet...
+	        this.addChildren(children);
+	        this.prototype = null;
+	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
 	        if (this._rootType === rootType)
@@ -3545,25 +3655,22 @@
 	        assert$1(this.getTransform(), 'EntityPrototype must have a Transform');
 	        _super.prototype.setRootType.call(this, rootType);
 	    };
-	    // If Transform or Transform.position is missing, they are added.
+	    /**
+	     * If Transform or Transform.position is missing, they are added.
+	     * prototype can also be Prefab which extends Prototype.
+	     */
 	    EntityPrototype.createFromPrototype = function (prototype) {
+	        if (prototype.threeLetterType === 'pfa') {
+	            return prototype.createEntityPrototype();
+	        }
 	        var entityPrototype = new EntityPrototype();
 	        entityPrototype.prototype = prototype;
 	        var id = entityPrototype.id;
 	        var prototypeTransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
-	        var fromPrefab = prototype.threeLetterType === 'pfa';
-	        if (!fromPrefab && prototypeTransform)
+	        if (prototypeTransform)
 	            { assert$1(false, 'Prototype (prt) can not have a Transform component'); }
-	        if (fromPrefab && !prototypeTransform)
-	            { assert$1(false, 'Prefab (pfa) must have a Transform component'); }
 	        var name = createEntityPrototypeNameProperty(id);
 	        var transform = createEntityPrototypeTransform(id);
-	        if (fromPrefab && prototypeTransform) {
-	            // No point to copy the position
-	            // transform.setValue('position', prototypeTransform.getValue('position'));
-	            transform.setValue('scale', prototypeTransform.getValue('scale'));
-	            transform.setValue('angle', prototypeTransform.getValue('angle'));
-	        }
 	        entityPrototype.initWithChildren([name, transform]);
 	        // @ifndef OPTIMIZE
 	        assert$1(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
@@ -3664,7 +3771,7 @@
 	        return nameProperty && nameProperty.value || 'Prefab';
 	    };
 	    Prefab.prototype.createEntity = function () {
-	        return EntityPrototype.createFromPrototype(this).createEntity();
+	        return this.createEntityPrototype().createEntity();
 	    };
 	    Prefab.prototype.getParentPrototype = function () {
 	        return null;
@@ -3677,10 +3784,47 @@
 	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
 	        });
 	        children.push(prototype._properties.name.clone());
+	        prototype.forEachChild('epr', function (childEntityPrototype) {
+	            var prefab = Prefab.createFromPrototype(childEntityPrototype);
+	            children.push(prefab);
+	        });
 	        var prefab = new Prefab().initWithChildren(children);
 	        // Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
 	        prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
 	        return prefab;
+	    };
+	    Prefab.prototype.createEntityPrototype = function () {
+	        var entityPrototype = new EntityPrototype();
+	        entityPrototype.prototype = this;
+	        var id = entityPrototype.id;
+	        var prototypeTransform = this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
+	        if (!prototypeTransform)
+	            { assert$1(false, 'Prefab (pfa) must have a Transform component'); }
+	        var name = createEntityPrototypeNameProperty(id);
+	        var transform = createEntityPrototypeTransform(id);
+	        transform.setValue('position', prototypeTransform.getValue('position'));
+	        transform.setValue('scale', prototypeTransform.getValue('scale'));
+	        transform.setValue('angle', prototypeTransform.getValue('angle'));
+	        var children = [name, transform];
+	        this.forEachChild('pfa', function (pfa) {
+	            var childEntityPrototype = pfa.createEntityPrototype();
+	            children.push(childEntityPrototype);
+	        });
+	        entityPrototype.initWithChildren(children);
+	        /*
+	                let inheritedComponentDatas = this.getInheritedComponentDatas();
+	                let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
+	                    return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+	                        .initWithChildren(icd.properties.map(prp => prp.clone()));
+	                }) as any as Array<Serializable>;
+	                children.push(this._properties.name.clone());
+
+	                entityPrototype.initWithChildren(children);
+	                */
+	        // @ifndef OPTIMIZE
+	        assert$1(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+	        // @endif
+	        return entityPrototype;
 	    };
 	    return Prefab;
 	}(Prototype));
@@ -4363,7 +4507,7 @@
 	// Export so that other components can have this component as parent
 	Component.register({
 	    name: 'Lifetime',
-	    description: 'Set the object to be destroyed after a time period',
+	    description: 'Set the object to be destroyed after a time period.',
 	    category: 'Logic',
 	    icon: 'fa-bars',
 	    requirements: ['Transform'],
@@ -5566,6 +5710,9 @@
 	        editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newToolName);
 	    }
 	}
+	editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, function () {
+	    editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editorSelection', editorSelection);
+	});
 	//# sourceMappingURL=editorSelection.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
@@ -6875,7 +7022,6 @@
 	            }
 	            if (scene && scene.resetting)
 	                { return stop('Editor: Scene'); }
-	            console.log('here sceneEdit.3', change.origin);
 	            // console.log('sceneModule change', change);
 	            if (change.origin !== _this) {
 	                setChangeOrigin(_this);
@@ -6988,7 +7134,7 @@
 	        });
 	        editorEventDispacher.listen('dragPrototypeStarted', function (prototypes) {
 	            var entityPrototypes = prototypes.map(function (prototype) {
-	                var entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+	                var entityPrototype = EntityPrototype.createFromPrototype(prototype);
 	                // entityPrototype.position = this.previousMousePosInWorldCoordinates;
 	                return entityPrototype;
 	            });
@@ -7354,6 +7500,176 @@
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
 	//# sourceMappingURL=sceneModule.js.map
 
+	var popupDepth = 0;
+	var Popup = /** @class */ (function () {
+	    function Popup(_a) {
+	        var _b = _a === void 0 ? {} : _a, _c = _b.title, title = _c === void 0 ? 'Undefined popup' : _c, _d = _b.cancelCallback, cancelCallback = _d === void 0 ? null : _d, _e = _b.width, width = _e === void 0 ? null : _e, _f = _b.content, content = _f === void 0 ? el('div.genericCustomContent', 'Undefined content') : _f;
+	        var _this = this;
+	        this.el = el('div.popup', {
+	            style: {
+	                'z-index': 1000 + popupDepth++
+	            }
+	        }, new Layer(this), el('div.popupContent', {
+	            style: {
+	                width: width
+	            }
+	        }, this.text = el('div.popupTitle'), this.content = content));
+	        this.depth = popupDepth;
+	        this.text.innerHTML = title;
+	        this.cancelCallback = cancelCallback;
+	        this.keyListener = listenKeyDown(function (keyChar) {
+	            if (keyChar === key.esc && _this.depth === popupDepth) {
+	                _this.remove();
+	                _this.cancelCallback && _this.cancelCallback();
+	            }
+	        });
+	        mount(document.body, this.el);
+	    }
+	    Popup.prototype.remove = function () {
+	        popupDepth--;
+	        this.el.parentNode.removeChild(this.el);
+	        this.keyListener();
+	        this.keyListener = null;
+	    };
+	    return Popup;
+	}());
+	var Button = /** @class */ (function () {
+	    function Button() {
+	        var _this = this;
+	        this.el = el('button.button', {
+	            onclick: function () {
+	                _this.callback();
+	            }
+	        });
+	    }
+	    Button.prototype.update = function (button) {
+	        var newClassName = button.class ? "button " + button.class : 'button';
+	        if (this.el.textContent === button.text
+	            && this._prevIcon === button.icon
+	            && this.el.className === newClassName
+	            && (!button.color || this.el.style['border-color'] === button.color)) {
+	            return; // optimization
+	        }
+	        this.el.textContent = button.text;
+	        this._prevIcon = button.icon;
+	        if (button.icon) {
+	            var icon = el('i.fa.' + button.icon);
+	            if (button.color)
+	                { icon.style.color = button.color; }
+	            mount(this.el, icon, this.el.firstChild);
+	        }
+	        this.el.className = newClassName;
+	        this.callback = button.callback;
+	        if (button.color) {
+	            this.el.style['border-color'] = button.color;
+	            this.el.style['color'] = button.color;
+	            // this.el.style['background'] = button.color;
+	        }
+	    };
+	    return Button;
+	}());
+	var ButtonWithDescription = /** @class */ (function () {
+	    function ButtonWithDescription() {
+	        this.el = el('div.buttonWithDescription', this.button = new Button(), this.description = el('span.description'));
+	    }
+	    ButtonWithDescription.prototype.update = function (buttonData) {
+	        this.description.innerHTML = buttonData.description;
+	        if (buttonData.disabledReason) {
+	            this.button.el.setAttribute('disabled', 'disabled');
+	        }
+	        else {
+	            this.button.el.removeAttribute('disabled');
+	        }
+	        this.button.el.setAttribute('title', buttonData.disabledReason || '');
+	        this.button.update(buttonData);
+	    };
+	    return ButtonWithDescription;
+	}());
+	var Layer = /** @class */ (function () {
+	    function Layer(popup) {
+	        this.el = el('div.popupLayer', {
+	            onclick: function () {
+	                popup.remove();
+	                popup.cancelCallback && popup.cancelCallback();
+	            }
+	        });
+	    }
+	    return Layer;
+	}());
+	//# sourceMappingURL=Popup.js.map
+
+	/**
+	 * Handles everything else than prototype deletion itself.
+	 * Asks if user wants to delete entityPrototypes that are using these prototypes or bake data to entityPrototypes.
+	 */
+	var PrototypeDeleteConfirmation = /** @class */ (function (_super) {
+	    __extends(PrototypeDeleteConfirmation, _super);
+	    function PrototypeDeleteConfirmation(prototypes, callback) {
+	        var _this = this;
+	        prototypes = filterChildren(prototypes);
+	        var entityPrototypes = [];
+	        var levels = new Set();
+	        prototypes.forEach(function (prototype) {
+	            var results = prototype.getEntityPrototypesThatUseThisPrototype();
+	            entityPrototypes.push.apply(entityPrototypes, results.entityPrototypes);
+	            results.levels.forEach(function (lvl) { return levels.add(lvl); });
+	        });
+	        var isPfa = prototypes[0].threeLetterType === 'pfa';
+	        var onlyOne = prototypes.length === 1;
+	        var nameText = onlyOne ? (isPfa ? 'Prefab' : 'Type') + " <b>" + prototypes[0].name + "</b>" : "These " + prototypes.length + " " + (isPfa ? 'prefabs' : 'types');
+	        var isText = onlyOne ? 'is' : 'are';
+	        var levelText = levels.size === 1 ? '1 level' : levels.size + " levels";
+	        var confirmMessage = nameText + " " + isText + " used in " + levelText + " by " + entityPrototypes.length + " objects.";
+	        var listView;
+	        _this = _super.call(this, {
+	            title: confirmMessage,
+	            width: 500,
+	            content: el('div', 
+	            // el('div.genericCustomContent', textContent),
+	            listView = list('div.confirmationButtons', ButtonWithDescription)),
+	            cancelCallback: function () {
+	                callback(false);
+	            }
+	        }) || this;
+	        if (entityPrototypes.length === 0) {
+	            callback(true);
+	            _this.remove();
+	        }
+	        var buttonOptions = [{
+	                text: entityPrototypes.length === 1 ? 'Delete 1 object' : "Delete " + entityPrototypes.length + " objects",
+	                callback: function () {
+	                    setChangeOrigin(_this);
+	                    entityPrototypes.forEach(function (epr) { return epr.delete(); });
+	                    _this.remove();
+	                    callback(true);
+	                },
+	                class: 'dangerButton',
+	                description: "Get rid of everything related to " + (nameText[0].toLowerCase() + nameText.substring(1)) + "."
+	            }, {
+	                text: entityPrototypes.length === 1 ? 'Keep object' : 'Keep objects',
+	                callback: function () {
+	                    setChangeOrigin(_this);
+	                    entityPrototypes.forEach(function (epr) { return epr.detachFromPrototype(); });
+	                    _this.remove();
+	                    callback(true);
+	                },
+	                class: 'greenButton',
+	                description: "All data of " + (isPfa ? (onlyOne ? 'this prefab' : 'these prefabs') : (onlyOne ? 'this type' : 'these types')) + " is bundled within the objects."
+	            }, {
+	                text: 'Cancel',
+	                callback: function () {
+	                    _this.remove();
+	                    _this.cancelCallback(false);
+	                },
+	                description: "Don't delete anything."
+	            }];
+	        listView.update(buttonOptions);
+	        return _this;
+	    }
+	    return PrototypeDeleteConfirmation;
+	}(Popup));
+	//# sourceMappingURL=PrototypeDeleteConfirmation.js.map
+
 	var TypesModule = /** @class */ (function (_super) {
 	    __extends(TypesModule, _super);
 	    function TypesModule() {
@@ -7435,6 +7751,23 @@
 	            }
 	            _this.externalChange = false;
 	            stop('Editor: Types');
+	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_DELETE_CONFIRMATION, function () {
+	            if (editorSelection.type === 'prt') {
+	                return new Promise(function (resolve, reject) {
+	                    new PrototypeDeleteConfirmation(editorSelection.items, function (canDelete) {
+	                        if (canDelete) {
+	                            resolve(true);
+	                        }
+	                        else {
+	                            reject('User cancelled');
+	                        }
+	                    });
+	                });
+	            }
+	            else {
+	                return true;
+	            }
 	        });
 	        return _this;
 	    }
@@ -7770,6 +8103,23 @@
 	            }
 	            else if (change.type === 'editorSelection') ;
 	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_DELETE_CONFIRMATION, function () {
+	            if (editorSelection.type === 'pfa') {
+	                return new Promise(function (resolve, reject) {
+	                    new PrototypeDeleteConfirmation(editorSelection.items, function (canDelete) {
+	                        if (canDelete) {
+	                            resolve(true);
+	                        }
+	                        else {
+	                            reject('User cancelled');
+	                        }
+	                    });
+	                });
+	            }
+	            else {
+	                return true;
+	            }
+	        });
 	        editorEventDispacher.listen('treeView drag start prefabs-tree', function (event) {
 	            var prefabs = event.idList.map(getSerializable);
 	            editorEventDispacher.dispatch('dragPrefabsStarted', prefabs);
@@ -7811,86 +8161,6 @@
 	}(Module));
 	Module.register(PrefabsModule, 'left');
 	//# sourceMappingURL=prefabsModule.js.map
-
-	var popupDepth = 0;
-	var Popup = /** @class */ (function () {
-	    function Popup(_a) {
-	        var _b = _a === void 0 ? {} : _a, _c = _b.title, title = _c === void 0 ? 'Undefined popup' : _c, _d = _b.cancelCallback, cancelCallback = _d === void 0 ? null : _d, _e = _b.width, width = _e === void 0 ? null : _e, _f = _b.content, content = _f === void 0 ? el('div.genericCustomContent', 'Undefined content') : _f;
-	        var _this = this;
-	        this.el = el('div.popup', {
-	            style: {
-	                'z-index': 1000 + popupDepth++
-	            }
-	        }, new Layer(this), el('div.popupContent', {
-	            style: {
-	                width: width
-	            }
-	        }, this.text = el('div.popupTitle'), this.content = content));
-	        this.depth = popupDepth;
-	        this.text.innerHTML = title;
-	        this.cancelCallback = cancelCallback;
-	        this.keyListener = listenKeyDown(function (keyChar) {
-	            if (keyChar === key.esc && _this.depth === popupDepth) {
-	                _this.remove();
-	            }
-	        });
-	        mount(document.body, this.el);
-	    }
-	    Popup.prototype.remove = function () {
-	        popupDepth--;
-	        this.el.parentNode.removeChild(this.el);
-	        this.keyListener();
-	        this.keyListener = null;
-	    };
-	    return Popup;
-	}());
-	var Button = /** @class */ (function () {
-	    function Button() {
-	        var _this = this;
-	        this.el = el('button.button', {
-	            onclick: function () {
-	                _this.callback();
-	            }
-	        });
-	    }
-	    Button.prototype.update = function (button) {
-	        var newClassName = button.class ? "button " + button.class : 'button';
-	        if (this.el.textContent === button.text
-	            && this._prevIcon === button.icon
-	            && this.el.className === newClassName
-	            && (!button.color || this.el.style['border-color'] === button.color)) {
-	            return; // optimize
-	        }
-	        this.el.textContent = button.text;
-	        this._prevIcon = button.icon;
-	        if (button.icon) {
-	            var icon = el('i.fa.' + button.icon);
-	            if (button.color)
-	                { icon.style.color = button.color; }
-	            mount(this.el, icon, this.el.firstChild);
-	        }
-	        this.el.className = newClassName;
-	        this.callback = button.callback;
-	        if (button.color) {
-	            this.el.style['border-color'] = button.color;
-	            this.el.style['color'] = button.color;
-	            // this.el.style['background'] = button.color;
-	        }
-	    };
-	    return Button;
-	}());
-	var Layer = /** @class */ (function () {
-	    function Layer(popup) {
-	        this.el = el('div.popupLayer', {
-	            onclick: function () {
-	                popup.remove();
-	                popup.cancelCallback && popup.cancelCallback();
-	            }
-	        });
-	    }
-	    return Layer;
-	}());
-	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7999,6 +8269,7 @@
 	            console.log('event', event);
 	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 	                var entityPrototypes = event.idList.map(getSerializable);
+	                entityPrototypes = filterChildren(entityPrototypes);
 	                entityPrototypes.forEach(function (epr) {
 	                    var prefab = Prefab.createFromPrototype(epr);
 	                    game.addChild(prefab);
@@ -8510,23 +8781,6 @@
 	    };
 	    return Category;
 	}());
-	var ButtonWithDescription = /** @class */ (function () {
-	    function ButtonWithDescription() {
-	        this.el = el('div.buttonWithDescription', this.button = new Button(), this.description = el('span.description'));
-	    }
-	    ButtonWithDescription.prototype.update = function (buttonData) {
-	        this.description.innerHTML = buttonData.description;
-	        if (buttonData.disabledReason) {
-	            this.button.el.setAttribute('disabled', 'disabled');
-	        }
-	        else {
-	            this.button.el.removeAttribute('disabled');
-	        }
-	        this.button.el.setAttribute('title', buttonData.disabledReason || '');
-	        this.button.update(buttonData);
-	    };
-	    return ButtonWithDescription;
-	}());
 	function getMissingRequirements(parent, requirements) {
 	    function isMissing(componentName) {
 	        var componentData = parent.findChild('cda', function (componentData) { return componentData.name === componentName; });
@@ -8784,7 +9038,7 @@
 	                redomDispatch(_this, 'propertyEditorSelect', clone);
 	            }
 	        }));
-	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', {
+	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type (OLD!!!)', {
 	            onclick: function () {
 	                redomDispatch(_this, 'makingChanges');
 	                var entityPrototypeCount = _this.item.countEntityPrototypes(true);
@@ -9511,6 +9765,13 @@
 	        enumerable: true,
 	        configurable: true
 	    });
+	    Object.defineProperty(Help.prototype, "selection", {
+	        get: function () {
+	            return this.editorSelection;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
 	    Object.defineProperty(Help.prototype, "serializablesArray", {
 	        get: function () {
 	            return Object.keys(serializables).map(function (k) { return serializables[k]; });
@@ -9589,11 +9850,10 @@
 	}(Popup));
 	//# sourceMappingURL=OKPopup.js.map
 
-	var modulesRegisteredPromise = editorEventDispacher.getEventPromise('modulesRegistered');
-	var loadedPromise = editorEventDispacher.getEventPromise('loaded');
-	modulesRegisteredPromise.then(function () {
-	    editorEventDispacher.dispatch('loaded');
+	editorEventDispacher.getEventPromise('modulesRegistered').then(function () {
+	    editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
 	});
+	var loadedPromise = editorEventDispacher.getEventPromise(EditorEvent.EDITOR_LOADED);
 	configureNetSync({
 	    serverToClientEnabled: true,
 	    clientToServerEnabled: true,
@@ -9639,11 +9899,23 @@
 	        listenKeyDown(function (k) {
 	            if (k === key.backspace && editorSelection.items.length > 0) {
 	                if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
-	                    editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
-	                    var serializables_1 = filterChildren(editorSelection.items);
-	                    setChangeOrigin(_this);
-	                    serializables_1.forEach(function (s$$1) { return s$$1.delete(); });
-	                    editorUpdateLimited();
+	                    editorEventDispacher.dispatchWithResults(EditorEvent.EDITOR_DELETE_CONFIRMATION).then(function (results) {
+	                        console.log('results', results);
+	                        // return;
+	                        if (results.filter(function (res) { return res !== true; }).length === 0) {
+	                            // It is ok for everyone to delete
+	                            editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
+	                            var serializables_1 = filterChildren(editorSelection.items);
+	                            setChangeOrigin(_this);
+	                            serializables_1.forEach(function (s$$1) { return s$$1.delete(); });
+	                            editorUpdateLimited();
+	                        }
+	                        else {
+	                            console.log('Not deleting. Results:', results);
+	                        }
+	                    }).catch(function (e) {
+	                        console.log('Not deleting because:', e);
+	                    });
 	                }
 	            }
 	        });

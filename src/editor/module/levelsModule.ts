@@ -1,4 +1,4 @@
-import { el, list, mount, List, RedomComponent } from 'redom';
+import { el, list, mount, List, RedomElement } from 'redom';
 import Module from './module';
 import { game } from '../../core/game';
 import Level from '../../core/level';
@@ -85,7 +85,7 @@ class LevelsModule extends Module {
 
 Module.register(LevelsModule, 'left');
 
-class LevelItem implements RedomComponent {
+class LevelItem implements RedomElement {
 	el: HTMLElement;
 	number: HTMLElement;
 	selectButton: Button;

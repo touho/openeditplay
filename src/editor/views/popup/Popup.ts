@@ -1,4 +1,4 @@
-import { el, mount, list, RedomComponent, RedomElement } from 'redom';
+import { el, mount, list, RedomElement } from 'redom';
 import { listenKeyDown, key } from '../../../util/input';
 
 export let popupDepth = 0;
@@ -7,7 +7,7 @@ type PopupParameters = {
 	title?: string,
 	cancelCallback?: Function,
 	width?: number,
-	content?: RedomComponent
+	content?: RedomElement
 };
 
 export default class Popup {
@@ -15,6 +15,12 @@ export default class Popup {
 	text: HTMLElement;
 	content: RedomElement;
 	depth: number;
+	keyListener: any;
+
+	/**
+	 * Callback to call when user click outside of this popup or if user presses esc and thus removing the popup.
+	 */
+	cancelCallback: Function;
 
 	constructor({
 		title = 'Undefined popup',
@@ -22,11 +28,12 @@ export default class Popup {
 		width = null,
 		content = el('div.genericCustomContent', 'Undefined content')
 	}: PopupParameters = {}) {
-		this.el = el('div.popup', {
-			style: {
-				'z-index': 1000 + popupDepth++
-			}
-		},
+		this.el = el('div.popup',
+			{
+				style: {
+					'z-index': 1000 + popupDepth++
+				}
+			},
 			new Layer(this),
 			el('div.popupContent',
 				{
@@ -46,6 +53,7 @@ export default class Popup {
 		this.keyListener = listenKeyDown(keyChar => {
 			if (keyChar === key.esc && this.depth === popupDepth) {
 				this.remove();
+				this.cancelCallback && this.cancelCallback();
 			}
 		});
 
@@ -59,6 +67,14 @@ export default class Popup {
 	}
 }
 
+export type ButtonOptions = {
+	class?: string,
+	color?: string,
+	text: string,
+	icon?: string,
+	callback: () => void
+};
+
 export class Button {
 	el: HTMLElement;
 	callback: () => void;
@@ -71,7 +87,7 @@ export class Button {
 			}
 		});
 	}
-	update(button) {
+	update(button: ButtonOptions) {
 		let newClassName = button.class ? `button ${button.class}` : 'button';
 
 		if (
@@ -80,7 +96,7 @@ export class Button {
 			&& this.el.className === newClassName
 			&& (!button.color || this.el.style['border-color'] === button.color)
 		) {
-			return; // optimize
+			return; // optimization
 		}
 
 		this.el.textContent = button.text;
@@ -99,6 +115,35 @@ export class Button {
 			this.el.style['color'] = button.color;
 			// this.el.style['background'] = button.color;
 		}
+	}
+}
+
+export type ButtonWithDescriptionOptions = ButtonOptions & {
+	description?: string,
+	disabledReason?: string
+}
+
+export class ButtonWithDescription {
+	el: HTMLElement;
+	button: Button;
+	description: HTMLElement;
+
+	constructor() {
+		this.el = el('div.buttonWithDescription',
+			this.button = new Button(),
+			this.description = el('span.description')
+		);
+	}
+
+	update(buttonData: ButtonWithDescriptionOptions) {
+		this.description.innerHTML = buttonData.description;
+		if (buttonData.disabledReason) {
+			this.button.el.setAttribute('disabled', 'disabled');
+		} else {
+			this.button.el.removeAttribute('disabled');
+		}
+		this.button.el.setAttribute('title', buttonData.disabledReason || '');
+		this.button.update(buttonData);
 	}
 }
 

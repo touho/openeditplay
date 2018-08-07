@@ -15,15 +15,11 @@ class ServerSerializable {
 		this.type = this.id.substring(0, 3);
 		this.name = json.n || null;
 
-		if (this.type === 'epr') {
-			console.log('jsonnnn', json);
-		}
-
 		// console.log('reger', this.name);
 		if (this.id[this.id.length - 2] === '_') {
 			console.log('SS', this.id, json);
 		}
-		
+
 		let propertyStoreValue = getPropertiesStoreValueString(json);
 		if (this.type === 'prp') {
 			if (propertyStoreValue || json.v === undefined) {
@@ -34,10 +30,10 @@ class ServerSerializable {
 			if (json.v !== undefined)
 				throw new Error('Cannot have v on ' + this.id);
 		}
-		
+
 		// string value
 		this.value = json.v !== undefined ? JSON.stringify(json.v) : (propertyStoreValue || null);
-		
+
 		this.children = [];
 		if (json.c) {
 			// children
@@ -57,7 +53,7 @@ class ServerSerializable {
 	static buildTree(serializablesFromDb) {
 		let game = null;
 		let map = {}; // parentId => list of serializables
-		
+
 		serializablesFromDb.forEach(s => {
 			// Create JSON form
 			let serializable = {

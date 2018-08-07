@@ -21,6 +21,7 @@ import { GameEvent } from '../../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../../editorEventDispatcher';
 import { selectInEditor } from '../../editorSelection';
 import { setOption, getOption } from '../../util/options';
+import Prototype from '../../../core/prototype';
 
 /*
 Reference: Unbounce
@@ -225,10 +226,10 @@ class Container {
 				redomDispatch(this, 'propertyEditorSelect', clone);
 			}
 		}));
-		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type', {
+		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type (OLD!!!)', {
 			onclick: () => {
 				redomDispatch(this, 'makingChanges');
-				let entityPrototypeCount = this.item.countEntityPrototypes(true);
+				let entityPrototypeCount = (this.item as Prototype).countEntityPrototypes(true);
 				if (entityPrototypeCount) {
 					if (confirm(`Type ${this.item.name} is used in levels ${entityPrototypeCount} times. Are you sure you want to delete this type and all ${entityPrototypeCount} objects that are using it?`))
 						this.item.delete();

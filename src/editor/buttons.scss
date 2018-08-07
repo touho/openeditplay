@@ -45,13 +45,24 @@ button.button:active {
 
 button.button.dangerButton {
   //color: #ffbcc1;
+  background: #5f3a3a;
   background: linear-gradient(to bottom, #714646, #523232);
-  //background: #5f3a3a;
 }
 button.button.dangerButton:hover {
   color: #ffb6bf;
   text-shadow: 0 0 2px red;
 }
+
+button.button.greenButton {
+  //color: #ffbcc1;
+  background: #3a5f3f;
+  background: linear-gradient(to bottom, #47714c, #325237);
+}
+button.button.greenButton:hover {
+  color: #b8ffc1;
+  text-shadow: 0 0 2px #00ff22;
+}
+
 button.button i.fa {
   position: relative;
   left: -3px;

@@ -1,6 +1,5 @@
 import { el, list, mount } from 'redom';
 import Module from './module';
-import { modulesRegisteredPromise } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
 import { GameEvent } from '../../core/eventDispatcher';

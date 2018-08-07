@@ -53,3 +53,12 @@ div.popup div.popupButtons {
 div.popup div.buttonContainer {
   display: flex;
 }
+
+.buttonWithDescription {
+  float: left;
+  clear: both;
+}
+
+.buttonWithDescription .description {
+  margin-left: 5px;
+}

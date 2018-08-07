@@ -1,7 +1,7 @@
-import { el, list, mount, RedomComponent } from 'redom';
+import { el, list, mount, RedomElement } from 'redom';
 import ModuleContainer from './moduleContainer';
 
-export default class Layout implements RedomComponent {
+export default class Layout implements RedomElement {
 	el: HTMLElement;
 	moduleContainers: Array<ModuleContainer> = [];
 

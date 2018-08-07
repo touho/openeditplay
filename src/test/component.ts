@@ -51,7 +51,7 @@ test(done => {
 	eq(component.threeLetterType, 'com');
 	eq(constuctorCalls, 1);
 	eq(preInitCalls, 0);
-	
+
 	// Test component with entity
 	let proto = Prototype.create('TestPrototype');
 	let componentData = new ComponentData('TestBuild');
@@ -61,30 +61,28 @@ test(done => {
 			value: 66
 		}
 	)]);
-	let entityPrototype = EntityPrototype.createFromPrototype(proto, [
-		componentData
-	]);
+	let entityPrototype = EntityPrototype.createFromPrototype(proto);
 	let entity = entityPrototype.createEntity();
 	component = entity.getComponent('TestBuild');
 	ok(component);
-	
+
 	eq(constuctorCalls, 2);
 	eq(preInitCalls, 1);
 	eq(initCalls, 1);
 	eq(sleepCalls, 0);
 	eq(deleteCalls, 0);
-	
-	
+
+
 	// Test component's properties
-	
+
 	eq(component.var1, 0);
 	eq(component.var2, 66);
 	eq(component.var3, 3);
-	
+
 	component.var1 = -2;
 	component.var2 = -2;
 	component.var3 = -2;
-	
+
 	eq(component.var1, -2);
 	eq(component.var2, -2);
 	eq(component.var3, 3);
@@ -92,10 +90,10 @@ test(done => {
 	component.var3 = 444;
 
 	eq(component.var3, 4);
-	
-	
+
+
 	// Test component events
-	
+
 	entity.sleep();
 
 	eq(constuctorCalls, 2);
@@ -103,7 +101,7 @@ test(done => {
 	eq(initCalls, 1);
 	eq(sleepCalls, 1);
 	eq(deleteCalls, 0);
-	
+
 	entity.wakeUp();
 
 	eq(constuctorCalls, 2);
@@ -111,7 +109,7 @@ test(done => {
 	eq(initCalls, 2);
 	eq(sleepCalls, 1);
 	eq(deleteCalls, 0);
-	
+
 	entity.delete();
 
 	eq(constuctorCalls, 2);

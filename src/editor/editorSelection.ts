@@ -63,3 +63,7 @@ export function setSceneTool(newToolName: string) {
 		editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newToolName);
 	}
 }
+
+editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, () => {
+    editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editorSelection', editorSelection);
+});

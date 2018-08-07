@@ -45,7 +45,6 @@ export default class EventDispatcher {
 
         if (eventDispatcherCallbacks.eventDispatchedCallback)
             eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length);
-        // performanceTool.eventHappened('Event ' + event, listeners.length);
 
         for (let i = 0; i < listeners.length; i++) {
             // @ifndef OPTIMIZE
@@ -60,6 +59,41 @@ export default class EventDispatcher {
             }
             // @endif
         }
+    }
+
+    /**
+     * This is separate function for optimization.
+     * Returns promise that has value array, containing all results from listeners.
+     * Promise can reject.
+     *
+     * Handler of this kind of events should return either a value or a Promise.
+     */
+    dispatchWithResults(event: GameEvent, a?, b?, c?) {
+        let listeners = this._listeners[event];
+        if (!listeners)
+            return Promise.all([]);
+
+        let results = [];
+
+        if (eventDispatcherCallbacks.eventDispatchedCallback)
+            eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length);
+
+        for (let i = 0; i < listeners.length; i++) {
+            // @ifndef OPTIMIZE
+            try {
+                // @endif
+
+                results.push(listeners[i](a, b, c));
+
+                // @ifndef OPTIMIZE
+            } catch (e) {
+                console.error(`Event ${event} listener crashed.`, this._listeners[event][i], e);
+            }
+            // @endif
+        }
+
+        let promises = results.map(res => res instanceof Promise ? res : Promise.resolve(res));
+        return Promise.all(promises);
     }
 
     delete() {

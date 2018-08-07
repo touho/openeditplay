@@ -40,7 +40,7 @@ Component.register({
 			context.textAlign = 'center';
 			context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 			context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
-			
+
 			context.restore();
 		},
 		spawn() {

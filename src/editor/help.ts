@@ -33,6 +33,9 @@ class Help {
 	get serializables() {
 		return serializables;
 	}
+	get selection() {
+		return this.editorSelection;
+	}
 	get serializablesArray() {
 		return Object.keys(serializables).map(k => serializables[k]);
 	}

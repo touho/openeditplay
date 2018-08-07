@@ -6,6 +6,7 @@ import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
 import assert from '../util/assert';
 import Vector from '../util/vector';
+import Prefab from './prefab';
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
@@ -144,6 +145,29 @@ export default class EntityPrototype extends Prototype {
 		this.createEntity(scene);
 	}
 
+	detachFromPrototype() {
+		this.name = this.makeUpAName();
+
+		let inheritedComponentDatas = this.getInheritedComponentDatas((cda: ComponentData) => {
+			return cda.name !== 'Transform';
+		});
+		let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
+			return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+				.initWithChildren(icd.properties.map(prp => prp.clone()));
+		}) as any as Array<Serializable>;
+
+		let componentDatas = this.getChildren('cda') as ComponentData[];
+		componentDatas.forEach(cda => {
+			if (cda.name !== 'Transform')
+				cda.delete();
+		});
+		debugger;
+		// TODO: For some reason all non-Transform components have not been removed yet...
+		this.addChildren(children);
+
+		this.prototype = null;
+	}
+
 	// Optimize this away
 	setRootType(rootType) {
 		if (this._rootType === rootType)
@@ -151,30 +175,26 @@ export default class EntityPrototype extends Prototype {
 		assert(this.getTransform(), 'EntityPrototype must have a Transform');
 		super.setRootType(rootType);
 	}
-	// If Transform or Transform.position is missing, they are added.
-	static createFromPrototype(prototype) {
+	/**
+	 * If Transform or Transform.position is missing, they are added.
+	 * prototype can also be Prefab which extends Prototype.
+	 */
+	static createFromPrototype(prototype: Prototype) {
+		if (prototype.threeLetterType === 'pfa') {
+			return (prototype as Prefab).createEntityPrototype();
+		}
+
 		let entityPrototype = new EntityPrototype();
 		entityPrototype.prototype = prototype;
 		let id = entityPrototype.id;
 
 		let prototypeTransform = prototype.findChild('cda', cda => cda.name === 'Transform');
-		let fromPrefab = prototype.threeLetterType === 'pfa';
 
-		if (!fromPrefab && prototypeTransform)
+		if (prototypeTransform)
 			assert(false, 'Prototype (prt) can not have a Transform component');
-
-		if (fromPrefab && !prototypeTransform)
-			assert(false, 'Prefab (pfa) must have a Transform component');
 
 		let name = createEntityPrototypeNameProperty(id);
 		let transform = createEntityPrototypeTransform(id);
-
-		if (fromPrefab && prototypeTransform) {
-			// No point to copy the position
-			// transform.setValue('position', prototypeTransform.getValue('position'));
-			transform.setValue('scale', prototypeTransform.getValue('scale'));
-			transform.setValue('angle', prototypeTransform.getValue('angle'));
-		}
 
 		entityPrototype.initWithChildren([name, transform]);
 
@@ -194,14 +214,14 @@ Object.defineProperty(EntityPrototype.prototype, 'position', {
 	}
 });
 
-function createEntityPrototypeNameProperty(entityPrototypeId, name = '') {
+export function createEntityPrototypeNameProperty(entityPrototypeId, name = '') {
 	return EntityPrototype._propertyTypesByName.name.createProperty({
 		value: name,
 		predefinedId: entityPrototypeId + '_n'
 	});
 }
 
-function createEntityPrototypeTransform(entityPrototypeId) {
+export function createEntityPrototypeTransform(entityPrototypeId) {
 	let transform = new ComponentData('Transform', entityPrototypeId + '_t');
 
 	let position = transform.componentClass._propertyTypesByName.position.createProperty({

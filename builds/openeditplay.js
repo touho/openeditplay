@@ -53,27 +53,118 @@
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
 
-	var serializables = {};
-	function addSerializable(serializable) {
-	    // @ifndef OPTIMIZE
-	    if (serializables[serializable.id] !== undefined)
-	        { assert(false, ("Serializable id clash " + (serializable.id))); }
-	    // @endif
-	    serializables[serializable.id] = serializable;
+	var GameEvent;
+	(function (GameEvent) {
+	    GameEvent["SCENE_START"] = "scene start";
+	    GameEvent["SCENE_PLAY"] = "scene play";
+	    GameEvent["SCENE_PAUSE"] = "scene pause";
+	    GameEvent["SCENE_RESET"] = "scene reset";
+	    GameEvent["SCENE_DRAW"] = "scene draw";
+	    GameEvent["SCENE_ZOOM_CHANGED"] = "zoom changed";
+	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
+	    GameEvent["PROPERTY_VALUE_CHANGE"] = "property change";
+	    GameEvent["GLOBAL_CHANGE_OCCURED"] = "change";
+	    GameEvent["GLOBAL_SCENE_CREATED"] = "scene created";
+	    GameEvent["GLOBAL_GAME_CREATED"] = "game created";
+	})(GameEvent || (GameEvent = {}));
+	var eventDispatcherCallbacks = {
+	    eventDispatchedCallback: null // (eventName, listenerCount) => void
+	};
+	var EventDispatcher = /** @class */ (function () {
+	    function EventDispatcher() {
+	        this._listeners = {};
+	    }
+	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	    EventDispatcher.prototype.listen = function (event, callback, priority) {
+	        var _this = this;
+	        if (priority === void 0) { priority = 0; }
+	        callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
+	        if (!this._listeners.hasOwnProperty(event)) {
+	            this._listeners[event] = [];
+	        }
+	        var index = decideIndexOfListener(this._listeners[event], callback);
+	        this._listeners[event].splice(index, 0, callback);
+	        return function () {
+	            var eventListeners = _this._listeners[event];
+	            if (!eventListeners)
+	                { return; } // listeners probably already deleted
+	            var index = eventListeners.indexOf(callback);
+	            if (index >= 0)
+	                { eventListeners.splice(index, 1); }
+	        };
+	    };
+	    EventDispatcher.prototype.dispatch = function (event, a, b, c) {
+	        var this$1 = this;
+
+	        var listeners = this._listeners[event];
+	        if (!listeners)
+	            { return; }
+	        if (eventDispatcherCallbacks.eventDispatchedCallback)
+	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
+	        for (var i = 0; i < listeners.length; i++) {
+	            // @ifndef OPTIMIZE
+	            try {
+	                // @endif
+	                listeners[i](a, b, c);
+	                // @ifndef OPTIMIZE
+	            }
+	            catch (e) {
+	                console.error("Event " + event + " listener crashed.", this$1._listeners[event][i], e);
+	            }
+	            // @endif
+	        }
+	    };
+	    /**
+	     * This is separate function for optimization.
+	     * Returns promise that has value array, containing all results from listeners.
+	     * Promise can reject.
+	     *
+	     * Handler of this kind of events should return either a value or a Promise.
+	     */
+	    EventDispatcher.prototype.dispatchWithResults = function (event, a, b, c) {
+	        var this$1 = this;
+
+	        var listeners = this._listeners[event];
+	        if (!listeners)
+	            { return Promise.all([]); }
+	        var results = [];
+	        if (eventDispatcherCallbacks.eventDispatchedCallback)
+	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
+	        for (var i = 0; i < listeners.length; i++) {
+	            // @ifndef OPTIMIZE
+	            try {
+	                // @endif
+	                results.push(listeners[i](a, b, c));
+	                // @ifndef OPTIMIZE
+	            }
+	            catch (e) {
+	                console.error("Event " + event + " listener crashed.", this$1._listeners[event][i], e);
+	            }
+	            // @endif
+	        }
+	        var promises = results.map(function (res) { return res instanceof Promise ? res : Promise.resolve(res); });
+	        return Promise.all(promises);
+	    };
+	    EventDispatcher.prototype.delete = function () {
+	        this._listeners = {};
+	    };
+	    return EventDispatcher;
+	}());
+	var globalEventDispatcher = new EventDispatcher();
+	var listenerCounter = 0;
+	var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
+	function decideIndexOfListener(array, callback) {
+	    var low = 0, high = array.length, priority = callback.priority;
+	    while (low < high) {
+	        var mid = low + high >>> 1;
+	        if (array[mid].priority < priority)
+	            { low = mid + 1; }
+	        else
+	            { high = mid; }
+	    }
+	    return low;
 	}
-	changeDispacher.addSerializable = addSerializable;
-	function getSerializable(id) {
-	    return serializables[id] || null;
-	}
-	function removeSerializable(id) {
-	    /* When deleting a scene, this function is called a lot of times
-	    if (!serializables[id])
-	        throw new Error('Serializable not found!');
-	    */
-	    delete serializables[id];
-	}
-	changeDispacher.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
+	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -83,16 +174,6 @@
 	    move: 'm',
 	    deleteAllChildren: 'c',
 	};
-	var keyToShortKey = {
-	    id: 'i',
-	    type: 't',
-	    value: 'v',
-	    parentId: 'p' // obj._parent.id
-	};
-	var shortKeyToKey = {};
-	Object.keys(keyToShortKey).forEach(function (k) {
-	    shortKeyToKey[keyToShortKey[k]] = k;
-	});
 	var origin;
 	function getChangeOrigin() {
 	    return origin;
@@ -133,9 +214,7 @@
 	    }
 	    var previousOrigin = origin;
 	    // @endif
-	    for (var i = 0; i < listeners.length; ++i) {
-	        listeners[i](change);
-	    }
+	    globalEventDispatcher.dispatch(GameEvent.GLOBAL_CHANGE_OCCURED, change);
 	    // @ifndef OPTIMIZE
 	    if (origin !== previousOrigin) {
 	        origin = previousOrigin;
@@ -150,103 +229,6 @@
 	    callback();
 	    externalChange = false;
 	}
-	var listeners = [];
-	function addChangeListener(callback) {
-	    assert(typeof callback === 'function');
-	    listeners.push(callback);
-	}
-	function packChange(change) {
-	    if (change.packedChange)
-	        { return change.packedChange; } // optimization
-	    var packed = {};
-	    try {
-	        if (change.parent)
-	            { change.parentId = change.parent.id; }
-	        if (change.type === changeType.addSerializableToTree) {
-	            if (change.reference) {
-	                change.value = change.reference.toJSON();
-	            }
-	            else {
-	                assert(false, 'invalid change of type addSerializableToTree', change);
-	            }
-	        }
-	        else if (change.value !== undefined) {
-	            change.value = change.reference.propertyType.type.toJSON(change.value);
-	        }
-	        Object.keys(keyToShortKey).forEach(function (key) {
-	            if (change[key] !== undefined) {
-	                if (key === 'type' && change[key] === changeType.setPropertyValue)
-	                    { return; } // optimize most common type
-	                packed[keyToShortKey[key]] = change[key];
-	            }
-	        });
-	    }
-	    catch (e) {
-	        console.log('PACK ERROR', e);
-	    }
-	    return packed;
-	}
-	function unpackChange(packedChange) {
-	    var change = {
-	        packedChange: packedChange // optimization
-	    };
-	    Object.keys(packedChange).forEach(function (shortKey) {
-	        var key = shortKeyToKey[shortKey];
-	        change[key] = packedChange[shortKey];
-	    });
-	    if (!change.type)
-	        { change.type = changeType.setPropertyValue; }
-	    if (change.type === changeType.addSerializableToTree) {
-	        // reference does not exist because it has not been created yet
-	        change.id = change.value.id;
-	    }
-	    else {
-	        change.reference = getSerializable(change.id);
-	        if (change.reference) {
-	            change.id = change.reference.id;
-	        }
-	        else {
-	            console.error('received a change with unknown id', change, 'packed:', packedChange);
-	            return null;
-	        }
-	    }
-	    if (change.parentId)
-	        { change.parent = getSerializable(change.parentId); }
-	    return change;
-	}
-	function executeChange(change) {
-	    var newScene;
-	    executeExternal(function () {
-	        if (change.type === changeType.setPropertyValue) {
-	            change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
-	        }
-	        else if (change.type === changeType.addSerializableToTree) {
-	            if (change.parent) {
-	                var obj = Serializable.fromJSON(change.value);
-	                change.parent.addChild(obj);
-	                if (obj.threeLetterType === 'ent') {
-	                    obj.localMaster = false;
-	                }
-	            }
-	            else {
-	                var obj = Serializable.fromJSON(change.value); // Scene does not need a parent
-	                if (obj.threeLetterType === 'sce')
-	                    { newScene = obj; }
-	            }
-	        }
-	        else if (change.type === changeType.deleteAllChildren) {
-	            change.reference.deleteChildren();
-	        }
-	        else if (change.type === changeType.deleteSerializable) {
-	            change.reference.delete();
-	        }
-	        else if (change.type === changeType.move) {
-	            change.reference.move(change.parent);
-	        }
-	    });
-	    if (newScene)
-	        { newScene.play(); }
-	}
 	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
@@ -255,106 +237,7 @@
 	    { throw new Error('Can not be client and server at the same time.'); }
 	//# sourceMappingURL=environment.js.map
 
-	/*
-	 Global event system
-
-	 let unlisten = events.listen('event name', function(params, ...) {});
-	 eventManager.dispatch('event name', paramOrParamArray);
-	 unlisten();
-	 */
-	var listeners$1 = {};
-	var events = {
-	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	    listen: function (event, callback, priority) {
-	        if (priority === void 0) { priority = 0; }
-	        callback.priority = priority + (listenerCounter++ / NUMBER_BIGGER_THAN_LISTENER_COUNT);
-	        if (!listeners$1.hasOwnProperty(event)) {
-	            listeners$1[event] = [];
-	        }
-	        // listeners[event].push(callback);
-	        // if (!this._listeners.hasOwnProperty(event)) {
-	        // 	this._listeners[event] = [];
-	        // }
-	        var index = indexOfListener(listeners$1[event], callback);
-	        listeners$1[event].splice(index, 0, callback);
-	        return function () {
-	            var index = listeners$1[event].indexOf(callback);
-	            listeners$1[event].splice(index, 1);
-	        };
-	    },
-	    dispatch: function (event) {
-	        var arguments$1 = arguments;
-
-	        var args = [];
-	        for (var _i = 1; _i < arguments.length; _i++) {
-	            args[_i - 1] = arguments$1[_i];
-	        }
-	        if (listeners$1.hasOwnProperty(event)) {
-	            var listener = listeners$1[event];
-	            for (var i = 0; i < listener.length; ++i) {
-	                listener[i].apply(null, args);
-	                /*
-	                try {
-	                    listeners[event][i].apply(null, args);
-	                } catch (e) {
-	                    if (console && console.sendError) {
-	                        console.sendError(e);
-	                    }
-	                }
-	                */
-	            }
-	        }
-	    },
-	    // Promise is resolved when next event if this type is sent
-	    getEventPromise: function (event) {
-	        return new Promise(function (res) {
-	            events.listen(event, res);
-	        });
-	    }
-	};
-	var listenerCounter = 0;
-	var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
-	function indexOfListener(array, callback) {
-	    var low = 0, high = array.length, priority = callback.priority;
-	    while (low < high) {
-	        var mid = low + high >>> 1;
-	        if (array[mid].priority < priority)
-	            { low = mid + 1; }
-	        else
-	            { high = mid; }
-	    }
-	    return low;
-	}
-	//# sourceMappingURL=events.js.map
-
-	var performance$1;
-	performance$1 = isClient ? window.performance : { now: Date.now };
-	var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
-	var currentPerformanceMeters = {}; // very short term
-	var currentPerSecondMeters = {};
-	function eventHappened(name, count) {
-	    if (count === void 0) { count = 1; }
-	    // @ifndef OPTIMIZE
-	    currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
-	    // @endif
-	}
-	function start(name) {
-	    // @ifndef OPTIMIZE
-	    currentPerformanceMeters[name] = performance$1.now();
-	    // @endif
-	}
-	function stop(name) {
-	    // @ifndef OPTIMIZE
-	    var millis = performance$1.now() - currentPerformanceMeters[name];
-	    if (cumulativePerformance[name])
-	        { cumulativePerformance[name] += millis; }
-	    else
-	        { cumulativePerformance[name] = millis; }
-	    // @endif
-	}
-	//# sourceMappingURL=performance.js.map
-
-	var changeDispacher = {
+	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
 	    removeSerializable: function (serializableId) { },
 	};
@@ -370,41 +253,37 @@
 	    return id;
 	}
 	var serializableClasses = new Map();
-	// type Listeners = { [event in GameEvent]: Array<(a?, b?, c?) => void>};
-	/*
-	Serializable lifecycle:
-
-	fromJSON()
-
-	 */
-	var Serializable = /** @class */ (function () {
+	var Serializable = /** @class */ (function (_super) {
+	    __extends(Serializable, _super);
 	    function Serializable(predefinedId, skipSerializableRegistering) {
 	        if (predefinedId === void 0) { predefinedId = ''; }
 	        if (skipSerializableRegistering === void 0) { skipSerializableRegistering = false; }
-	        this._children = new Map();
-	        this._listeners = {};
+	        var _this = _super.call(this) || this;
+	        _this._children = new Map();
 	        // @ifndef OPTIMIZE
-	        assert(this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
+	        assert(_this.threeLetterType, 'Forgot to Serializable.registerSerializable your class?');
 	        // @endif
-	        this._rootType = this.isRoot ? this.threeLetterType : null;
+	        _this._rootType = _this.isRoot ? _this.threeLetterType : null;
 	        if (skipSerializableRegistering)
-	            { return; }
+	            { return _this; }
 	        if (predefinedId) {
-	            this.id = predefinedId;
+	            _this.id = predefinedId;
 	        }
 	        else {
-	            this.id = createStringId(this.threeLetterType);
+	            _this.id = createStringId(_this.threeLetterType);
 	        }
 	        /*
 	        if (this.id.startsWith('?'))
 	            throw new Error('?');
 	            */
-	        changeDispacher.addSerializable(this);
+	        serializableCallbacks.addSerializable(_this);
+	        return _this;
 	    }
 	    Serializable.prototype.makeUpAName = function () {
 	        return 'Serializable';
 	    };
 	    Serializable.prototype.delete = function () {
+	        _super.prototype.delete.call(this);
 	        if (this._parent) {
 	            this._parent.deleteChild(this);
 	            return false;
@@ -412,8 +291,7 @@
 	        this.deleteChildren();
 	        this._alive = false;
 	        this._rootType = null;
-	        this._listeners = {};
-	        changeDispacher.removeSerializable(this.id);
+	        serializableCallbacks.removeSerializable(this.id);
 	        this._state |= Serializable.STATE_DESTROY;
 	        return true;
 	    };
@@ -590,44 +468,6 @@
 	        this._state |= Serializable.STATE_CLONE;
 	        return obj;
 	    };
-	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
-	    Serializable.prototype.listen = function (event, callback, priority) {
-	        var _this = this;
-	        if (priority === void 0) { priority = 0; }
-	        callback.priority = priority + (listenerCounter$1++ / NUMBER_BIGGER_THAN_LISTENER_COUNT$1);
-	        if (!this._listeners.hasOwnProperty(event)) {
-	            this._listeners[event] = [];
-	        }
-	        var index = indexOfListener$1(this._listeners[event], callback);
-	        this._listeners[event].splice(index, 0, callback);
-	        return function () {
-	            if (!_this._alive)
-	                { return; } // listeners already deleted
-	            var index = _this._listeners[event].indexOf(callback);
-	            if (index >= 0)
-	                { _this._listeners[event].splice(index, 1); }
-	        };
-	    };
-	    Serializable.prototype.dispatch = function (event, a, b, c) {
-	        var this$1 = this;
-
-	        var listeners = this._listeners[event];
-	        if (!listeners)
-	            { return; }
-	        eventHappened('Event ' + event, listeners.length);
-	        for (var i = 0; i < listeners.length; i++) {
-	            // @ifndef OPTIMIZE
-	            try {
-	                // @endif
-	                listeners[i](a, b, c);
-	                // @ifndef OPTIMIZE
-	            }
-	            catch (e) {
-	                console.error("Event " + event + " listener crashed.", this$1._listeners[event][i], e);
-	            }
-	            // @endif
-	        }
-	    };
 	    Serializable.prototype.hasDescendant = function (child) {
 	        var this$1 = this;
 
@@ -700,7 +540,7 @@
 	    Serializable.STATE_DESTROY = 32;
 	    Serializable.STATE_FROMJSON = 64;
 	    return Serializable;
-	}());
+	}(EventDispatcher));
 	Serializable.prototype._parent = null;
 	Serializable.prototype._alive = true;
 	Serializable.prototype._state = 0;
@@ -778,32 +618,7 @@
 	        return children;
 	    }
 	});
-	var listenerCounter$1 = 0;
-	var NUMBER_BIGGER_THAN_LISTENER_COUNT$1 = 10000000000;
-	function indexOfListener$1(array, callback) {
-	    var low = 0, high = array.length, priority = callback.priority;
-	    while (low < high) {
-	        var mid = low + high >>> 1;
-	        if (array[mid].priority < priority)
-	            { low = mid + 1; }
-	        else
-	            { high = mid; }
-	    }
-	    return low;
-	}
 	//# sourceMappingURL=serializable.js.map
-
-	var GameEvent;
-	(function (GameEvent) {
-	    GameEvent["SCENE_START"] = "scene start";
-	    GameEvent["SCENE_PLAY"] = "scene play";
-	    GameEvent["SCENE_PAUSE"] = "scene pause";
-	    GameEvent["SCENE_RESET"] = "scene reset";
-	    GameEvent["SCENE_DRAW"] = "scene draw";
-	    GameEvent["GAME_LEVEL_COMPLETED"] = "game level completed";
-	    GameEvent["PROPERTY_VALUE_CHANGE"] = "property change";
-	})(GameEvent || (GameEvent = {}));
-	//# sourceMappingURL=gameEvents.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -874,8 +689,9 @@
 	            return this._value;
 	        },
 	        set: function (newValue) {
+	            var oldValue = this._value;
 	            this._value = this.propertyType.validator.validate(newValue);
-	            this.dispatch(GameEvent.PROPERTY_VALUE_CHANGE, this._value);
+	            this.dispatch(GameEvent.PROPERTY_VALUE_CHANGE, this._value, oldValue);
 	            if (changesEnabled && this._rootType) { // not scene or empty
 	                if (scenePropertyFilter === null
 	                    || this._rootType !== 'sce'
@@ -1947,24 +1763,24 @@
 	    ctx.fillRect(0, 0, 1, RESOLUTION);
 	    return canvas;
 	}
-	events.listen('scene load level', function (scene) {
+	globalEventDispatcher.listen('scene load level', function (scene) {
 	    var gradientCanvas = createCanvas();
 	    var sprite = new PIXI$1.Sprite(PIXI$1.Texture.fromCanvas(gradientCanvas));
-	    scene.backgroundGradient = sprite;
+	    scene['backgroundGradient'] = sprite;
 	    updateSceneBackgroundGradient(scene);
 	    scene.layers.static.addChild(sprite);
 	});
-	events.listen('scene unload level', function (scene) {
-	    delete scene.backgroundGradient;
+	globalEventDispatcher.listen('scene unload level', function (scene) {
+	    delete scene['backgroundGradient'];
 	});
-	events.listen('canvas resize', function (scene) {
+	globalEventDispatcher.listen('canvas resize', function (scene) {
 	    updateSceneBackgroundGradient(scene);
 	});
 	function updateSceneBackgroundGradient(scene) {
-	    if (!scene.canvas || !scene.backgroundGradient)
+	    if (!scene.canvas || !scene['backgroundGradient'])
 	        { return; }
-	    scene.backgroundGradient.width = scene.canvas.width;
-	    scene.backgroundGradient.height = scene.canvas.height;
+	    scene['backgroundGradient'].width = scene.canvas.width;
+	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
 	//# sourceMappingURL=backgroundGradient.js.map
 
@@ -1998,7 +1814,7 @@
 	            game = _this;
 	        }
 	        setTimeout(function () {
-	            gameCreateListeners.forEach(function (listener) { return listener(game); });
+	            globalEventDispatcher.dispatch(GameEvent.GLOBAL_GAME_CREATED, _this);
 	        }, 1);
 	        return _this;
 	    }
@@ -2032,10 +1848,8 @@
 	    }
 	    return new Game(json.id);
 	});
-	var gameCreateListeners = [];
-	function listenGameCreation(listener) {
-	    gameCreateListeners.push(listener);
-	    console.log('real ts');
+	function forEachGame(listener) {
+	    globalEventDispatcher.listen(GameEvent.GLOBAL_GAME_CREATED, listener);
 	    if (game)
 	        { listener(game); }
 	}
@@ -2265,6 +2079,70 @@
 	}
 	//# sourceMappingURL=input.js.map
 
+	var EditorEvent;
+	(function (EditorEvent) {
+	    EditorEvent["EDITOR_CHANGE"] = "editor change";
+	    EditorEvent["EDITOR_REGISTER_MODULES"] = "registerModules";
+	    EditorEvent["EDITOR_SCENE_TOOL_CHANGED"] = "scene tool changed";
+	    EditorEvent["EDITOR_REGISTER_HELP_VARIABLE"] = "define help variable";
+	    EditorEvent["EDITOR_DELETE_CONFIRMATION"] = "delete confirmation";
+	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
+	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
+	})(EditorEvent || (EditorEvent = {}));
+	// Wrapper that takes only EditorEvents
+	var EditorEventDispatcher = /** @class */ (function () {
+	    function EditorEventDispatcher() {
+	        this.dispatcher = new EventDispatcher();
+	    }
+	    // priority should be a whole number between -100000 and 100000. a smaller priority number means that it will be executed first.
+	    EditorEventDispatcher.prototype.listen = function (event, callback, priority) {
+	        if (priority === void 0) { priority = 0; }
+	        return this.dispatcher.listen(event, callback, priority);
+	    };
+	    EditorEventDispatcher.prototype.dispatch = function (event, a, b, c) {
+	        this.dispatcher.dispatch(event, a, b, c);
+	    };
+	    EditorEventDispatcher.prototype.dispatchWithResults = function (event, a, b, c) {
+	        return this.dispatcher.dispatchWithResults(event, a, b, c);
+	    };
+	    EditorEventDispatcher.prototype.getEventPromise = function (event) {
+	        return new Promise(function (res) {
+	            editorEventDispacher.listen(event, res);
+	        });
+	    };
+	    return EditorEventDispatcher;
+	}());
+	var editorEventDispacher = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
+
+	var performance$1;
+	performance$1 = isClient ? window.performance : { now: Date.now };
+	var cumulativePerformance = {}; // will be reseted every UPDATE_INTERVAL
+	var currentPerformanceMeters = {}; // very short term
+	var currentPerSecondMeters = {};
+	function eventHappened(name, count) {
+	    if (count === void 0) { count = 1; }
+	    // @ifndef OPTIMIZE
+	    currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
+	    // @endif
+	}
+	eventDispatcherCallbacks.eventDispatchedCallback = function (eventName, count) { return eventHappened("Event " + eventName, count); };
+	function start(name) {
+	    // @ifndef OPTIMIZE
+	    currentPerformanceMeters[name] = performance$1.now();
+	    // @endif
+	}
+	function stop(name) {
+	    // @ifndef OPTIMIZE
+	    var millis = performance$1.now() - currentPerformanceMeters[name];
+	    if (cumulativePerformance[name])
+	        { cumulativePerformance[name] += millis; }
+	    else
+	        { cumulativePerformance[name] = millis; }
+	    // @endif
+	}
+	//# sourceMappingURL=performance.js.map
+
 	var scene = null;
 	var physicsOptions = {
 	    enableSleeping: true
@@ -2294,7 +2172,7 @@
 	            listenMouseUp(_this.canvas, function (mousePosition) { return _this.dispatch('onMouseUp', mousePosition); })
 	        ];
 	        addChange(changeType.addSerializableToTree, _this);
-	        sceneCreateListeners.forEach(function (listener) { return listener(); });
+	        globalEventDispatcher.dispatch(GameEvent.GLOBAL_SCENE_CREATED, _this);
 	        return _this;
 	    }
 	    Scene.prototype.makeUpAName = function () {
@@ -2334,9 +2212,9 @@
 	        this.time = 0;
 	        this.won = false;
 	        createWorld(this, physicsOptions);
-	        events.dispatch('scene load level before entities', scene, level);
+	        globalEventDispatcher.dispatch('scene load level before entities', scene, level);
 	        this.level.getChildren('epr').map(function (epr) { return epr.createEntity(_this); });
-	        events.dispatch('scene load level', scene, level);
+	        globalEventDispatcher.dispatch('scene load level', scene, level);
 	        // this.draw();
 	    };
 	    Scene.prototype.unloadLevel = function () {
@@ -2350,7 +2228,7 @@
 	        this.layers = {};
 	        this.components.clear();
 	        deleteWorld(this);
-	        events.dispatch('scene unload level', scene, level);
+	        globalEventDispatcher.dispatch('scene unload level', scene, level);
 	    };
 	    Scene.prototype.setCameraPositionToPlayer = function () {
 	        var pos = new Vector(0, 0);
@@ -2396,6 +2274,10 @@
 	        start('Physics');
 	        updateWorld(this, dt);
 	        stop('Physics');
+	        // // Update logic
+	        // performanceTool.start('Component post updates');
+	        // this.dispatch('onPostPhysicsUpdate', dt, this.time);
+	        // performanceTool.stop('Component post updates');
 	        // Update graphics
 	        start('Draw');
 	        this.draw();
@@ -2420,7 +2302,7 @@
 	        this.updateCamera();
 	        [this.layers.behind, this.layers.main, this.layers.front].forEach(sortDisplayObjects);
 	        this.renderer.render(this.stage, null, false);
-	        events.dispatch(GameEvent.SCENE_DRAW, scene);
+	        this.dispatch(GameEvent.SCENE_DRAW, scene);
 	        eventHappened('Draws');
 	    };
 	    Scene.prototype.isInInitialState = function () {
@@ -2501,7 +2383,7 @@
 	    Scene.prototype.setZoom = function (zoomLevel) {
 	        if (zoomLevel)
 	            { this.cameraZoom = zoomLevel; }
-	        this.dispatch('zoomChange', this.cameraZoom);
+	        this.dispatch(GameEvent.SCENE_ZOOM_CHANGED, this.cameraZoom);
 	    };
 	    Scene.prototype.resizeCanvas = function (gameResolution, screenResolution) {
 	        this.renderer.resize(gameResolution.x, gameResolution.y);
@@ -2511,19 +2393,206 @@
 	        else {
 	            this.pixelDensity.setScalars(1, 1);
 	        }
-	        console.log('resizeCanvas', this.pixelDensity, screenResolution);
 	    };
 	    return Scene;
 	}(Serializable));
 	Scene.prototype.isRoot = true;
 	Serializable.registerSerializable(Scene, 'sce');
-	var sceneCreateListeners = [];
-	function listenSceneCreation(listener) {
-	    sceneCreateListeners.push(listener);
+	function forEachScene(listener) {
+	    globalEventDispatcher.listen(GameEvent.GLOBAL_SCENE_CREATED, listener);
 	    if (scene)
-	        { listener(); }
+	        { listener(scene); }
 	}
 	//# sourceMappingURL=scene.js.map
+
+	var componentClasses = new Map();
+	var automaticSceneEventListeners = [
+	    'onUpdate',
+	    'onStart'
+	];
+	// Object of a component, see _componentExample.js
+	var Component = /** @class */ (function (_super) {
+	    __extends(Component, _super);
+	    function Component(predefinedId) {
+	        var _this = _super.call(this, predefinedId) || this;
+	        _this._componentId = null; // Creator will fill this
+	        _this.scene = scene;
+	        _this.game = game;
+	        _this._listenRemoveFunctions = [];
+	        _this.entity = null;
+	        return _this;
+	    }
+	    Component.prototype.makeUpAName = function () {
+	        return this.componentClass.componentName;
+	    };
+	    Component.prototype.delete = function () {
+	        // Component.delete never returns false because entity doesn't have components as children
+	        this._parent = null;
+	        this.entity = null;
+	        _super.prototype.delete.call(this);
+	        return true;
+	    };
+	    Component.prototype._addEventListener = function (functionName) {
+	        var func = this[functionName];
+	        var self = this;
+	        var performanceName = 'Component: ' + this.componentClass.componentName;
+	        this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
+	            // @ifndef OPTIMIZE
+	            start(performanceName);
+	            // @endif
+	            func.apply(self, arguments);
+	            // @ifndef OPTIMIZE
+	            stop(performanceName);
+	            // @endif
+	        }));
+	    };
+	    // In preInit you can init the component with stuff that other components might want to use in init function
+	    // In preInit you can not trust that other components have been inited in any way
+	    Component.prototype._preInit = function () {
+	        var this$1 = this;
+
+	        var _this = this;
+	        this.componentClass.requirements.forEach(function (r) {
+	            _this[r] = _this.entity.getComponent(r);
+	            assert(_this[r], _this.componentClass.componentName + " requires component " + r + " but it is not found");
+	        });
+	        this.forEachChild('com', function (c) { return c._preInit(); });
+	        for (var i = 0; i < automaticSceneEventListeners.length; ++i) {
+	            if (typeof this$1[automaticSceneEventListeners[i]] === 'function')
+	                { this$1._addEventListener(automaticSceneEventListeners[i]); }
+	        }
+	        if (this.componentClass.componentName !== 'Transform' && this.scene)
+	            { this.scene.addComponent(this); }
+	        try {
+	            if (typeof this.preInit === 'function')
+	                { this.preInit(); }
+	        }
+	        catch (e) {
+	            console.error(this.entity, this.componentClass.componentName, 'preInit', e);
+	        }
+	    };
+	    // In preInit you can access other components and know that their preInit is done.
+	    Component.prototype._init = function () {
+	        this.forEachChild('com', function (c) { return c._init(); });
+	        try {
+	            if (typeof this.init === 'function')
+	                { this.init(); }
+	        }
+	        catch (e) {
+	            console.error(this.entity, this.componentClass.componentName, 'init', e);
+	        }
+	    };
+	    Component.prototype._sleep = function () {
+	        try {
+	            if (typeof this.sleep === 'function')
+	                { this.sleep(); }
+	        }
+	        catch (e) {
+	            console.error(this.entity, this.componentClass.componentName, 'sleep', e);
+	        }
+	        if (this.componentClass.componentName !== 'Transform' && this.scene)
+	            { this.scene.removeComponent(this); }
+	        this.forEachChild('com', function (c) { return c._sleep(); });
+	        this._listenRemoveFunctions.forEach(function (f) { return f(); });
+	        this._listenRemoveFunctions.length = 0;
+	    };
+	    Component.prototype.listenProperty = function (component, propertyName, callback) {
+	        this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
+	    };
+	    Component.prototype.toJSON = function () {
+	        return Object.assign(_super.prototype.toJSON.call(this), {
+	            n: this.componentClass.componentName,
+	            cid: this._componentId
+	        });
+	    };
+	    Component.create = function (name, values) {
+	        if (values === void 0) { values = {}; }
+	        var componentClass = componentClasses.get(name);
+	        assert(componentClass);
+	        var component = new componentClass();
+	        component.initWithPropertyValues(values);
+	        return component;
+	    };
+	    Component.createWithInheritedComponentData = function (inheritedComponentData) {
+	        var component = new inheritedComponentData.componentClass;
+	        component._componentId = inheritedComponentData.componentId;
+	        var properties = inheritedComponentData.properties.map(function (p) { return p.clone(); });
+	        component.initWithChildren(properties);
+	        return component;
+	    };
+	    Component.register = function (_a) {
+	        var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? '' : _c, // required
+	        _d = _b.description, // required
+	        description = _d === void 0 ? '' : _d, _e = _b.category, category = _e === void 0 ? 'Other' : _e, _f = _b.icon, icon = _f === void 0 ? 'fa-puzzle-piece' : _f, // in editor
+	        _g = _b.color, // in editor
+	        color = _g === void 0 ? '' : _g, // in editor
+	        _h = _b.properties, // in editor
+	        properties = _h === void 0 ? [] : _h, _j = _b.requirements, requirements = _j === void 0 ? ['Transform'] : _j, _k = _b.children, children = _k === void 0 ? [] : _k, _l = _b.parentClass, parentClass = _l === void 0 ? Component : _l, _m = _b.prototype, prototype = _m === void 0 ? {} : _m, _o = _b.allowMultiple, allowMultiple = _o === void 0 ? true : _o, _p = _b.requiresInitWhenEntityIsEdited;
+	        assert(name, 'Component must have a name.');
+	        assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
+	        assert(!componentClasses.has(name), 'Duplicate component class ' + name);
+	        Object.keys(prototype).forEach(function (k) {
+	            if (Component.reservedPrototypeMembers.has(k))
+	                { assert(false, 'Component prototype can not have a reserved member: ' + k); }
+	        });
+	        if (requirements.indexOf('Transform') < 0)
+	            { requirements.push('Transform'); }
+	        var colorNum = name.split('').reduce(function (prev, curr) { return prev + curr.charCodeAt(0); }, 0);
+	        var constructorFunction = prototype.constructor;
+	        var deleteFunction = prototype.delete;
+	        delete prototype.constructor;
+	        delete prototype.delete;
+	        var Com = /** @class */ (function (_super) {
+	            __extends(Com, _super);
+	            function Com() {
+	                var arguments$1 = arguments;
+
+	                var args = [];
+	                for (var _i = 0; _i < arguments.length; _i++) {
+	                    args[_i] = arguments$1[_i];
+	                }
+	                var _this = _super.apply(this, args) || this;
+	                if (constructorFunction)
+	                    { constructorFunction.call(_this); }
+	                return _this;
+	            }
+	            Com.prototype.delete = function () {
+	                if (!_super.prototype.delete.call(this))
+	                    { return false; }
+	                if (deleteFunction)
+	                    { deleteFunction.call(this); }
+	                return true;
+	            };
+	            Com.componentName = name;
+	            Com.category = category;
+	            Com.requirements = requirements;
+	            Com.children = children;
+	            Com.description = description;
+	            Com.allowMultiple = allowMultiple;
+	            Com.icon = icon;
+	            Com.color = color || "hsla(" + colorNum % 360 + ", 40%, 60%, 1)";
+	            return Com;
+	        }(parentClass));
+	        properties.forEach(function (p) {
+	            assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
+	        });
+	        PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
+	        prototype._name = name;
+	        Com.prototype.componentClass = Com;
+	        Object.assign(Com.prototype, prototype);
+	        componentClasses.set(Com.componentName, Com);
+	        return Com;
+	    };
+	    Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
+	    Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
+	    return Component;
+	}(PropertyOwner));
+	Serializable.registerSerializable(Component, 'com', function (json) {
+	    var component = new (componentClasses.get(json.n))(json.id);
+	    component._componentId = json.cid || null;
+	    return component;
+	});
+	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2658,210 +2727,48 @@
 	Serializable.registerSerializable(ComponentData, 'cda', function (json) {
 	    return new ComponentData(json.n, json.id, json.cid);
 	});
-	//# sourceMappingURL=componentData.js.map
+	/*
 
-	var componentClasses = new Map();
-	var automaticSceneEventListeners = [
-	    'onUpdate',
-	    'onStart'
-	];
-	// Object of a component, see _componentExample.js
-	var Component = /** @class */ (function (_super) {
-	    __extends(Component, _super);
-	    function Component(predefinedId) {
-	        var _this = _super.call(this, predefinedId) || this;
-	        _this._componentId = null; // Creator will fill this
-	        _this.scene = scene;
-	        _this.game = game;
-	        _this._listenRemoveFunctions = [];
-	        _this.entity = null;
-	        return _this;
-	    }
-	    Component.prototype.makeUpAName = function () {
-	        return this.componentClass.componentName;
-	    };
-	    Component.prototype.delete = function () {
-	        // Component.delete never returns false because entity doesn't have components as children
-	        this._parent = null;
-	        this.entity = null;
-	        _super.prototype.delete.call(this);
-	        return true;
-	    };
-	    Component.prototype._addEventListener = function (functionName) {
-	        var func = this[functionName];
-	        var self = this;
-	        var performanceName = 'Component: ' + this.componentClass.componentName;
-	        this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
-	            // @ifndef OPTIMIZE
-	            start(performanceName);
-	            // @endif
-	            func.apply(self, arguments);
-	            // @ifndef OPTIMIZE
-	            stop(performanceName);
-	            // @endif
-	        }));
-	    };
-	    // In preInit you can init the component with stuff that other components might want to use in init function
-	    // In preInit you can not trust that other components have been inited in any way
-	    Component.prototype._preInit = function () {
-	        var this$1 = this;
+	From Component? Is this needed?
 
-	        var _this = this;
-	        this.componentClass.requirements.forEach(function (r) {
-	            _this[r] = _this.entity.getComponent(r);
-	            assert(_this[r], _this.componentClass.componentName + " requires component " + r + " but it is not found");
-	        });
-	        this.forEachChild('com', function (c) { return c._preInit(); });
-	        for (var i = 0; i < automaticSceneEventListeners.length; ++i) {
-	            if (typeof this$1[automaticSceneEventListeners[i]] === 'function')
-	                { this$1._addEventListener(automaticSceneEventListeners[i]); }
-	        }
-	        if (this.componentClass.componentName !== 'Transform' && this.scene)
-	            { this.scene.addComponent(this); }
-	        try {
-	            if (typeof this.preInit === 'function')
-	                { this.preInit(); }
-	        }
-	        catch (e) {
-	            console.error(this.entity, this.componentClass.componentName, 'preInit', e);
-	        }
-	    };
-	    // In preInit you can access other components and know that their preInit is done.
-	    Component.prototype._init = function () {
-	        this.forEachChild('com', function (c) { return c._init(); });
-	        try {
-	            if (typeof this.init === 'function')
-	                { this.init(); }
-	        }
-	        catch (e) {
-	            console.error(this.entity, this.componentClass.componentName, 'init', e);
-	        }
-	    };
-	    Component.prototype._sleep = function () {
-	        try {
-	            if (typeof this.sleep === 'function')
-	                { this.sleep(); }
-	        }
-	        catch (e) {
-	            console.error(this.entity, this.componentClass.componentName, 'sleep', e);
-	        }
-	        if (this.componentClass.componentName !== 'Transform' && this.scene)
-	            { this.scene.removeComponent(this); }
-	        this.forEachChild('com', function (c) { return c._sleep(); });
-	        this._listenRemoveFunctions.forEach(function (f) { return f(); });
-	        this._listenRemoveFunctions.length = 0;
-	    };
-	    Component.prototype.listenProperty = function (component, propertyName, callback) {
-	        this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
-	    };
-	    Component.prototype.createComponentData = function () {
-	        var _this = this;
-	        var componentName = this.componentClass.componentName;
-	        var propertyTypes = this.class._propertyTypes;
-	        var componentData = new ComponentData(componentName);
-	        var children = [];
-	        propertyTypes.forEach(function (pt) {
+	    createComponentData() {
+	        let componentName = this.componentClass.componentName;
+	        let propertyTypes = this.class._propertyTypes;
+	        let componentData = new ComponentData(componentName);
+	        let children = [];
+	        propertyTypes.forEach(pt => {
 	            children.push(pt.createProperty({
-	                value: _this[pt.name]
+	                value: this[pt.name]
 	            }));
 	        });
 	        componentData.initWithChildren(children);
 	        return componentData;
-	    };
-	    Component.prototype.toJSON = function () {
-	        return Object.assign(_super.prototype.toJSON.call(this), {
-	            n: this.componentClass.componentName,
-	            cid: this._componentId
-	        });
-	    };
-	    Component.create = function (name, values) {
-	        if (values === void 0) { values = {}; }
-	        var componentClass = componentClasses.get(name);
-	        assert(componentClass);
-	        var component = new componentClass();
-	        component.initWithPropertyValues(values);
-	        return component;
-	    };
-	    Component.createWithInheritedComponentData = function (inheritedComponentData) {
-	        var component = new inheritedComponentData.componentClass;
-	        component._componentId = inheritedComponentData.componentId;
-	        var properties = inheritedComponentData.properties.map(function (p) { return p.clone(); });
-	        component.initWithChildren(properties);
-	        return component;
-	    };
-	    Component.register = function (_a) {
-	        var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? '' : _c, // required
-	        _d = _b.description, // required
-	        description = _d === void 0 ? '' : _d, _e = _b.category, category = _e === void 0 ? 'Other' : _e, _f = _b.icon, icon = _f === void 0 ? 'fa-puzzle-piece' : _f, // in editor
-	        _g = _b.color, // in editor
-	        color = _g === void 0 ? '' : _g, // in editor
-	        _h = _b.properties, // in editor
-	        properties = _h === void 0 ? [] : _h, _j = _b.requirements, requirements = _j === void 0 ? ['Transform'] : _j, _k = _b.children, children = _k === void 0 ? [] : _k, _l = _b.parentClass, parentClass = _l === void 0 ? Component : _l, _m = _b.prototype, prototype = _m === void 0 ? {} : _m, _o = _b.allowMultiple, allowMultiple = _o === void 0 ? true : _o, _p = _b.requiresInitWhenEntityIsEdited;
-	        assert(name, 'Component must have a name.');
-	        assert(name[0] >= 'A' && name[0] <= 'Z', 'Component name must start with capital letter.');
-	        assert(!componentClasses.has(name), 'Duplicate component class ' + name);
-	        Object.keys(prototype).forEach(function (k) {
-	            if (Component.reservedPrototypeMembers.has(k))
-	                { assert(false, 'Component prototype can not have a reserved member: ' + k); }
-	        });
-	        if (requirements.indexOf('Transform') < 0)
-	            { requirements.push('Transform'); }
-	        var colorNum = name.split('').reduce(function (prev, curr) { return prev + curr.charCodeAt(0); }, 0);
-	        var constructorFunction = prototype.constructor;
-	        var deleteFunction = prototype.delete;
-	        delete prototype.constructor;
-	        delete prototype.delete;
-	        var Com = /** @class */ (function (_super) {
-	            __extends(Com, _super);
-	            function Com() {
-	                var arguments$1 = arguments;
+	    }
 
-	                var args = [];
-	                for (var _i = 0; _i < arguments.length; _i++) {
-	                    args[_i] = arguments$1[_i];
-	                }
-	                var _this = _super.apply(this, args) || this;
-	                if (constructorFunction)
-	                    { constructorFunction.call(_this); }
-	                return _this;
-	            }
-	            Com.prototype.delete = function () {
-	                if (!_super.prototype.delete.call(this))
-	                    { return false; }
-	                if (deleteFunction)
-	                    { deleteFunction.call(this); }
-	                return true;
-	            };
-	            Com.componentName = name;
-	            Com.category = category;
-	            Com.requirements = requirements;
-	            Com.children = children;
-	            Com.description = description;
-	            Com.allowMultiple = allowMultiple;
-	            Com.icon = icon;
-	            Com.color = color || "hsla(" + colorNum % 360 + ", 40%, 60%, 1)";
-	            return Com;
-	        }(parentClass));
-	        properties.forEach(function (p) {
-	            assert(!Component.reservedPropertyNames.has(p.name), 'Can not have property called ' + p.name);
-	        });
-	        PropertyOwner.defineProperties(Com, properties); // properties means propertyTypes here
-	        prototype._name = name;
-	        Com.prototype.componentClass = Com;
-	        Object.assign(Com.prototype, prototype);
-	        componentClasses.set(Com.componentName, Com);
-	        return Com;
-	    };
-	    Component.reservedPropertyNames = new Set(['id', 'constructor', 'delete', 'children', 'entity', 'env', 'init', 'preInit', 'sleep', 'toJSON', 'fromJSON']);
-	    Component.reservedPrototypeMembers = new Set(['id', 'children', 'entity', 'env', '_preInit', '_init', '_sleep', '_forEachChildComponent', '_properties', '_componentData', 'toJSON', 'fromJSON']);
-	    return Component;
-	}(PropertyOwner));
-	Serializable.registerSerializable(Component, 'com', function (json) {
-	    var component = new (componentClasses.get(json.n))(json.id);
-	    component._componentId = json.cid || null;
-	    return component;
-	});
-	//# sourceMappingURL=component.js.map
+	*/
+	//# sourceMappingURL=componentData.js.map
+
+	var serializables = {};
+	function addSerializable(serializable) {
+	    // @ifndef OPTIMIZE
+	    if (serializables[serializable.id] !== undefined)
+	        { assert(false, ("Serializable id clash " + (serializable.id))); }
+	    // @endif
+	    serializables[serializable.id] = serializable;
+	}
+	serializableCallbacks.addSerializable = addSerializable;
+	function getSerializable(id) {
+	    return serializables[id] || null;
+	}
+	function removeSerializable(id) {
+	    /* When deleting a scene, this function is called a lot of times
+	    if (!serializables[id])
+	        throw new Error('Serializable not found!');
+	    */
+	    delete serializables[id];
+	}
+	serializableCallbacks.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3025,17 +2932,26 @@
 	            proto: this.prototype.id
 	        });
 	    };
+	    Object.defineProperty(Entity.prototype, "position", {
+	        get: function () {
+	            return this.getComponent('Transform').position;
+	        },
+	        set: function (position) {
+	            this.getComponent('Transform').position = position;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
+	    Object.defineProperty(Entity.prototype, "Transform", {
+	        get: function () {
+	            return this.getComponent('Transform');
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
 	    Entity.ENTITY_CREATION_DEBUGGING = false;
 	    return Entity;
 	}(Serializable));
-	Object.defineProperty(Entity.prototype, 'position', {
-	    get: function () {
-	        return this.getComponent('Transform').position;
-	    },
-	    set: function (position) {
-	        this.getComponent('Transform').position = position;
-	    }
-	});
 	Serializable.registerSerializable(Entity, 'ent', function (json) {
 	    if (Entity.ENTITY_CREATION_DEBUGGING)
 	        { console.log('creating entity from json', json); }
@@ -3187,7 +3103,7 @@
 	        Entity.initComponents(components);
 	        this.previouslyCreatedEntity = entity;
 	        if (!_skipNewEntityEvent)
-	            { events.dispatch('new entity created', entity); }
+	            { globalEventDispatcher.dispatch('new entity created', entity); }
 	        return entity;
 	    };
 	    Prototype.prototype.getValue = function (componentId, propertyName) {
@@ -3197,24 +3113,80 @@
 	        else
 	            { return undefined; }
 	    };
-	    Prototype.prototype.countEntityPrototypes = function (findParents) {
+	    Prototype.prototype.countEntityPrototypes = function (findChildren) {
 	        var this$1 = this;
 
-	        if (findParents === void 0) { findParents = false; }
-	        if (this.threeLetterType !== 'prt')
-	            { return 0; }
-	        var count = 0;
+	        if (findChildren === void 0) { findChildren = false; }
+	        var entityPrototypeCount = 0;
+	        var levelIds = new Set();
+	        if (this.threeLetterType !== 'prt') {
+	            return {
+	                entityPrototypeCount: entityPrototypeCount,
+	                levelIds: levelIds
+	            };
+	        }
 	        var levels = game.getChildren('lvl');
 	        for (var i = levels.length - 1; i >= 0; i--) {
 	            var entityPrototypes = levels[i].getChildren('epr');
+	            var foundInThisLevel = false;
 	            for (var j = entityPrototypes.length - 1; j >= 0; j--) {
-	                if (entityPrototypes[j].prototype === this$1)
-	                    { count++; }
+	                if (entityPrototypes[j].prototype === this$1) {
+	                    entityPrototypeCount++;
+	                    foundInThisLevel = true;
+	                }
+	            }
+	            if (foundInThisLevel) {
+	                levelIds.add(levels[i].id);
 	            }
 	        }
-	        if (findParents)
-	            { this.forEachChild('prt', function (prt) { return count += prt.countEntityPrototypes(true); }); }
-	        return count;
+	        if (findChildren)
+	            { this.forEachChild('prt', function (prt) {
+	                var results = prt.countEntityPrototypes(true);
+	                entityPrototypeCount += results.entityPrototypeCount;
+	                results.levelIds.forEach(function (levelId) { return levelIds.add(levelId); });
+	            }); }
+	        return {
+	            entityPrototypeCount: entityPrototypeCount,
+	            levelIds: levelIds
+	        };
+	    };
+	    /**
+	     * Only works for Prefabs and Prototypes. Not for EntityPrototypes.
+	     */
+	    Prototype.prototype.getEntityPrototypesThatUseThisPrototype = function () {
+	        var this$1 = this;
+
+	        var entityPrototypes = [];
+	        var levels = new Set();
+	        if (this.threeLetterType !== 'prt' && this.threeLetterType !== 'pfa') {
+	            return {
+	                entityPrototypes: entityPrototypes,
+	                levels: levels
+	            };
+	        }
+	        var levelArray = game.getChildren('lvl');
+	        for (var i = levelArray.length - 1; i >= 0; i--) {
+	            var levelEntityPrototypes = levelArray[i].getChildren('epr');
+	            var foundInThisLevel = false;
+	            for (var j = levelEntityPrototypes.length - 1; j >= 0; j--) {
+	                if (levelEntityPrototypes[j].prototype === this$1) {
+	                    entityPrototypes.push(levelEntityPrototypes[j]);
+	                    foundInThisLevel = true;
+	                }
+	            }
+	            if (foundInThisLevel) {
+	                levels.add(levelArray[i]);
+	            }
+	        }
+	        this.forEachChild(this.threeLetterType, function (prt) {
+	            var results = prt.getEntityPrototypesThatUseThisPrototype();
+	            entityPrototypes.push.apply(entityPrototypes, entityPrototypes);
+	            results.levels.forEach(function (level) { return levels.add(level); });
+	        });
+	        return {
+	            entityPrototypes: entityPrototypes,
+	            levels: levels
+	        };
 	    };
 	    Prototype.prototype.delete = function () {
 	        var _this = this;
@@ -3417,6 +3389,25 @@
 	        }
 	        this.createEntity(scene);
 	    };
+	    EntityPrototype.prototype.detachFromPrototype = function () {
+	        this.name = this.makeUpAName();
+	        var inheritedComponentDatas = this.getInheritedComponentDatas(function (cda) {
+	            return cda.name !== 'Transform';
+	        });
+	        var children = inheritedComponentDatas.map(function (icd) {
+	            return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
+	        });
+	        var componentDatas = this.getChildren('cda');
+	        componentDatas.forEach(function (cda) {
+	            if (cda.name !== 'Transform')
+	                { cda.delete(); }
+	        });
+	        debugger;
+	        // TODO: For some reason all non-Transform components have not been removed yet...
+	        this.addChildren(children);
+	        this.prototype = null;
+	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
 	        if (this._rootType === rootType)
@@ -3424,25 +3415,22 @@
 	        assert(this.getTransform(), 'EntityPrototype must have a Transform');
 	        _super.prototype.setRootType.call(this, rootType);
 	    };
-	    // If Transform or Transform.position is missing, they are added.
+	    /**
+	     * If Transform or Transform.position is missing, they are added.
+	     * prototype can also be Prefab which extends Prototype.
+	     */
 	    EntityPrototype.createFromPrototype = function (prototype) {
+	        if (prototype.threeLetterType === 'pfa') {
+	            return prototype.createEntityPrototype();
+	        }
 	        var entityPrototype = new EntityPrototype();
 	        entityPrototype.prototype = prototype;
 	        var id = entityPrototype.id;
 	        var prototypeTransform = prototype.findChild('cda', function (cda) { return cda.name === 'Transform'; });
-	        var fromPrefab = prototype.threeLetterType === 'pfa';
-	        if (!fromPrefab && prototypeTransform)
+	        if (prototypeTransform)
 	            { assert(false, 'Prototype (prt) can not have a Transform component'); }
-	        if (fromPrefab && !prototypeTransform)
-	            { assert(false, 'Prefab (pfa) must have a Transform component'); }
 	        var name = createEntityPrototypeNameProperty(id);
 	        var transform = createEntityPrototypeTransform(id);
-	        if (fromPrefab && prototypeTransform) {
-	            // No point to copy the position
-	            // transform.setValue('position', prototypeTransform.getValue('position'));
-	            transform.setValue('scale', prototypeTransform.getValue('scale'));
-	            transform.setValue('angle', prototypeTransform.getValue('angle'));
-	        }
 	        entityPrototype.initWithChildren([name, transform]);
 	        // @ifndef OPTIMIZE
 	        assert(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
@@ -3543,7 +3531,7 @@
 	        return nameProperty && nameProperty.value || 'Prefab';
 	    };
 	    Prefab.prototype.createEntity = function () {
-	        return EntityPrototype.createFromPrototype(this).createEntity();
+	        return this.createEntityPrototype().createEntity();
 	    };
 	    Prefab.prototype.getParentPrototype = function () {
 	        return null;
@@ -3556,10 +3544,47 @@
 	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
 	        });
 	        children.push(prototype._properties.name.clone());
+	        prototype.forEachChild('epr', function (childEntityPrototype) {
+	            var prefab = Prefab.createFromPrototype(childEntityPrototype);
+	            children.push(prefab);
+	        });
 	        var prefab = new Prefab().initWithChildren(children);
 	        // Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
 	        prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
 	        return prefab;
+	    };
+	    Prefab.prototype.createEntityPrototype = function () {
+	        var entityPrototype = new EntityPrototype();
+	        entityPrototype.prototype = this;
+	        var id = entityPrototype.id;
+	        var prototypeTransform = this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
+	        if (!prototypeTransform)
+	            { assert(false, 'Prefab (pfa) must have a Transform component'); }
+	        var name = createEntityPrototypeNameProperty(id);
+	        var transform = createEntityPrototypeTransform(id);
+	        transform.setValue('position', prototypeTransform.getValue('position'));
+	        transform.setValue('scale', prototypeTransform.getValue('scale'));
+	        transform.setValue('angle', prototypeTransform.getValue('angle'));
+	        var children = [name, transform];
+	        this.forEachChild('pfa', function (pfa) {
+	            var childEntityPrototype = pfa.createEntityPrototype();
+	            children.push(childEntityPrototype);
+	        });
+	        entityPrototype.initWithChildren(children);
+	        /*
+	                let inheritedComponentDatas = this.getInheritedComponentDatas();
+	                let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
+	                    return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+	                        .initWithChildren(icd.properties.map(prp => prp.clone()));
+	                }) as any as Array<Serializable>;
+	                children.push(this._properties.name.clone());
+
+	                entityPrototype.initWithChildren(children);
+	                */
+	        // @ifndef OPTIMIZE
+	        assert(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+	        // @endif
+	        return entityPrototype;
 	    };
 	    return Prefab;
 	}(Prototype));
@@ -4016,9 +4041,9 @@
 	                var entities_1 = [];
 	                componentSet.forEach(function (c) { return entities_1.push(c.entity); });
 	                var distSq = this.radius * this.radius;
-	                var pos = this.Transform.position;
+	                var pos = this.Transform.getGlobalPosition();
 	                for (var i = 0; i < entities_1.length; ++i) {
-	                    if (entities_1[i].position.distanceSq(pos) < distSq) {
+	                    if (entities_1[i].Transform.getGlobalPosition().distanceSq(pos) < distSq) {
 	                        if (!entities_1[i][this$1.storeProp] && this$1.launchTrigger(entities_1[i]) !== false)
 	                            { break; }
 	                        entities_1[i][this$1.storeProp] = true;
@@ -4242,7 +4267,7 @@
 	// Export so that other components can have this component as parent
 	Component.register({
 	    name: 'Lifetime',
-	    description: 'Set the object to be destroyed after a time period',
+	    description: 'Set the object to be destroyed after a time period.',
 	    category: 'Logic',
 	    icon: 'fa-bars',
 	    requirements: ['Transform'],
@@ -4351,7 +4376,8 @@
 	                this.container.position.set(0, 0);
 	            }
 	            else {
-	                this.positionListener = this.Transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (position) {
+	                this.positionListener = this.Transform.listen('globalTransformChanged', function (Transform) {
+	                    var position = Transform.getGlobalPosition();
 	                    _this.container.position.set(position.x, position.y);
 	                });
 	                this.container.position.set(this.Transform.position.x, this.Transform.position.y);
@@ -4416,7 +4442,7 @@
 	                    p.vy += Math.sin(angle) * this.speedToOutside;
 	                }
 	            }
-	            else {
+	            else if (this.spawnType === 'rectangle') {
 	                // Rectangle
 	                p.sprite.x = -this.spawnRect.x / 2 + Math.random() * this.spawnRect.x;
 	                p.sprite.y = -this.spawnRect.y / 2 + Math.random() * this.spawnRect.y;
@@ -4424,8 +4450,9 @@
 	            p.age = this.scene.time - p.nextBirth;
 	            p.nextBirth += this.particleLifetime;
 	            if (this.globalCoordinates) {
-	                p.sprite.x += this.Transform.position.x;
-	                p.sprite.y += this.Transform.position.y;
+	                var pos = Vector.fromObject(this.container.toLocal(zeroPoint$1, this.Transform.container, tempPoint$1));
+	                p.sprite.x += pos.x;
+	                p.sprite.y += pos.y;
 	                if (this.Physics && this.Physics.body) {
 	                    var vel = this.Physics.body.velocity;
 	                    p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
@@ -4548,6 +4575,8 @@
 	    }
 	    return textureCache[hash];
 	}
+	var zeroPoint$1 = new PIXI$1.Point();
+	var tempPoint$1 = new PIXI$1.Point();
 	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
@@ -4858,7 +4887,7 @@
 	        stickyNonModalErrorPopup('Game is corrupt.');
 	    }
 	}
-	addChangeListener(function (change) {
+	globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, function (change) {
 	    if (change.external || !options.clientToServerEnabled)
 	        { return; } // Don't send a change that you have received.
 	    if (isInSceneTree(change)) // Don't sync scene
@@ -4882,13 +4911,13 @@
 	    else
 	        { socket.emit(data); }
 	}
-	var listeners$2 = {
+	var listeners = {
 	    data: function (result) {
 	        var profile = result.profile, gameData = result.gameData, editAccess = result.editAccess;
 	        localStorage.openEditPlayUserId = profile.id;
 	        localStorage.openEditPlayUserToken = profile.userToken;
 	        if (!editAccess) {
-	            events.dispatch('noEditAccess');
+	            globalEventDispatcher.dispatch('noEditAccess');
 	        }
 	        delete profile.userToken;
 	        window.user = profile;
@@ -4923,16 +4952,16 @@
 	});
 	var socket;
 	function connect() {
-	    if (!window.io) {
+	    var io = window['io'];
+	    if (!io) {
 	        return console.error('socket.io not defined after window load.');
 	    }
 	    socket = new io();
-	    window.s = socket;
 	    socket.on('connect', function () {
 	        socket.onevent = function (packet) {
 	            var param1 = packet.data[0];
 	            if (typeof param1 === 'string') {
-	                listeners$2[param1](packet.data[1]);
+	                listeners[param1](packet.data[1]);
 	            }
 	            else {
 	                // Optimized change-event
@@ -4948,6 +4977,108 @@
 	    });
 	}
 	window.addEventListener('load', connect);
+	var keyToShortKey = {
+	    id: 'i',
+	    type: 't',
+	    value: 'v',
+	    parentId: 'p' // obj._parent.id
+	};
+	var shortKeyToKey = {};
+	Object.keys(keyToShortKey).forEach(function (k) {
+	    shortKeyToKey[keyToShortKey[k]] = k;
+	});
+	function packChange(change) {
+	    if (change.packedChange)
+	        { return change.packedChange; } // optimization
+	    var packed = {};
+	    try {
+	        if (change.parent)
+	            { change.parentId = change.parent.id; }
+	        if (change.type === changeType.addSerializableToTree) {
+	            if (change.reference) {
+	                change.value = change.reference.toJSON();
+	            }
+	            else {
+	                assert(false, 'invalid change of type addSerializableToTree', change);
+	            }
+	        }
+	        else if (change.value !== undefined) {
+	            change.value = change.reference.propertyType.type.toJSON(change.value);
+	        }
+	        Object.keys(keyToShortKey).forEach(function (key) {
+	            if (change[key] !== undefined) {
+	                if (key === 'type' && change[key] === changeType.setPropertyValue)
+	                    { return; } // optimize most common type
+	                packed[keyToShortKey[key]] = change[key];
+	            }
+	        });
+	    }
+	    catch (e) {
+	        console.log('PACK ERROR', e);
+	    }
+	    return packed;
+	}
+	function unpackChange(packedChange) {
+	    var change = {
+	        packedChange: packedChange // optimization
+	    };
+	    Object.keys(packedChange).forEach(function (shortKey) {
+	        var key = shortKeyToKey[shortKey];
+	        change[key] = packedChange[shortKey];
+	    });
+	    if (!change.type)
+	        { change.type = changeType.setPropertyValue; }
+	    if (change.type === changeType.addSerializableToTree) {
+	        // reference does not exist because it has not been created yet
+	        change.id = change.value.id;
+	    }
+	    else {
+	        change.reference = getSerializable(change.id);
+	        if (change.reference) {
+	            change.id = change.reference.id;
+	        }
+	        else {
+	            console.error('received a change with unknown id', change, 'packed:', packedChange);
+	            return null;
+	        }
+	    }
+	    if (change.parentId)
+	        { change.parent = getSerializable(change.parentId); }
+	    return change;
+	}
+	function executeChange(change) {
+	    var newScene;
+	    executeExternal(function () {
+	        if (change.type === changeType.setPropertyValue) {
+	            change.reference.value = change.reference.propertyType.type.fromJSON(change.value);
+	        }
+	        else if (change.type === changeType.addSerializableToTree) {
+	            if (change.parent) {
+	                var obj = Serializable.fromJSON(change.value);
+	                change.parent.addChild(obj);
+	                if (obj.threeLetterType === 'ent') {
+	                    obj.localMaster = false;
+	                }
+	            }
+	            else {
+	                var obj = Serializable.fromJSON(change.value); // Scene does not need a parent
+	                if (obj.threeLetterType === 'sce')
+	                    { newScene = obj; }
+	            }
+	        }
+	        else if (change.type === changeType.deleteAllChildren) {
+	            change.reference.deleteChildren();
+	        }
+	        else if (change.type === changeType.deleteSerializable) {
+	            change.reference.delete();
+	        }
+	        else if (change.type === changeType.move) {
+	            change.reference.move(change.parent);
+	        }
+	    });
+	    if (newScene)
+	        { newScene.play(); }
+	}
 	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
@@ -4979,7 +5110,7 @@
 	        window.scrollTo(0, 0);
 	        previousWidth = width;
 	        previousHeight = height;
-	        events.dispatch('canvas resize', scene);
+	        globalEventDispatcher.dispatch('canvas resize', scene);
 	        // Lets see if it has changed after 200ms.
 	        setTimeout(function () { return setSize(); }, 200);
 	    }
@@ -4989,7 +5120,7 @@
 	    // setTimeout(setSize, 1000);
 	}
 	window.addEventListener('resize', resizeCanvas);
-	listenSceneCreation(resizeCanvas);
+	forEachScene(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
 	//# sourceMappingURL=canvasResize.js.map
 
@@ -5109,7 +5240,7 @@
 	    }
 	    return touchCoordinates;
 	}
-	listenSceneCreation(function () {
+	forEachScene(function () {
 	    scene.listen(GameEvent.SCENE_START, function () { return positionControls(); });
 	});
 	function positionControls() {
@@ -5210,7 +5341,7 @@
 	    clientToServerEnabled: false,
 	    context: 'play'
 	});
-	listenGameCreation(function (game$$1) {
+	forEachGame(function (game$$1) {
 	    var levelIndex = 0;
 	    function play() {
 	        var levels = game$$1.getChildren('lvl');

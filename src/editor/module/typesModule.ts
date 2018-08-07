@@ -8,6 +8,7 @@ import * as performance from '../../util/performance';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { selectInEditor, editorSelection } from '../editorSelection';
 import { game } from '../../core/game';
+import PrototypeDeleteConfirmation from '../views/popup/PrototypeDeleteConfirmation';
 
 class TypesModule extends Module {
 	addButton: HTMLElement;
@@ -116,6 +117,22 @@ class TypesModule extends Module {
 			this.externalChange = false;
 
 			performance.stop('Editor: Types');
+		});
+
+		editorEventDispacher.listen(EditorEvent.EDITOR_DELETE_CONFIRMATION, () => {
+			if (editorSelection.type === 'prt') {
+				return new Promise((resolve, reject) => {
+					new PrototypeDeleteConfirmation(editorSelection.items, (canDelete) => {
+						if (canDelete) {
+							resolve(true);
+						} else {
+							reject('User cancelled');
+						}
+					});
+				});
+			} else {
+				return true;
+			}
 		});
 	}
 	update() {

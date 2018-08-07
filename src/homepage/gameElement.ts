@@ -1,11 +1,11 @@
 import {dateToAgoFormat, standaloneMobileLinkClickEventSupport} from "./util";
 import {ContextMenu} from "./contextMenu";
-import {el, mount, list, List, RedomComponent} from 'redom';
+import {el, mount, list, List, RedomElement} from 'redom';
 import {profilePromise} from "./profile";
 
 const sizeExplanation = 'Game size in data units. Every object in scene, type, component, level and property is a data unit.';
 
-export class GameList implements RedomComponent {
+export class GameList implements RedomElement {
 	el: HTMLElement;
 	list: List;
 	constructor() {
@@ -29,7 +29,7 @@ export class GameList implements RedomComponent {
 	}
 }
 
-class Game implements RedomComponent {
+class Game implements RedomElement {
 	el: HTMLElement;
 	name: HTMLElement;
 	play: HTMLElement;

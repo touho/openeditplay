@@ -30,6 +30,7 @@ import Level from '../../core/level';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { selectInEditor, editorSelection } from '../editorSelection';
+import Prefab from '../../core/prefab';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -407,8 +408,6 @@ class SceneModule extends Module {
 			if (scene && scene.resetting)
 			return performanceTool.stop('Editor: Scene');
 
-			console.log('here sceneEdit.3', change.origin);
-
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
@@ -527,12 +526,12 @@ class SceneModule extends Module {
 			this.draw();
 		});
 
-		editorEventDispacher.listen('dragPrefabsStarted', prefabs => {
+		editorEventDispacher.listen('dragPrefabsStarted', (prefabs: Prefab[]) => {
 			this.newEntities = prefabs.map(pfa => pfa.createEntity());
 		});
 		editorEventDispacher.listen('dragPrototypeStarted', prototypes => {
 			let entityPrototypes = prototypes.map(prototype => {
-				let entityPrototype = EntityPrototype.createFromPrototype(prototype, []);
+				let entityPrototype = EntityPrototype.createFromPrototype(prototype);
 				// entityPrototype.position = this.previousMousePosInWorldCoordinates;
 				return entityPrototype;
 			});

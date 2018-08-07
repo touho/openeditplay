@@ -44,12 +44,21 @@ button.button:active {
 }
 button.button.dangerButton {
   /*color: #ffbcc1;*/
+  background: #5f3a3a;
   background: linear-gradient(to bottom, #714646, #523232);
-  /*background: #5f3a3a;*/
 }
 button.button.dangerButton:hover {
   color: #ffb6bf;
   text-shadow: 0 0 2px red;
+}
+button.button.greenButton {
+  /*color: #ffbcc1;*/
+  background: #3a5f3f;
+  background: linear-gradient(to bottom, #47714c, #325237);
+}
+button.button.greenButton:hover {
+  color: #b8ffc1;
+  text-shadow: 0 0 2px #00ff22;
 }
 button.button i.fa {
   position: relative;
@@ -751,7 +760,7 @@ div.propertyContent {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  
+
   max-width: 901px;
 }
 .componentAdderContent .categoryItem {
@@ -767,13 +776,6 @@ div.propertyContent {
 }
 .componentAdderContent div.categoryName {
   margin-bottom: 12px;
-}
-.componentAdderContent span.description {
-  margin-left: 10px;
-}
-.componentAdderContent .buttonWithDescription {
-  float: left;
-  clear: both;
 }
 button.button:disabled {
   filter: grayscale(100%);
@@ -828,6 +830,13 @@ div.popup div.popupButtons {
 }
 div.popup div.buttonContainer {
   display: flex;
+}
+.buttonWithDescription {
+  float: left;
+  clear: both;
+}
+.buttonWithDescription .description {
+  margin-left: 5px;
 }
 * {
   box-sizing: border-box;

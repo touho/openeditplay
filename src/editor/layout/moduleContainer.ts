@@ -1,4 +1,4 @@
-import { el, list, mount, List, RedomComponent } from 'redom';
+import { el, list, mount, List, RedomElement } from 'redom';
 import { redomDispatch, redomListen } from '../../util/redomEvents';
 import * as performance from '../../util/performance';
 import Module from '../module/module';
@@ -152,7 +152,7 @@ export default class ModuleContainer {
 	}
 }
 
-class ModuleTab implements RedomComponent {
+class ModuleTab implements RedomElement {
 	el: HTMLElement;
 	module: Module;
 	_sel: boolean;

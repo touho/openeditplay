@@ -1,4 +1,4 @@
-import Popup, { Button } from './Popup';
+import Popup, { Button, ButtonWithDescription } from './Popup';
 import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
 import { list, el, List } from 'redom';
@@ -133,30 +133,6 @@ class Category {
 		});
 
 		this.list.update(componentButtonData);
-	}
-}
-
-class ButtonWithDescription {
-	el: HTMLElement;
-	button: Button;
-	description: HTMLElement;
-
-	constructor() {
-		this.el = el('div.buttonWithDescription',
-			this.button = new Button(),
-			this.description = el('span.description')
-		);
-	}
-
-	update(buttonData) {
-		this.description.innerHTML = buttonData.description;
-		if (buttonData.disabledReason) {
-			this.button.el.setAttribute('disabled', 'disabled');
-		} else {
-			this.button.el.removeAttribute('disabled');
-		}
-		this.button.el.setAttribute('title', buttonData.disabledReason || '');
-		this.button.update(buttonData);
 	}
 }
 

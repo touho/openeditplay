@@ -4,10 +4,11 @@ import Module from './module';
 import {game} from "../../core/game";
 import {getSerializable} from "../../core/serializableManager";
 import {editor} from "../editor";
-import { selectInEditor } from '../editorSelection';
+import { selectInEditor, editorSelection } from '../editorSelection';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { changeType } from '../../core/change';
 import Prefab from '../../core/prefab';
+import PrototypeDeleteConfirmation from '../views/popup/PrototypeDeleteConfirmation';
 
 class PrefabsModule extends Module {
 	treeView: TreeView;
@@ -43,6 +44,22 @@ class PrefabsModule extends Module {
 				// if (change.origin != this) {
 				// 	this.selectBasedOnEditorSelection();
 				// }
+			}
+		});
+
+		editorEventDispacher.listen(EditorEvent.EDITOR_DELETE_CONFIRMATION, () => {
+			if (editorSelection.type === 'pfa') {
+				return new Promise((resolve, reject) => {
+					new PrototypeDeleteConfirmation(editorSelection.items, (canDelete) => {
+						if (canDelete) {
+							resolve(true);
+						} else {
+							reject('User cancelled');
+						}
+					});
+				});
+			} else {
+				return true;
 			}
 		});
 

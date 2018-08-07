@@ -6,7 +6,7 @@ import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
 import assert from '../util/assert';
 import Vector from '../util/vector';
-import EntityPrototype from "./entityPrototype";
+import EntityPrototype, { createEntityPrototypeNameProperty, createEntityPrototypeTransform } from "./entityPrototype";
 
 // Prefab is an EntityPrototype that has been saved to a prefab.
 export default class Prefab extends Prototype {
@@ -20,7 +20,7 @@ export default class Prefab extends Prototype {
 	}
 
 	createEntity() {
-		return EntityPrototype.createFromPrototype(this).createEntity();
+		return this.createEntityPrototype().createEntity();
 	}
 
 	getParentPrototype() {
@@ -36,12 +36,62 @@ export default class Prefab extends Prototype {
 
 		children.push(prototype._properties.name.clone());
 
+		prototype.forEachChild('epr', (childEntityPrototype: EntityPrototype) => {
+			let prefab = Prefab.createFromPrototype(childEntityPrototype);
+			children.push(prefab);
+		});
+
 		let prefab = new Prefab().initWithChildren(children);
 
 		// Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
 		prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
+
 		return prefab;
-	};
+	}
+
+	createEntityPrototype() {
+		let entityPrototype = new EntityPrototype();
+		entityPrototype.prototype = this;
+		let id = entityPrototype.id;
+
+		let prototypeTransform = this.findChild('cda', (cda: ComponentData) => cda.name === 'Transform');
+
+		if (!prototypeTransform)
+			assert(false, 'Prefab (pfa) must have a Transform component');
+
+		let name = createEntityPrototypeNameProperty(id);
+		let transform = createEntityPrototypeTransform(id);
+
+		transform.setValue('position', prototypeTransform.getValue('position'));
+		transform.setValue('scale', prototypeTransform.getValue('scale'));
+		transform.setValue('angle', prototypeTransform.getValue('angle'));
+
+		let children: Serializable[] = [name, transform];
+
+		this.forEachChild('pfa', (pfa: Prefab) => {
+			let childEntityPrototype = pfa.createEntityPrototype();
+			children.push(childEntityPrototype);
+		});
+
+		entityPrototype.initWithChildren(children);
+
+		/*
+				let inheritedComponentDatas = this.getInheritedComponentDatas();
+				let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
+					return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+						.initWithChildren(icd.properties.map(prp => prp.clone()));
+				}) as any as Array<Serializable>;
+				children.push(this._properties.name.clone());
+
+				entityPrototype.initWithChildren(children);
+				*/
+
+		// @ifndef OPTIMIZE
+		assert(entityPrototype.getTransform(), 'EntityPrototype must have a Transform');
+		// @endif
+
+		return entityPrototype;
+	}
 
 	// Do not use EntityPrototype optimization
 	// This is only needed if Prefab would extend EntityPrototype instead of Prototype
