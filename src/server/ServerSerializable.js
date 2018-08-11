@@ -61,13 +61,17 @@ class ServerSerializable {
 			};
 			if (s.name) serializable.n = s.name;
 			if (s.value) {
-				let value = JSON.parse(s.value);
-				if (s.id.startsWith('prp')) {
-					serializable.v = value;
-				} else {
-					Object.keys(value).forEach(key => {
-						serializable[key] = value[key];
-					});
+				try {
+					let value = JSON.parse(s.value);
+					if (s.id.startsWith('prp')) {
+						serializable.v = value;
+					} else {
+						Object.keys(value).forEach(key => {
+							serializable[key] = value[key];
+						});
+					}
+				} catch(e) {
+					console.error(e, s.value);
 				}
 			}
 			if (s.type === 'gam')

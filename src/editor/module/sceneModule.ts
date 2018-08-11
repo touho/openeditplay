@@ -210,7 +210,7 @@ class SceneModule extends Module {
 		this.selectionArea = null;
 		this.entitiesInSelection = [];
 
-		editorEventDispacher.listen('reset', () => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, () => {
 			setChangeOrigin(this);
 			this.stopAndReset();
 
@@ -411,7 +411,6 @@ class SceneModule extends Module {
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
 				setChangeOrigin(this);
-				console.log('here sceneEdit.syncAChangeBetweenSceneAndLevel');
 
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
 				this.draw();

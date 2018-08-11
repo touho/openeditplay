@@ -3,11 +3,11 @@ import Vector from '../util/vector';
 import p2, { addBody, deleteBody, createMaterial, getWorld } from '../features/physics';
 import assert from '../util/assert';
 
-const PHYSICS_SCALE = 1/50;
+const PHYSICS_SCALE = 1 / 50;
 export { PHYSICS_SCALE };
-const PHYSICS_SCALE_INV = 1/PHYSICS_SCALE;
+const PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
 
-const DENSITY_SCALE = 3/10;
+const DENSITY_SCALE = 3 / 10;
 
 const type = {
 	dynamic: p2.Body.DYNAMIC,
@@ -65,11 +65,12 @@ Component.register({
 			}
 
 			this.listenProperty(this.Transform, 'position', update(position => {
-				this.body.position = position.toArray().map(x => x * PHYSICS_SCALE);
+				this.body.position = fromTransformToBodyPosition(this.Transform);
 				this.body.updateAABB();
 			}));
 			this.listenProperty(this.Transform, 'angle', update(angle => {
-				this.body.angle = angle;
+				let globalAngle = this.Transform.getGlobalAngle();
+				this.body.angle = globalAngle;
 				this.body.updateAABB();
 			}));
 			this.listenProperty(this.Transform, 'scale', update(scale => this.updateShape()));
@@ -93,13 +94,21 @@ Component.register({
 			if (this._rootType)
 				this.createBody();
 		},
+		// This is here because createBody in init() doesn't have access to Transform's global position because parents are inited later.
+		onStart() {
+			this.body.position = fromTransformToBodyPosition(this.Transform);
+			this.body.angle = this.Transform.getGlobalAngle();
+			this.updateShape();
+		},
 		createBody() {
 			assert(!this.body);
 
 			this.body = new p2.Body({
 				type: type[this.type],
-				position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
-				angle: this.Transform.angle,
+
+				// position and angle are updated at onStart
+				position: [0, 0], // fromTransformToBodyPosition(this.Transform),
+				angle: 0, // this.Transform.getGlobalAngle(),
 				velocity: [0, 0],
 				angularVelocity: 0,
 				sleepTimeLimit: 0.6,
@@ -108,7 +117,7 @@ Component.register({
 				angularDamping: this.rotationalDrag > 0.98 ? 1 : this.rotationalDrag,
 				fixedRotation: this.rotationalDrag === 1
 			});
-			this.updateShape();
+			// this.updateShape(); // This is done at onStart. No need to do it here.
 
 			this.body.entity = this.entity;
 
@@ -131,7 +140,12 @@ Component.register({
 			}
 
 			let Shapes = this.entity.getComponents('Shape');
-			let scale = this.Transform.scale;
+			let scale = this.Transform.scale.clone() as Vector;
+			let parentEntity = this.entity.getParent();
+			while (parentEntity && parentEntity.threeLetterType === 'ent') {
+				scale.multiply(parentEntity.Transform.scale);
+				parentEntity = parentEntity.getParent();
+			}
 
 			Shapes.forEach(Shape => {
 				let shape;
@@ -160,7 +174,7 @@ Component.register({
 			this.updateMass();
 			this.updateMaterial();
 		},
-		updateMaterial() {
+		updateMaterial()  {
 			let material = createMaterial(this.scene, {
 				friction: this.friction,
 				restitution: this.bounciness,
@@ -190,12 +204,14 @@ Component.register({
 
 			this.updatingOthers = true;
 
-			let newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
-			if (!this.Transform.position.isEqualTo(newPos))
-				this.Transform.position = newPos;
+			// TODO: find out should these be optimized.
+			let newGlobalPosition = fromBodyPositionToGlobalVector(b.position);
+			let oldGlobalPosition = this.Transform.getGlobalPosition();
+			if (!oldGlobalPosition.isEqualTo(newGlobalPosition))
+				this.Transform.setGlobalPosition(newGlobalPosition);
 
-			if (this.Transform.angle !== b.angle)
-				this.Transform.angle = b.angle;
+			if (this.Transform.getGlobalAngle() !== b.angle)
+				this.Transform.setGlobalAngle(b.angle);
 
 			this.updatingOthers = false;
 		},
@@ -219,3 +235,10 @@ Component.register({
 		}
 	}
 });
+
+function fromTransformToBodyPosition(Transform): Array<number> {
+	return Transform.getGlobalPosition().toArray().map(x => x * PHYSICS_SCALE);
+}
+function fromBodyPositionToGlobalVector(bodyPosition): Vector {
+	return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
+}

@@ -23,6 +23,8 @@ Component.register({
 			this.container.rotation = this.angle;
 		},
 		init() {
+
+			// TODO: move add code to parent? Because container logic is needed in init() of physics component.
 			let parentTransform = this.getParentTransform();
 			if (parentTransform) {
 				parentTransform.container.addChild(this.container);
@@ -67,6 +69,10 @@ Component.register({
 		getGlobalPosition() {
 			return Vector.fromObject(this.layer.toLocal(zeroPoint, this.container, tempPoint));
 		},
+		// given position is altered
+		setGlobalPosition(position: Vector) {
+			this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+		},
 		getGlobalAngle() {
 			let angle = this.angle;
 			let parent = this.getParentTransform();
@@ -76,8 +82,10 @@ Component.register({
 			}
 			return angle;
 		},
-		setGlobalPosition(position: Vector) {
-			this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+		setGlobalAngle(newGlobalAngle: number) {
+			let globalAngle = this.getGlobalAngle();
+			let change = newGlobalAngle - globalAngle;
+			this.container.rotation = (this.container.rotation + change + Math.PI * 2) % (Math.PI * 2);
 		},
 		sleep() {
 			this.container.destroy();

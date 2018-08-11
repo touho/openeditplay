@@ -4,7 +4,7 @@ import TreeView from "../views/treeView";
 import { editor } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { getSerializable } from "../../core/serializableManager";
-import { changeType } from "../../core/change";
+import { changeType, setChangeOrigin } from "../../core/change";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import Game, { game } from "../../core/game";
@@ -15,6 +15,9 @@ import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { selectInEditor, selectedLevel, editorSelection } from '../editorSelection';
 import Entity from '../../core/entity';
+import EntityPrototype from '../../core/entityPrototype';
+import Vector from '../../util/vector';
+import { PositionAngleScale } from '../util/positionAngleScaleUtil';
 
 class ObjectsModule extends Module {
 	treeView: TreeView;
@@ -51,36 +54,45 @@ class ObjectsModule extends Module {
 			},
 			moveCallback: (serializableId: string, parentId: string) => {
 				if (serializableId.substring(0, 3) === 'epr') {
-					let serializable = getSerializable(serializableId);
+					let entityPrototype = getSerializable(serializableId) as EntityPrototype;
 					let parent = parentId === '#' ? selectedLevel : getSerializable(parentId);
-					serializable.move(parent);
-					/*
-					let target = event.targetElement;
-					while (!target.classList.contains('jstree-node')) {
-						target = target.parentElement;
-						if (!target)
-							throw new Error('Invalid target', event.targetElement);
+
+					let transformComponentDataChain1 = [];
+					let transformComponentDataChain2 = [];
+
+					let traverser = entityPrototype;
+					while (traverser && traverser.threeLetterType === 'epr') {
+						transformComponentDataChain1.unshift(traverser.getTransform());
+						traverser = traverser._parent as EntityPrototype;
 					}
-					console.log('target.id', target.id)
-					let targetSerializable = getSerializable(target.id);
 
-					let idSet = new Set(event.idList);
-					let serializables = event.idList.map(getSerializable).filter(serializable => {
-						let parent = serializable.getParent();
-						while (parent) {
-							if (idSet.has(parent.id))
-								return false;
-							parent = parent.getParent();
-						}
-						return true;
-					});
+					traverser = parent;
+					while (traverser && traverser.threeLetterType === 'epr') {
+						transformComponentDataChain2.unshift(traverser.getTransform());
+						traverser = traverser._parent as EntityPrototype;
+					}
 
-					console.log('move serializables', serializables, 'to', targetSerializable);
-					serializables.forEach(serializable => {
-						serializable.move(targetSerializable);
-					});
-					console.log('Done!')
-					*/
+					let pas1 = PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[0]);
+					for (let i = 1; i < transformComponentDataChain1.length; i++) {
+						pas1.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[i]));
+					}
+
+					let pas2 = transformComponentDataChain2.length > 0
+						? PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[0])
+						: new PositionAngleScale();
+					for (let i = 1; i < transformComponentDataChain2.length; i++) {
+						pas2.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[i]));
+					}
+
+					let diffPas = PositionAngleScale.getLeafDelta(pas1, pas2);
+
+					setChangeOrigin(this);
+					entityPrototype.move(parent);
+
+					let TCD = entityPrototype.getTransform();
+					TCD.setValue('position', diffPas.position);
+					TCD.setValue('angle', diffPas.angle);
+					TCD.setValue('scale', diffPas.scale);
 				}
 			},
 			doubleClickCallback: serializableId => {
@@ -116,7 +128,7 @@ class ObjectsModule extends Module {
 				let target = event.targetElement;
 				while (!target.classList.contains('jstree-node')) {
 					target = target.parentElement;
-					if (!target){
+					if (!target) {
 						console.error('Invalid target', event.targetElement);
 					}
 				}
@@ -160,7 +172,7 @@ class ObjectsModule extends Module {
 			this.dirty = true;
 		};
 		editorEventDispacher.listen('play', setDirty, -1);
-		editorEventDispacher.listen('reset', setDirty, -1);
+		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
 		game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {

@@ -185,6 +185,15 @@ export default class Scene extends Serializable {
 		this.dispatch('onUpdate', dt, this.time);
 		performanceTool.stop('Component updates');
 
+		// performanceTool.start('Component up2');
+		// let set = this.getComponents('Spawner');
+		// let sceneTime = this.time;
+		// set.forEach(comp => {
+		// 	if (sceneTime > comp.lastSpawn + comp.interval)
+		// 		comp.spawn();
+		// });
+		// performanceTool.stop('Component up2');
+
 		// Update physics
 		performanceTool.start('Physics');
 		updateWorld(this, dt);

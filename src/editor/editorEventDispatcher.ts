@@ -7,7 +7,8 @@ export enum EditorEvent {
     EDITOR_REGISTER_HELP_VARIABLE = 'define help variable', // parameters(name, value)
     EDITOR_DELETE_CONFIRMATION = 'delete confirmation', // handlerCallback return true|false|Promise wether deletion should succeed.
     EDITOR_PRE_DELETE_SELECTION = 'pre delete selection',
-    EDITOR_LOADED = 'editor loaded'
+    EDITOR_LOADED = 'editor loaded',
+    EDITOR_RESET = 'reset'
 };
 
 // Wrapper that takes only EditorEvents

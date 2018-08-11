@@ -2271,6 +2271,7 @@
 	    EditorEvent["EDITOR_DELETE_CONFIRMATION"] = "delete confirmation";
 	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
 	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
+	    EditorEvent["EDITOR_RESET"] = "reset";
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2510,6 +2511,14 @@
 	        start('Component updates');
 	        this.dispatch('onUpdate', dt, this.time);
 	        stop('Component updates');
+	        // performanceTool.start('Component up2');
+	        // let set = this.getComponents('Spawner');
+	        // let sceneTime = this.time;
+	        // set.forEach(comp => {
+	        // 	if (sceneTime > comp.lastSpawn + comp.interval)
+	        // 		comp.spawn();
+	        // });
+	        // performanceTool.stop('Component up2');
 	        // Update physics
 	        start('Physics');
 	        updateWorld(this, dt);
@@ -2646,10 +2655,10 @@
 	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
-	var automaticSceneEventListeners = [
-	    'onUpdate',
-	    'onStart'
-	];
+	var automaticSceneEventListeners = {
+	    onUpdate: 'onUpdate',
+	    onStart: GameEvent.SCENE_START
+	};
 	// Object of a component, see _componentExample.js
 	var Component = /** @class */ (function (_super) {
 	    __extends(Component, _super);
@@ -2672,11 +2681,13 @@
 	        _super.prototype.delete.call(this);
 	        return true;
 	    };
-	    Component.prototype._addEventListener = function (functionName) {
+	    Component.prototype._addEventListener = function (functionName, eventName) {
+	        if (!eventName)
+	            { eventName = functionName; }
 	        var func = this[functionName];
 	        var self = this;
 	        var performanceName = 'Component: ' + this.componentClass.componentName;
-	        this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
+	        this._listenRemoveFunctions.push(this.scene.listen(eventName, function () {
 	            // @ifndef OPTIMIZE
 	            start(performanceName);
 	            // @endif
@@ -2697,10 +2708,18 @@
 	            assert$1(_this[r], _this.componentClass.componentName + " requires component " + r + " but it is not found");
 	        });
 	        this.forEachChild('com', function (c) { return c._preInit(); });
-	        for (var i = 0; i < automaticSceneEventListeners.length; ++i) {
-	            if (typeof this$1[automaticSceneEventListeners[i]] === 'function')
-	                { this$1._addEventListener(automaticSceneEventListeners[i]); }
+	        for (var key in automaticSceneEventListeners) {
+	            if (typeof this$1[key] === 'function') {
+	                this$1._addEventListener(key, automaticSceneEventListeners[key]);
+	            }
 	        }
+	        /*
+	        for (let i = 0; i < Object.keys(automaticSceneEventListeners).length; ++i) {
+	            if (typeof this[automaticSceneEventListeners[i]] === 'function') {
+	                this._addEventListener(automaticSceneEventListeners[i]);
+	            }
+	        }
+	        */
 	        if (this.componentClass.componentName !== 'Transform' && this.scene)
 	            { this.scene.addComponent(this); }
 	        try {
@@ -3623,11 +3642,11 @@
 	    };
 	    EntityPrototype.prototype.spawnEntityToScene = function (scene, position) {
 	        if (!scene)
-	            { return; }
+	            { return null; }
 	        if (position) {
 	            this.getTransform().getPropertyOrCreate('position').value = position;
 	        }
-	        this.createEntity(scene);
+	        return this.createEntity(scene);
 	    };
 	    EntityPrototype.prototype.detachFromPrototype = function () {
 	        this.name = this.makeUpAName();
@@ -3643,10 +3662,9 @@
 	            if (cda.name !== 'Transform')
 	                { cda.delete(); }
 	        });
-	        debugger;
-	        // TODO: For some reason all non-Transform components have not been removed yet...
 	        this.addChildren(children);
 	        this.prototype = null;
+	        return this;
 	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
@@ -3654,6 +3672,7 @@
 	            { return; }
 	        assert$1(this.getTransform(), 'EntityPrototype must have a Transform');
 	        _super.prototype.setRootType.call(this, rootType);
+	        return this;
 	    };
 	    /**
 	     * If Transform or Transform.position is missing, they are added.
@@ -3906,6 +3925,7 @@
 	        },
 	        init: function () {
 	            var _this = this;
+	            // TODO: move add code to parent? Because container logic is needed in init() of physics component.
 	            var parentTransform = this.getParentTransform();
 	            if (parentTransform) {
 	                parentTransform.container.addChild(this.container);
@@ -3947,6 +3967,10 @@
 	        getGlobalPosition: function () {
 	            return Vector.fromObject(this.layer.toLocal(zeroPoint, this.container, tempPoint));
 	        },
+	        // given position is altered
+	        setGlobalPosition: function (position) {
+	            this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+	        },
 	        getGlobalAngle: function () {
 	            var angle = this.angle;
 	            var parent = this.getParentTransform();
@@ -3956,8 +3980,10 @@
 	            }
 	            return angle;
 	        },
-	        setGlobalPosition: function (position) {
-	            this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+	        setGlobalAngle: function (newGlobalAngle) {
+	            var globalAngle = this.getGlobalAngle();
+	            var change = newGlobalAngle - globalAngle;
+	            this.container.rotation = (this.container.rotation + change + Math.PI * 2) % (Math.PI * 2);
 	        },
 	        sleep: function () {
 	            this.container.destroy();
@@ -4247,6 +4273,7 @@
 	        },
 	        spawn: function () {
 	            var _this = this;
+	            window['testi']++;
 	            var prototype = this.game.findChild('prt', function (prt) { return prt.name === _this.typeName; }, true);
 	            if (!prototype)
 	                { return; }
@@ -4255,8 +4282,15 @@
 	            entityPrototype.delete();
 	            this.lastSpawn = this.scene.time;
 	        }
-	    }
+	    },
 	});
+	/*
+	window['testi'] = 0;
+	setInterval(() => {
+	    console.log('testi', window['testi']);
+	    window['testi'] = 0;
+	}, 1000);
+	*/ 
 	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
@@ -4366,11 +4400,12 @@
 	                _loop_1(i);
 	            }
 	            this.listenProperty(this.Transform, 'position', update(function (position) {
-	                _this.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; });
+	                _this.body.position = fromTransformToBodyPosition(_this.Transform);
 	                _this.body.updateAABB();
 	            }));
 	            this.listenProperty(this.Transform, 'angle', update(function (angle) {
-	                _this.body.angle = angle;
+	                var globalAngle = _this.Transform.getGlobalAngle();
+	                _this.body.angle = globalAngle;
 	                _this.body.updateAABB();
 	            }));
 	            this.listenProperty(this.Transform, 'scale', update(function (scale) { return _this.updateShape(); }));
@@ -4393,12 +4428,19 @@
 	            if (this._rootType)
 	                { this.createBody(); }
 	        },
+	        // This is here because createBody in init() doesn't have access to Transform's global position because parents are inited later.
+	        onStart: function () {
+	            this.body.position = fromTransformToBodyPosition(this.Transform);
+	            this.body.angle = this.Transform.getGlobalAngle();
+	            this.updateShape();
+	        },
 	        createBody: function () {
 	            assert$1(!this.body);
 	            this.body = new p2$1.Body({
 	                type: type[this.type],
-	                position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
-	                angle: this.Transform.angle,
+	                // position and angle are updated at onStart
+	                position: [0, 0],
+	                angle: 0,
 	                velocity: [0, 0],
 	                angularVelocity: 0,
 	                sleepTimeLimit: 0.6,
@@ -4407,7 +4449,7 @@
 	                angularDamping: this.rotationalDrag > 0.98 ? 1 : this.rotationalDrag,
 	                fixedRotation: this.rotationalDrag === 1
 	            });
-	            this.updateShape();
+	            // this.updateShape(); // This is done at onStart. No need to do it here.
 	            this.body.entity = this.entity;
 	            addBody(this.scene, this.body);
 	        },
@@ -4426,7 +4468,12 @@
 	                shapes.length = 0;
 	            }
 	            var Shapes = this.entity.getComponents('Shape');
-	            var scale = this.Transform.scale;
+	            var scale = this.Transform.scale.clone();
+	            var parentEntity = this.entity.getParent();
+	            while (parentEntity && parentEntity.threeLetterType === 'ent') {
+	                scale.multiply(parentEntity.Transform.scale);
+	                parentEntity = parentEntity.getParent();
+	            }
 	            Shapes.forEach(function (Shape) {
 	                var shape;
 	                if (Shape.type === 'rectangle') {
@@ -4475,11 +4522,13 @@
 	            if (!b || b.sleepState === SLEEPING || b.type === STATIC)
 	                { return; }
 	            this.updatingOthers = true;
-	            var newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
-	            if (!this.Transform.position.isEqualTo(newPos))
-	                { this.Transform.position = newPos; }
-	            if (this.Transform.angle !== b.angle)
-	                { this.Transform.angle = b.angle; }
+	            // TODO: find out should these be optimized.
+	            var newGlobalPosition = fromBodyPositionToGlobalVector(b.position);
+	            var oldGlobalPosition = this.Transform.getGlobalPosition();
+	            if (!oldGlobalPosition.isEqualTo(newGlobalPosition))
+	                { this.Transform.setGlobalPosition(newGlobalPosition); }
+	            if (this.Transform.getGlobalAngle() !== b.angle)
+	                { this.Transform.setGlobalAngle(b.angle); }
 	            this.updatingOthers = false;
 	        },
 	        sleep: function () {
@@ -4502,6 +4551,12 @@
 	        }
 	    }
 	});
+	function fromTransformToBodyPosition(Transform) {
+	    return Transform.getGlobalPosition().toArray().map(function (x) { return x * PHYSICS_SCALE; });
+	}
+	function fromBodyPositionToGlobalVector(bodyPosition) {
+	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
+	}
 	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
@@ -5760,7 +5815,7 @@
 	            title: 'Reset (R)',
 	            icon: 'fa-stop',
 	            type: 'reset',
-	            callback: function () { return editorEventDispacher.dispatch('reset'); }
+	            callback: function () { return editorEventDispacher.dispatch(EditorEvent.EDITOR_RESET); }
 	        });
 	        var updateButtons = function () {
 	            setTimeout(function () {
@@ -5894,7 +5949,7 @@
 	    return entities;
 	}
 	// Call setChangeOrigin(this) before calling this
-	// Does modifications to entities in editor scene
+	// Does modifications to entities in editor scene based on levels prototypes
 	function syncAChangeBetweenSceneAndLevel(change) {
 	    if (!scene || !scene.level)
 	        { return; }
@@ -6039,7 +6094,11 @@
 	        }
 	        // If Prototype is deleted, all entity prototypes are also deleted so we can ignore Prototype here
 	    }
-	    else if (change.type === changeType.move) ;
+	    else if (change.type === changeType.move) {
+	        // This might be difficult to achieve without reseting the whole scene.
+	        // So...
+	        editorEventDispacher.dispatch(EditorEvent.EDITOR_RESET);
+	    }
 	}
 	function copyEntitiesToScene(entities) {
 	    if (scene) {
@@ -6860,7 +6919,7 @@
 	        _this.selectionEnd = null;
 	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
-	        editorEventDispacher.listen('reset', function () {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, function () {
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
 	            if (scene.layers.editorLayer)
@@ -7025,7 +7084,6 @@
 	            // console.log('sceneModule change', change);
 	            if (change.origin !== _this) {
 	                setChangeOrigin(_this);
-	                console.log('here sceneEdit.syncAChangeBetweenSceneAndLevel');
 	                syncAChangeBetweenSceneAndLevel(change);
 	                _this.draw();
 	            }
@@ -8191,6 +8249,71 @@
 	}(Popup));
 	//# sourceMappingURL=createObject.js.map
 
+	var PositionAngleScale = /** @class */ (function () {
+	    function PositionAngleScale(position, angle, scale) {
+	        if (position === void 0) { position = new Vector(0, 0); }
+	        if (angle === void 0) { angle = 0; }
+	        if (scale === void 0) { scale = new Vector(1, 1); }
+	        this.position = position;
+	        this.angle = angle;
+	        this.scale = scale;
+	        // PIXI Container
+	        this.container = new PIXI$2.Container();
+	        this.child = null;
+	        this.parent = null;
+	        this.container.position.set(position.x, position.y);
+	        this.container.rotation = angle;
+	        this.container.scale.set(scale.x, scale.y);
+	    }
+	    PositionAngleScale.prototype.addChild = function (pas) {
+	        this.child = pas;
+	        pas.parent = this;
+	        this.container.addChild(pas.container);
+	    };
+	    PositionAngleScale.fromTransformComponentData = function (fromTransformComponentData) {
+	        assert$1(fromTransformComponentData.name === 'Transform', 'fromTransformComponentData must take Transform ComponentData');
+	        var map = {};
+	        fromTransformComponentData.forEachChild('prp', function (prp) {
+	            map[prp.name] = prp.value;
+	        });
+	        assert$1(map['position'], 'position is missing');
+	        assert$1(!isNaN(map['angle']), 'angle is missing');
+	        assert$1(map['scale'], 'scale is missing');
+	        return new PositionAngleScale(map['position'].clone(), map['angle'], map['scale'].clone());
+	    };
+	    PositionAngleScale.getLeafDelta = function (from, to) {
+	        // First go to root
+	        while (from.parent)
+	            { from = from.parent; }
+	        while (to.parent)
+	            { to = to.parent; }
+	        // We are at root. Let travel to leaf and calculate angle and scale
+	        var fromAngle = from.angle;
+	        var toAngle = to.angle;
+	        var fromScale = from.scale;
+	        var toScale = to.scale;
+	        while (from.child) {
+	            from = from.child;
+	            fromAngle += from.angle;
+	            fromScale.multiply(from.scale);
+	        }
+	        while (to.child) {
+	            to = to.child;
+	            toAngle += to.angle;
+	            toScale.multiply(to.scale);
+	        }
+	        // We are at leaf.
+	        // Get delta angle and scale.
+	        var deltaScale = fromScale.divide(toScale);
+	        var deltaAngle = (fromAngle - toAngle + Math.PI * 2) % (Math.PI * 2);
+	        // Now we shall calculate the delta position using PIXI Container Matrix.
+	        var deltaPosition = Vector.fromObject(to.container.toLocal(new PIXI$2.Point(), from.container));
+	        return new PositionAngleScale(deltaPosition, deltaAngle, deltaScale);
+	    };
+	    return PositionAngleScale;
+	}());
+	//# sourceMappingURL=positionAngleScaleUtil.js.map
+
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
 	    function ObjectsModule() {
@@ -8216,36 +8339,37 @@
 	            },
 	            moveCallback: function (serializableId, parentId) {
 	                if (serializableId.substring(0, 3) === 'epr') {
-	                    var serializable = getSerializable(serializableId);
+	                    var entityPrototype = getSerializable(serializableId);
 	                    var parent_1 = parentId === '#' ? selectedLevel : getSerializable(parentId);
-	                    serializable.move(parent_1);
-	                    /*
-	                    let target = event.targetElement;
-	                    while (!target.classList.contains('jstree-node')) {
-	                        target = target.parentElement;
-	                        if (!target)
-	                            throw new Error('Invalid target', event.targetElement);
+	                    var transformComponentDataChain1 = [];
+	                    var transformComponentDataChain2 = [];
+	                    var traverser = entityPrototype;
+	                    while (traverser && traverser.threeLetterType === 'epr') {
+	                        transformComponentDataChain1.unshift(traverser.getTransform());
+	                        traverser = traverser._parent;
 	                    }
-	                    console.log('target.id', target.id)
-	                    let targetSerializable = getSerializable(target.id);
-
-	                    let idSet = new Set(event.idList);
-	                    let serializables = event.idList.map(getSerializable).filter(serializable => {
-	                        let parent = serializable.getParent();
-	                        while (parent) {
-	                            if (idSet.has(parent.id))
-	                                return false;
-	                            parent = parent.getParent();
-	                        }
-	                        return true;
-	                    });
-
-	                    console.log('move serializables', serializables, 'to', targetSerializable);
-	                    serializables.forEach(serializable => {
-	                        serializable.move(targetSerializable);
-	                    });
-	                    console.log('Done!')
-	                    */
+	                    traverser = parent_1;
+	                    while (traverser && traverser.threeLetterType === 'epr') {
+	                        transformComponentDataChain2.unshift(traverser.getTransform());
+	                        traverser = traverser._parent;
+	                    }
+	                    var pas1 = PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[0]);
+	                    for (var i = 1; i < transformComponentDataChain1.length; i++) {
+	                        pas1.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[i]));
+	                    }
+	                    var pas2 = transformComponentDataChain2.length > 0
+	                        ? PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[0])
+	                        : new PositionAngleScale();
+	                    for (var i = 1; i < transformComponentDataChain2.length; i++) {
+	                        pas2.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[i]));
+	                    }
+	                    var diffPas = PositionAngleScale.getLeafDelta(pas1, pas2);
+	                    setChangeOrigin(_this);
+	                    entityPrototype.move(parent_1);
+	                    var TCD = entityPrototype.getTransform();
+	                    TCD.setValue('position', diffPas.position);
+	                    TCD.setValue('angle', diffPas.angle);
+	                    TCD.setValue('scale', diffPas.scale);
 	                }
 	            },
 	            doubleClickCallback: function (serializableId) {
@@ -8319,7 +8443,7 @@
 	            _this.dirty = true;
 	        };
 	        editorEventDispacher.listen('play', setDirty, -1);
-	        editorEventDispacher.listen('reset', setDirty, -1);
+	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
 	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (_this.dirty || !_this._selected)
@@ -8562,14 +8686,25 @@
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
 	var editors = {};
+	var MAX_STRING_LENGTH = 32;
+	var MAX_LONG_STRING_LENGTH = 200;
 	editors.default = editors.string = function (container, oninput, onchange, options) {
 	    var input = el('input', {
 	        placeholder: options.placeholder || '',
-	        oninput: function () { return oninput(input.value); },
-	        onchange: function () { return onchange(input.value); }
+	        oninput: function () { return oninput(input.value.substring(0, MAX_STRING_LENGTH)); },
+	        onchange: function () { return onchange(input.value.substring(0, MAX_STRING_LENGTH).substring(0, MAX_STRING_LENGTH)); }
 	    });
 	    mount(container, input);
-	    return function (val) { return input.value = val; };
+	    return function (val) { return input.value = val.substring(0, MAX_STRING_LENGTH); };
+	};
+	editors.longString = function (container, oninput, onchange, options) {
+	    var input = el('input', {
+	        placeholder: options.placeholder || '',
+	        oninput: function () { return oninput(input.value.substring(0, MAX_LONG_STRING_LENGTH)); },
+	        onchange: function () { return onchange(input.value.substring(0, MAX_LONG_STRING_LENGTH).substring(0, MAX_LONG_STRING_LENGTH)); }
+	    });
+	    mount(container, input);
+	    return function (val) { return input.value = val.substring(0, MAX_LONG_STRING_LENGTH); };
 	};
 	editors.float = editors.int = function (container, oninput, onchange) {
 	    var input = el('input', {
@@ -8578,7 +8713,7 @@
 	        onchange: function () { return onchange(+input.value); }
 	    });
 	    mount(container, input);
-	    return function (val) { return input.value = Math.round(val * EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION; };
+	    return function (val) { return input.value = String(Math.round(val * EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION); };
 	};
 	editors.bool = function (container, oninput, onchange) {
 	    var input = el('input', {
@@ -8611,8 +8746,8 @@
 	    });
 	    mount(container, el('div', el('span', 'x:'), xInput, el('span', 'y:'), yInput));
 	    return function (val) {
-	        xInput.value = Math.round(val.x * EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
-	        yInput.value = Math.round(val.y * EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION;
+	        xInput.value = String(Math.round(val.x * EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION);
+	        yInput.value = String(Math.round(val.y * EDITOR_FLOAT_PRECISION) / EDITOR_FLOAT_PRECISION);
 	    };
 	};
 	editors.enum = function (container, oninput, onchange, options) {

@@ -10,10 +10,10 @@ import * as performance from '../util/performance';
 import { PropertyType } from './propertyType';
 import { GameEvent } from './eventDispatcher';
 
-const automaticSceneEventListeners = [
-	'onUpdate',
-	'onStart'
-];
+const automaticSceneEventListeners = {
+	onUpdate: 'onUpdate',
+	onStart: GameEvent.SCENE_START
+};
 
 // Object of a component, see _componentExample.js
 export class Component extends PropertyOwner {
@@ -57,11 +57,14 @@ export class Component extends PropertyOwner {
 		super.delete();
 		return true;
 	}
-	_addEventListener(functionName: string) {
+	_addEventListener(functionName: string, eventName?: GameEvent) {
+		if (!eventName)
+			eventName = functionName as GameEvent;
+
 		let func = this[functionName];
 		let self = this;
 		let performanceName = 'Component: ' + this.componentClass.componentName;
-		this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
+		this._listenRemoveFunctions.push(this.scene.listen(eventName, function () {
 			// @ifndef OPTIMIZE
 			performance.start(performanceName);
 			// @endif
@@ -83,10 +86,18 @@ export class Component extends PropertyOwner {
 
 		this.forEachChild('com', (c: Component) => c._preInit());
 
-		for (let i = 0; i < automaticSceneEventListeners.length; ++i) {
-			if (typeof this[automaticSceneEventListeners[i]] === 'function')
-				this._addEventListener(automaticSceneEventListeners[i]);
+		for (let key in automaticSceneEventListeners) {
+			if (typeof this[key] === 'function') {
+				this._addEventListener(key, automaticSceneEventListeners[key]);
+			}
 		}
+		/*
+		for (let i = 0; i < Object.keys(automaticSceneEventListeners).length; ++i) {
+			if (typeof this[automaticSceneEventListeners[i]] === 'function') {
+				this._addEventListener(automaticSceneEventListeners[i]);
+			}
+		}
+		*/
 
 		if (this.componentClass.componentName !== 'Transform' && this.scene)
 			this.scene.addComponent(this);
@@ -103,7 +114,7 @@ export class Component extends PropertyOwner {
 		this.forEachChild('com', (c: Component) => c._init());
 		try {
 			if (typeof (this as ComponentRegisterPrototype).init === 'function')
-			(this as ComponentRegisterPrototype).init();
+				(this as ComponentRegisterPrototype).init();
 		} catch (e) {
 			console.error(this.entity, this.componentClass.componentName, 'init', e);
 		}
@@ -111,7 +122,7 @@ export class Component extends PropertyOwner {
 	_sleep() {
 		try {
 			if (typeof (this as ComponentRegisterPrototype).sleep === 'function')
-			(this as ComponentRegisterPrototype).sleep();
+				(this as ComponentRegisterPrototype).sleep();
 		} catch (e) {
 			console.error(this.entity, this.componentClass.componentName, 'sleep', e);
 		}
@@ -244,7 +255,7 @@ type ComponentRegisterOptions = {
 };
 
 Serializable.registerSerializable(Component, 'com', json => {
-	let component = <Component> new (componentClasses.get(json.n))(json.id);
+	let component = <Component>new (componentClasses.get(json.n))(json.id);
 	component._componentId = json.cid || null;
 	return component;
 });

@@ -44,7 +44,9 @@ Component.register({
 			context.restore();
 		},
 		spawn() {
+			window['testi']++;
 			let prototype = this.game.findChild('prt', prt => prt.name === this.typeName, true);
+
 			if (!prototype)
 				return;
 
@@ -53,5 +55,24 @@ Component.register({
 			entityPrototype.delete();
 			this.lastSpawn = this.scene.time;
 		}
+	},
+	/* TODO: This kind of thing can improve update performance by 2x or more
+	systems: {
+		onUpdate(setOfSpawners, scene) {
+			let sceneTime = scene.time;
+			setOfSpawners.forEach(comp => {
+				if (sceneTime > comp.lastSpawn + comp.interval)
+					comp.spawn();
+			});
+		}
 	}
+	*/
 });
+
+/*
+window['testi'] = 0;
+setInterval(() => {
+	console.log('testi', window['testi']);
+	window['testi'] = 0;
+}, 1000);
+*/

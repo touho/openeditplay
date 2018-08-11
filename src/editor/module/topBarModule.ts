@@ -65,7 +65,7 @@ export class TopBarModule extends Module {
 			title: 'Reset (R)',
 			icon: 'fa-stop',
 			type: 'reset',
-			callback: () => editorEventDispacher.dispatch('reset')
+			callback: () => editorEventDispacher.dispatch(EditorEvent.EDITOR_RESET)
 		});
 
 		const updateButtons = () => {

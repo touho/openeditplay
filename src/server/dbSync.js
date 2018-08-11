@@ -78,7 +78,7 @@ dbSync.writeChangeToDatabase = async function (change, gameId, optionalConnectio
 	let type = change[keyToShortKey.type];
 
 	if (!type) {
-		// changeType.setPropertyValue
+		// changeType.setPropertyValue. leaved out for optimization
 
 		let id = change[keyToShortKey.id];
 		let writeId;
@@ -116,7 +116,7 @@ WHERE id = ? AND gameId = ?;
 			}
 		}
 
-		return db.query(`
+		return await db.query(`
 UPDATE serializable
 SET value = ?
 WHERE gameId = ? and id = ?
@@ -134,7 +134,7 @@ WHERE gameId = ? and id = ?
 		}
 
 		console.log('addSerializableToTree', value);
-		
+
 
 		let serializables = ServerSerializable.getSerializables(value, parentId);
 

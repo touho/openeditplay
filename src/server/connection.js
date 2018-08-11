@@ -6,7 +6,7 @@ const createNewGame = require('./game/createNewGame');
 let connection = module.exports;
 
 let socketServer;
-connection.init = function(httpServer) {
+connection.init = function (httpServer) {
 	socketServer = require('socket.io')(httpServer);
 	socketServer.on('connection', socket => {
 		new Connection(socket);
@@ -50,11 +50,11 @@ class Connection {
 		// x-real-ip from nginx, handshake.address for local environment
 		this.ip = socket.handshake.headers['x-real-ip'] || socket.handshake.address;
 		this.changeCount = 0;
-		
+
 		let listeners = {
 			identify: identifyData => this.onIdentify(identifyData)
 		};
-		
+
 		socket.onevent = packet => {
 			let param1 = packet.data[0];
 			if (typeof param1 === 'string') {
@@ -64,7 +64,7 @@ class Connection {
 				this.changeReceived(param1);
 			}
 		};
-		
+
 		socket.on('disconnecting', () => this.disconnected());
 
 		this.requestIdentify();
@@ -78,20 +78,20 @@ class Connection {
 			}
 		}
 	}
-	changeReceived(changes) {
+	async changeReceived(changes) {
 		if (!this.editAccess) {
 			this.sendError('No edit access');
 			return;
 		}
-		
+
 		try {
-			changes.forEach(async change => {
+			for (let change of changes) {
 				this.changeCount++;
 				try {
 					await dbSync.writeChangeToDatabase(change, this.gameId, this);
-				} catch(e) {
+				} catch (e) {
 					console.error('socket.c writeChangeToDatabase', e);
-					
+
 					if (e.message.includes(gameUpdating.GAME_NOT_FOUND)) {
 						this.sendError('Game not found. Please refresh.', true);
 					} else {
@@ -99,53 +99,53 @@ class Connection {
 					}
 					return;
 				}
-			});
+			}
 
 			let gameConnections = connections.get(this.gameId);
 			for (let connection of gameConnections) {
 				if (connection !== this)
 					connection.send('', changes);
 			}
-		} catch(e) {
+		} catch (e) {
 			console.error('socket.c', e);
 		}
 	}
 	async onIdentify(identifyData) {
 		if (this.gameId)
 			return console.error('Connection.onIdentify: gameId already exists');
-		
+
 		try {
 			let { gameId, userId, userToken, context } = identifyData;
 			this.context = context;
 			this.gameId = gameId;
 			this.userId = userId;
-			
+
 			let validUser = null;
-				
+
 			let gameData = await dbSync.getGameData(gameId);
-			
+
 			if (!gameData && context === 'edit' && !gameUpdating.idLooksLikeGameId(gameId)) {
 				validUser = await userTools.getValidUser(this, userToken);
 				this.userId = validUser.id; // update from more reliable source
-				
+
 				gameData = await createNewGame(this);
 			}
-			
+
 			if (gameData) {
 				if (!validUser)
 					validUser = await userTools.getValidUser(this, userToken);
 				this.userId = validUser.id; // update from more reliable source
-				
+
 				this.gameId = gameData.id; // update from more reliable source
-				
+
 				let game = await dbSync.getGame(this.gameId);
-				
+
 				if (game.creatorUserId === this.userId)
 					this.editAccess = true;
-				
+
 				// This user might be a new user
 				await userTools.userActivity(this, validUser);
-				
+
 				onConnectedToAGame(this);
 				let profile = await userTools.getProfile(validUser.id, validUser.userToken);
 				this.send('data', {
@@ -156,8 +156,9 @@ class Connection {
 			} else {
 				this.sendError('Game not found', true);
 			}
-		} catch(e) {
+		} catch (e) {
 			console.error('Connection.onIdentify', e);
+			this.sendError('Error occured', true);
 		}
 	}
 	requestIdentify() {

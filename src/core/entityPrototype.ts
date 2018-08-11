@@ -17,7 +17,7 @@ export default class EntityPrototype extends Prototype {
 		// this._parent is level, not prototype. We need a link to parent-prototype.
 	}
 
-	makeUpAName() {
+	makeUpAName(): string {
 		let nameProperty = this.findChild('prp', (property: Property) => property.name === 'name');
 		if (nameProperty && nameProperty.value)
 			return nameProperty.value;
@@ -28,9 +28,9 @@ export default class EntityPrototype extends Prototype {
 	}
 
 	getTransform() {
-		return this.findChild('cda', (cda: ComponentData) => cda.name === 'Transform');
+		return this.findChild('cda', (cda: ComponentData) => cda.name === 'Transform') as ComponentData;
 	}
-	getParentPrototype() {
+	getParentPrototype(): Prototype {
 		return this.prototype || null;
 	}
 	clone() {
@@ -136,13 +136,13 @@ export default class EntityPrototype extends Prototype {
 	}
 	spawnEntityToScene(scene, position) {
 		if (!scene)
-			return;
+			return null;
 
 		if (position) {
 			this.getTransform().getPropertyOrCreate('position').value = position;
 		}
 
-		this.createEntity(scene);
+		return this.createEntity(scene);
 	}
 
 	detachFromPrototype() {
@@ -161,11 +161,10 @@ export default class EntityPrototype extends Prototype {
 			if (cda.name !== 'Transform')
 				cda.delete();
 		});
-		debugger;
-		// TODO: For some reason all non-Transform components have not been removed yet...
 		this.addChildren(children);
 
 		this.prototype = null;
+		return this;
 	}
 
 	// Optimize this away
@@ -174,6 +173,7 @@ export default class EntityPrototype extends Prototype {
 			return;
 		assert(this.getTransform(), 'EntityPrototype must have a Transform');
 		super.setRootType(rootType);
+		return this;
 	}
 	/**
 	 * If Transform or Transform.position is missing, they are added.

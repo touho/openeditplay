@@ -9,6 +9,7 @@ import {Component} from "../../core/component";
 import { selectedLevel } from '../editorSelection';
 import Entity from '../../core/entity';
 import EntityPrototype from '../../core/entityPrototype';
+import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 
 let radius = 10;
 
@@ -64,7 +65,7 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 }
 
 // Call setChangeOrigin(this) before calling this
-// Does modifications to entities in editor scene
+// Does modifications to entities in editor scene based on levels prototypes
 export function syncAChangeBetweenSceneAndLevel(change) {
 	if (!scene || !scene.level) return;
 
@@ -211,7 +212,10 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 		}
 		// If Prototype is deleted, all entity prototypes are also deleted so we can ignore Prototype here
 	} else if (change.type === changeType.move) {
+		// This might be difficult to achieve without reseting the whole scene.
 
+		// So...
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_RESET);
 	}
 }
 

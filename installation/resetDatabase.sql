@@ -53,7 +53,7 @@ CREATE TABLE `serializable` (
   `id` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `type` char(3) NOT NULL DEFAULT '',
   `parentId` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin DEFAULT '',
-  `value` varchar(130) DEFAULT NULL COMMENT 'if type=prp then value contains json presentation of the property value. else value contains json presentation of additional values like prototypeId ''p''',
+  `value` varchar(200) DEFAULT NULL COMMENT 'if type=prp then value contains json presentation of the property value. else value contains json presentation of additional values like prototypeId ''p''',
   `name` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin DEFAULT NULL COMMENT 'If serializable has generated name, it is stored here',
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
