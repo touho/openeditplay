@@ -85,7 +85,17 @@ Component.register({
 		setGlobalAngle(newGlobalAngle: number) {
 			let globalAngle = this.getGlobalAngle();
 			let change = newGlobalAngle - globalAngle;
-			this.container.rotation = (this.container.rotation + change + Math.PI * 2) % (Math.PI * 2);
+			this.angle = (this.angle + change + Math.PI * 2) % (Math.PI * 2);
+		},
+		// This may give wrong numbers if there are rotations and scale included in object tree.
+		getGlobalScale() {
+			let scale = this.scale.clone() as Vector;
+			let parentEntity = this.entity.getParent();
+			while (parentEntity && parentEntity.threeLetterType === 'ent') {
+				scale.multiply(parentEntity.Transform.scale);
+				parentEntity = parentEntity.getParent();
+			}
+			return scale;
 		},
 		sleep() {
 			this.container.destroy();

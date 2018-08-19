@@ -103,8 +103,13 @@ export default class ModuleContainer {
 
 		for (let i = 0; i < this.modules.length; ++i) {
 			let m = this.modules[i];
-			if (m._selected && modules.indexOf(m) >= 0)
-				return; // Already selected
+			if (m._selected && modules.indexOf(m) >= 0) {
+				// Already selected
+				if (args.length > 0) {
+					this.activateModule(m, unpackModuleView, ...args);
+				}
+				return;
+			}
 		}
 
 		for (let i = 0; i < this.modules.length; ++i) {

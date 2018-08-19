@@ -1,10 +1,10 @@
-import {el, list, mount} from 'redom';
+import {el, list, mount, RedomElement} from 'redom';
 import {DragAndDropMoveEvent, DragAndDropStartEvent, DragAndDropStopEvent} from "../util/dragAndDrop";
 import { editorEventDispacher } from '../editorEventDispatcher';
 
 declare var $: any;
 
-export default class TreeView {
+export default class TreeView implements RedomElement {
 	options: any;
 	el: HTMLElement;
 

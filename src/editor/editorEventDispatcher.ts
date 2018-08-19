@@ -8,7 +8,8 @@ export enum EditorEvent {
     EDITOR_DELETE_CONFIRMATION = 'delete confirmation', // handlerCallback return true|false|Promise wether deletion should succeed.
     EDITOR_PRE_DELETE_SELECTION = 'pre delete selection',
     EDITOR_LOADED = 'editor loaded',
-    EDITOR_RESET = 'reset'
+    EDITOR_RESET = 'reset',
+    EDITOR_FORCE_UPDATE = 'editor force update'
 };
 
 // Wrapper that takes only EditorEvents

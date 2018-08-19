@@ -31,6 +31,7 @@ import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { selectInEditor, editorSelection } from '../editorSelection';
 import Prefab from '../../core/prefab';
+import CreateObject from '../views/popup/createObject';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -435,6 +436,8 @@ class SceneModule extends Module {
 			} else if (k === key.v) {
 				this.pasteEntities();
 				this.draw();
+			} else if (k === key.n) {
+				new CreateObject();
 			} else if (scene) {
 				// Scene controls
 				if (k === key['0']) {
@@ -865,10 +868,12 @@ class SceneModule extends Module {
 	selectSelectedEntitiesInEditor() {
 		if (sceneEdit.shouldSyncLevelAndScene()) {
 			selectInEditor(this.selectedEntities.map(ent => ent.prototype), this);
+			editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 			Module.activateOneOfModules(['type', 'object'], false);
 		} else {
 			selectInEditor(this.selectedEntities, this);
-			Module.activateOneOfModules(['object'], false);
+			editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
+			Module.activateModule('object', false);
 		}
 	}
 

@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import ModuleContainer from '../layout/moduleContainer';
 import { editorEventDispacher } from '../editorEventDispatcher';
 
-let moduleIdToModule = {};
+let moduleIdToModule: { [moduleId: string]: Module } = {};
 
 export default class Module {
 	id: string;
@@ -56,12 +56,18 @@ export default class Module {
 		this._selected = false;
 	}
 
-	//arguments: moduleName, unpackModuleView=true, ...args
-	static activateModule(moduleId, unpackModuleView=true, ...args) {
+	/**
+	 * Modules must be in same moduleContainer
+	 * You might want to first call editor update to first enable the modules you want to activate.
+	*/
+	static activateModule(moduleId, unpackModuleView = true, ...args) {
 		moduleIdToModule[moduleId].moduleContainer.activateModule(moduleIdToModule[moduleId], unpackModuleView, ...args);
 	};
-	// Modules must be in same moduleContainer
-	static activateOneOfModules(moduleIds, unpackModuleView=true, ...args) {
+	/**
+	 * Modules must be in same moduleContainer
+	 * You might want to first call editor update to first enable the modules you want to activate.
+	*/
+	static activateOneOfModules(moduleIds: string[], unpackModuleView = true, ...args) {
 		moduleIdToModule[moduleIds[0]].moduleContainer.activateOneOfModules(moduleIds.map(mId => moduleIdToModule[mId]), unpackModuleView, ...args);
 	};
 	static packModuleContainer(moduleContainerName) {
@@ -81,8 +87,8 @@ export default class Module {
 
 
 
-let registerPromise: Promise<void> = new Promise(function(resolve) {
-	editorEventDispacher.listen('registerModules', function() {
+let registerPromise: Promise<void> = new Promise(function (resolve) {
+	editorEventDispacher.listen('registerModules', function () {
 		registerPromise.then(() => {
 			editorEventDispacher.dispatch('modulesRegistered');
 		});

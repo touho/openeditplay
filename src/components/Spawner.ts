@@ -44,7 +44,7 @@ Component.register({
 			context.restore();
 		},
 		spawn() {
-			window['testi']++;
+			// window['testi']++;
 			let prototype = this.game.findChild('prt', prt => prt.name === this.typeName, true);
 
 			if (!prototype)

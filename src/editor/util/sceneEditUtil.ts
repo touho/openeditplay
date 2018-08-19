@@ -219,11 +219,11 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 	}
 }
 
-export function copyEntitiesToScene(entities) {
+export function copyEntitiesToScene(entities: Entity[]) {
 	if (scene) {
 		if (shouldSyncLevelAndScene()) {
 			let entityPrototypes = entities.map(entity => {
-				let epr = entity.prototype.clone();
+				let epr = entity.prototype.clone() as EntityPrototype;
 				epr.position = entity.position;
 				return epr;
 			});

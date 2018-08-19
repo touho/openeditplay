@@ -292,4 +292,4 @@ $(document).on('dnd_stop.vakata', function (e, data) {
 });
 
 
-Module.register(TypesModule, 'left');
+// Module.register(TypesModule, 'left');

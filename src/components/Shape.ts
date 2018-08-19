@@ -172,7 +172,7 @@ Component.register({
 			}
 
 			if (takeScaleIntoAccount) {
-				const scale = this.Transform.scale;
+				const scale = this.Transform.getGlobalScale();
 				if (scale.x !== 1 || scale.y !== 1) {
 					path.forEach(p => {
 						p.x *= scale.x;

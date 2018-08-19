@@ -140,12 +140,7 @@ Component.register({
 			}
 
 			let Shapes = this.entity.getComponents('Shape');
-			let scale = this.Transform.scale.clone() as Vector;
-			let parentEntity = this.entity.getParent();
-			while (parentEntity && parentEntity.threeLetterType === 'ent') {
-				scale.multiply(parentEntity.Transform.scale);
-				parentEntity = parentEntity.getParent();
-			}
+			let scale = this.Transform.getGlobalScale();
 
 			Shapes.forEach(Shape => {
 				let shape;

@@ -5,6 +5,7 @@ import { addChange, changeType, setChangeOrigin } from './change';
 import Prototype from './prototype'
 import assert from '../util/assert'
 import PropertyOwner, { Prop, PropertyOwnerClass } from './propertyOwner';
+import { Component } from './component';
 import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
 import { globalEventDispatcher, GameEvent } from './eventDispatcher';
@@ -66,7 +67,18 @@ PropertyOwner.defineProperties(Game, propertyTypes);
 
 Game.prototype.isRoot = true;
 
-
+/*
+// Export so that other components can have this component as parent
+Component.register({
+	name: 'GameProperties',
+	description: 'Contains all game specific settings',
+	category: 'MainProperties',
+	allowMultiple: false,
+	properties: [
+		Prop('gameProperty1', 3, Prop.float, Prop.float.range(0.01, 1000))
+	]
+});
+*/
 
 Serializable.registerSerializable(Game, 'gam', json => {
 	if (json.c) {

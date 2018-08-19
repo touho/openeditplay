@@ -22,7 +22,7 @@ export default class PropertyOwner extends Serializable {
 		return (this as any).name || 'PropertyOwner';
 	}
 	// Just a helper
-	initWithPropertyValues(values: {[key: string]: any} = {}) {
+	initWithPropertyValues(values: { [key: string]: any } = {}) {
 		let children = [];
 
 		Object.keys(values).forEach(propName => {
@@ -114,16 +114,21 @@ export default class PropertyOwner extends Serializable {
 	static defineProperties(Class: { new(...args): Serializable }, propertyTypes: Array<PropertyType>) {
 		Class.prototype._propertyOwnerClass = Class;
 		let ClassAsTypeHolder = Class as any as PropertyOwnerClass;
-		ClassAsTypeHolder._propertyTypes = propertyTypes;
+		// debugger;
+		if (!ClassAsTypeHolder._propertyTypes) {
+			ClassAsTypeHolder._propertyTypes = [];
+		}
+		ClassAsTypeHolder._propertyTypes.push(...propertyTypes);
 		ClassAsTypeHolder._propertyTypesByName = {};
-		propertyTypes.forEach(propertyType => {
+
+		ClassAsTypeHolder._propertyTypes.forEach(propertyType => {
 			const propertyTypeName = propertyType.name;
-			assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+			assert(!Class.prototype.hasOwnProperty(propertyTypeName), 'Property name ' + propertyTypeName + ' clashes');
 			ClassAsTypeHolder._propertyTypesByName[propertyTypeName] = propertyType;
 			Object.defineProperty(Class.prototype, propertyTypeName, {
 				get() {
-					if  (!this._properties[propertyTypeName])
-					debugger;
+					if (!this._properties[propertyTypeName])
+						debugger;
 					return this._properties[propertyTypeName].value;
 				},
 				set(value) {

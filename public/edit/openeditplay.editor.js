@@ -1310,13 +1310,18 @@
 	        return this;
 	    };
 	    PropertyOwner.defineProperties = function (Class, propertyTypes) {
+	        var _a;
 	        Class.prototype._propertyOwnerClass = Class;
 	        var ClassAsTypeHolder = Class;
-	        ClassAsTypeHolder._propertyTypes = propertyTypes;
+	        // debugger;
+	        if (!ClassAsTypeHolder._propertyTypes) {
+	            ClassAsTypeHolder._propertyTypes = [];
+	        }
+	        (_a = ClassAsTypeHolder._propertyTypes).push.apply(_a, propertyTypes);
 	        ClassAsTypeHolder._propertyTypesByName = {};
-	        propertyTypes.forEach(function (propertyType) {
+	        ClassAsTypeHolder._propertyTypes.forEach(function (propertyType) {
 	            var propertyTypeName = propertyType.name;
-	            assert$1(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+	            assert$1(!Class.prototype.hasOwnProperty(propertyTypeName), 'Property name ' + propertyTypeName + ' clashes');
 	            ClassAsTypeHolder._propertyTypesByName[propertyTypeName] = propertyType;
 	            Object.defineProperty(Class.prototype, propertyTypeName, {
 	                get: function () {
@@ -2033,6 +2038,18 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Game, propertyTypes);
 	Game.prototype.isRoot = true;
+	/*
+	// Export so that other components can have this component as parent
+	Component.register({
+	    name: 'GameProperties',
+	    description: 'Contains all game specific settings',
+	    category: 'MainProperties',
+	    allowMultiple: false,
+	    properties: [
+	        Prop('gameProperty1', 3, Prop.float, Prop.float.range(0.01, 1000))
+	    ]
+	});
+	*/
 	Serializable.registerSerializable(Game, 'gam', function (json) {
 	    if (json.c) {
 	        json.c.sort(function (a, b) {
@@ -2272,6 +2289,7 @@
 	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
 	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
 	    EditorEvent["EDITOR_RESET"] = "reset";
+	    EditorEvent["EDITOR_FORCE_UPDATE"] = "editor force update";
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2475,7 +2493,7 @@
 	        var count = 0;
 	        this.getComponents('CharacterController').forEach(function (characterController) {
 	            if (characterController._rootType) {
-	                pos.add(characterController.Transform.position);
+	                pos.add(characterController.Transform.getGlobalPosition());
 	                count++;
 	            }
 	        });
@@ -3696,16 +3714,29 @@
 	        // @endif
 	        return entityPrototype;
 	    };
+	    EntityPrototype.create = function (name, position) {
+	        if (name === void 0) { name = 'Empty'; }
+	        if (position === void 0) { position = new Vector(0, 0); }
+	        var entityPrototype = new EntityPrototype();
+	        var transform = createEntityPrototypeTransform(entityPrototype.id);
+	        transform.setValue('position', position);
+	        var nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
+	        entityPrototype.initWithChildren([nameProperty, transform]);
+	        return entityPrototype;
+	    };
+	    Object.defineProperty(EntityPrototype.prototype, "position", {
+	        get: function () {
+	            return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value;
+	        },
+	        set: function (position) {
+	            this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value = position;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
 	    return EntityPrototype;
 	}(Prototype));
-	Object.defineProperty(EntityPrototype.prototype, 'position', {
-	    get: function () {
-	        return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value;
-	    },
-	    set: function (position) {
-	        return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value = position;
-	    }
-	});
+	// PropertyOwner.defineProperties(EntityPrototype, propertyTypes);
 	function createEntityPrototypeNameProperty(entityPrototypeId, name) {
 	    if (name === void 0) { name = ''; }
 	    return EntityPrototype._propertyTypesByName.name.createProperty({
@@ -3732,16 +3763,6 @@
 	    transform.addChild(angle);
 	    return transform;
 	}
-	EntityPrototype.create = function (name, position) {
-	    if (name === void 0) { name = 'Empty'; }
-	    if (position === void 0) { position = new Vector(0, 0); }
-	    var entityPrototype = new EntityPrototype();
-	    var transform = createEntityPrototypeTransform(entityPrototype.id);
-	    transform.setValue('position', position);
-	    var nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
-	    entityPrototype.initWithChildren([nameProperty, transform]);
-	    return entityPrototype;
-	};
 	Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	    var entityPrototype = new EntityPrototype(json.id);
 	    entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
@@ -3877,7 +3898,7 @@
 	Serializable.registerSerializable(Prefab, 'pfa');
 	//# sourceMappingURL=prefab.js.map
 
-	var propertyTypes$2 = [
+	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
 	];
 	var Level = /** @class */ (function (_super) {
@@ -3897,7 +3918,7 @@
 	    };
 	    return Level;
 	}(PropertyOwner));
-	PropertyOwner.defineProperties(Level, propertyTypes$2);
+	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
 	//# sourceMappingURL=level.js.map
 
@@ -3983,7 +4004,17 @@
 	        setGlobalAngle: function (newGlobalAngle) {
 	            var globalAngle = this.getGlobalAngle();
 	            var change = newGlobalAngle - globalAngle;
-	            this.container.rotation = (this.container.rotation + change + Math.PI * 2) % (Math.PI * 2);
+	            this.angle = (this.angle + change + Math.PI * 2) % (Math.PI * 2);
+	        },
+	        // This may give wrong numbers if there are rotations and scale included in object tree.
+	        getGlobalScale: function () {
+	            var scale = this.scale.clone();
+	            var parentEntity = this.entity.getParent();
+	            while (parentEntity && parentEntity.threeLetterType === 'ent') {
+	                scale.multiply(parentEntity.Transform.scale);
+	                parentEntity = parentEntity.getParent();
+	            }
+	            return scale;
 	        },
 	        sleep: function () {
 	            this.container.destroy();
@@ -4176,7 +4207,7 @@
 	                path.forEach(function (p) { return p.y -= averageY_1; });
 	            }
 	            if (takeScaleIntoAccount) {
-	                var scale_1 = this.Transform.scale;
+	                var scale_1 = this.Transform.getGlobalScale();
 	                if (scale_1.x !== 1 || scale_1.y !== 1) {
 	                    path.forEach(function (p) {
 	                        p.x *= scale_1.x;
@@ -4273,7 +4304,7 @@
 	        },
 	        spawn: function () {
 	            var _this = this;
-	            window['testi']++;
+	            // window['testi']++;
 	            var prototype = this.game.findChild('prt', function (prt) { return prt.name === _this.typeName; }, true);
 	            if (!prototype)
 	                { return; }
@@ -4468,12 +4499,7 @@
 	                shapes.length = 0;
 	            }
 	            var Shapes = this.entity.getComponents('Shape');
-	            var scale = this.Transform.scale.clone();
-	            var parentEntity = this.entity.getParent();
-	            while (parentEntity && parentEntity.threeLetterType === 'ent') {
-	                scale.multiply(parentEntity.Transform.scale);
-	                parentEntity = parentEntity.getParent();
-	            }
+	            var scale = this.Transform.getGlobalScale();
 	            Shapes.forEach(function (Shape) {
 	                var shape;
 	                if (Shape.type === 'rectangle') {
@@ -5530,8 +5556,13 @@
 	        }
 	        for (var i = 0; i < this.modules.length; ++i) {
 	            var m = this$1.modules[i];
-	            if (m._selected && modules.indexOf(m) >= 0)
-	                { return; } // Already selected
+	            if (m._selected && modules.indexOf(m) >= 0) {
+	                // Already selected
+	                if (args.length > 0) {
+	                    this$1.activateModule.apply(this$1, [m, unpackModuleView].concat(args));
+	                }
+	                return;
+	            }
 	        }
 	        for (var i = 0; i < this.modules.length; ++i) {
 	            var m = this$1.modules[i];
@@ -5670,7 +5701,10 @@
 	        this.el.classList.add('hidden');
 	        this._selected = false;
 	    };
-	    //arguments: moduleName, unpackModuleView=true, ...args
+	    /**
+	     * Modules must be in same moduleContainer
+	     * You might want to first call editor update to first enable the modules you want to activate.
+	    */
 	    Module.activateModule = function (moduleId, unpackModuleView) {
 	        var arguments$1 = arguments;
 
@@ -5682,7 +5716,10 @@
 	        var _a;
 	        (_a = moduleIdToModule[moduleId].moduleContainer).activateModule.apply(_a, [moduleIdToModule[moduleId], unpackModuleView].concat(args));
 	    };
-	    // Modules must be in same moduleContainer
+	    /**
+	     * Modules must be in same moduleContainer
+	     * You might want to first call editor update to first enable the modules you want to activate.
+	    */
 	    Module.activateOneOfModules = function (moduleIds, unpackModuleView) {
 	        var arguments$1 = arguments;
 
@@ -6782,6 +6819,148 @@
 	});
 	//# sourceMappingURL=EditorWidget.js.map
 
+	var popupDepth = 0;
+	var Popup = /** @class */ (function () {
+	    function Popup(_a) {
+	        var _b = _a === void 0 ? {} : _a, _c = _b.title, title = _c === void 0 ? 'Undefined popup' : _c, _d = _b.cancelCallback, cancelCallback = _d === void 0 ? null : _d, _e = _b.width, width = _e === void 0 ? null : _e, _f = _b.content, content = _f === void 0 ? el('div.genericCustomContent', 'Undefined content') : _f;
+	        var _this = this;
+	        this.el = el('div.popup', {
+	            style: {
+	                'z-index': 1000 + popupDepth++
+	            }
+	        }, new Layer(this), el('div.popupContent', {
+	            style: {
+	                width: width
+	            }
+	        }, this.text = el('div.popupTitle'), this.content = content));
+	        this.depth = popupDepth;
+	        this.text.innerHTML = title;
+	        this.cancelCallback = cancelCallback;
+	        this.keyListener = listenKeyDown(function (keyChar) {
+	            if (keyChar === key.esc && _this.depth === popupDepth) {
+	                _this.remove();
+	                _this.cancelCallback && _this.cancelCallback();
+	            }
+	        });
+	        mount(document.body, this.el);
+	    }
+	    Popup.prototype.remove = function () {
+	        popupDepth--;
+	        this.el.parentNode.removeChild(this.el);
+	        this.keyListener();
+	        this.keyListener = null;
+	    };
+	    return Popup;
+	}());
+	var Button = /** @class */ (function () {
+	    function Button() {
+	        var _this = this;
+	        this.el = el('button.button', {
+	            onclick: function () {
+	                _this.callback();
+	            }
+	        });
+	    }
+	    Button.prototype.update = function (button) {
+	        var newClassName = button.class ? "button " + button.class : 'button';
+	        if (this.el.textContent === button.text
+	            && this._prevIcon === button.icon
+	            && this.el.className === newClassName
+	            && (!button.color || this.el.style['border-color'] === button.color)) {
+	            return; // optimization
+	        }
+	        this.el.textContent = button.text;
+	        this._prevIcon = button.icon;
+	        if (button.icon) {
+	            var icon = el('i.fa.' + button.icon);
+	            if (button.color)
+	                { icon.style.color = button.color; }
+	            mount(this.el, icon, this.el.firstChild);
+	        }
+	        this.el.className = newClassName;
+	        this.callback = button.callback;
+	        if (button.color) {
+	            this.el.style['border-color'] = button.color;
+	            this.el.style['color'] = button.color;
+	            // this.el.style['background'] = button.color;
+	        }
+	    };
+	    return Button;
+	}());
+	var ButtonWithDescription = /** @class */ (function () {
+	    function ButtonWithDescription() {
+	        this.el = el('div.buttonWithDescription', this.button = new Button(), this.description = el('span.description'));
+	    }
+	    ButtonWithDescription.prototype.update = function (buttonData) {
+	        this.description.innerHTML = buttonData.description;
+	        if (buttonData.disabledReason) {
+	            this.button.el.setAttribute('disabled', 'disabled');
+	        }
+	        else {
+	            this.button.el.removeAttribute('disabled');
+	        }
+	        this.button.el.setAttribute('title', buttonData.disabledReason || '');
+	        this.button.update(buttonData);
+	    };
+	    return ButtonWithDescription;
+	}());
+	var Layer = /** @class */ (function () {
+	    function Layer(popup) {
+	        this.el = el('div.popupLayer', {
+	            onclick: function () {
+	                popup.remove();
+	                popup.cancelCallback && popup.cancelCallback();
+	            }
+	        });
+	    }
+	    return Layer;
+	}());
+	//# sourceMappingURL=Popup.js.map
+
+	var CreateObject = /** @class */ (function (_super) {
+	    __extends(CreateObject, _super);
+	    /*
+	    buttonOptions:
+	    - text
+	    - color
+	    - icon (fa-plus)
+	     */
+	    function CreateObject() {
+	        var _this = _super.call(this, {
+	            title: 'Create Object',
+	            width: 500,
+	            content: list('div.confirmationButtons', Button)
+	        }) || this;
+	        function selectCreatedObjects(entities) {
+	            if (entities.length === 0) {
+	                return;
+	            }
+	            if (entities[0].prototype && entities[0].prototype.threeLetterType === 'epr') {
+	                var entityPrototypes = entities.map(function (e) { return e.prototype; }).filter(Boolean);
+	                selectInEditor(entityPrototypes, this);
+	            }
+	            else {
+	                selectInEditor(entities, this);
+	            }
+	            editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
+	            Module.activateModule('object', true, 'focusOnProperty', 'name');
+	        }
+	        _this.content.update([{
+	                text: 'Empty Object',
+	                callback: function () {
+	                    var entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
+	                    var entity = entityPrototype.createEntity(null, true);
+	                    var entitiesInScene = copyEntitiesToScene([entity]);
+	                    selectCreatedObjects(entitiesInScene);
+	                    _this.remove();
+	                }
+	            }]);
+	        return _this;
+	    }
+	    return CreateObject;
+	}(Popup));
+	//# sourceMappingURL=createObject.js.map
+
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
 	var MAX_ZOOM = 10;
@@ -7106,6 +7285,9 @@
 	            else if (k === key.v) {
 	                _this.pasteEntities();
 	                _this.draw();
+	            }
+	            else if (k === key.n) {
+	                new CreateObject();
 	            }
 	            else if (scene) {
 	                // Scene controls
@@ -7473,11 +7655,13 @@
 	    SceneModule.prototype.selectSelectedEntitiesInEditor = function () {
 	        if (shouldSyncLevelAndScene()) {
 	            selectInEditor(this.selectedEntities.map(function (ent) { return ent.prototype; }), this);
+	            editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 	            Module.activateOneOfModules(['type', 'object'], false);
 	        }
 	        else {
 	            selectInEditor(this.selectedEntities, this);
-	            Module.activateOneOfModules(['object'], false);
+	            editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
+	            Module.activateModule('object', false);
 	        }
 	    };
 	    SceneModule.prototype.stopAndReset = function () {
@@ -7558,103 +7742,526 @@
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
 	//# sourceMappingURL=sceneModule.js.map
 
-	var popupDepth = 0;
-	var Popup = /** @class */ (function () {
-	    function Popup(_a) {
-	        var _b = _a === void 0 ? {} : _a, _c = _b.title, title = _c === void 0 ? 'Undefined popup' : _c, _d = _b.cancelCallback, cancelCallback = _d === void 0 ? null : _d, _e = _b.width, width = _e === void 0 ? null : _e, _f = _b.content, content = _f === void 0 ? el('div.genericCustomContent', 'Undefined content') : _f;
+	var DragAndDropEvent = /** @class */ (function () {
+	    function DragAndDropEvent(idList, targetElement, state) {
+	        this.idList = idList;
+	        this.targetElement = targetElement;
+	        this.state = state;
+	        this.type = null;
+	        var types = Array.from(new Set(this.idList.map(function (id) { return id.substring(0, 3); })));
+	        if (types.length === 0)
+	            { this.type = 'none'; }
+	        else if (types.length === 1)
+	            { this.type = types[0]; }
+	        else
+	            { this.type = 'mixed'; }
+	    }
+	    return DragAndDropEvent;
+	}());
+	var DragAndDropStartEvent = /** @class */ (function (_super) {
+	    __extends(DragAndDropStartEvent, _super);
+	    function DragAndDropStartEvent(idList, targetElement) {
+	        return _super.call(this, idList, targetElement, 'start') || this;
+	    }
+	    return DragAndDropStartEvent;
+	}(DragAndDropEvent));
+	var DragAndDropMoveEvent = /** @class */ (function (_super) {
+	    __extends(DragAndDropMoveEvent, _super);
+	    function DragAndDropMoveEvent(idList, targetElement, helper) {
+	        var _this = _super.call(this, idList, targetElement, 'move') || this;
+	        _this.helper = helper;
+	        return _this;
+	    }
+	    DragAndDropMoveEvent.prototype.hideValidationIndicator = function () {
+	        this.helper.find('.jstree-icon').css({
+	            visibility: 'hidden'
+	        });
+	    };
+	    return DragAndDropMoveEvent;
+	}(DragAndDropEvent));
+	var DragAndDropStopEvent = /** @class */ (function (_super) {
+	    __extends(DragAndDropStopEvent, _super);
+	    function DragAndDropStopEvent(idList, targetElement) {
+	        return _super.call(this, idList, targetElement, 'stop') || this;
+	    }
+	    return DragAndDropStopEvent;
+	}(DragAndDropEvent));
+	//# sourceMappingURL=dragAndDrop.js.map
+
+	var TreeView = /** @class */ (function () {
+	    function TreeView(options) {
 	        var _this = this;
-	        this.el = el('div.popup', {
-	            style: {
-	                'z-index': 1000 + popupDepth++
-	            }
-	        }, new Layer(this), el('div.popupContent', {
-	            style: {
-	                width: width
-	            }
-	        }, this.text = el('div.popupTitle'), this.content = content));
-	        this.depth = popupDepth;
-	        this.text.innerHTML = title;
-	        this.cancelCallback = cancelCallback;
-	        this.keyListener = listenKeyDown(function (keyChar) {
-	            if (keyChar === key.esc && _this.depth === popupDepth) {
-	                _this.remove();
-	                _this.cancelCallback && _this.cancelCallback();
+	        this.options = Object.assign({
+	            id: '',
+	            defaultIcon: 'fa fa-book',
+	            selectionChangedCallback: null,
+	            moveCallback: null,
+	            doubleClickCallback: null
+	        }, options);
+	        if (!this.options.id)
+	            { throw new Error('Id missing'); }
+	        this.el = el('div.treeView');
+	        var jstree = $(this.el).attr('id', this.options.id).on('move_node.jstree', function (e, data) {
+	            var serializableId = data.node.id;
+	            var parentId = data.parent;
+	            _this.options.moveCallback && _this.options.moveCallback(serializableId, parentId);
+	        }).on('changed.jstree', function (e, data) {
+	            _this.options.selectionChangedCallback && data.selected.length > 0 && _this.options.selectionChangedCallback(data.selected);
+	        }).jstree({
+	            core: {
+	                check_callback: true,
+	                data: [],
+	                force_text: true
+	            },
+	            plugins: ['types', 'dnd', 'sort', 'search' ],
+	            types: {
+	                default: {
+	                    icon: this.options.defaultIcon
+	                }
+	            },
+	            sort: function (a, b) {
+	                return this.get_text(a).toLowerCase() > this.get_text(b).toLowerCase() ? 1 : -1;
+	            },
+	            dnd: {
+	                copy: false // jstree makes it way too hard to copy multiple prototypes
+	            },
+	            search: {
+	                fuzzy: true,
+	                show_only_matches: true,
+	                show_only_matches_children: true,
+	                close_opened_onclear: false
 	            }
 	        });
-	        mount(document.body, this.el);
+	        if (this.options.doubleClickCallback) {
+	            jstree.bind("dblclick.jstree", function (event) {
+	                var element = $(event.target).closest("li")[0];
+	                _this.options.doubleClickCallback(element.id);
+	            });
+	        }
 	    }
-	    Popup.prototype.remove = function () {
-	        popupDepth--;
-	        this.el.parentNode.removeChild(this.el);
-	        this.keyListener();
-	        this.keyListener = null;
+	    TreeView.prototype.createNode = function (id, text$$1, parent) {
+	        $(this.el).jstree().create_node(parent || '#', { id: id, text: text$$1 }, 'last');
 	    };
-	    return Popup;
+	    TreeView.prototype.deleteNode = function (id) {
+	        var jstree = $(this.el).jstree(true);
+	        jstree.delete_node(jstree.get_node(id));
+	    };
+	    TreeView.prototype.select = function (idOrList) {
+	        if (!idOrList)
+	            { return; }
+	        var jstree = $(this.el).jstree(true);
+	        jstree.deselect_all(true);
+	        if (typeof idOrList === 'number')
+	            { idOrList = [idOrList]; }
+	        if (idOrList.length > 0) {
+	            idOrList.forEach(function (id) {
+	                jstree.select_node(jstree.get_node(id));
+	            });
+	            var node = document.getElementById(idOrList[0]);
+	            if (!node)
+	                { return console.warn("id " + idOrList[0] + " not found from the tree"); }
+	            var module = this.el.parentNode;
+	            while (module && !module.classList.contains('module')) {
+	                module = module.parentNode;
+	            }
+	            var NODE_HEIGHT = 24;
+	            var SAFETY_MARGIN = 15;
+	            var minScroll = node.offsetTop - module.offsetHeight + NODE_HEIGHT + SAFETY_MARGIN;
+	            var maxScroll = node.offsetTop - SAFETY_MARGIN;
+	            if (module.scrollTop < minScroll)
+	                { module.scrollTop = minScroll; }
+	            else if (module.scrollTop > maxScroll)
+	                { module.scrollTop = maxScroll; }
+	        }
+	    };
+	    TreeView.prototype.search = function (query) {
+	        $(this.el).jstree().search(query.trim());
+	    };
+	    TreeView.prototype.update = function (data) {
+	        var jstree = $(this.el).jstree(true);
+	        jstree.settings.core.data = data;
+	        jstree.refresh(true, function (state) {
+	            delete state.core.selected;
+	            return state;
+	        });
+	    };
+	    return TreeView;
 	}());
-	var Button = /** @class */ (function () {
-	    function Button() {
-	        var _this = this;
-	        this.el = el('button.button', {
+	$(document).on('dnd_start.vakata', function (e, data) {
+	    var idList = data.data.nodes;
+	    var targetElement = data.event.target;
+	    var event = new DragAndDropStartEvent(idList, targetElement);
+	    editorEventDispacher.dispatch('treeView drag start ' + data.data.origin.element[0].id, event);
+	});
+	$(document).on('dnd_move.vakata', function (e, data) {
+	    data.helper.find('.jstree-icon').css({
+	        visibility: 'visible'
+	    });
+	    var idList = data.data.nodes;
+	    var targetElement = data.event.target;
+	    var event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
+	    editorEventDispacher.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
+	});
+	$(document).on('dnd_stop.vakata', function (e, data) {
+	    var idList = data.data.nodes;
+	    var targetElement = data.event.target;
+	    var event = new DragAndDropStopEvent(idList, targetElement);
+	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
+	});
+	//# sourceMappingURL=treeView.js.map
+
+	var PositionAngleScale = /** @class */ (function () {
+	    function PositionAngleScale(position, angle, scale) {
+	        if (position === void 0) { position = new Vector(0, 0); }
+	        if (angle === void 0) { angle = 0; }
+	        if (scale === void 0) { scale = new Vector(1, 1); }
+	        this.position = position;
+	        this.angle = angle;
+	        this.scale = scale;
+	        // PIXI Container
+	        this.container = new PIXI$2.Container();
+	        this.child = null;
+	        this.parent = null;
+	        this.container.position.set(position.x, position.y);
+	        this.container.rotation = angle;
+	        this.container.scale.set(scale.x, scale.y);
+	    }
+	    PositionAngleScale.prototype.addChild = function (pas) {
+	        this.child = pas;
+	        pas.parent = this;
+	        this.container.addChild(pas.container);
+	    };
+	    PositionAngleScale.fromTransformComponentData = function (fromTransformComponentData) {
+	        assert$1(fromTransformComponentData.name === 'Transform', 'fromTransformComponentData must take Transform ComponentData');
+	        var map = {};
+	        fromTransformComponentData.forEachChild('prp', function (prp) {
+	            map[prp.name] = prp.value;
+	        });
+	        assert$1(map['position'], 'position is missing');
+	        assert$1(!isNaN(map['angle']), 'angle is missing');
+	        assert$1(map['scale'], 'scale is missing');
+	        return new PositionAngleScale(map['position'].clone(), map['angle'], map['scale'].clone());
+	    };
+	    PositionAngleScale.getLeafDelta = function (from, to) {
+	        // First go to root
+	        while (from.parent)
+	            { from = from.parent; }
+	        while (to.parent)
+	            { to = to.parent; }
+	        // We are at root. Let travel to leaf and calculate angle and scale
+	        var fromAngle = from.angle;
+	        var toAngle = to.angle;
+	        var fromScale = from.scale;
+	        var toScale = to.scale;
+	        while (from.child) {
+	            from = from.child;
+	            fromAngle += from.angle;
+	            fromScale.multiply(from.scale);
+	        }
+	        while (to.child) {
+	            to = to.child;
+	            toAngle += to.angle;
+	            toScale.multiply(to.scale);
+	        }
+	        // We are at leaf.
+	        // Get delta angle and scale.
+	        var deltaScale = fromScale.divide(toScale);
+	        var deltaAngle = (fromAngle - toAngle + Math.PI * 2) % (Math.PI * 2);
+	        // Now we shall calculate the delta position using PIXI Container Matrix.
+	        var deltaPosition = Vector.fromObject(to.container.toLocal(new PIXI$2.Point(), from.container));
+	        return new PositionAngleScale(deltaPosition, deltaAngle, deltaScale);
+	    };
+	    return PositionAngleScale;
+	}());
+	//# sourceMappingURL=positionAngleScaleUtil.js.map
+
+	var ObjectsModule = /** @class */ (function (_super) {
+	    __extends(ObjectsModule, _super);
+	    function ObjectsModule() {
+	        var _this = _super.call(this) || this;
+	        _this.tasks = [];
+	        _this.taskTimeout = null;
+	        _this.name = 'Objects';
+	        _this.id = 'objects';
+	        var createButton = el('button.button', 'Create ', el('u', 'N'), 'ew', {
 	            onclick: function () {
-	                _this.callback();
+	                createButton.blur();
+	                new CreateObject();
+	            },
+	            title: 'Create new object (N)'
+	        });
+	        mount(_this.el, createButton);
+	        _this.treeView = new TreeView({
+	            id: 'objects-tree',
+	            selectionChangedCallback: function (selectedIds) {
+	                if (_this.externalChange)
+	                    { return; }
+	                var serializables$$1 = selectedIds.map(getSerializable).filter(Boolean);
+	                selectInEditor(serializables$$1, _this);
+	                Module.activateModule('object', false);
+	            },
+	            moveCallback: function (serializableId, parentId) {
+	                if (serializableId.substring(0, 3) === 'epr') {
+	                    var entityPrototype = getSerializable(serializableId);
+	                    var parent_1 = parentId === '#' ? selectedLevel : getSerializable(parentId);
+	                    var transformComponentDataChain1 = [];
+	                    var transformComponentDataChain2 = [];
+	                    var traverser = entityPrototype;
+	                    while (traverser && traverser.threeLetterType === 'epr') {
+	                        transformComponentDataChain1.unshift(traverser.getTransform());
+	                        traverser = traverser._parent;
+	                    }
+	                    traverser = parent_1;
+	                    while (traverser && traverser.threeLetterType === 'epr') {
+	                        transformComponentDataChain2.unshift(traverser.getTransform());
+	                        traverser = traverser._parent;
+	                    }
+	                    var pas1 = PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[0]);
+	                    for (var i = 1; i < transformComponentDataChain1.length; i++) {
+	                        pas1.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[i]));
+	                        pas1 = pas1.child;
+	                    }
+	                    var pas2 = transformComponentDataChain2.length > 0
+	                        ? PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[0])
+	                        : new PositionAngleScale();
+	                    for (var i = 1; i < transformComponentDataChain2.length; i++) {
+	                        pas2.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[i]));
+	                        pas2 = pas2.child;
+	                    }
+	                    var diffPas = PositionAngleScale.getLeafDelta(pas1, pas2);
+	                    setChangeOrigin(_this);
+	                    entityPrototype.move(parent_1);
+	                    var TCD = entityPrototype.getTransform();
+	                    TCD.setValue('position', diffPas.position);
+	                    TCD.setValue('angle', diffPas.angle);
+	                    TCD.setValue('scale', diffPas.scale);
+	                }
+	            },
+	            doubleClickCallback: function (serializableId) {
+	                var serializable = getSerializable(serializableId);
+	                if (serializable)
+	                    { editorEventDispacher.dispatch('locate serializable', serializable); }
+	                else
+	                    { throw new Error("Locate serializable " + serializableId + " not found"); }
 	            }
 	        });
+	        mount(_this.el, _this.treeView);
+	        editorEventDispacher.listen('treeView drag start objects-tree', function (event) {
+	        });
+	        editorEventDispacher.listen('treeView drag move objects-tree', function (event) {
+	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs')
+	                { event.hideValidationIndicator(); }
+	            // if (event.targetElement.classList.contains('openEditPlayCanvas'))
+	            // 	event.hideValidationIndicator();
+	        });
+	        editorEventDispacher.listen('treeView drag stop objects-tree', function (event) {
+	            console.log('event', event);
+	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
+	                var entityPrototypes = event.idList.map(getSerializable);
+	                entityPrototypes = filterChildren(entityPrototypes);
+	                entityPrototypes.forEach(function (epr) {
+	                    var prefab = Prefab.createFromPrototype(epr);
+	                    game.addChild(prefab);
+	                });
+	            }
+	            return;
+	            if (event.type === 'epr') {
+	                var target = event.targetElement;
+	                while (!target.classList.contains('jstree-node')) {
+	                    target = target.parentElement;
+	                    if (!target) {
+	                        console.error('Invalid target', event.targetElement);
+	                    }
+	                }
+	                console.log('target.id', target.id);
+	                var targetSerializable_1 = getSerializable(target.id);
+	                var idSet_1 = new Set(event.idList);
+	                var serializables$$1 = event.idList.map(getSerializable).filter(function (serializable) {
+	                    var parent = serializable.getParent();
+	                    while (parent) {
+	                        if (idSet_1.has(parent.id))
+	                            { return false; }
+	                        parent = parent.getParent();
+	                    }
+	                    return true;
+	                });
+	                console.log('move serializables', serializables$$1, 'to', targetSerializable_1);
+	                serializables$$1.forEach(function (serializable) {
+	                    serializable.move(targetSerializable_1);
+	                });
+	                console.log('Done!');
+	            }
+	        });
+	        _this.dirty = true;
+	        _this.treeType = null;
+	        // This will be called when play and reset has already happened. After all the
+	        var updateWithDelay = function () {
+	            _this.dirty = true;
+	            setTimeout(function () { return _this.update(); }, 100);
+	        };
+	        forEachScene(function () {
+	            scene.listen(GameEvent.SCENE_START, updateWithDelay);
+	            scene.listen(GameEvent.SCENE_RESET, updateWithDelay);
+	        });
+	        // Set dirty so that every single serializable deletion and addition won't separately update the tree.
+	        var setDirty = function () {
+	            _this.dirty = true;
+	        };
+	        editorEventDispacher.listen('play', setDirty, -1);
+	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
+	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	            if (_this.dirty || !_this._selected)
+	                { return; }
+	            start('Editor: Objects');
+	            _this.externalChange = true;
+	            var newTask = null;
+	            if (change.type === changeType.addSerializableToTree) {
+	                if (change.reference.threeLetterType === _this.treeType) {
+	                    var serializable_1 = change.reference;
+	                    newTask = function () {
+	                        _this.treeView.createNode(serializable_1.id, serializable_1.makeUpAName(), '#');
+	                    };
+	                }
+	            }
+	            else if (change.type === changeType.deleteSerializable) {
+	                if (change.reference.threeLetterType === _this.treeType) {
+	                    var serializable_2 = change.reference;
+	                    newTask = function () {
+	                        _this.treeView.deleteNode(serializable_2.id);
+	                    };
+	                }
+	            }
+	            else if (change.type === 'editorSelection') {
+	                if (change.origin != _this) {
+	                    _this.selectBasedOnEditorSelection();
+	                }
+	            }
+	            else if (change.type === changeType.setPropertyValue && _this._selected) {
+	                var property = change.reference;
+	                if (property.name === 'name') {
+	                    var entityPrototype = property.getParent();
+	                    if (entityPrototype && entityPrototype.threeLetterType === 'epr') {
+	                        _this.dirty = true;
+	                    }
+	                }
+	            }
+	            if (newTask) {
+	                _this.addTask(newTask);
+	            }
+	            _this.externalChange = false;
+	            stop('Editor: Objects');
+	        });
+	        return _this;
 	    }
-	    Button.prototype.update = function (button) {
-	        var newClassName = button.class ? "button " + button.class : 'button';
-	        if (this.el.textContent === button.text
-	            && this._prevIcon === button.icon
-	            && this.el.className === newClassName
-	            && (!button.color || this.el.style['border-color'] === button.color)) {
-	            return; // optimization
+	    /**
+	     * Runs task with delay for optimization. If small amount of tasks is added, they are just added.
+	     * If big number of tasks is added, they are ignored and this module is flagged as dirty.
+	     * @param task function to run in delay
+	     */
+	    ObjectsModule.prototype.addTask = function (task) {
+	        var _this = this;
+	        this.tasks.push(task);
+	        if (this.taskTimeout)
+	            { clearTimeout(this.taskTimeout); }
+	        if (this.tasks.length > 1000) {
+	            this.tasks.length = 0;
+	            this.dirty = true;
+	            return;
 	        }
-	        this.el.textContent = button.text;
-	        this._prevIcon = button.icon;
-	        if (button.icon) {
-	            var icon = el('i.fa.' + button.icon);
-	            if (button.color)
-	                { icon.style.color = button.color; }
-	            mount(this.el, icon, this.el.firstChild);
-	        }
-	        this.el.className = newClassName;
-	        this.callback = button.callback;
-	        if (button.color) {
-	            this.el.style['border-color'] = button.color;
-	            this.el.style['color'] = button.color;
-	            // this.el.style['background'] = button.color;
-	        }
+	        var delay = scene.playing ? 500 : 50;
+	        this.taskTimeout = setTimeout(function () {
+	            _this.taskTimeout = null;
+	            if (_this.tasks.length < 5) {
+	                _this.tasks.forEach(function (task) { return task(); });
+	            }
+	            else {
+	                _this.dirty = true;
+	            }
+	            _this.tasks.length = 0;
+	        }, delay);
 	    };
-	    return Button;
-	}());
-	var ButtonWithDescription = /** @class */ (function () {
-	    function ButtonWithDescription() {
-	        this.el = el('div.buttonWithDescription', this.button = new Button(), this.description = el('span.description'));
-	    }
-	    ButtonWithDescription.prototype.update = function (buttonData) {
-	        this.description.innerHTML = buttonData.description;
-	        if (buttonData.disabledReason) {
-	            this.button.el.setAttribute('disabled', 'disabled');
+	    ObjectsModule.prototype.selectBasedOnEditorSelection = function (runInstantly) {
+	        var _this = this;
+	        if (runInstantly === void 0) { runInstantly = false; }
+	        var task = null;
+	        if (editorSelection.type === this.treeType) {
+	            task = function () {
+	                var oldExternalState = _this.externalChange;
+	                _this.externalChange = true;
+	                _this.treeView.select(editorSelection.items.map(function (item) { return item.id; }));
+	                _this.externalChange = oldExternalState;
+	            };
 	        }
 	        else {
-	            this.button.el.removeAttribute('disabled');
+	            task = function () {
+	                var oldExternalState = _this.externalChange;
+	                _this.externalChange = true;
+	                _this.treeView.select(null);
+	                _this.externalChange = oldExternalState;
+	            };
 	        }
-	        this.button.el.setAttribute('title', buttonData.disabledReason || '');
-	        this.button.update(buttonData);
+	        if (runInstantly) {
+	            task();
+	        }
+	        else {
+	            this.addTask(task);
+	        }
 	    };
-	    return ButtonWithDescription;
-	}());
-	var Layer = /** @class */ (function () {
-	    function Layer(popup) {
-	        this.el = el('div.popupLayer', {
-	            onclick: function () {
-	                popup.remove();
-	                popup.cancelCallback && popup.cancelCallback();
-	            }
-	        });
-	    }
-	    return Layer;
-	}());
-	//# sourceMappingURL=Popup.js.map
+	    ObjectsModule.prototype.activate = function () {
+	        this.dirty = true;
+	    };
+	    ObjectsModule.prototype.update = function () {
+	        var _this = this;
+	        if (!scene || !selectedLevel)
+	            { return false; }
+	        if (!this._selected)
+	            { return true; }
+	        var newTreeType = this.treeType;
+	        if (scene.isInInitialState()) {
+	            newTreeType = 'epr';
+	        }
+	        else {
+	            newTreeType = 'ent';
+	        }
+	        if (!this.dirty && newTreeType === this.treeType)
+	            { return true; }
+	        this.treeType = newTreeType;
+	        var data = [];
+	        if (this.treeType === 'epr') {
+	            selectedLevel.forEachChild('epr', function (epr) {
+	                var parent = epr.getParent();
+	                data.push({
+	                    text: epr.makeUpAName(),
+	                    id: epr.id,
+	                    parent: parent.threeLetterType === 'epr' ? parent.id : '#'
+	                });
+	            }, true);
+	        }
+	        else if (this.treeType === 'ent') {
+	            scene.forEachChild('ent', function (ent) {
+	                var parent = ent.getParent();
+	                data.push({
+	                    text: ent.prototype ? ent.prototype.makeUpAName() : 'Object',
+	                    id: ent.id,
+	                    parent: parent.threeLetterType === 'ent' ? parent.id : '#'
+	                });
+	            }, true);
+	        }
+	        this.treeView.update(data);
+	        // Sometimes treeView.update takes a bit time. Therefore hacky timeout.
+	        setTimeout(function () {
+	            _this.externalChange = true;
+	            _this.selectBasedOnEditorSelection();
+	            _this.externalChange = false;
+	        }, 30);
+	        this.dirty = false;
+	        return true;
+	    };
+	    return ObjectsModule;
+	}(Module));
+	Module.register(ObjectsModule, 'left');
+	//# sourceMappingURL=objectsModule.js.map
 
 	/**
 	 * Handles everything else than prototype deletion itself.
@@ -7959,176 +8566,8 @@
 	        }
 	    }, 0);
 	});
-	Module.register(TypesModule, 'left');
+	// Module.register(TypesModule, 'left');
 	//# sourceMappingURL=typesModule.js.map
-
-	var DragAndDropEvent = /** @class */ (function () {
-	    function DragAndDropEvent(idList, targetElement, state) {
-	        this.idList = idList;
-	        this.targetElement = targetElement;
-	        this.state = state;
-	        this.type = null;
-	        var types = Array.from(new Set(this.idList.map(function (id) { return id.substring(0, 3); })));
-	        if (types.length === 0)
-	            { this.type = 'none'; }
-	        else if (types.length === 1)
-	            { this.type = types[0]; }
-	        else
-	            { this.type = 'mixed'; }
-	    }
-	    return DragAndDropEvent;
-	}());
-	var DragAndDropStartEvent = /** @class */ (function (_super) {
-	    __extends(DragAndDropStartEvent, _super);
-	    function DragAndDropStartEvent(idList, targetElement) {
-	        return _super.call(this, idList, targetElement, 'start') || this;
-	    }
-	    return DragAndDropStartEvent;
-	}(DragAndDropEvent));
-	var DragAndDropMoveEvent = /** @class */ (function (_super) {
-	    __extends(DragAndDropMoveEvent, _super);
-	    function DragAndDropMoveEvent(idList, targetElement, helper) {
-	        var _this = _super.call(this, idList, targetElement, 'move') || this;
-	        _this.helper = helper;
-	        return _this;
-	    }
-	    DragAndDropMoveEvent.prototype.hideValidationIndicator = function () {
-	        this.helper.find('.jstree-icon').css({
-	            visibility: 'hidden'
-	        });
-	    };
-	    return DragAndDropMoveEvent;
-	}(DragAndDropEvent));
-	var DragAndDropStopEvent = /** @class */ (function (_super) {
-	    __extends(DragAndDropStopEvent, _super);
-	    function DragAndDropStopEvent(idList, targetElement) {
-	        return _super.call(this, idList, targetElement, 'stop') || this;
-	    }
-	    return DragAndDropStopEvent;
-	}(DragAndDropEvent));
-	//# sourceMappingURL=dragAndDrop.js.map
-
-	var TreeView = /** @class */ (function () {
-	    function TreeView(options) {
-	        var _this = this;
-	        this.options = Object.assign({
-	            id: '',
-	            defaultIcon: 'fa fa-book',
-	            selectionChangedCallback: null,
-	            moveCallback: null,
-	            doubleClickCallback: null
-	        }, options);
-	        if (!this.options.id)
-	            { throw new Error('Id missing'); }
-	        this.el = el('div.treeView');
-	        var jstree = $(this.el).attr('id', this.options.id).on('move_node.jstree', function (e, data) {
-	            var serializableId = data.node.id;
-	            var parentId = data.parent;
-	            _this.options.moveCallback && _this.options.moveCallback(serializableId, parentId);
-	        }).on('changed.jstree', function (e, data) {
-	            _this.options.selectionChangedCallback && data.selected.length > 0 && _this.options.selectionChangedCallback(data.selected);
-	        }).jstree({
-	            core: {
-	                check_callback: true,
-	                data: [],
-	                force_text: true
-	            },
-	            plugins: ['types', 'dnd', 'sort', 'search' ],
-	            types: {
-	                default: {
-	                    icon: this.options.defaultIcon
-	                }
-	            },
-	            sort: function (a, b) {
-	                return this.get_text(a).toLowerCase() > this.get_text(b).toLowerCase() ? 1 : -1;
-	            },
-	            dnd: {
-	                copy: false // jstree makes it way too hard to copy multiple prototypes
-	            },
-	            search: {
-	                fuzzy: true,
-	                show_only_matches: true,
-	                show_only_matches_children: true,
-	                close_opened_onclear: false
-	            }
-	        });
-	        if (this.options.doubleClickCallback) {
-	            jstree.bind("dblclick.jstree", function (event) {
-	                var element = $(event.target).closest("li")[0];
-	                _this.options.doubleClickCallback(element.id);
-	            });
-	        }
-	    }
-	    TreeView.prototype.createNode = function (id, text$$1, parent) {
-	        $(this.el).jstree().create_node(parent || '#', { id: id, text: text$$1 }, 'last');
-	    };
-	    TreeView.prototype.deleteNode = function (id) {
-	        var jstree = $(this.el).jstree(true);
-	        jstree.delete_node(jstree.get_node(id));
-	    };
-	    TreeView.prototype.select = function (idOrList) {
-	        if (!idOrList)
-	            { return; }
-	        var jstree = $(this.el).jstree(true);
-	        jstree.deselect_all(true);
-	        if (typeof idOrList === 'number')
-	            { idOrList = [idOrList]; }
-	        if (idOrList.length > 0) {
-	            idOrList.forEach(function (id) {
-	                jstree.select_node(jstree.get_node(id));
-	            });
-	            var node = document.getElementById(idOrList[0]);
-	            if (!node)
-	                { return console.warn("id " + idOrList[0] + " not found from the tree"); }
-	            var module = this.el.parentNode;
-	            while (module && !module.classList.contains('module')) {
-	                module = module.parentNode;
-	            }
-	            var NODE_HEIGHT = 24;
-	            var SAFETY_MARGIN = 15;
-	            var minScroll = node.offsetTop - module.offsetHeight + NODE_HEIGHT + SAFETY_MARGIN;
-	            var maxScroll = node.offsetTop - SAFETY_MARGIN;
-	            if (module.scrollTop < minScroll)
-	                { module.scrollTop = minScroll; }
-	            else if (module.scrollTop > maxScroll)
-	                { module.scrollTop = maxScroll; }
-	        }
-	    };
-	    TreeView.prototype.search = function (query) {
-	        $(this.el).jstree().search(query.trim());
-	    };
-	    TreeView.prototype.update = function (data) {
-	        var jstree = $(this.el).jstree(true);
-	        jstree.settings.core.data = data;
-	        jstree.refresh(true, function (state) {
-	            delete state.core.selected;
-	            return state;
-	        });
-	    };
-	    return TreeView;
-	}());
-	$(document).on('dnd_start.vakata', function (e, data) {
-	    var idList = data.data.nodes;
-	    var targetElement = data.event.target;
-	    var event = new DragAndDropStartEvent(idList, targetElement);
-	    editorEventDispacher.dispatch('treeView drag start ' + data.data.origin.element[0].id, event);
-	});
-	$(document).on('dnd_move.vakata', function (e, data) {
-	    data.helper.find('.jstree-icon').css({
-	        visibility: 'visible'
-	    });
-	    var idList = data.data.nodes;
-	    var targetElement = data.event.target;
-	    var event = new DragAndDropMoveEvent(idList, targetElement, data.helper);
-	    editorEventDispacher.dispatch('treeView drag move ' + data.data.origin.element[0].id, event);
-	});
-	$(document).on('dnd_stop.vakata', function (e, data) {
-	    var idList = data.data.nodes;
-	    var targetElement = data.event.target;
-	    var event = new DragAndDropStopEvent(idList, targetElement);
-	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
-	});
-	//# sourceMappingURL=treeView.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -8145,7 +8584,7 @@
 	                Module.activateModule('prefab', false);
 	            },
 	        });
-	        mount(_this.el, _this.treeView);
+	        _this.addElements(_this.treeView, _this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right')));
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.type === changeType.addSerializableToTree) {
 	                if (change.reference.threeLetterType === 'pfa') {
@@ -8219,375 +8658,6 @@
 	}(Module));
 	Module.register(PrefabsModule, 'left');
 	//# sourceMappingURL=prefabsModule.js.map
-
-	var CreateObject = /** @class */ (function (_super) {
-	    __extends(CreateObject, _super);
-	    /*
-	    buttonOptions:
-	    - text
-	    - color
-	    - icon (fa-plus)
-	     */
-	    function CreateObject() {
-	        var _this = _super.call(this, {
-	            title: 'Create Object',
-	            width: '500px',
-	            content: list('div.confirmationButtons', Button)
-	        }) || this;
-	        _this.content.update([{
-	                text: 'Empty Object',
-	                callback: function () {
-	                    var entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
-	                    var entity = entityPrototype.createEntity(null, true);
-	                    copyEntitiesToScene([entity]);
-	                    _this.remove();
-	                }
-	            }]);
-	        return _this;
-	    }
-	    return CreateObject;
-	}(Popup));
-	//# sourceMappingURL=createObject.js.map
-
-	var PositionAngleScale = /** @class */ (function () {
-	    function PositionAngleScale(position, angle, scale) {
-	        if (position === void 0) { position = new Vector(0, 0); }
-	        if (angle === void 0) { angle = 0; }
-	        if (scale === void 0) { scale = new Vector(1, 1); }
-	        this.position = position;
-	        this.angle = angle;
-	        this.scale = scale;
-	        // PIXI Container
-	        this.container = new PIXI$2.Container();
-	        this.child = null;
-	        this.parent = null;
-	        this.container.position.set(position.x, position.y);
-	        this.container.rotation = angle;
-	        this.container.scale.set(scale.x, scale.y);
-	    }
-	    PositionAngleScale.prototype.addChild = function (pas) {
-	        this.child = pas;
-	        pas.parent = this;
-	        this.container.addChild(pas.container);
-	    };
-	    PositionAngleScale.fromTransformComponentData = function (fromTransformComponentData) {
-	        assert$1(fromTransformComponentData.name === 'Transform', 'fromTransformComponentData must take Transform ComponentData');
-	        var map = {};
-	        fromTransformComponentData.forEachChild('prp', function (prp) {
-	            map[prp.name] = prp.value;
-	        });
-	        assert$1(map['position'], 'position is missing');
-	        assert$1(!isNaN(map['angle']), 'angle is missing');
-	        assert$1(map['scale'], 'scale is missing');
-	        return new PositionAngleScale(map['position'].clone(), map['angle'], map['scale'].clone());
-	    };
-	    PositionAngleScale.getLeafDelta = function (from, to) {
-	        // First go to root
-	        while (from.parent)
-	            { from = from.parent; }
-	        while (to.parent)
-	            { to = to.parent; }
-	        // We are at root. Let travel to leaf and calculate angle and scale
-	        var fromAngle = from.angle;
-	        var toAngle = to.angle;
-	        var fromScale = from.scale;
-	        var toScale = to.scale;
-	        while (from.child) {
-	            from = from.child;
-	            fromAngle += from.angle;
-	            fromScale.multiply(from.scale);
-	        }
-	        while (to.child) {
-	            to = to.child;
-	            toAngle += to.angle;
-	            toScale.multiply(to.scale);
-	        }
-	        // We are at leaf.
-	        // Get delta angle and scale.
-	        var deltaScale = fromScale.divide(toScale);
-	        var deltaAngle = (fromAngle - toAngle + Math.PI * 2) % (Math.PI * 2);
-	        // Now we shall calculate the delta position using PIXI Container Matrix.
-	        var deltaPosition = Vector.fromObject(to.container.toLocal(new PIXI$2.Point(), from.container));
-	        return new PositionAngleScale(deltaPosition, deltaAngle, deltaScale);
-	    };
-	    return PositionAngleScale;
-	}());
-	//# sourceMappingURL=positionAngleScaleUtil.js.map
-
-	var ObjectsModule = /** @class */ (function (_super) {
-	    __extends(ObjectsModule, _super);
-	    function ObjectsModule() {
-	        var _this = _super.call(this) || this;
-	        _this.tasks = [];
-	        _this.taskTimeout = null;
-	        _this.name = 'Objects';
-	        _this.id = 'objects';
-	        var createButton = el('button.button', 'Create', {
-	            onclick: function () {
-	                new CreateObject();
-	            }
-	        });
-	        mount(_this.el, createButton);
-	        _this.treeView = new TreeView({
-	            id: 'objects-tree',
-	            selectionChangedCallback: function (selectedIds) {
-	                if (_this.externalChange)
-	                    { return; }
-	                var serializables$$1 = selectedIds.map(getSerializable).filter(Boolean);
-	                selectInEditor(serializables$$1, _this);
-	                Module.activateModule('object', false);
-	            },
-	            moveCallback: function (serializableId, parentId) {
-	                if (serializableId.substring(0, 3) === 'epr') {
-	                    var entityPrototype = getSerializable(serializableId);
-	                    var parent_1 = parentId === '#' ? selectedLevel : getSerializable(parentId);
-	                    var transformComponentDataChain1 = [];
-	                    var transformComponentDataChain2 = [];
-	                    var traverser = entityPrototype;
-	                    while (traverser && traverser.threeLetterType === 'epr') {
-	                        transformComponentDataChain1.unshift(traverser.getTransform());
-	                        traverser = traverser._parent;
-	                    }
-	                    traverser = parent_1;
-	                    while (traverser && traverser.threeLetterType === 'epr') {
-	                        transformComponentDataChain2.unshift(traverser.getTransform());
-	                        traverser = traverser._parent;
-	                    }
-	                    var pas1 = PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[0]);
-	                    for (var i = 1; i < transformComponentDataChain1.length; i++) {
-	                        pas1.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[i]));
-	                    }
-	                    var pas2 = transformComponentDataChain2.length > 0
-	                        ? PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[0])
-	                        : new PositionAngleScale();
-	                    for (var i = 1; i < transformComponentDataChain2.length; i++) {
-	                        pas2.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[i]));
-	                    }
-	                    var diffPas = PositionAngleScale.getLeafDelta(pas1, pas2);
-	                    setChangeOrigin(_this);
-	                    entityPrototype.move(parent_1);
-	                    var TCD = entityPrototype.getTransform();
-	                    TCD.setValue('position', diffPas.position);
-	                    TCD.setValue('angle', diffPas.angle);
-	                    TCD.setValue('scale', diffPas.scale);
-	                }
-	            },
-	            doubleClickCallback: function (serializableId) {
-	                var serializable = getSerializable(serializableId);
-	                if (serializable)
-	                    { editorEventDispacher.dispatch('locate serializable', serializable); }
-	                else
-	                    { throw new Error("Locate serializable " + serializableId + " not found"); }
-	            }
-	        });
-	        mount(_this.el, _this.treeView);
-	        editorEventDispacher.listen('treeView drag start objects-tree', function (event) {
-	        });
-	        editorEventDispacher.listen('treeView drag move objects-tree', function (event) {
-	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs')
-	                { event.hideValidationIndicator(); }
-	            // if (event.targetElement.classList.contains('openEditPlayCanvas'))
-	            // 	event.hideValidationIndicator();
-	        });
-	        editorEventDispacher.listen('treeView drag stop objects-tree', function (event) {
-	            console.log('event', event);
-	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
-	                var entityPrototypes = event.idList.map(getSerializable);
-	                entityPrototypes = filterChildren(entityPrototypes);
-	                entityPrototypes.forEach(function (epr) {
-	                    var prefab = Prefab.createFromPrototype(epr);
-	                    game.addChild(prefab);
-	                });
-	            }
-	            return;
-	            if (event.type === 'epr') {
-	                var target = event.targetElement;
-	                while (!target.classList.contains('jstree-node')) {
-	                    target = target.parentElement;
-	                    if (!target) {
-	                        console.error('Invalid target', event.targetElement);
-	                    }
-	                }
-	                console.log('target.id', target.id);
-	                var targetSerializable_1 = getSerializable(target.id);
-	                var idSet_1 = new Set(event.idList);
-	                var serializables$$1 = event.idList.map(getSerializable).filter(function (serializable) {
-	                    var parent = serializable.getParent();
-	                    while (parent) {
-	                        if (idSet_1.has(parent.id))
-	                            { return false; }
-	                        parent = parent.getParent();
-	                    }
-	                    return true;
-	                });
-	                console.log('move serializables', serializables$$1, 'to', targetSerializable_1);
-	                serializables$$1.forEach(function (serializable) {
-	                    serializable.move(targetSerializable_1);
-	                });
-	                console.log('Done!');
-	            }
-	        });
-	        _this.dirty = true;
-	        _this.treeType = null;
-	        // This will be called when play and reset has already happened. After all the
-	        var updateWithDelay = function () {
-	            _this.dirty = true;
-	            setTimeout(function () { return _this.update(); }, 100);
-	        };
-	        forEachScene(function () {
-	            scene.listen(GameEvent.SCENE_START, updateWithDelay);
-	            scene.listen(GameEvent.SCENE_RESET, updateWithDelay);
-	        });
-	        // Set dirty so that every single serializable deletion and addition won't separately update the tree.
-	        var setDirty = function () {
-	            _this.dirty = true;
-	        };
-	        editorEventDispacher.listen('play', setDirty, -1);
-	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
-	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
-	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
-	            if (_this.dirty || !_this._selected)
-	                { return; }
-	            start('Editor: Objects');
-	            _this.externalChange = true;
-	            var newTask = null;
-	            if (change.type === changeType.addSerializableToTree) {
-	                if (change.reference.threeLetterType === _this.treeType) {
-	                    var serializable_1 = change.reference;
-	                    newTask = function () {
-	                        _this.treeView.createNode(serializable_1.id, serializable_1.makeUpAName(), '#');
-	                    };
-	                }
-	            }
-	            else if (change.type === changeType.deleteSerializable) {
-	                if (change.reference.threeLetterType === _this.treeType) {
-	                    var serializable_2 = change.reference;
-	                    newTask = function () {
-	                        _this.treeView.deleteNode(serializable_2.id);
-	                    };
-	                }
-	            }
-	            else if (change.type === 'editorSelection') {
-	                if (change.origin != _this) {
-	                    _this.selectBasedOnEditorSelection();
-	                }
-	            }
-	            if (newTask) {
-	                _this.addTask(newTask);
-	            }
-	            _this.externalChange = false;
-	            stop('Editor: Objects');
-	        });
-	        return _this;
-	    }
-	    /**
-	     * Runs task with delay for optimization. If small amount of tasks is added, they are just added.
-	     * If big number of tasks is added, they are ignored and this module is flagged as dirty.
-	     * @param task function to run in delay
-	     */
-	    ObjectsModule.prototype.addTask = function (task) {
-	        var _this = this;
-	        this.tasks.push(task);
-	        if (this.taskTimeout)
-	            { clearTimeout(this.taskTimeout); }
-	        if (this.tasks.length > 1000) {
-	            this.tasks.length = 0;
-	            this.dirty = true;
-	            return;
-	        }
-	        var delay = scene.playing ? 500 : 50;
-	        this.taskTimeout = setTimeout(function () {
-	            _this.taskTimeout = null;
-	            if (_this.tasks.length < 5) {
-	                _this.tasks.forEach(function (task) { return task(); });
-	            }
-	            else {
-	                _this.dirty = true;
-	            }
-	            _this.tasks.length = 0;
-	        }, delay);
-	    };
-	    ObjectsModule.prototype.selectBasedOnEditorSelection = function (runInstantly) {
-	        var _this = this;
-	        if (runInstantly === void 0) { runInstantly = false; }
-	        var task = null;
-	        if (editorSelection.type === this.treeType) {
-	            task = function () {
-	                var oldExternalState = _this.externalChange;
-	                _this.externalChange = true;
-	                _this.treeView.select(editorSelection.items.map(function (item) { return item.id; }));
-	                _this.externalChange = oldExternalState;
-	            };
-	        }
-	        else {
-	            task = function () {
-	                var oldExternalState = _this.externalChange;
-	                _this.externalChange = true;
-	                _this.treeView.select(null);
-	                _this.externalChange = oldExternalState;
-	            };
-	        }
-	        if (runInstantly) {
-	            task();
-	        }
-	        else {
-	            this.addTask(task);
-	        }
-	    };
-	    ObjectsModule.prototype.activate = function () {
-	        this.dirty = true;
-	    };
-	    ObjectsModule.prototype.update = function () {
-	        var _this = this;
-	        if (!scene || !selectedLevel)
-	            { return false; }
-	        if (!this._selected)
-	            { return true; }
-	        var newTreeType = this.treeType;
-	        if (scene.isInInitialState()) {
-	            newTreeType = 'epr';
-	        }
-	        else {
-	            newTreeType = 'ent';
-	        }
-	        if (!this.dirty && newTreeType === this.treeType)
-	            { return true; }
-	        this.treeType = newTreeType;
-	        var data = [];
-	        if (this.treeType === 'epr') {
-	            selectedLevel.forEachChild('epr', function (epr) {
-	                var parent = epr.getParent();
-	                data.push({
-	                    text: epr.makeUpAName(),
-	                    id: epr.id,
-	                    parent: parent.threeLetterType === 'epr' ? parent.id : '#'
-	                });
-	            }, true);
-	        }
-	        else if (this.treeType === 'ent') {
-	            scene.forEachChild('ent', function (ent) {
-	                var parent = ent.getParent();
-	                data.push({
-	                    text: ent.prototype ? ent.prototype.makeUpAName() : 'Object',
-	                    id: ent.id,
-	                    parent: parent.threeLetterType === 'ent' ? parent.id : '#'
-	                });
-	            }, true);
-	        }
-	        this.treeView.update(data);
-	        // Sometimes treeView.update takes a bit time. Therefore hacky timeout.
-	        setTimeout(function () {
-	            _this.externalChange = true;
-	            _this.selectBasedOnEditorSelection();
-	            _this.externalChange = false;
-	        }, 30);
-	        this.dirty = false;
-	        return true;
-	    };
-	    return ObjectsModule;
-	}(Module));
-	Module.register(ObjectsModule, 'left');
-	//# sourceMappingURL=objectsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -9604,6 +9674,9 @@
 	        }
 	    };
 	    ObjectModule.prototype.activate = function (command, parameter) {
+	        if (command === 'focusOnProperty') {
+	            this.propertyEditor.el.querySelector(".property[name='" + parameter + "'] input").select();
+	        }
 	    };
 	    return ObjectModule;
 	}(Module));
@@ -10023,6 +10096,9 @@
 	    // editor && editor.update();
 	    editor && editorUpdateLimited();
 	});
+	editorEventDispacher.listen(EditorEvent.EDITOR_FORCE_UPDATE, function () {
+	    editor && editor.update();
+	});
 	var editor = null;
 	var Editor = /** @class */ (function () {
 	    function Editor(game$$1) {
@@ -10043,6 +10119,7 @@
 	                            var serializables_1 = filterChildren(editorSelection.items);
 	                            setChangeOrigin(_this);
 	                            serializables_1.forEach(function (s$$1) { return s$$1.delete(); });
+	                            selectInEditor([], _this);
 	                            editorUpdateLimited();
 	                        }
 	                        else {

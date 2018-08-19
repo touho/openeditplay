@@ -7,6 +7,11 @@ import ComponentData from './componentData';
 import assert from '../util/assert';
 import Vector from '../util/vector';
 import Prefab from './prefab';
+import PropertyOwner from './propertyOwner';
+
+let propertyTypes = [
+	// Prop('name2', 'No name', Prop.string)
+];
 
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
@@ -188,7 +193,7 @@ export default class EntityPrototype extends Prototype {
 		entityPrototype.prototype = prototype;
 		let id = entityPrototype.id;
 
-		let prototypeTransform = prototype.findChild('cda', cda => cda.name === 'Transform');
+		let prototypeTransform = prototype.findChild('cda', (cda: ComponentData) => cda.name === 'Transform');
 
 		if (prototypeTransform)
 			assert(false, 'Prototype (prt) can not have a Transform component');
@@ -204,15 +209,27 @@ export default class EntityPrototype extends Prototype {
 
 		return entityPrototype;
 	}
-}
-Object.defineProperty(EntityPrototype.prototype, 'position', {
-	get() {
-		return this.getTransform().findChild('prp', prp => prp.name === 'position').value;
-	},
-	set(position) {
-		return this.getTransform().findChild('prp', prp => prp.name === 'position').value = position;
+
+	static create(name = 'Empty', position = new Vector(0, 0)) {
+		let entityPrototype = new EntityPrototype();
+		let transform = createEntityPrototypeTransform(entityPrototype.id);
+		transform.setValue('position', position);
+
+		let nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
+
+		entityPrototype.initWithChildren([nameProperty, transform]);
+		return entityPrototype;
 	}
-});
+
+	get position() {
+		return this.getTransform().findChild('prp', (prp: Property) => prp.name === 'position').value;
+	}
+	set position(position) {
+		this.getTransform().findChild('prp', (prp: Property) => prp.name === 'position').value = position;
+	}
+}
+
+// PropertyOwner.defineProperties(EntityPrototype, propertyTypes);
 
 export function createEntityPrototypeNameProperty(entityPrototypeId, name = '') {
 	return EntityPrototype._propertyTypesByName.name.createProperty({
@@ -243,17 +260,6 @@ export function createEntityPrototypeTransform(entityPrototypeId) {
 	transform.addChild(angle);
 
 	return transform;
-}
-
-EntityPrototype.create = function (name = 'Empty', position = new Vector(0, 0)) {
-	let entityPrototype = new EntityPrototype();
-	let transform = createEntityPrototypeTransform(entityPrototype.id);
-	transform.setValue('position', position);
-
-	let nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
-
-	entityPrototype.initWithChildren([nameProperty, transform]);
-	return entityPrototype;
 }
 
 Serializable.registerSerializable(EntityPrototype, 'epr', json => {

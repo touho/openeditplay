@@ -141,7 +141,7 @@ export default class Scene extends Serializable {
 		let count = 0;
 		this.getComponents('CharacterController').forEach(characterController => {
 			if (characterController._rootType) {
-				pos.add(characterController.Transform.position);
+				pos.add(characterController.Transform.getGlobalPosition());
 				count++;
 			}
 		});

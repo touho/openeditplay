@@ -3,9 +3,9 @@ import Layout from './layout/layout';
 import './module/topBarModule';
 import './module/sceneModule';
 
+import './module/objectsModule';
 import './module/typesModule';
 import './module/prefabsModule';
-import './module/objectsModule';
 import './module/levelsModule';
 
 import './module/typeModule';
@@ -81,7 +81,11 @@ editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, () => {
 	editor && editorUpdateLimited();
 });
 
-export let editor = null;
+editorEventDispacher.listen(EditorEvent.EDITOR_FORCE_UPDATE, () => {
+	editor && editor.update();
+});
+
+export let editor: Editor = null;
 
 class Editor {
 	layout: Layout;
@@ -108,6 +112,7 @@ class Editor {
 							let serializables = filterChildren(editorSelection.items);
 							setChangeOrigin(this);
 							serializables.forEach(s => s.delete());
+							selectInEditor([], this);
 							editorUpdateLimited();
 						} else {
 							console.log('Not deleting. Results:', results);

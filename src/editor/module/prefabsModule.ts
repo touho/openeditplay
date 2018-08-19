@@ -1,9 +1,9 @@
 import { el, list, mount } from 'redom';
 import TreeView from "../views/treeView";
 import Module from './module';
-import {game} from "../../core/game";
-import {getSerializable} from "../../core/serializableManager";
-import {editor} from "../editor";
+import { game } from "../../core/game";
+import { getSerializable } from "../../core/serializableManager";
+import { editor } from "../editor";
 import { selectInEditor, editorSelection } from '../editorSelection';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { changeType } from '../../core/change';
@@ -13,6 +13,7 @@ import PrototypeDeleteConfirmation from '../views/popup/PrototypeDeleteConfirmat
 class PrefabsModule extends Module {
 	treeView: TreeView;
 	dirty: boolean = true;
+	helperText: HTMLElement;
 
 	constructor() {
 		super();
@@ -27,7 +28,14 @@ class PrefabsModule extends Module {
 				Module.activateModule('prefab', false);
 			},
 		});
-		mount(this.el, this.treeView);
+		this.addElements(
+			this.treeView,
+			this.helperText = el('div.typesDragHelper',
+				el('i.fa.fa-long-arrow-right'),
+				'Drag',
+				el('i.fa.fa-long-arrow-right')
+			)
+		);
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (change.type === changeType.addSerializableToTree) {

@@ -4,7 +4,7 @@ import TreeView from "../views/treeView";
 import { editor } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { getSerializable } from "../../core/serializableManager";
-import { changeType, setChangeOrigin } from "../../core/change";
+import { changeType, setChangeOrigin, Change } from "../../core/change";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import Game, { game } from "../../core/game";
@@ -18,6 +18,7 @@ import Entity from '../../core/entity';
 import EntityPrototype from '../../core/entityPrototype';
 import Vector from '../../util/vector';
 import { PositionAngleScale } from '../util/positionAngleScaleUtil';
+import Property from '../../core/property';
 
 class ObjectsModule extends Module {
 	treeView: TreeView;
@@ -37,10 +38,12 @@ class ObjectsModule extends Module {
 		this.name = 'Objects';
 		this.id = 'objects';
 
-		let createButton = el('button.button', 'Create', {
+		let createButton = el('button.button', 'Create ', el('u', 'N'), 'ew', {
 			onclick: () => {
+				createButton.blur();
 				new CreateObject();
-			}
+			},
+			title: 'Create new object (N)'
 		});
 		mount(this.el, createButton);
 
@@ -75,6 +78,7 @@ class ObjectsModule extends Module {
 					let pas1 = PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[0]);
 					for (let i = 1; i < transformComponentDataChain1.length; i++) {
 						pas1.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain1[i]));
+						pas1 = pas1.child;
 					}
 
 					let pas2 = transformComponentDataChain2.length > 0
@@ -82,6 +86,7 @@ class ObjectsModule extends Module {
 						: new PositionAngleScale();
 					for (let i = 1; i < transformComponentDataChain2.length; i++) {
 						pas2.addChild(PositionAngleScale.fromTransformComponentData(transformComponentDataChain2[i]));
+						pas2 = pas2.child;
 					}
 
 					let diffPas = PositionAngleScale.getLeafDelta(pas1, pas2);
@@ -175,7 +180,7 @@ class ObjectsModule extends Module {
 		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
 		game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 
-		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
 			if (this.dirty || !this._selected)
 				return;
 
@@ -202,6 +207,14 @@ class ObjectsModule extends Module {
 			} else if (change.type === 'editorSelection') {
 				if (change.origin != this) {
 					this.selectBasedOnEditorSelection();
+				}
+			} else if (change.type === changeType.setPropertyValue && this._selected) {
+				let property = change.reference as Property;
+				if (property.name === 'name') {
+					let entityPrototype = property.getParent() as EntityPrototype;
+					if (entityPrototype && entityPrototype.threeLetterType === 'epr') {
+						this.dirty = true;
+					}
 				}
 			}
 

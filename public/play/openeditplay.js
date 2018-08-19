@@ -2069,6 +2069,7 @@
 	    EditorEvent["EDITOR_DELETE_CONFIRMATION"] = "delete confirmation";
 	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
 	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
+	    EditorEvent["EDITOR_RESET"] = "reset";
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2214,7 +2215,7 @@
 	        var count = 0;
 	        this.getComponents('CharacterController').forEach(function (characterController) {
 	            if (characterController._rootType) {
-	                pos.add(characterController.Transform.position);
+	                pos.add(characterController.Transform.getGlobalPosition());
 	                count++;
 	            }
 	        });
@@ -2249,6 +2250,14 @@
 	        start('Component updates');
 	        this.dispatch('onUpdate', dt, this.time);
 	        stop('Component updates');
+	        // performanceTool.start('Component up2');
+	        // let set = this.getComponents('Spawner');
+	        // let sceneTime = this.time;
+	        // set.forEach(comp => {
+	        // 	if (sceneTime > comp.lastSpawn + comp.interval)
+	        // 		comp.spawn();
+	        // });
+	        // performanceTool.stop('Component up2');
 	        // Update physics
 	        start('Physics');
 	        updateWorld(this, dt);
@@ -2384,10 +2393,10 @@
 	}
 
 	var componentClasses = new Map();
-	var automaticSceneEventListeners = [
-	    'onUpdate',
-	    'onStart'
-	];
+	var automaticSceneEventListeners = {
+	    onUpdate: 'onUpdate',
+	    onStart: GameEvent.SCENE_START
+	};
 	// Object of a component, see _componentExample.js
 	var Component = /** @class */ (function (_super) {
 	    __extends(Component, _super);
@@ -2410,11 +2419,13 @@
 	        _super.prototype.delete.call(this);
 	        return true;
 	    };
-	    Component.prototype._addEventListener = function (functionName) {
+	    Component.prototype._addEventListener = function (functionName, eventName) {
+	        if (!eventName)
+	            { eventName = functionName; }
 	        var func = this[functionName];
 	        var self = this;
 	        var performanceName = 'Component: ' + this.componentClass.componentName;
-	        this._listenRemoveFunctions.push(this.scene.listen(functionName, function () {
+	        this._listenRemoveFunctions.push(this.scene.listen(eventName, function () {
 	            // @ifndef OPTIMIZE
 	            start(performanceName);
 	            // @endif
@@ -2435,10 +2446,18 @@
 	            assert(_this[r], _this.componentClass.componentName + " requires component " + r + " but it is not found");
 	        });
 	        this.forEachChild('com', function (c) { return c._preInit(); });
-	        for (var i = 0; i < automaticSceneEventListeners.length; ++i) {
-	            if (typeof this$1[automaticSceneEventListeners[i]] === 'function')
-	                { this$1._addEventListener(automaticSceneEventListeners[i]); }
+	        for (var key in automaticSceneEventListeners) {
+	            if (typeof this$1[key] === 'function') {
+	                this$1._addEventListener(key, automaticSceneEventListeners[key]);
+	            }
 	        }
+	        /*
+	        for (let i = 0; i < Object.keys(automaticSceneEventListeners).length; ++i) {
+	            if (typeof this[automaticSceneEventListeners[i]] === 'function') {
+	                this._addEventListener(automaticSceneEventListeners[i]);
+	            }
+	        }
+	        */
 	        if (this.componentClass.componentName !== 'Transform' && this.scene)
 	            { this.scene.addComponent(this); }
 	        try {
@@ -3356,11 +3375,11 @@
 	    };
 	    EntityPrototype.prototype.spawnEntityToScene = function (scene, position) {
 	        if (!scene)
-	            { return; }
+	            { return null; }
 	        if (position) {
 	            this.getTransform().getPropertyOrCreate('position').value = position;
 	        }
-	        this.createEntity(scene);
+	        return this.createEntity(scene);
 	    };
 	    EntityPrototype.prototype.detachFromPrototype = function () {
 	        this.name = this.makeUpAName();
@@ -3376,10 +3395,9 @@
 	            if (cda.name !== 'Transform')
 	                { cda.delete(); }
 	        });
-	        debugger;
-	        // TODO: For some reason all non-Transform components have not been removed yet...
 	        this.addChildren(children);
 	        this.prototype = null;
+	        return this;
 	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
@@ -3387,6 +3405,7 @@
 	            { return; }
 	        assert(this.getTransform(), 'EntityPrototype must have a Transform');
 	        _super.prototype.setRootType.call(this, rootType);
+	        return this;
 	    };
 	    /**
 	     * If Transform or Transform.position is missing, they are added.
@@ -3634,6 +3653,7 @@
 	        },
 	        init: function () {
 	            var _this = this;
+	            // TODO: move add code to parent? Because container logic is needed in init() of physics component.
 	            var parentTransform = this.getParentTransform();
 	            if (parentTransform) {
 	                parentTransform.container.addChild(this.container);
@@ -3675,6 +3695,10 @@
 	        getGlobalPosition: function () {
 	            return Vector.fromObject(this.layer.toLocal(zeroPoint, this.container, tempPoint));
 	        },
+	        // given position is altered
+	        setGlobalPosition: function (position) {
+	            this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+	        },
 	        getGlobalAngle: function () {
 	            var angle = this.angle;
 	            var parent = this.getParentTransform();
@@ -3684,8 +3708,20 @@
 	            }
 	            return angle;
 	        },
-	        setGlobalPosition: function (position) {
-	            this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
+	        setGlobalAngle: function (newGlobalAngle) {
+	            var globalAngle = this.getGlobalAngle();
+	            var change = newGlobalAngle - globalAngle;
+	            this.angle = (this.angle + change + Math.PI * 2) % (Math.PI * 2);
+	        },
+	        // This may give wrong numbers if there are rotations and scale included in object tree.
+	        getGlobalScale: function () {
+	            var scale = this.scale.clone();
+	            var parentEntity = this.entity.getParent();
+	            while (parentEntity && parentEntity.threeLetterType === 'ent') {
+	                scale.multiply(parentEntity.Transform.scale);
+	                parentEntity = parentEntity.getParent();
+	            }
+	            return scale;
 	        },
 	        sleep: function () {
 	            this.container.destroy();
@@ -3876,7 +3912,7 @@
 	                path.forEach(function (p) { return p.y -= averageY_1; });
 	            }
 	            if (takeScaleIntoAccount) {
-	                var scale_1 = this.Transform.scale;
+	                var scale_1 = this.Transform.getGlobalScale();
 	                if (scale_1.x !== 1 || scale_1.y !== 1) {
 	                    path.forEach(function (p) {
 	                        p.x *= scale_1.x;
@@ -3971,6 +4007,7 @@
 	        },
 	        spawn: function () {
 	            var _this = this;
+	            // window['testi']++;
 	            var prototype = this.game.findChild('prt', function (prt) { return prt.name === _this.typeName; }, true);
 	            if (!prototype)
 	                { return; }
@@ -3979,8 +4016,15 @@
 	            entityPrototype.delete();
 	            this.lastSpawn = this.scene.time;
 	        }
-	    }
+	    },
 	});
+	/*
+	window['testi'] = 0;
+	setInterval(() => {
+	    console.log('testi', window['testi']);
+	    window['testi'] = 0;
+	}, 1000);
+	*/
 
 	Component.register({
 	    name: 'Trigger',
@@ -4088,11 +4132,12 @@
 	                _loop_1(i);
 	            }
 	            this.listenProperty(this.Transform, 'position', update(function (position) {
-	                _this.body.position = position.toArray().map(function (x) { return x * PHYSICS_SCALE; });
+	                _this.body.position = fromTransformToBodyPosition(_this.Transform);
 	                _this.body.updateAABB();
 	            }));
 	            this.listenProperty(this.Transform, 'angle', update(function (angle) {
-	                _this.body.angle = angle;
+	                var globalAngle = _this.Transform.getGlobalAngle();
+	                _this.body.angle = globalAngle;
 	                _this.body.updateAABB();
 	            }));
 	            this.listenProperty(this.Transform, 'scale', update(function (scale) { return _this.updateShape(); }));
@@ -4115,12 +4160,19 @@
 	            if (this._rootType)
 	                { this.createBody(); }
 	        },
+	        // This is here because createBody in init() doesn't have access to Transform's global position because parents are inited later.
+	        onStart: function () {
+	            this.body.position = fromTransformToBodyPosition(this.Transform);
+	            this.body.angle = this.Transform.getGlobalAngle();
+	            this.updateShape();
+	        },
 	        createBody: function () {
 	            assert(!this.body);
 	            this.body = new p2$1.Body({
 	                type: type[this.type],
-	                position: [this.Transform.position.x * PHYSICS_SCALE, this.Transform.position.y * PHYSICS_SCALE],
-	                angle: this.Transform.angle,
+	                // position and angle are updated at onStart
+	                position: [0, 0],
+	                angle: 0,
 	                velocity: [0, 0],
 	                angularVelocity: 0,
 	                sleepTimeLimit: 0.6,
@@ -4129,7 +4181,7 @@
 	                angularDamping: this.rotationalDrag > 0.98 ? 1 : this.rotationalDrag,
 	                fixedRotation: this.rotationalDrag === 1
 	            });
-	            this.updateShape();
+	            // this.updateShape(); // This is done at onStart. No need to do it here.
 	            this.body.entity = this.entity;
 	            addBody(this.scene, this.body);
 	        },
@@ -4148,7 +4200,7 @@
 	                shapes.length = 0;
 	            }
 	            var Shapes = this.entity.getComponents('Shape');
-	            var scale = this.Transform.scale;
+	            var scale = this.Transform.getGlobalScale();
 	            Shapes.forEach(function (Shape) {
 	                var shape;
 	                if (Shape.type === 'rectangle') {
@@ -4197,11 +4249,13 @@
 	            if (!b || b.sleepState === SLEEPING || b.type === STATIC)
 	                { return; }
 	            this.updatingOthers = true;
-	            var newPos = new Vector(b.position[0] * PHYSICS_SCALE_INV, b.position[1] * PHYSICS_SCALE_INV);
-	            if (!this.Transform.position.isEqualTo(newPos))
-	                { this.Transform.position = newPos; }
-	            if (this.Transform.angle !== b.angle)
-	                { this.Transform.angle = b.angle; }
+	            // TODO: find out should these be optimized.
+	            var newGlobalPosition = fromBodyPositionToGlobalVector(b.position);
+	            var oldGlobalPosition = this.Transform.getGlobalPosition();
+	            if (!oldGlobalPosition.isEqualTo(newGlobalPosition))
+	                { this.Transform.setGlobalPosition(newGlobalPosition); }
+	            if (this.Transform.getGlobalAngle() !== b.angle)
+	                { this.Transform.setGlobalAngle(b.angle); }
 	            this.updatingOthers = false;
 	        },
 	        sleep: function () {
@@ -4224,6 +4278,12 @@
 	        }
 	    }
 	});
+	function fromTransformToBodyPosition(Transform) {
+	    return Transform.getGlobalPosition().toArray().map(function (x) { return x * PHYSICS_SCALE; });
+	}
+	function fromBodyPositionToGlobalVector(bodyPosition) {
+	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
+	}
 
 	// Export so that other components can have this component as parent
 	Component.register({
