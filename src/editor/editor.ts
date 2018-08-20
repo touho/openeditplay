@@ -121,6 +121,8 @@ class Editor {
 						console.log('Not deleting because:', e);
 					});
 				}
+			} else if (k === key.esc) {
+				selectInEditor([], this);
 			}
 		});
 	}

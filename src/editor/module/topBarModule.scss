@@ -95,6 +95,13 @@ div.topToolSelectionButtons {
   top: 50%;
   left: 20vw;
 }
+div.selectionView {
+  padding: 5px 20px;
+  top: 50%;
+  left: 62vw;
+  text-align: center;
+}
+
 @keyframes blinkPlayButton {
   0% { opacity: 1 }
   50% { opacity: 0.8 }

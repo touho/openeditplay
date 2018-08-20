@@ -4,7 +4,7 @@ import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
 import { GameEvent } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { setSceneTool, sceneToolName } from '../editorSelection';
+import { setSceneTool, sceneToolName, editorSelection } from '../editorSelection';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -12,14 +12,20 @@ export class TopBarModule extends Module {
 	controlButtons: HTMLElement;
 	toolSelectionButtons: HTMLElement;
 	keyboardShortcuts: { [code: number]: () => void };
+	selectionView: HTMLElement;
+	selectionText: HTMLElement;
 
 	constructor() {
 		super();
 		this.addElements(
 			this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }),
-			this.buttons = el('div.buttonContainer.select-none'),
+			// this.buttons = el('div.buttonContainer.select-none'),
 			this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'),
-			this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons')
+			this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'),
+			this.selectionView = el('div.topButtonGroup.selectionView',
+				'Selection', el('br'),
+				this.selectionText = el('span', '...')
+			)
 		);
 
 		this.id = 'topbar';
@@ -36,6 +42,11 @@ export class TopBarModule extends Module {
 
 		this.initControlButtons();
 		this.initToolSelectionButtons();
+	}
+
+	update() {
+		let text = `${editorSelection.items.length} ${editorSelection.type}`;
+		this.selectionText.textContent = text;
 	}
 
 	addKeyboardShortcut(key, buttonOrCallback) {

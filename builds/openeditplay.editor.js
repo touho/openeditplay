@@ -5811,7 +5811,9 @@
 	    __extends(TopBarModule, _super);
 	    function TopBarModule() {
 	        var _this = _super.call(this) || this;
-	        _this.addElements(_this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), _this.buttons = el('div.buttonContainer.select-none'), _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'));
+	        _this.addElements(_this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), 
+	        // this.buttons = el('div.buttonContainer.select-none'),
+	        _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'), _this.selectionView = el('div.topButtonGroup.selectionView', 'Selection', el('br'), _this.selectionText = el('span', '...')));
 	        _this.id = 'topbar';
 	        _this.name = 'TopBar'; // not visible
 	        _this.keyboardShortcuts = {}; // key.x -> func
@@ -5825,6 +5827,10 @@
 	        _this.initToolSelectionButtons();
 	        return _this;
 	    }
+	    TopBarModule.prototype.update = function () {
+	        var text$$1 = editorSelection.items.length + " " + editorSelection.type;
+	        this.selectionText.textContent = text$$1;
+	    };
 	    TopBarModule.prototype.addKeyboardShortcut = function (key$$1, buttonOrCallback) {
 	        if (typeof buttonOrCallback === 'function') {
 	            this.keyboardShortcuts[key$$1] = buttonOrCallback;
@@ -10130,6 +10136,9 @@
 	                    });
 	                }
 	            }
+	            else if (k === key.esc) {
+	                selectInEditor([], _this);
+	            }
 	        });
 	    }
 	    Editor.prototype.update = function () {
@@ -10150,7 +10159,6 @@
 	        serverToClientEnabled: false
 	    });
 	});
-	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
