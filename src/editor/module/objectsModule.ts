@@ -176,7 +176,7 @@ class ObjectsModule extends Module {
 		let setDirty = () => {
 			this.dirty = true;
 		};
-		editorEventDispacher.listen('play', setDirty, -1);
+		editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, setDirty, -1);
 		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
 		game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 

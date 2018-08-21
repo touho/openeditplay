@@ -3,7 +3,7 @@ import assert from "../util/assert";
 import { editorEventDispacher, EditorEvent } from "./editorEventDispatcher";
 import Level from "../core/level";
 
-type EditorSelection = { type: string, items: Array<any>, dirty: boolean };
+type EditorSelection = { type: string, items: Serializable[], focused: boolean, getText: () => string };
 
 
 export let selectedLevel: Level = null;
@@ -11,7 +11,34 @@ export let selectedTool: string = null;
 export let editorSelection: EditorSelection = {
     type: 'none',
     items: [],
-    dirty: true
+    focused: false,
+    getText: function() {
+        let itemCount = this.items.length;
+        if (itemCount < 1) {
+            return null;
+        }
+        let typeName = serializableNames[this.type][itemCount === 1 ? 0 : 1];
+        let text = `${itemCount} ${typeName}`;
+        if (itemCount === 1) {
+            let item = this.items[0] as Serializable;
+            text += ` "${item.makeUpAName()}"`;
+        }
+        return text;
+    }
+};
+
+let serializableNames = {
+    gam: ['game', 'games'],
+    sce: ['scene', 'scenes'],
+    prt: ['prototype', 'prototypes'],
+    prp: ['property', 'properties'],
+    cda: ['component', 'components'],
+    com: ['component instance', 'component instances'],
+    epr: ['object', 'objects'],
+    ent: ['object instance', 'object instances'],
+    lvl: ['level', 'levels'],
+    pfa: ['prefab', 'prefabs'],
+    mixed: ['mixed', 'mixeds'],
 };
 
 /**
@@ -26,6 +53,7 @@ export function selectInEditor(items: Array<Serializable> | Serializable, origin
         items = [items];
 
     assert(items.filter(item => item == null).length === 0, 'Can not select null');
+    assert(origin, 'origin must be given when selecting in editor');
 
     editorSelection.items = [].concat(items);
 
@@ -37,7 +65,7 @@ export function selectInEditor(items: Array<Serializable> | Serializable, origin
     else
         editorSelection.type = 'mixed';
 
-    // console.log('selectedIds', this.selection)
+    editorSelection.focused = true;
 
     editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, {
         type: 'editorSelection',
@@ -46,22 +74,27 @@ export function selectInEditor(items: Array<Serializable> | Serializable, origin
     });
 }
 
+export function unfocus() {
+    editorSelection.focused = false;
+    editorEventDispacher.dispatch(EditorEvent.EDITOR_UNFOCUS);
+}
+
 export function setLevel(level: Level) {
     if (level && level.threeLetterType === 'lvl')
         selectedLevel = level;
     else
         selectedLevel = null;
 
-    selectInEditor([], this);
+    selectInEditor([], 'editor selection');
     editorEventDispacher.dispatch('setLevel', selectedLevel);
 }
 
 export let sceneToolName = 'multiTool'; // in top bar
 export function setSceneTool(newToolName: string) {
-	if (sceneToolName !== newToolName) {
-		sceneToolName = newToolName;
-		editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newToolName);
-	}
+    if (sceneToolName !== newToolName) {
+        sceneToolName = newToolName;
+        editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newToolName);
+    }
 }
 
 editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, () => {

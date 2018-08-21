@@ -29,7 +29,7 @@ import { limit } from "../../util/callLimiter";
 import Level from '../../core/level';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { selectInEditor, editorSelection } from '../editorSelection';
+import { selectInEditor, editorSelection, unfocus } from '../editorSelection';
 import Prefab from '../../core/prefab';
 import CreateObject from '../views/popup/createObject';
 
@@ -43,10 +43,23 @@ class SceneModule extends Module {
 	globeButton: HTMLElement;
 	copyButton: HTMLElement;
 	deleteButton: HTMLElement;
-	sceneContextButtons: HTMLElement;
 	canvasParentSize: Vector = new Vector(0, 0);
+	previousMousePosInWorldCoordinates: Vector = new Vector(0, 0);
+	parentToAddNewEntitiesOn: EntityPrototype = null;
 
-	newEntities: Array<Entity> = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
+	/**
+	 * selectedEntities is the entity that is used in editing.
+	 * selectedEntities is needed in addition to editorSelection.
+	 * When entities are selected in scene, editorSelection will contain entityPrototype instead of entity.
+	 * */
+	selectedEntities: Entity[] = [];
+
+	/**
+	 * New entities are not in tree. This is the only link to them and their entityPrototype.
+	 * But it's going to change. These will be the links to entities in tree. If cancel (esc) is pressed, these are deleted from the tree.
+	 * It's because newEntities must be able to have parents with funny transforms.
+	 * */
+	newEntities: Entity[] = [];
 
 	constructor() {
 		super();
@@ -59,7 +72,7 @@ class SceneModule extends Module {
 		};
 
 		this.addElements(
-			this.canvas = <HTMLCanvasElement> el('canvas.openEditPlayCanvas.select-none', {
+			this.canvas = <HTMLCanvasElement>el('canvas.openEditPlayCanvas.select-none', {
 				// width and height will be fixed after loading
 				width: 0,
 				height: 0
@@ -70,6 +83,7 @@ class SceneModule extends Module {
 			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
 			el('i.fa.fa-pause.pauseInfo.bottomRight'),
 			el('div.sceneEditorSideBarButtons',
+
 				el('i.fa.fa-arrows.iconButton.button.movement', {
 					onclick: () => {
 						alert('Move in editor with arrow keys or WASD');
@@ -124,35 +138,22 @@ class SceneModule extends Module {
 						this.draw();
 					},
 					title: 'Go home to player or to default start position (H)'
-				}),
-				this.sceneContextButtons = el('div.sceneContextButtons',
-					this.copyButton = el('i.fa.fa-copy.iconButton.button', {
-						onclick: () => {
-							if (this.selectedEntities.length > 0) {
-								this.deleteNewEntities();
-								this.newEntities.push(...this.selectedEntities.map(e => e.clone()));
-								this.copyEntities(this.newEntities);
-								this.clearSelectedEntities();
-								sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
-								this.draw();
-							}
-						},
-						onmousedown: disableMouseDown,
-						title: 'Copy selected objects (C)'
-					}),
-					this.deleteButton = el('i.fa.fa-trash.iconButton.button', {
-						onclick: () => {
-							sceneEdit.deleteEntities(this.selectedEntities);
-							this.clearState();
-							this.draw();
-						},
-						onmousedown: disableMouseDown,
-						title: 'Delete selected objects (Backspace)'
-					})
-				)
+				})
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
+
+		editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
+			if (['ent', 'epr'].includes(editorSelection.type) && this.selectedEntities.length > 0) {
+				this.deleteNewEntities();
+				let entities = filterChildren(this.selectedEntities) as Entity[];
+				this.newEntities.push(...entities.map(e => e.clone()));
+				this.copyEntities(this.newEntities);
+				this.clearSelectedEntities();
+				sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
+				this.draw();
+			}
+		});
 
 		editorEventDispacher.listen('locate serializable', serializable => {
 			if (serializable.threeLetterType === 'epr') {
@@ -201,7 +202,6 @@ class SceneModule extends Module {
 		this.previousMousePosInMouseCoordinates = null;
 
 		this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
-		this.selectedEntities = [];
 
 		this.editorCameraPosition = new Vector(0, 0);
 		this.editorCameraZoom = 1;
@@ -212,6 +212,8 @@ class SceneModule extends Module {
 		this.entitiesInSelection = [];
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, () => {
+			unfocus();
+
 			setChangeOrigin(this);
 			this.stopAndReset();
 
@@ -219,9 +221,11 @@ class SceneModule extends Module {
 				scene.layers.editorLayer.visible = true;
 		});
 
-		editorEventDispacher.listen('play', () => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, () => {
 			if (!scene || !scene.level)
 				return;
+
+			unfocus();
 
 			setChangeOrigin(this);
 			this.clearState();
@@ -235,9 +239,11 @@ class SceneModule extends Module {
 			this.updatePropertyChangeCreationFilter();
 		});
 
-		editorEventDispacher.listen('pause', () => {
+		editorEventDispacher.listen(EditorEvent.EDITOR_PAUSE, () => {
 			if (!scene || !scene.level)
 				return;
+
+			unfocus();
 
 			setChangeOrigin(this);
 			this.clearState();
@@ -392,25 +398,36 @@ class SceneModule extends Module {
 
 			if (change.type === 'editorSelection') {
 				this.updatePropertyChangeCreationFilter();
+				this.clearSelectedEntities();
 				if (change.reference.type === 'epr') {
-					this.clearSelectedEntities();
 					let idSet = new Set(change.reference.items.map(item => item.id));
-					let entities = [];
+					let entities: Entity[] = [];
 					scene.forEachChild('ent', (ent: Entity) => {
 						if (idSet.has(ent.prototype.id)) {
 							entities.push(ent);
 						}
 					}, true);
 					this.selectEntities(entities);
+				} else if (change.reference.type === 'ent') {
+					/*
+					let idSet = new Set(change.reference.items.map(item => item.id));
+					let entities: Entity[] = [];
+					scene.forEachChild('ent', (ent: Entity) => {
+						if (idSet.has(ent.prototype.id)) {
+							entities.push(ent);
+						}
+					}, true);*/
+					this.selectEntities(change.reference.items);
 				}
 			}
 
 
 			if (scene && scene.resetting)
-			return performanceTool.stop('Editor: Scene');
+				return performanceTool.stop('Editor: Scene');
 
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
+				this.deleteNewEntities();
 				setChangeOrigin(this);
 
 				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
@@ -429,10 +446,6 @@ class SceneModule extends Module {
 			if (k === key.esc) {
 				this.clearState();
 				this.draw();
-			} /*else if (k === key.backspace) {
-				this.deleteButton.click();
-			}*/ else if (k === key.c) {
-				this.copyButton.click();
 			} else if (k === key.v) {
 				this.pasteEntities();
 				this.draw();
@@ -483,9 +496,9 @@ class SceneModule extends Module {
 						this.clearSelectedEntities();
 					this.selectedEntities.push(this.widgetUnderMouse.component.entity);
 					this.widgetUnderMouse.component.select();
+					this.selectSelectedEntitiesInEditor();
 				}
 				this.entitiesToEdit.push(...this.selectedEntities);
-				this.selectSelectedEntitiesInEditor();
 			} else {
 				this.clearSelectedEntities();
 				this.selectionStart = mousePos;
@@ -493,9 +506,8 @@ class SceneModule extends Module {
 				this.destroySelectionArea();
 				this.selectionArea = new PIXI.Graphics();
 				scene.selectionLayer.addChild(this.selectionArea);
+				unfocus();
 			}
-
-			this.updateSceneContextButtonVisibility();
 
 			this.draw();
 		});
@@ -523,8 +535,6 @@ class SceneModule extends Module {
 				this.selectSelectedEntitiesInEditor();
 			}
 
-			this.updateSceneContextButtonVisibility();
-
 			this.draw();
 		});
 
@@ -545,7 +555,6 @@ class SceneModule extends Module {
 			this.clearState();
 			this.selectEntities(entitiesInSelection);
 			this.selectSelectedEntitiesInEditor();
-			this.updateSceneContextButtonVisibility();
 
 			this.draw();
 		};
@@ -746,7 +755,7 @@ class SceneModule extends Module {
 		}
 	}
 
-	fixAspectRatio(secondaryCheck? = false) {
+	fixAspectRatio(secondaryCheck?= false) {
 		if (scene && this.canvas) {
 			let change = false;
 			if (this.canvasParentSize.x !== this.canvas.parentElement.offsetWidth && this.canvas.parentElement.offsetWidth
@@ -826,7 +835,7 @@ class SceneModule extends Module {
 		 */
 	}
 
-	selectEntities(entities) {
+	selectEntities(entities: Entity[]) {
 		this.clearSelectedEntities();
 		this.selectedEntities.push(...entities);
 		this.selectedEntities.forEach(entity => {
@@ -840,8 +849,6 @@ class SceneModule extends Module {
 				entity.getComponent('EditorWidget').deselect();
 		});
 		this.selectedEntities.length = 0;
-
-		this.updateSceneContextButtonVisibility();
 	}
 
 	clearState() {
@@ -924,14 +931,7 @@ class SceneModule extends Module {
 		}
 	}
 
-	updateSceneContextButtonVisibility() {
-		if (this.selectedEntities.length > 0)
-			this.sceneContextButtons.classList.remove('hidden');
-		else
-			this.sceneContextButtons.classList.add('hidden');
-	}
-
-	copyEntities(entities) {
+	copyEntities(entities: Entity[]) {
 		this.copiedEntities.forEach(entity => entity.delete());
 		this.copiedEntities.length = [];
 		this.copiedEntities.push(...entities.map(entity => entity.clone()));

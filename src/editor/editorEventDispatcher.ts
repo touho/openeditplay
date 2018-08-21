@@ -9,7 +9,12 @@ export enum EditorEvent {
     EDITOR_PRE_DELETE_SELECTION = 'pre delete selection',
     EDITOR_LOADED = 'editor loaded',
     EDITOR_RESET = 'reset',
-    EDITOR_FORCE_UPDATE = 'editor force update'
+    EDITOR_FORCE_UPDATE = 'editor force update',
+    EDITOR_UNFOCUS = 'editor unfocus',
+    EDITOR_PLAY = 'play',
+    EDITOR_PAUSE = 'pause',
+    EDITOR_CLONE = 'clone',
+    EDITOR_DELETE = 'delete'
 };
 
 // Wrapper that takes only EditorEvents

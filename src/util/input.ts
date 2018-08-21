@@ -90,6 +90,9 @@ export function listenMouseMove(element: HTMLElement, handler: (vec: Vector) => 
 // Requires listenMouseMove on the same element to get the mouse position
 export function listenMouseDown(element: HTMLElement, handler: (vec?: Vector) => void) {
 	let domHandler = event => {
+		if (event.button !== 0)
+			return;
+
 		if (typeof element['_mx'] === 'number')
 			handler(new Vector(element['_mx'], element['_my']));
 		else

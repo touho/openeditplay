@@ -9,7 +9,6 @@ import { disableAllChanges } from '../core/property';
 import './canvasResize'
 import './touchControlManager'
 
-
 import * as fullscreen from '../util/fullscreen';
 import Level from '../core/level';
 import { GameEvent } from '../core/eventDispatcher';

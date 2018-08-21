@@ -23,7 +23,7 @@ export default class CreateObject extends Popup {
 			content: list('div.confirmationButtons', Button)
 		});
 
-		function selectCreatedObjects(entities: Entity[]) {
+		const selectCreatedObjects = (entities: Entity[]) => {
 			if (entities.length === 0) {
 				return;
 			}

@@ -57,7 +57,7 @@ export default class Entity extends Serializable {
 		return components;
 	}
 
-	clone() {
+	clone(parent: Entity = null) {
 		let entity = new Entity();
 		entity.prototype = this.prototype.clone() as Prototype;
 		entity.sleeping = this.sleeping;
@@ -65,7 +65,17 @@ export default class Entity extends Serializable {
 		this.components.forEach((value, key) => {
 			components.push(...value.map(c => c.clone()));
 		});
-		entity.addComponents(components);
+		entity.addComponents(components, { fullInit: false });
+
+		if (parent) {
+			parent.addChild(entity);
+		}
+
+		let children = [];
+		this.forEachChild('ent', (ent: Entity) => {
+			children.push(ent.clone(entity));
+		});
+		Entity.initComponents(components);
 		return entity;
 	}
 
@@ -124,6 +134,8 @@ export default class Entity extends Serializable {
 
 		this.components.forEach((value, key) => Entity.makeComponentsSleep(value));
 
+		this.forEachChild('ent', (entity: Entity) => entity.sleep());
+
 		this.sleeping = true;
 		return true;
 	}
@@ -134,6 +146,8 @@ export default class Entity extends Serializable {
 
 		this.components.forEach((value, key) => Entity.preInitComponents(value));
 		this.components.forEach((value, key) => Entity.initComponents(value));
+
+		this.forEachChild('ent', (entity: Entity) => entity.wakeUp());
 
 		this.sleeping = false;
 		return true;

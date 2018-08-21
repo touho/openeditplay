@@ -2236,6 +2236,8 @@
 	// Requires listenMouseMove on the same element to get the mouse position
 	function listenMouseDown(element, handler) {
 	    var domHandler = function (event) {
+	        if (event.button !== 0)
+	            { return; }
 	        if (typeof element['_mx'] === 'number')
 	            { handler(new Vector(element['_mx'], element['_my'])); }
 	        else
@@ -2290,6 +2292,11 @@
 	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
 	    EditorEvent["EDITOR_RESET"] = "reset";
 	    EditorEvent["EDITOR_FORCE_UPDATE"] = "editor force update";
+	    EditorEvent["EDITOR_UNFOCUS"] = "editor unfocus";
+	    EditorEvent["EDITOR_PLAY"] = "play";
+	    EditorEvent["EDITOR_PAUSE"] = "pause";
+	    EditorEvent["EDITOR_CLONE"] = "clone";
+	    EditorEvent["EDITOR_DELETE"] = "delete";
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -3088,7 +3095,8 @@
 	        });
 	        return components;
 	    };
-	    Entity.prototype.clone = function () {
+	    Entity.prototype.clone = function (parent) {
+	        if (parent === void 0) { parent = null; }
 	        var entity = new Entity();
 	        entity.prototype = this.prototype.clone();
 	        entity.sleeping = this.sleeping;
@@ -3096,7 +3104,15 @@
 	        this.components.forEach(function (value, key) {
 	            components.push.apply(components, value.map(function (c) { return c.clone(); }));
 	        });
-	        entity.addComponents(components);
+	        entity.addComponents(components, { fullInit: false });
+	        if (parent) {
+	            parent.addChild(entity);
+	        }
+	        var children = [];
+	        this.forEachChild('ent', function (ent) {
+	            children.push(ent.clone(entity));
+	        });
+	        Entity.initComponents(components);
 	        return entity;
 	    };
 	    /*
@@ -3151,6 +3167,7 @@
 	        if (this.sleeping)
 	            { return false; }
 	        this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
+	        this.forEachChild('ent', function (entity) { return entity.sleep(); });
 	        this.sleeping = true;
 	        return true;
 	    };
@@ -3160,6 +3177,7 @@
 	            { return false; }
 	        this.components.forEach(function (value, key) { return Entity.preInitComponents(value); });
 	        this.components.forEach(function (value, key) { return Entity.initComponents(value); });
+	        this.forEachChild('ent', function (entity) { return entity.wakeUp(); });
 	        this.sleeping = false;
 	        return true;
 	    };
@@ -3949,12 +3967,14 @@
 	            // TODO: move add code to parent? Because container logic is needed in init() of physics component.
 	            var parentTransform = this.getParentTransform();
 	            if (parentTransform) {
+	                console.log('yeh', this.entity.makeUpAName());
 	                parentTransform.container.addChild(this.container);
 	                parentTransform.listen('globalTransformChanged', function () {
 	                    _this.dispatch('globalTransformChanged', _this);
 	                });
 	            }
 	            else {
+	                console.log('else', this.entity.makeUpAName());
 	                this.layer.addChild(this.container);
 	            }
 	            // Optimize this. Shouldn't be called multiple times per frame.
@@ -5759,7 +5779,33 @@
 	var editorSelection = {
 	    type: 'none',
 	    items: [],
-	    dirty: true
+	    focused: false,
+	    getText: function () {
+	        var itemCount = this.items.length;
+	        if (itemCount < 1) {
+	            return null;
+	        }
+	        var typeName = serializableNames[this.type][itemCount === 1 ? 0 : 1];
+	        var text = itemCount + " " + typeName;
+	        if (itemCount === 1) {
+	            var item = this.items[0];
+	            text += " \"" + item.makeUpAName() + "\"";
+	        }
+	        return text;
+	    }
+	};
+	var serializableNames = {
+	    gam: ['game', 'games'],
+	    sce: ['scene', 'scenes'],
+	    prt: ['prototype', 'prototypes'],
+	    prp: ['property', 'properties'],
+	    cda: ['component', 'components'],
+	    com: ['component instance', 'component instances'],
+	    epr: ['object', 'objects'],
+	    ent: ['object instance', 'object instances'],
+	    lvl: ['level', 'levels'],
+	    pfa: ['prefab', 'prefabs'],
+	    mixed: ['mixed', 'mixeds'],
 	};
 	/**
 	 *
@@ -5772,6 +5818,7 @@
 	    else if (!Array.isArray(items))
 	        { items = [items]; }
 	    assert$1(items.filter(function (item) { return item == null; }).length === 0, 'Can not select null');
+	    assert$1(origin, 'origin must be given when selecting in editor');
 	    editorSelection.items = [].concat(items);
 	    var types = Array.from(new Set(items.map(function (i) { return i.threeLetterType; })));
 	    if (types.length === 0)
@@ -5780,19 +5827,23 @@
 	        { editorSelection.type = types[0]; }
 	    else
 	        { editorSelection.type = 'mixed'; }
-	    // console.log('selectedIds', this.selection)
+	    editorSelection.focused = true;
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, {
 	        type: 'editorSelection',
 	        reference: editorSelection,
 	        origin: origin
 	    });
 	}
+	function unfocus() {
+	    editorSelection.focused = false;
+	    editorEventDispacher.dispatch(EditorEvent.EDITOR_UNFOCUS);
+	}
 	function setLevel(level) {
 	    if (level && level.threeLetterType === 'lvl')
 	        { selectedLevel = level; }
 	    else
 	        { selectedLevel = null; }
-	    selectInEditor([], this);
+	    selectInEditor([], 'editor selection');
 	    editorEventDispacher.dispatch('setLevel', selectedLevel);
 	}
 	var sceneToolName = 'multiTool'; // in top bar
@@ -5811,12 +5862,12 @@
 	    __extends(TopBarModule, _super);
 	    function TopBarModule() {
 	        var _this = _super.call(this) || this;
+	        _this.keyboardShortcuts = {}; // key.x -> func
 	        _this.addElements(_this.logo = el('img.logo.button.iconButton.select-none', { src: '/img/logo_graphics.png' }), 
 	        // this.buttons = el('div.buttonContainer.select-none'),
-	        _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'), _this.selectionView = el('div.topButtonGroup.selectionView', 'Selection', el('br'), _this.selectionText = el('span', '...')));
+	        _this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'), _this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'), _this.selectionView = el('div.selectionView', _this.selectionText = el('div'), _this.selectionButtons = el('div.selectionButtons')));
 	        _this.id = 'topbar';
 	        _this.name = 'TopBar'; // not visible
-	        _this.keyboardShortcuts = {}; // key.x -> func
 	        _this.logo.onclick = function () {
 	            location.href = '/';
 	        };
@@ -5825,11 +5876,17 @@
 	        });
 	        _this.initControlButtons();
 	        _this.initToolSelectionButtons();
+	        _this.initSelectionButtons();
 	        return _this;
 	    }
 	    TopBarModule.prototype.update = function () {
-	        var text$$1 = editorSelection.items.length + " " + editorSelection.type;
-	        this.selectionText.textContent = text$$1;
+	        this.selectionText.textContent = editorSelection.getText() || '';
+	        if (editorSelection.items.length > 0 && editorSelection.focused) {
+	            this.selectionView.classList.add('selectionFocused');
+	        }
+	        else {
+	            this.selectionView.classList.remove('selectionFocused');
+	        }
 	    };
 	    TopBarModule.prototype.addKeyboardShortcut = function (key$$1, buttonOrCallback) {
 	        if (typeof buttonOrCallback === 'function') {
@@ -5845,13 +5902,13 @@
 	            title: 'Play (P)',
 	            icon: 'fa-play',
 	            type: 'play',
-	            callback: function () { return editorEventDispacher.dispatch('play'); }
+	            callback: function () { return editorEventDispacher.dispatch(EditorEvent.EDITOR_PLAY); }
 	        };
 	        var pauseButtonData = {
 	            title: 'Pause (P)',
 	            icon: 'fa-pause',
 	            type: 'pause',
-	            callback: function () { return editorEventDispacher.dispatch('pause'); }
+	            callback: function () { return editorEventDispacher.dispatch(EditorEvent.EDITOR_PAUSE); }
 	        };
 	        var playButton = new SceneControlButton(playButtonData);
 	        var stopButton = new SceneControlButton({
@@ -5923,6 +5980,24 @@
 	        tools[sceneToolName].click();
 	        // this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	    };
+	    TopBarModule.prototype.initSelectionButtons = function () {
+	        var copyButton = new SelectionButton({
+	            title: 'Clone/Copy selected objects (C)',
+	            className: 'fa-copy',
+	            type: 'copy',
+	            callback: function () { return editorSelection.focused && editorEventDispacher.dispatch(EditorEvent.EDITOR_CLONE); }
+	        });
+	        var deleteButton = new SelectionButton({
+	            title: 'Delete selected objects (Backspace)',
+	            className: 'fa-trash',
+	            type: 'delete',
+	            callback: function () { return editorSelection.focused && editorEventDispacher.dispatch(EditorEvent.EDITOR_DELETE); }
+	        });
+	        this.addKeyboardShortcut(key.c, copyButton);
+	        this.addKeyboardShortcut(key.backspace, deleteButton);
+	        mount(this.selectionButtons, copyButton);
+	        mount(this.selectionButtons, deleteButton);
+	    };
 	    return TopBarModule;
 	}(Module));
 	Module.register(TopBarModule, 'top');
@@ -5945,6 +6020,31 @@
 	        this.callback && this.callback(this.el);
 	    };
 	    return SceneControlButton;
+	}());
+	var SelectionButton = /** @class */ (function () {
+	    function SelectionButton(data) {
+	        var _this = this;
+	        this.className = '';
+	        this.el = el('i.fa.iconButton.button', {
+	            onclick: function () { return _this.click(); }
+	        });
+	        if (data)
+	            { this.update(data); }
+	    }
+	    SelectionButton.prototype.update = function (data) {
+	        if (this.className) {
+	            this.el.classList.remove(this.className);
+	        }
+	        this.className = data.className;
+	        this.el.classList.add(this.className);
+	        this.el.setAttribute('title', data.title || '');
+	        this.el.setAttribute('selectionButtonType', data.type || '');
+	        this.callback = data.callback;
+	    };
+	    SelectionButton.prototype.click = function () {
+	        this.callback && this.callback();
+	    };
+	    return SelectionButton;
 	}());
 	//# sourceMappingURL=topBarModule.js.map
 
@@ -6236,13 +6336,6 @@
 	    entities.forEach(function (entity) {
 	        entity.position = entity.position.add(change);
 	    });
-	}
-	function deleteEntities(entities) {
-	    entities = filterChildren(entities);
-	    if (shouldSyncLevelAndScene()) {
-	        entities.forEach(function (e) { return e.prototype.delete(); });
-	    }
-	    entities.forEach(function (e) { return e.delete(); });
 	}
 	function entityModifiedInEditor(entity, change) {
 	    if (!entity || entity.threeLetterType !== 'ent' || !change || change.type !== changeType.setPropertyValue)
@@ -6937,20 +7030,20 @@
 	            width: 500,
 	            content: list('div.confirmationButtons', Button)
 	        }) || this;
-	        function selectCreatedObjects(entities) {
+	        var selectCreatedObjects = function (entities) {
 	            if (entities.length === 0) {
 	                return;
 	            }
 	            if (entities[0].prototype && entities[0].prototype.threeLetterType === 'epr') {
 	                var entityPrototypes = entities.map(function (e) { return e.prototype; }).filter(Boolean);
-	                selectInEditor(entityPrototypes, this);
+	                selectInEditor(entityPrototypes, _this);
 	            }
 	            else {
-	                selectInEditor(entities, this);
+	                selectInEditor(entities, _this);
 	            }
 	            editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 	            Module.activateModule('object', true, 'focusOnProperty', 'name');
-	        }
+	        };
 	        _this.content.update([{
 	                text: 'Empty Object',
 	                callback: function () {
@@ -6975,13 +7068,20 @@
 	    function SceneModule() {
 	        var _this = _super.call(this) || this;
 	        _this.canvasParentSize = new Vector(0, 0);
-	        _this.newEntities = []; // New entities are not in tree. This is the only link to them and their entityPrototype.
-	        var disableMouseDown = function (e) {
-	            e.returnValue = false;
-	            e.preventDefault();
-	            e.stopPropagation();
-	            return false;
-	        };
+	        _this.previousMousePosInWorldCoordinates = new Vector(0, 0);
+	        _this.parentToAddNewEntitiesOn = null;
+	        /**
+	         * selectedEntities is the entity that is used in editing.
+	         * selectedEntities is needed in addition to editorSelection.
+	         * When entities are selected in scene, editorSelection will contain entityPrototype instead of entity.
+	         * */
+	        _this.selectedEntities = [];
+	        /**
+	         * New entities are not in tree. This is the only link to them and their entityPrototype.
+	         * But it's going to change. These will be the links to entities in tree. If cancel (esc) is pressed, these are deleted from the tree.
+	         * It's because newEntities must be able to have parents with funny transforms.
+	         * */
+	        _this.newEntities = [];
 	        _this.addElements(_this.canvas = el('canvas.openEditPlayCanvas.select-none', {
 	            // width and height will be fixed after loading
 	            width: 0,
@@ -7033,30 +7133,20 @@
 	                _this.draw();
 	            },
 	            title: 'Go home to player or to default start position (H)'
-	        }), _this.sceneContextButtons = el('div.sceneContextButtons', _this.copyButton = el('i.fa.fa-copy.iconButton.button', {
-	            onclick: function () {
-	                var _a;
-	                if (_this.selectedEntities.length > 0) {
-	                    _this.deleteNewEntities();
-	                    (_a = _this.newEntities).push.apply(_a, _this.selectedEntities.map(function (e) { return e.clone(); }));
-	                    _this.copyEntities(_this.newEntities);
-	                    _this.clearSelectedEntities();
-	                    setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
-	                    _this.draw();
-	                }
-	            },
-	            onmousedown: disableMouseDown,
-	            title: 'Copy selected objects (C)'
-	        }), _this.deleteButton = el('i.fa.fa-trash.iconButton.button', {
-	            onclick: function () {
-	                deleteEntities(_this.selectedEntities);
-	                _this.clearState();
-	                _this.draw();
-	            },
-	            onmousedown: disableMouseDown,
-	            title: 'Delete selected objects (Backspace)'
-	        }))));
+	        })));
 	        _this.el.classList.add('hideScenePauseInformation');
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, function () {
+	            var _a;
+	            if (['ent', 'epr'].includes(editorSelection.type) && _this.selectedEntities.length > 0) {
+	                _this.deleteNewEntities();
+	                var entities = filterChildren(_this.selectedEntities);
+	                (_a = _this.newEntities).push.apply(_a, entities.map(function (e) { return e.clone(); }));
+	                _this.copyEntities(_this.newEntities);
+	                _this.clearSelectedEntities();
+	                setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
+	                _this.draw();
+	            }
+	        });
 	        editorEventDispacher.listen('locate serializable', function (serializable) {
 	            if (serializable.threeLetterType === 'epr') {
 	                var entityPrototype = serializable;
@@ -7097,7 +7187,6 @@
 	        _this.previousMousePosInWorldCoordinates = null;
 	        _this.previousMousePosInMouseCoordinates = null;
 	        _this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
-	        _this.selectedEntities = [];
 	        _this.editorCameraPosition = new Vector(0, 0);
 	        _this.editorCameraZoom = 1;
 	        _this.selectionStart = null;
@@ -7105,14 +7194,16 @@
 	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
 	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, function () {
+	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
 	            if (scene.layers.editorLayer)
 	                { scene.layers.editorLayer.visible = true; }
 	        });
-	        editorEventDispacher.listen('play', function () {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, function () {
 	            if (!scene || !scene.level)
 	                { return; }
+	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.clearState();
 	            if (scene.isInInitialState())
@@ -7122,9 +7213,10 @@
 	            _this.playingModeChanged();
 	            _this.updatePropertyChangeCreationFilter();
 	        });
-	        editorEventDispacher.listen('pause', function () {
+	        editorEventDispacher.listen(EditorEvent.EDITOR_PAUSE, function () {
 	            if (!scene || !scene.level)
 	                { return; }
+	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.clearState();
 	            if (scene.isInInitialState())
@@ -7252,8 +7344,8 @@
 	            start('Editor: Scene');
 	            if (change.type === 'editorSelection') {
 	                _this.updatePropertyChangeCreationFilter();
+	                _this.clearSelectedEntities();
 	                if (change.reference.type === 'epr') {
-	                    _this.clearSelectedEntities();
 	                    var idSet_1 = new Set(change.reference.items.map(function (item) { return item.id; }));
 	                    var entities_1 = [];
 	                    scene.forEachChild('ent', function (ent) {
@@ -7263,11 +7355,23 @@
 	                    }, true);
 	                    _this.selectEntities(entities_1);
 	                }
+	                else if (change.reference.type === 'ent') {
+	                    /*
+	                    let idSet = new Set(change.reference.items.map(item => item.id));
+	                    let entities: Entity[] = [];
+	                    scene.forEachChild('ent', (ent: Entity) => {
+	                        if (idSet.has(ent.prototype.id)) {
+	                            entities.push(ent);
+	                        }
+	                    }, true);*/
+	                    _this.selectEntities(change.reference.items);
+	                }
 	            }
 	            if (scene && scene.resetting)
 	                { return stop('Editor: Scene'); }
 	            // console.log('sceneModule change', change);
 	            if (change.origin !== _this) {
+	                _this.deleteNewEntities();
 	                setChangeOrigin(_this);
 	                syncAChangeBetweenSceneAndLevel(change);
 	                _this.draw();
@@ -7282,11 +7386,6 @@
 	            if (k === key.esc) {
 	                _this.clearState();
 	                _this.draw();
-	            } /*else if (k === key.backspace) {
-	                this.deleteButton.click();
-	            }*/
-	            else if (k === key.c) {
-	                _this.copyButton.click();
 	            }
 	            else if (k === key.v) {
 	                _this.pasteEntities();
@@ -7337,9 +7436,9 @@
 	                        { _this.clearSelectedEntities(); }
 	                    _this.selectedEntities.push(_this.widgetUnderMouse.component.entity);
 	                    _this.widgetUnderMouse.component.select();
+	                    _this.selectSelectedEntitiesInEditor();
 	                }
 	                (_a = _this.entitiesToEdit).push.apply(_a, _this.selectedEntities);
-	                _this.selectSelectedEntitiesInEditor();
 	            }
 	            else {
 	                _this.clearSelectedEntities();
@@ -7348,8 +7447,8 @@
 	                _this.destroySelectionArea();
 	                _this.selectionArea = new PIXI$2.Graphics();
 	                scene.selectionLayer.addChild(_this.selectionArea);
+	                unfocus();
 	            }
-	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        });
 	        listenMouseUp(_this.el, function ( /*mousePos*/) {
@@ -7372,7 +7471,6 @@
 	                _this.entitiesInSelection.length = 0;
 	                _this.selectSelectedEntitiesInEditor();
 	            }
-	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        });
 	        editorEventDispacher.listen('dragPrefabsStarted', function (prefabs) {
@@ -7391,7 +7489,6 @@
 	            _this.clearState();
 	            _this.selectEntities(entitiesInSelection);
 	            _this.selectSelectedEntitiesInEditor();
-	            _this.updateSceneContextButtonVisibility();
 	            _this.draw();
 	        };
 	        editorEventDispacher.listen('dragPrototypeToCanvas', entityDragEnd);
@@ -7639,7 +7736,6 @@
 	                { entity.getComponent('EditorWidget').deselect(); }
 	        });
 	        this.selectedEntities.length = 0;
-	        this.updateSceneContextButtonVisibility();
 	    };
 	    SceneModule.prototype.clearState = function () {
 	        this.deleteNewEntities();
@@ -7715,12 +7811,6 @@
 	            disableAllChanges();
 	        }
 	    };
-	    SceneModule.prototype.updateSceneContextButtonVisibility = function () {
-	        if (this.selectedEntities.length > 0)
-	            { this.sceneContextButtons.classList.remove('hidden'); }
-	        else
-	            { this.sceneContextButtons.classList.add('hidden'); }
-	    };
 	    SceneModule.prototype.copyEntities = function (entities) {
 	        var _a;
 	        this.copiedEntities.forEach(function (entity) { return entity.delete(); });
@@ -7746,7 +7836,6 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
-	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -8113,7 +8202,7 @@
 	        var setDirty = function () {
 	            _this.dirty = true;
 	        };
-	        editorEventDispacher.listen('play', setDirty, -1);
+	        editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, setDirty, -1);
 	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, setDirty, -1);
 	        game.listen(GameEvent.GAME_LEVEL_COMPLETED, setDirty, -1);
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
@@ -8580,6 +8669,7 @@
 	    function PrefabsModule() {
 	        var _this = _super.call(this) || this;
 	        _this.dirty = true;
+	        _this.externalChange = false;
 	        _this.name = 'Prefabs';
 	        _this.id = 'prefabs';
 	        _this.treeView = new TreeView({
@@ -8604,7 +8694,20 @@
 	                    _this.treeView.deleteNode(serializable.id);
 	                }
 	            }
-	            else if (change.type === 'editorSelection') ;
+	            else if (change.type === 'editorSelection') {
+	                if (change.origin != _this) {
+	                    _this.selectBasedOnEditorSelection();
+	                }
+	            }
+	            else if (change.type === changeType.setPropertyValue && _this._selected) {
+	                var property = change.reference;
+	                if (property.name === 'name') {
+	                    var prefab = property.getParent();
+	                    if (prefab && prefab.threeLetterType === 'pfa') {
+	                        _this.dirty = true;
+	                    }
+	                }
+	            }
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_DELETE_CONFIRMATION, function () {
 	            if (editorSelection.type === 'pfa') {
@@ -8659,6 +8762,13 @@
 	        this.treeView.update(data);
 	        this.dirty = false;
 	        return true;
+	    };
+	    PrefabsModule.prototype.selectBasedOnEditorSelection = function () {
+	        if (editorSelection.type === 'pfa') {
+	            this.externalChange = true;
+	            this.treeView.select(editorSelection.items.map(function (item) { return item.id; }));
+	            this.externalChange = false;
+	        }
 	    };
 	    return PrefabsModule;
 	}(Module));
@@ -10099,50 +10209,68 @@
 	    stop('Editor: General');
 	});
 	editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function () {
-	    // editor && editor.update();
+	    editor && editorUpdateLimited();
+	});
+	editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {
 	    editor && editorUpdateLimited();
 	});
 	editorEventDispacher.listen(EditorEvent.EDITOR_FORCE_UPDATE, function () {
 	    editor && editor.update();
 	});
+	editorEventDispacher.listen(EditorEvent.EDITOR_DELETE, function () {
+	    if (editorSelection.focused && editorSelection.items.length > 0) {
+	        if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
+	            editorEventDispacher.dispatchWithResults(EditorEvent.EDITOR_DELETE_CONFIRMATION).then(function (results) {
+	                if (results.filter(function (res) { return res !== true; }).length === 0) {
+	                    // It is ok for everyone to delete
+	                    editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
+	                    var serializables_1 = filterChildren(editorSelection.items);
+	                    setChangeOrigin(editor);
+	                    serializables_1.forEach(function (s$$1) { return s$$1.delete(); });
+	                    selectInEditor([], editor);
+	                    editorUpdateLimited();
+	                }
+	                else {
+	                    console.log('Not deleting. Results:', results);
+	                }
+	            }).catch(function (e) {
+	                console.log('Not deleting because:', e);
+	            });
+	        }
+	    }
+	});
+	editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, function () {
+	    if (editorSelection.focused && editorSelection.items.length > 0) {
+	        if (['pfa', 'prt'].includes(editorSelection.type)) {
+	            var filteredSerializabled = filterChildren(editorSelection.items);
+	            var clones_1 = [];
+	            setChangeOrigin(editor);
+	            filteredSerializabled.forEach(function (serializable) {
+	                var parent = serializable.getParent();
+	                var clone = serializable.clone();
+	                if (parent) {
+	                    parent.addChild(clone);
+	                }
+	                clones_1.push(clone);
+	            });
+	            selectInEditor(clones_1, editor);
+	        }
+	    }
+	});
 	var editor = null;
 	var Editor = /** @class */ (function () {
 	    function Editor(game$$1) {
-	        var _this = this;
 	        assert$1(game$$1);
 	        this.layout = new Layout();
-	        this.game = game$$1;
 	        mount(document.body, this.layout);
 	        listenKeyDown(function (k) {
-	            if (k === key.backspace && editorSelection.items.length > 0) {
-	                if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
-	                    editorEventDispacher.dispatchWithResults(EditorEvent.EDITOR_DELETE_CONFIRMATION).then(function (results) {
-	                        console.log('results', results);
-	                        // return;
-	                        if (results.filter(function (res) { return res !== true; }).length === 0) {
-	                            // It is ok for everyone to delete
-	                            editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
-	                            var serializables_1 = filterChildren(editorSelection.items);
-	                            setChangeOrigin(_this);
-	                            serializables_1.forEach(function (s$$1) { return s$$1.delete(); });
-	                            selectInEditor([], _this);
-	                            editorUpdateLimited();
-	                        }
-	                        else {
-	                            console.log('Not deleting. Results:', results);
-	                        }
-	                    }).catch(function (e) {
-	                        console.log('Not deleting because:', e);
-	                    });
-	                }
-	            }
-	            else if (k === key.esc) {
-	                selectInEditor([], _this);
+	            if (k === key.esc) {
+	                unfocus();
 	            }
 	        });
 	    }
 	    Editor.prototype.update = function () {
-	        if (!this.game)
+	        if (!game)
 	            { return; }
 	        this.layout.update();
 	    };
@@ -10159,6 +10287,7 @@
 	        serverToClientEnabled: false
 	    });
 	});
+	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;

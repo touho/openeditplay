@@ -96,10 +96,31 @@ div.topToolSelectionButtons {
   left: 20vw;
 }
 div.selectionView {
+  display: inline-block;
+  position: absolute;
+  transform: translateY(-50%);
+
+  height: 80%;
+
   padding: 5px 20px;
   top: 50%;
-  left: 62vw;
+  right: 10px;
   text-align: center;
+
+  border: 1px solid transparent;
+}
+div.selectionView.selectionFocused {
+  border: 1px solid black;
+  box-shadow: inset 0 1px 3px 0px #e8e8e8, 0 0 2px black;
+
+  border-radius: 4px;
+}
+div.selectionView:not(.selectionFocused) div.selectionButtons {
+  display: none;
+}
+
+div.selectionView div.selectionButtons .fa-trash:hover {
+  color: #ff745f;
 }
 
 @keyframes blinkPlayButton {

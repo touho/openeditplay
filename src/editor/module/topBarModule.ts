@@ -4,16 +4,18 @@ import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
 import { GameEvent } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { setSceneTool, sceneToolName, editorSelection } from '../editorSelection';
+import { setSceneTool, sceneToolName, editorSelection, unfocus } from '../editorSelection';
+import { Button } from '../views/popup/Popup';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
 	buttons: HTMLElement;
 	controlButtons: HTMLElement;
 	toolSelectionButtons: HTMLElement;
-	keyboardShortcuts: { [code: number]: () => void };
+	keyboardShortcuts: { [code: number]: Function } = {}; // key.x -> func
 	selectionView: HTMLElement;
 	selectionText: HTMLElement;
+	selectionButtons: HTMLElement;
 
 	constructor() {
 		super();
@@ -22,15 +24,14 @@ export class TopBarModule extends Module {
 			// this.buttons = el('div.buttonContainer.select-none'),
 			this.controlButtons = el('div.topButtonGroup.topSceneControlButtons'),
 			this.toolSelectionButtons = el('div.topButtonGroup.topToolSelectionButtons'),
-			this.selectionView = el('div.topButtonGroup.selectionView',
-				'Selection', el('br'),
-				this.selectionText = el('span', '...')
+			this.selectionView = el('div.selectionView',
+				this.selectionText = el('div'),
+				this.selectionButtons = el('div.selectionButtons')
 			)
 		);
 
 		this.id = 'topbar';
 		this.name = 'TopBar'; // not visible
-		this.keyboardShortcuts = {}; // key.x -> func
 
 		this.logo.onclick = () => {
 			location.href = '/';
@@ -42,14 +43,20 @@ export class TopBarModule extends Module {
 
 		this.initControlButtons();
 		this.initToolSelectionButtons();
+		this.initSelectionButtons();
 	}
 
 	update() {
-		let text = `${editorSelection.items.length} ${editorSelection.type}`;
-		this.selectionText.textContent = text;
+		this.selectionText.textContent = editorSelection.getText() || '';
+
+		if (editorSelection.items.length > 0 && editorSelection.focused) {
+			this.selectionView.classList.add('selectionFocused');
+		} else {
+			this.selectionView.classList.remove('selectionFocused');
+		}
 	}
 
-	addKeyboardShortcut(key, buttonOrCallback) {
+	addKeyboardShortcut(key: number, buttonOrCallback: Callback) {
 		if (typeof buttonOrCallback === 'function') {
 			this.keyboardShortcuts[key] = buttonOrCallback;
 		} else {
@@ -62,13 +69,13 @@ export class TopBarModule extends Module {
 			title: 'Play (P)',
 			icon: 'fa-play',
 			type: 'play',
-			callback: () => editorEventDispacher.dispatch('play')
+			callback: () => editorEventDispacher.dispatch(EditorEvent.EDITOR_PLAY)
 		};
 		let pauseButtonData = {
 			title: 'Pause (P)',
 			icon: 'fa-pause',
 			type: 'pause',
-			callback: () => editorEventDispacher.dispatch('pause')
+			callback: () => editorEventDispacher.dispatch(EditorEvent.EDITOR_PAUSE)
 		};
 
 		let playButton = new SceneControlButton(playButtonData);
@@ -149,8 +156,32 @@ export class TopBarModule extends Module {
 		tools[sceneToolName].click();
 		// this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	}
+
+	initSelectionButtons() {
+		let copyButton = new SelectionButton({
+			title: 'Clone/Copy selected objects (C)',
+			className: 'fa-copy',
+			type: 'copy',
+			callback: () => editorSelection.focused && editorEventDispacher.dispatch(EditorEvent.EDITOR_CLONE)
+		});
+
+		let deleteButton = new SelectionButton({
+			title: 'Delete selected objects (Backspace)',
+			className: 'fa-trash',
+			type: 'delete',
+			callback: () => editorSelection.focused && editorEventDispacher.dispatch(EditorEvent.EDITOR_DELETE)
+		});
+
+		this.addKeyboardShortcut(key.c, copyButton);
+		this.addKeyboardShortcut(key.backspace, deleteButton);
+
+		mount(this.selectionButtons, copyButton);
+		mount(this.selectionButtons, deleteButton);
+	}
 }
 Module.register(TopBarModule, 'top');
+
+type Callback = Function | { callback: Function, el: HTMLElement }
 
 class SceneControlButton {
 	el: HTMLElement;
@@ -174,6 +205,34 @@ class SceneControlButton {
 	}
 }
 
+class SelectionButton {
+	el: HTMLElement;
+	callback: () => void;
+	className: string = '';
+
+	constructor(data) {
+		this.el = el('i.fa.iconButton.button', {
+			onclick: () => this.click()
+		});
+		if (data)
+			this.update(data);
+	}
+	update(data) {
+		if (this.className) {
+			this.el.classList.remove(this.className);
+		}
+		this.className = data.className;
+		this.el.classList.add(this.className);
+
+		this.el.setAttribute('title', data.title || '');
+		this.el.setAttribute('selectionButtonType', data.type || '');
+		this.callback = data.callback;
+	}
+	click() {
+		this.callback && this.callback();
+	}
+}
+
 export class TopButton {
 	priority: number;
 	callback: (TopButton) => void;
@@ -184,7 +243,7 @@ export class TopButton {
 
 	constructor({
 		text = 'Button',
-		callback,
+		callback = null,
 		iconClass = 'fa-circle',
 		priority = 1
 	} = {}) {

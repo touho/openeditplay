@@ -9,11 +9,14 @@ import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { changeType } from '../../core/change';
 import Prefab from '../../core/prefab';
 import PrototypeDeleteConfirmation from '../views/popup/PrototypeDeleteConfirmation';
+import Serializable from '../../core/serializable';
+import Property from '../../core/property';
 
 class PrefabsModule extends Module {
 	treeView: TreeView;
 	dirty: boolean = true;
 	helperText: HTMLElement;
+	externalChange = false;
 
 	constructor() {
 		super();
@@ -49,16 +52,24 @@ class PrefabsModule extends Module {
 					this.treeView.deleteNode(serializable.id);
 				}
 			} else if (change.type === 'editorSelection') {
-				// if (change.origin != this) {
-				// 	this.selectBasedOnEditorSelection();
-				// }
+				if (change.origin != this) {
+					this.selectBasedOnEditorSelection();
+				}
+			} else if (change.type === changeType.setPropertyValue && this._selected) {
+				let property = change.reference as Property;
+				if (property.name === 'name') {
+					let prefab = property.getParent() as Prefab;
+					if (prefab && prefab.threeLetterType === 'pfa') {
+						this.dirty = true;
+					}
+				}
 			}
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_DELETE_CONFIRMATION, () => {
 			if (editorSelection.type === 'pfa') {
 				return new Promise((resolve, reject) => {
-					new PrototypeDeleteConfirmation(editorSelection.items, (canDelete) => {
+					new PrototypeDeleteConfirmation(editorSelection.items as Prefab[], (canDelete) => {
 						if (canDelete) {
 							resolve(true);
 						} else {
@@ -110,6 +121,13 @@ class PrefabsModule extends Module {
 		this.dirty = false;
 
 		return true;
+	}
+	selectBasedOnEditorSelection() {
+		if (editorSelection.type === 'pfa') {
+			this.externalChange = true;
+			this.treeView.select(editorSelection.items.map((item: Serializable) => item.id));
+			this.externalChange = false;
+		}
 	}
 }
 

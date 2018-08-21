@@ -34,7 +34,7 @@ import OKPopup from "./views/popup/OKPopup";
 import Level from '../core/level';
 import { GameEvent, globalEventDispatcher } from '../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from './editorEventDispatcher';
-import { editorSelection, selectInEditor, setLevel, selectedLevel } from './editorSelection';
+import { editorSelection, selectInEditor, setLevel, selectedLevel, unfocus } from './editorSelection';
 import { listenKeyDown, key } from '../util/input';
 
 editorEventDispacher.getEventPromise('modulesRegistered').then(() => {
@@ -77,58 +77,74 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 });
 
 editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, () => {
-	// editor && editor.update();
 	editor && editorUpdateLimited();
 });
-
+editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, () => {
+	editor && editorUpdateLimited();
+});
 editorEventDispacher.listen(EditorEvent.EDITOR_FORCE_UPDATE, () => {
 	editor && editor.update();
+});
+editorEventDispacher.listen(EditorEvent.EDITOR_DELETE, () => {
+	if (editorSelection.focused && editorSelection.items.length > 0) {
+		if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
+			editorEventDispacher.dispatchWithResults(EditorEvent.EDITOR_DELETE_CONFIRMATION).then(results => {
+				if (results.filter(res => res !== true).length === 0) {
+					// It is ok for everyone to delete
+					editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
+
+					let serializables = filterChildren(editorSelection.items);
+					setChangeOrigin(editor);
+					serializables.forEach(s => s.delete());
+					selectInEditor([], editor);
+					editorUpdateLimited();
+				} else {
+					console.log('Not deleting. Results:', results);
+				}
+			}).catch(e => {
+				console.log('Not deleting because:', e);
+			});
+		}
+	}
+});
+editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
+	if (editorSelection.focused && editorSelection.items.length > 0) {
+		if (['pfa', 'prt'].includes(editorSelection.type)) {
+			let filteredSerializabled = filterChildren(editorSelection.items);
+			let clones: Serializable[] = [];
+			setChangeOrigin(editor);
+			filteredSerializabled.forEach((serializable: Serializable) => {
+				let parent = serializable.getParent();
+				let clone = serializable.clone();
+				if (parent) {
+					parent.addChild(clone);
+				}
+				clones.push(clone);
+			});
+			selectInEditor(clones, editor);
+		}
+	}
 });
 
 export let editor: Editor = null;
 
 class Editor {
 	layout: Layout;
-	game: Game;
 
 	constructor(game) {
 		assert(game);
 		this.layout = new Layout();
-		this.game = game;
 		mount(document.body, this.layout);
 
 		listenKeyDown(k => {
-			if (k === key.backspace && editorSelection.items.length > 0) {
-				if (['ent', 'epr', 'pfa', 'prt'].includes(editorSelection.type)) {
-					editorEventDispacher.dispatchWithResults(EditorEvent.EDITOR_DELETE_CONFIRMATION).then(results => {
-						console.log('results', results);
-
-						// return;
-						if (results.filter(res => res !== true).length === 0) {
-							// It is ok for everyone to delete
-
-							editorEventDispacher.dispatch(EditorEvent.EDITOR_PRE_DELETE_SELECTION);
-
-							let serializables = filterChildren(editorSelection.items);
-							setChangeOrigin(this);
-							serializables.forEach(s => s.delete());
-							selectInEditor([], this);
-							editorUpdateLimited();
-						} else {
-							console.log('Not deleting. Results:', results);
-						}
-					}).catch(e => {
-						console.log('Not deleting because:', e);
-					});
-				}
-			} else if (k === key.esc) {
-				selectInEditor([], this);
+			if (k === key.esc) {
+				unfocus();
 			}
 		});
 	}
 
 	update() {
-		if (!this.game) return;
+		if (!game) return;
 		this.layout.update();
 	}
 }
