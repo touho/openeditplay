@@ -3574,9 +3574,12 @@
 	    __extends(EntityPrototype, _super);
 	    function EntityPrototype(predefinedId) {
 	        var _this = _super.call(this, predefinedId) || this;
+	        // this._parent is level or another entityPrototype, not prototype as in type or prefab. We need a link to parent-prototype. That's why we have prototype property
+	        /**
+	         * prototype stays the same whole EntityPrototype lifetime. It can not change. It is not and will be not supported by server communication.
+	         */
 	        _this.prototype = null;
 	        return _this;
-	        // this._parent is level, not prototype. We need a link to parent-prototype.
 	    }
 	    EntityPrototype.prototype.makeUpAName = function () {
 	        var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
@@ -3699,32 +3702,46 @@
 	        }
 	        return this.createEntity(scene);
 	    };
+	    /**
+	     * This function creates a new EntityPrototype and this one will be deleted.
+	     */
 	    EntityPrototype.prototype.replaceWithVersionThatIsDetachedFromPrototype = function () {
-	        // TODO
-	        this.name = this.makeUpAName();
-	        var inheritedComponentDatas = this.getInheritedComponentDatas(function (cda) {
-	            return cda.name !== 'Transform';
-	        });
-	        var children = inheritedComponentDatas.map(function (icd) {
+	        var entityPrototype = new EntityPrototype();
+	        // Leave entityPrototype.prototype null to detach
+	        var inheritedComponentDatas = this.getInheritedComponentDatas();
+	        var componentDatas = inheritedComponentDatas.map(function (icd) {
 	            return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
 	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
 	        });
-	        var componentDatas = this.getChildren('cda');
-	        componentDatas.forEach(function (cda) {
-	            if (cda.name !== 'Transform')
-	                { cda.delete(); }
-	        });
-	        this.addChildren(children);
-	        this.prototype = null;
-	        return this;
+	        entityPrototype.initWithChildren(componentDatas);
+	        entityPrototype.name = this.makeUpAName();
+	        var parent = this.getParent();
+	        this.delete();
+	        if (parent) {
+	            parent.addChild(entityPrototype);
+	        }
+	        return entityPrototype;
 	    };
 	    /**
 	     * WARNING! Only Transform and name are preserved. All other data is lost.
 	     * This should only be called with a prefab that has been created using:
 	     * Prefab.createFromPrototype(entityPrototype)
+	     * This function creates a new EntityPrototype and this one will be deleted
 	     * */
 	    EntityPrototype.prototype.replaceWithVersionThatIsAttachedToPrototype = function (prototype) {
-	        // TODO
+	        var newEntityPrototype = EntityPrototype.createFromPrototype(prototype);
+	        var thisTransform = this.getTransform();
+	        var Transform = newEntityPrototype.getTransform();
+	        Transform.componentClass._propertyTypes.forEach(function (propertyType) {
+	            Transform.setValue(propertyType.name, thisTransform.getValue(propertyType.name));
+	        });
+	        newEntityPrototype.name = this.name;
+	        var parent = this.getParent();
+	        this.delete();
+	        if (parent) {
+	            parent.addChild(newEntityPrototype);
+	        }
+	        return newEntityPrototype;
 	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
@@ -7082,6 +7099,7 @@
 	        _this.content.update([{
 	                text: 'Empty Object',
 	                callback: function () {
+	                    setChangeOrigin(_this);
 	                    var entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
 	                    var entity = entityPrototype.createEntity(null, true);
 	                    var entitiesInScene = copyEntitiesToScene([entity]);
@@ -7184,6 +7202,7 @@
 	            var _a;
 	            if (['ent', 'epr'].includes(editorSelection.type) && _this.selectedEntities.length > 0) {
 	                // Entities are put to scene tree. Game tree won't have newEntities items.
+	                setChangeOrigin(_this);
 	                _this.deleteNewEntities();
 	                var entities = filterChildren(_this.selectedEntities);
 	                (_a = _this.newEntities).push.apply(_a, entities.map(function (e) { return e.clone(e.getParent()); }));
@@ -7530,6 +7549,7 @@
 	            _this.newEntities = entityPrototypes.map(function (epr) { return epr.createEntity(); });
 	        });
 	        var entityDragEnd = function () {
+	            setChangeOrigin(_this);
 	            var entitiesInSelection = copyEntitiesToScene(_this.newEntities) || [];
 	            _this.clearState();
 	            _this.selectEntities(entitiesInSelection);
@@ -8201,8 +8221,11 @@
 	                var entityPrototypes = event.idList.map(getSerializable);
 	                entityPrototypes = filterChildren(entityPrototypes);
 	                entityPrototypes.forEach(function (epr) {
+	                    setChangeOrigin(_this);
 	                    var prefab = Prefab.createFromPrototype(epr);
 	                    game.addChild(prefab);
+	                    var newEpr = epr.replaceWithVersionThatIsAttachedToPrototype(prefab);
+	                    console.log('created', newEpr, 'out of', epr);
 	                });
 	            }
 	            return;
@@ -10364,6 +10387,7 @@
 	        number: num
 	    };
 	}
+	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;

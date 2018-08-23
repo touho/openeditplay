@@ -8,6 +8,8 @@ import assert from '../util/assert';
 import Vector from '../util/vector';
 import Prefab from './prefab';
 import PropertyOwner from './propertyOwner';
+import { PropertyType } from './propertyType';
+import { selectInEditor } from '../editor/editorSelection';
 
 let propertyTypes = [
 	// Prop('name2', 'No name', Prop.string)
@@ -16,10 +18,15 @@ let propertyTypes = [
 // EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 // Entities are created based on EntityPrototypes
 export default class EntityPrototype extends Prototype {
+
+	// this._parent is level or another entityPrototype, not prototype as in type or prefab. We need a link to parent-prototype. That's why we have prototype property
+	/**
+	 * prototype stays the same whole EntityPrototype lifetime. It can not change. It is not and will be not supported by server communication.
+	 */
 	prototype: Prototype = null;
+
 	constructor(predefinedId?) {
 		super(predefinedId);
-		// this._parent is level, not prototype. We need a link to parent-prototype.
 	}
 
 	makeUpAName(): string {
@@ -150,36 +157,56 @@ export default class EntityPrototype extends Prototype {
 		return this.createEntity(scene);
 	}
 
+	/**
+	 * This function creates a new EntityPrototype and this one will be deleted.
+	 */
 	replaceWithVersionThatIsDetachedFromPrototype() {
-		// TODO
-		this.name = this.makeUpAName();
+		let entityPrototype = new EntityPrototype();
+		// Leave entityPrototype.prototype null to detach
 
-		let inheritedComponentDatas = this.getInheritedComponentDatas((cda: ComponentData) => {
-			return cda.name !== 'Transform';
-		});
-		let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
+		let inheritedComponentDatas = this.getInheritedComponentDatas();
+		let componentDatas: ComponentData[] = inheritedComponentDatas.map(icd => {
 			return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
 				.initWithChildren(icd.properties.map(prp => prp.clone()));
-		}) as any as Array<Serializable>;
+		}) as ComponentData[];
 
-		let componentDatas = this.getChildren('cda') as ComponentData[];
-		componentDatas.forEach(cda => {
-			if (cda.name !== 'Transform')
-				cda.delete();
-		});
-		this.addChildren(children);
+		entityPrototype.initWithChildren(componentDatas);
+		entityPrototype.name = this.makeUpAName();
 
-		this.prototype = null;
-		return this;
+		let parent = this.getParent();
+
+		this.delete();
+
+		if (parent) {
+			parent.addChild(entityPrototype);
+		}
+
+		return entityPrototype;
 	}
 
 	/**
 	 * WARNING! Only Transform and name are preserved. All other data is lost.
 	 * This should only be called with a prefab that has been created using:
 	 * Prefab.createFromPrototype(entityPrototype)
+	 * This function creates a new EntityPrototype and this one will be deleted
 	 * */
 	replaceWithVersionThatIsAttachedToPrototype(prototype: Prototype) {
-		// TODO
+		let newEntityPrototype = EntityPrototype.createFromPrototype(prototype);
+		let thisTransform = this.getTransform();
+		let Transform = newEntityPrototype.getTransform();
+		Transform.componentClass._propertyTypes.forEach((propertyType: PropertyType) => {
+			Transform.setValue(propertyType.name, thisTransform.getValue(propertyType.name));
+		});
+		newEntityPrototype.name = this.name;
+
+		let parent = this.getParent();
+
+		this.delete();
+
+		if (parent) {
+			parent.addChild(newEntityPrototype);
+		}
+		return newEntityPrototype;
 	}
 
 	// Optimize this away

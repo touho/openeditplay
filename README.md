@@ -29,5 +29,5 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 
 
 ### TODO ###
-- when creating a prefab, make the object use that prefab.
-    - Implement replaceWithVersionThatIsDetachedFromPrototype and replaceWithVersionThatIsAttachedToPrototype
+- Animation component
+- If scaled entity has child entity that has particles, particles should be scaled.

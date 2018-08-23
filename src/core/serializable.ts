@@ -164,7 +164,7 @@ export default class Serializable extends EventDispatcher {
 		return this;
 	}
 	// idx is optional
-	_detachChild(child: Serializable, idx:number = 0) {
+	_detachChild(child: Serializable, idx: number = 0) {
 		let array = this._children.get(child.threeLetterType);
 		assert(array, 'child not found');
 		if (array[idx] !== child)
@@ -288,7 +288,7 @@ export default class Serializable extends EventDispatcher {
 		obj._state |= Serializable.STATE_FROMJSON;
 		return obj;
 	}
-	static registerSerializable(Class: { new(...args): Serializable}, threeLetterType: string, fromJSON: (string) => void = null) {
+	static registerSerializable(Class: { new(...args): Serializable }, threeLetterType: string, fromJSON: (string) => void = null) {
 		Class.prototype.threeLetterType = threeLetterType;
 		assert(typeof threeLetterType === 'string' && threeLetterType.length === 3);
 		if (!fromJSON)

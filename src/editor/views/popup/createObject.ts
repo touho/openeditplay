@@ -8,6 +8,7 @@ import Vector from '../../../util/vector';
 import { selectInEditor } from '../../editorSelection';
 import Module from '../../module/module';
 import { editorEventDispacher, EditorEvent } from '../../editorEventDispatcher';
+import { setChangeOrigin } from '../../../core/change';
 
 export default class CreateObject extends Popup {
 	/*
@@ -42,6 +43,7 @@ export default class CreateObject extends Popup {
 		this.content.update([{
 			text: 'Empty Object',
 			callback: () => {
+				setChangeOrigin(this);
 				let entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
 				let entity = entityPrototype.createEntity(null, true);
 				let entitiesInScene = copyEntitiesToScene([entity]);

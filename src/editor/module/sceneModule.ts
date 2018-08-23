@@ -159,6 +159,8 @@ class SceneModule extends Module {
 			if (['ent', 'epr'].includes(editorSelection.type) && this.selectedEntities.length > 0) {
 				// Entities are put to scene tree. Game tree won't have newEntities items.
 
+				setChangeOrigin(this);
+
 				this.deleteNewEntities();
 				let entities = filterChildren(this.selectedEntities) as Entity[];
 				this.newEntities.push(...entities.map(e => e.clone(e.getParent())));
@@ -563,6 +565,7 @@ class SceneModule extends Module {
 			this.newEntities = entityPrototypes.map(epr => epr.createEntity());
 		});
 		let entityDragEnd = () => {
+			setChangeOrigin(this);
 			let entitiesInSelection = sceneEdit.copyEntitiesToScene(this.newEntities) || [];
 			this.clearState();
 			this.selectEntities(entitiesInSelection);

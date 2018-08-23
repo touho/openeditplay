@@ -4,7 +4,7 @@ import TreeView from "../views/treeView";
 import { editor } from '../editor';
 import { forEachScene, scene } from '../../core/scene';
 import { getSerializable } from "../../core/serializableManager";
-import { changeType, setChangeOrigin, Change } from "../../core/change";
+import { changeType, setChangeOrigin, Change, getChangeOrigin } from "../../core/change";
 import * as performance from "../../util/performance";
 import CreateObject from "../views/popup/createObject";
 import Game, { game } from "../../core/game";
@@ -123,9 +123,12 @@ class ObjectsModule extends Module {
 			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 				let entityPrototypes = event.idList.map(getSerializable);
 				entityPrototypes = filterChildren(entityPrototypes);
-				entityPrototypes.forEach(epr => {
+				entityPrototypes.forEach((epr: EntityPrototype) => {
+					setChangeOrigin(this);
 					let prefab = Prefab.createFromPrototype(epr);
 					game.addChild(prefab);
+					let newEpr = epr.replaceWithVersionThatIsAttachedToPrototype(prefab);
+					console.log('created', newEpr, 'out of', epr);
 				});
 			}
 			return;
