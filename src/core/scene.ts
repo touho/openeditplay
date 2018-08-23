@@ -49,7 +49,6 @@ export default class Scene extends Serializable {
 			}
 		}
 		scene = this;
-		window['scene'] = this;
 
 		this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 		this.renderer = getRenderer(this.canvas);

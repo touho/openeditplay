@@ -26,3 +26,8 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 3. Configure Instance: Click "Advanced Details" and copy /installation/amazon/amazonLaunchScript content to "User data" field.
 4. Configure Security Group: Click "Add Rule" and "HTTP"
 5. Start instance and enjoy Open Edit Play by using Public DNS address given by AWS.
+
+
+### TODO ###
+- when creating a prefab, make the object use that prefab.
+    - Implement replaceWithVersionThatIsDetachedFromPrototype and replaceWithVersionThatIsAttachedToPrototype

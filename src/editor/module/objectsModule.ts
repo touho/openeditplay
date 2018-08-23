@@ -119,7 +119,7 @@ class ObjectsModule extends Module {
 			// 	event.hideValidationIndicator();
 		});
 		editorEventDispacher.listen('treeView drag stop objects-tree', event => {
-			console.log('event', event)
+			// console.log('event', event)
 			if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 				let entityPrototypes = event.idList.map(getSerializable);
 				entityPrototypes = filterChildren(entityPrototypes);
@@ -193,8 +193,16 @@ class ObjectsModule extends Module {
 			if (change.type === changeType.addSerializableToTree) {
 				if (change.reference.threeLetterType === this.treeType) {
 					let serializable = change.reference;
+					const addToTree = (s: Serializable) => {
+						let parent = s.getParent();
+						let treeParent = parent.threeLetterType === this.treeType ? parent.id : '#';
+						this.treeView.createNode(s.id, s.makeUpAName(), treeParent);
+					};
 					newTask = () => {
-						this.treeView.createNode(serializable.id, serializable.makeUpAName(), '#');
+						addToTree(serializable);
+						serializable.forEachChild(this.treeType, (child: Serializable) => {
+							addToTree(child);
+						});
 					};
 				}
 			} else if (change.type === changeType.deleteSerializable) {

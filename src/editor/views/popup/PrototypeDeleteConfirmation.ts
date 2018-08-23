@@ -63,7 +63,7 @@ export default class PrototypeDeleteConfirmation extends Popup {
 			text: entityPrototypes.length === 1 ? 'Keep object' : 'Keep objects',
 			callback: () => {
 				setChangeOrigin(this);
-				entityPrototypes.forEach(epr => epr.detachFromPrototype());
+				entityPrototypes.forEach(epr => epr.replaceWithVersionThatIsDetachedFromPrototype());
 				this.remove();
 				callback(true);
 			},

@@ -27,13 +27,11 @@ Component.register({
 			// TODO: move add code to parent? Because container logic is needed in init() of physics component.
 			let parentTransform = this.getParentTransform();
 			if (parentTransform) {
-				console.log('yeh', this.entity.makeUpAName());
 				parentTransform.container.addChild(this.container);
 				parentTransform.listen('globalTransformChanged', () => {
 					this.dispatch('globalTransformChanged', this);
 				});
 			} else {
-				console.log('else', this.entity.makeUpAName());
 				this.layer.addChild(this.container);
 			}
 

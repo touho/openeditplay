@@ -32,6 +32,9 @@ forEachGame(game => {
 	}
 
 	play();
+	if (window['introLogo']) {
+		window['introLogo'].style.display = 'none';
+	}
 
 	game.listen(GameEvent.GAME_LEVEL_COMPLETED, () => {
 		levelIndex++;

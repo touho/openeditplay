@@ -50,6 +50,11 @@ export class Component extends PropertyOwner {
 	makeUpAName() {
 		return this.componentClass.componentName;
 	}
+	clone() {
+		let component = super.clone() as any as Component;
+		component._componentId = this._componentId;
+		return component;
+	}
 	delete() {
 		// Component.delete never returns false because entity doesn't have components as children
 		this._parent = null;
@@ -81,7 +86,7 @@ export class Component extends PropertyOwner {
 	_preInit() {
 		this.componentClass.requirements.forEach(r => {
 			this[r] = this.entity.getComponent(r);
-			assert(this[r], `${this.componentClass.componentName} requires component ${r} but it is not found`);
+			assert(this[r], this.componentClass.componentName + ` requires component ` + r + ` but it is not found`);
 		});
 
 		this.forEachChild('com', (c: Component) => c._preInit());
@@ -136,6 +141,9 @@ export class Component extends PropertyOwner {
 		this._listenRemoveFunctions.length = 0;
 	}
 	listenProperty(component: Component, propertyName: string, callback: Function) {
+		// @ifndef OPTIMIZE
+		assert(component, 'listenProperty called without a component');
+		// @endif
 		this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	}
 	toJSON() {
@@ -153,7 +161,7 @@ export class Component extends PropertyOwner {
 		return component;
 	};
 	static createWithInheritedComponentData(inheritedComponentData) {
-		let component = new inheritedComponentData.componentClass;
+		let component = new inheritedComponentData.componentClass as Component;
 		component._componentId = inheritedComponentData.componentId;
 		let properties = inheritedComponentData.properties.map(p => p.clone());
 		component.initWithChildren(properties);

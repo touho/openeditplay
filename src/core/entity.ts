@@ -57,10 +57,11 @@ export default class Entity extends Serializable {
 		return components;
 	}
 
-	clone(parent: Entity = null) {
+	clone(parent: Serializable = null) {
 		let entity = new Entity();
 		entity.prototype = this.prototype.clone() as Prototype;
 		entity.sleeping = this.sleeping;
+
 		let components = [];
 		this.components.forEach((value, key) => {
 			components.push(...value.map(c => c.clone()));
@@ -75,7 +76,9 @@ export default class Entity extends Serializable {
 		this.forEachChild('ent', (ent: Entity) => {
 			children.push(ent.clone(entity));
 		});
-		Entity.initComponents(components);
+		if (!entity.sleeping) {
+			Entity.initComponents(components);
+		}
 		return entity;
 	}
 
@@ -108,14 +111,18 @@ export default class Entity extends Serializable {
 
 	static preInitComponents(components) {
 		if (Entity.ENTITY_CREATION_DEBUGGING) console.log('preInit components for', components[0].entity.makeUpAName());
-		for (let i = 0; i < components.length; i++)
+		for (let i = 0; i < components.length; i++) {
+			assert(!components[i].entity.sleeping, 'entity can not be sleeping when pre initing components');
 			components[i]._preInit();
+		}
 	}
 
 	static initComponents(components) {
 		if (Entity.ENTITY_CREATION_DEBUGGING) console.log(`init ${components.length} components for`, components[0].entity.makeUpAName());
-		for (let i = 0; i < components.length; i++)
+		for (let i = 0; i < components.length; i++) {
+			assert(!components[i].entity.sleeping, 'entity can not be sleeping when initing components');
 			components[i]._init();
+		}
 	}
 
 	static makeComponentsSleep(components) {
@@ -143,13 +150,13 @@ export default class Entity extends Serializable {
 	wakeUp() {
 		assert(this._alive, ALIVE_ERROR);
 		if (!this.sleeping) return false;
+		this.sleeping = false;
 
 		this.components.forEach((value, key) => Entity.preInitComponents(value));
 		this.components.forEach((value, key) => Entity.initComponents(value));
 
 		this.forEachChild('ent', (entity: Entity) => entity.wakeUp());
 
-		this.sleeping = false;
 		return true;
 	}
 

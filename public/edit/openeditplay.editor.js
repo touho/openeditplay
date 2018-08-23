@@ -1988,6 +1988,7 @@
 	//# sourceMappingURL=index.js.map
 
 	// @flow
+	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
 	var propertyTypes = [
 	    Prop('name', 'No name', Prop.string)
 	];
@@ -2428,7 +2429,6 @@
 	            }
 	        }
 	        scene = _this;
-	        window['scene'] = _this;
 	        _this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 	        _this.renderer = getRenderer(_this.canvas);
 	        _this.mouseListeners = [
@@ -2699,6 +2699,11 @@
 	    Component.prototype.makeUpAName = function () {
 	        return this.componentClass.componentName;
 	    };
+	    Component.prototype.clone = function () {
+	        var component = _super.prototype.clone.call(this);
+	        component._componentId = this._componentId;
+	        return component;
+	    };
 	    Component.prototype.delete = function () {
 	        // Component.delete never returns false because entity doesn't have components as children
 	        this._parent = null;
@@ -2781,6 +2786,9 @@
 	        this._listenRemoveFunctions.length = 0;
 	    };
 	    Component.prototype.listenProperty = function (component, propertyName, callback) {
+	        // @ifndef OPTIMIZE
+	        assert$1(component, 'listenProperty called without a component');
+	        // @endif
 	        this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	    };
 	    Component.prototype.toJSON = function () {
@@ -3112,7 +3120,9 @@
 	        this.forEachChild('ent', function (ent) {
 	            children.push(ent.clone(entity));
 	        });
-	        Entity.initComponents(components);
+	        if (!entity.sleeping) {
+	            Entity.initComponents(components);
+	        }
 	        return entity;
 	    };
 	    /*
@@ -3145,14 +3155,18 @@
 	    Entity.preInitComponents = function (components) {
 	        if (Entity.ENTITY_CREATION_DEBUGGING)
 	            { console.log('preInit components for', components[0].entity.makeUpAName()); }
-	        for (var i = 0; i < components.length; i++)
-	            { components[i]._preInit(); }
+	        for (var i = 0; i < components.length; i++) {
+	            assert$1(!components[i].entity.sleeping, 'entity can not be sleeping when pre initing components');
+	            components[i]._preInit();
+	        }
 	    };
 	    Entity.initComponents = function (components) {
 	        if (Entity.ENTITY_CREATION_DEBUGGING)
 	            { console.log("init " + components.length + " components for", components[0].entity.makeUpAName()); }
-	        for (var i = 0; i < components.length; i++)
-	            { components[i]._init(); }
+	        for (var i = 0; i < components.length; i++) {
+	            assert$1(!components[i].entity.sleeping, 'entity can not be sleeping when initing components');
+	            components[i]._init();
+	        }
 	    };
 	    Entity.makeComponentsSleep = function (components) {
 	        for (var i = 0; i < components.length; i++)
@@ -3175,10 +3189,10 @@
 	        assert$1(this._alive, ALIVE_ERROR);
 	        if (!this.sleeping)
 	            { return false; }
+	        this.sleeping = false;
 	        this.components.forEach(function (value, key) { return Entity.preInitComponents(value); });
 	        this.components.forEach(function (value, key) { return Entity.initComponents(value); });
 	        this.forEachChild('ent', function (entity) { return entity.wakeUp(); });
-	        this.sleeping = false;
 	        return true;
 	    };
 	    Entity.prototype.delete = function () {
@@ -3449,8 +3463,7 @@
 	     * Only works for Prefabs and Prototypes. Not for EntityPrototypes.
 	     */
 	    Prototype.prototype.getEntityPrototypesThatUseThisPrototype = function () {
-	        var this$1 = this;
-
+	        var _this = this;
 	        var entityPrototypes = [];
 	        var levels = new Set();
 	        if (this.threeLetterType !== 'prt' && this.threeLetterType !== 'pfa') {
@@ -3460,18 +3473,20 @@
 	            };
 	        }
 	        var levelArray = game.getChildren('lvl');
-	        for (var i = levelArray.length - 1; i >= 0; i--) {
-	            var levelEntityPrototypes = levelArray[i].getChildren('epr');
+	        var _loop_1 = function (i) {
 	            var foundInThisLevel = false;
-	            for (var j = levelEntityPrototypes.length - 1; j >= 0; j--) {
-	                if (levelEntityPrototypes[j].prototype === this$1) {
-	                    entityPrototypes.push(levelEntityPrototypes[j]);
+	            levelArray[i].forEachChild('epr', function (epr) {
+	                if (epr.prototype === _this) {
+	                    entityPrototypes.push(epr);
 	                    foundInThisLevel = true;
 	                }
-	            }
+	            }, true);
 	            if (foundInThisLevel) {
 	                levels.add(levelArray[i]);
 	            }
+	        };
+	        for (var i = levelArray.length - 1; i >= 0; i--) {
+	            _loop_1(i);
 	        }
 	        this.forEachChild(this.threeLetterType, function (prt) {
 	            var results = prt.getEntityPrototypesThatUseThisPrototype();
@@ -3684,7 +3699,8 @@
 	        }
 	        return this.createEntity(scene);
 	    };
-	    EntityPrototype.prototype.detachFromPrototype = function () {
+	    EntityPrototype.prototype.replaceWithVersionThatIsDetachedFromPrototype = function () {
+	        // TODO
 	        this.name = this.makeUpAName();
 	        var inheritedComponentDatas = this.getInheritedComponentDatas(function (cda) {
 	            return cda.name !== 'Transform';
@@ -3701,6 +3717,14 @@
 	        this.addChildren(children);
 	        this.prototype = null;
 	        return this;
+	    };
+	    /**
+	     * WARNING! Only Transform and name are preserved. All other data is lost.
+	     * This should only be called with a prefab that has been created using:
+	     * Prefab.createFromPrototype(entityPrototype)
+	     * */
+	    EntityPrototype.prototype.replaceWithVersionThatIsAttachedToPrototype = function (prototype) {
+	        // TODO
 	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
@@ -3785,8 +3809,9 @@
 	    var entityPrototype = new EntityPrototype(json.id);
 	    entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
 	    // assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
-	    if (json.t && !entityPrototype.prototype)
-	        { console.warn("EntityPrototype thougt it had a prototype or prefab " + json.t + " but it was not found."); }
+	    if (json.t && !entityPrototype.prototype) {
+	        console.error("EntityPrototype " + json.id + " thought it had a prototype or prefab " + json.t + " but it was not found.");
+	    }
 	    var nameId = json.id + '_n';
 	    var transformId = json.id + '_t';
 	    var positionId = json.id + '_p';
@@ -3967,14 +3992,12 @@
 	            // TODO: move add code to parent? Because container logic is needed in init() of physics component.
 	            var parentTransform = this.getParentTransform();
 	            if (parentTransform) {
-	                console.log('yeh', this.entity.makeUpAName());
 	                parentTransform.container.addChild(this.container);
 	                parentTransform.listen('globalTransformChanged', function () {
 	                    _this.dispatch('globalTransformChanged', _this);
 	                });
 	            }
 	            else {
-	                console.log('else', this.entity.makeUpAName());
 	                this.layer.addChild(this.container);
 	            }
 	            // Optimize this. Shouldn't be called multiple times per frame.
@@ -4658,6 +4681,8 @@
 	    ],
 	    prototype: {
 	        init: function () {
+	            var this$1 = this;
+
 	            //ParticleContainer does not work properly!
 	            var _this = this;
 	            // maxSize < 40 will crash
@@ -4699,7 +4724,11 @@
 	            this.listenProperty(this, 'globalCoordinates', function () {
 	                _this.updateGlobalCoordinatesProperty();
 	            });
-	            this.Physics = this.entity.getComponent('Physics');
+	            var physicsEntity = this.entity;
+	            while (physicsEntity && physicsEntity.threeLetterType === 'ent' && !this.Physics) {
+	                this$1.Physics = physicsEntity.getComponent('Physics');
+	                physicsEntity = physicsEntity.getParent();
+	            }
 	        },
 	        updateGlobalCoordinatesProperty: function () {
 	            var _this = this;
@@ -6093,7 +6122,7 @@
 	}
 	// Call setChangeOrigin(this) before calling this
 	// Does modifications to entities in editor scene based on levels prototypes
-	function syncAChangeBetweenSceneAndLevel(change) {
+	function syncAChangeFromGameToScene(change) {
 	    if (!scene || !scene.level)
 	        { return; }
 	    if (!shouldSyncLevelAndScene())
@@ -6102,9 +6131,9 @@
 	        { return; }
 	    var ref = change.reference;
 	    assert$1(ref && ref._rootType);
-	    var threeLetterType = ref && ref.threeLetterType || null;
 	    if (ref._rootType !== 'gam')
 	        { return; }
+	    var threeLetterType = ref && ref.threeLetterType || null;
 	    if (change.type === changeType.addSerializableToTree) {
 	        if (threeLetterType === 'epr') {
 	            var epr = ref;
@@ -6246,17 +6275,22 @@
 	function copyEntitiesToScene(entities) {
 	    if (scene) {
 	        if (shouldSyncLevelAndScene()) {
-	            var entityPrototypes = entities.map(function (entity) {
+	            var newEntities = entities.map(function (entity) {
+	                var parentEntity = entity.getParent();
+	                var parentEntityPrototype;
+	                if (parentEntity && parentEntity.threeLetterType === 'ent') {
+	                    parentEntityPrototype = parentEntity.prototype;
+	                }
 	                var epr = entity.prototype.clone();
 	                epr.position = entity.position;
-	                return epr;
+	                (parentEntityPrototype || selectedLevel).addChild(epr);
+	                return epr.createEntity(parentEntity || scene);
 	            });
-	            selectedLevel.addChildren(entityPrototypes);
-	            return entityPrototypes.map(function (epr) { return epr.createEntity(scene); });
+	            return newEntities;
 	        }
 	        else {
-	            var newEntities = entities.map(function (e) { return e.clone(); });
-	            scene.addChildren(newEntities);
+	            var newEntities = entities.map(function (e) { return e.clone(e.getParent()); });
+	            // scene.addChildren(newEntities);
 	            return newEntities;
 	        }
 	    }
@@ -6327,14 +6361,15 @@
 	function setEntityPositions(entities, position) {
 	    if (entities.length === 0)
 	        { return; }
-	    var averagePosition = new Vector(0, 0);
-	    entities.forEach(function (entity) {
-	        averagePosition.add(entity.position);
+	    var globalPositions = entities.map(function (e) { return e.Transform.getGlobalPosition(); });
+	    var averageGlobalPosition = new Vector(0, 0);
+	    globalPositions.forEach(function (globalPosition) {
+	        averageGlobalPosition.add(globalPosition);
 	    });
-	    averagePosition.divideScalar(entities.length);
-	    var change = averagePosition.multiplyScalar(-1).add(position);
+	    averageGlobalPosition.divideScalar(entities.length);
+	    var change = averageGlobalPosition.multiplyScalar(-1).add(position);
 	    entities.forEach(function (entity) {
-	        entity.position = entity.position.add(change);
+	        entity.Transform.setGlobalPosition(entity.Transform.getGlobalPosition().add(change));
 	    });
 	}
 	function entityModifiedInEditor(entity, change) {
@@ -7063,6 +7098,12 @@
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
 	var MAX_ZOOM = 10;
+	/**
+	 * Data flow:
+	 * SceneModule is in charge of scene entities.
+	 * If changes are made to prototypes, SceneModule will update changes to entities.
+	 * If changes are made to entities, it won't affect entityPrototypes automatically.
+	 */
 	var SceneModule = /** @class */ (function (_super) {
 	    __extends(SceneModule, _super);
 	    function SceneModule() {
@@ -7082,6 +7123,10 @@
 	         * It's because newEntities must be able to have parents with funny transforms.
 	         * */
 	        _this.newEntities = [];
+	        /**
+	         * Press 'v' to clone these to newEntities. copiedEntities are sleeping.
+	         */
+	        _this.copiedEntities = [];
 	        _this.addElements(_this.canvas = el('canvas.openEditPlayCanvas.select-none', {
 	            // width and height will be fixed after loading
 	            width: 0,
@@ -7138,9 +7183,10 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, function () {
 	            var _a;
 	            if (['ent', 'epr'].includes(editorSelection.type) && _this.selectedEntities.length > 0) {
+	                // Entities are put to scene tree. Game tree won't have newEntities items.
 	                _this.deleteNewEntities();
 	                var entities = filterChildren(_this.selectedEntities);
-	                (_a = _this.newEntities).push.apply(_a, entities.map(function (e) { return e.clone(); }));
+	                (_a = _this.newEntities).push.apply(_a, entities.map(function (e) { return e.clone(e.getParent()); }));
 	                _this.copyEntities(_this.newEntities);
 	                _this.clearSelectedEntities();
 	                setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
@@ -7182,7 +7228,6 @@
 	        _this.id = 'scene';
 	        _this.name = 'Scene';
 	        editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'sceneModule', _this);
-	        _this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
 	        _this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 	        _this.previousMousePosInWorldCoordinates = null;
 	        _this.previousMousePosInMouseCoordinates = null;
@@ -7371,9 +7416,9 @@
 	                { return stop('Editor: Scene'); }
 	            // console.log('sceneModule change', change);
 	            if (change.origin !== _this) {
-	                _this.deleteNewEntities();
+	                _this.deleteNewEntities(); // Why? If someone else does anything in editor, new entities are gone..
 	                setChangeOrigin(_this);
-	                syncAChangeBetweenSceneAndLevel(change);
+	                syncAChangeFromGameToScene(change);
 	                _this.draw();
 	            }
 	            stop('Editor: Scene');
@@ -7836,6 +7881,7 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
+	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -8150,7 +8196,7 @@
 	            // 	event.hideValidationIndicator();
 	        });
 	        editorEventDispacher.listen('treeView drag stop objects-tree', function (event) {
-	            console.log('event', event);
+	            // console.log('event', event)
 	            if (event.type === 'epr' && event.targetElement.getAttribute('moduleid') === 'prefabs') {
 	                var entityPrototypes = event.idList.map(getSerializable);
 	                entityPrototypes = filterChildren(entityPrototypes);
@@ -8214,8 +8260,16 @@
 	            if (change.type === changeType.addSerializableToTree) {
 	                if (change.reference.threeLetterType === _this.treeType) {
 	                    var serializable_1 = change.reference;
+	                    var addToTree_1 = function (s$$1) {
+	                        var parent = s$$1.getParent();
+	                        var treeParent = parent.threeLetterType === _this.treeType ? parent.id : '#';
+	                        _this.treeView.createNode(s$$1.id, s$$1.makeUpAName(), treeParent);
+	                    };
 	                    newTask = function () {
-	                        _this.treeView.createNode(serializable_1.id, serializable_1.makeUpAName(), '#');
+	                        addToTree_1(serializable_1);
+	                        serializable_1.forEachChild(_this.treeType, function (child) {
+	                            addToTree_1(child);
+	                        });
 	                    };
 	                }
 	            }
@@ -8409,7 +8463,7 @@
 	                text: entityPrototypes.length === 1 ? 'Keep object' : 'Keep objects',
 	                callback: function () {
 	                    setChangeOrigin(_this);
-	                    entityPrototypes.forEach(function (epr) { return epr.detachFromPrototype(); });
+	                    entityPrototypes.forEach(function (epr) { return epr.replaceWithVersionThatIsDetachedFromPrototype(); });
 	                    _this.remove();
 	                    callback(true);
 	                },
@@ -9174,15 +9228,6 @@
 	        element.classList.remove('skipPropertyEditorTransitions');
 	    }, 10);
 	}
-	function parseTextAndNumber(textAndNumber) {
-	    var endingNumberMatch = textAndNumber.match(/\d+$/); // ending number
-	    var num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
-	    var nameWithoutNumber = endingNumberMatch ? textAndNumber.substring(0, textAndNumber.length - endingNumberMatch[0].length) : textAndNumber;
-	    return {
-	        text: nameWithoutNumber,
-	        number: num
-	    };
-	}
 	//# sourceMappingURL=util.js.map
 
 	/*
@@ -9345,20 +9390,22 @@
 	        }));
 	        if (inheritedComponentDatas.length === 0)
 	            { addButton.classList.add('clickMeEffect'); }
-	        mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
-	            onclick: function () {
-	                redomDispatch(_this, 'makingChanges');
-	                var clone = _this.item.clone();
-	                var _a = parseTextAndNumber(clone.name), text$$1 = _a.text, number = _a.number;
-	                var nameSuggestion = text$$1 + number++;
-	                while (_this.item.getParent().findChild('prt', function (prt) { return prt.name === nameSuggestion; })) {
-	                    nameSuggestion = text$$1 + number++;
-	                }
-	                clone.name = nameSuggestion;
-	                _this.item.getParent().addChild(clone);
-	                redomDispatch(_this, 'propertyEditorSelect', clone);
+	        /*
+	    mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
+	        onclick: () => {
+	            redomDispatch(this, 'makingChanges');
+	            let clone = this.item.clone();
+	            let { text, number } = parseTextAndNumber(clone.name);
+	            let nameSuggestion = text + number++;
+	            while (this.item.getParent().findChild('prt', prt => prt.name === nameSuggestion)) {
+	                nameSuggestion = text + number++;
 	            }
-	        }));
+	            clone.name = nameSuggestion;
+	            this.item.getParent().addChild(clone);
+	            redomDispatch(this, 'propertyEditorSelect', clone);
+	        }
+	    }));
+	    */
 	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type (OLD!!!)', {
 	            onclick: function () {
 	                redomDispatch(_this, 'makingChanges');
@@ -9756,6 +9803,9 @@
 	        }
 	    };
 	    PrefabModule.prototype.activate = function (command, parameter) {
+	        if (command === 'focusOnProperty') {
+	            this.propertyEditor.el.querySelector(".property[name='" + parameter + "'] input").select();
+	        }
 	    };
 	    return PrefabModule;
 	}(Module));
@@ -10194,11 +10244,18 @@
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, change);
 	    if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 	        var game_1 = change.reference;
-	        editor = new Editor(game_1);
-	        editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
-	        editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
+	        var timeSincePageLoad = window['timeOfPageLoad'] ? (Date.now() - window['timeOfPageLoad']) : 100;
+	        setTimeout(function () {
+	            document.getElementById('introLogo').classList.add('hiding');
+	            setTimeout(function () {
+	                editor = new Editor(game_1);
+	                editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
+	                editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
+	                editor.update();
+	            }, 50);
+	        }, Math.max(800 - timeSincePageLoad, 10));
 	    }
-	    if (editor) {
+	    else if (editor) {
 	        if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
 	            if (selectedLevel === change.reference) {
 	                setLevel(null);
@@ -10249,12 +10306,27 @@
 	                var parent = serializable.getParent();
 	                var clone = serializable.clone();
 	                if (parent) {
+	                    var _a = parseTextAndNumber(serializable.name), text$$1 = _a.text, number = _a.number;
+	                    var nameSuggestion_1 = text$$1 + number++;
+	                    while (parent.findChild(editorSelection.type, function (prt) { return prt.name === nameSuggestion_1; })) {
+	                        nameSuggestion_1 = text$$1 + number++;
+	                    }
+	                    clone.name = nameSuggestion_1;
 	                    parent.addChild(clone);
 	                }
 	                clones_1.push(clone);
 	            });
 	            selectInEditor(clones_1, editor);
+	            // If there wasn't setTimeout, 'c' character that user just pressed would end up being in the name input.
+	            setTimeout(function () {
+	                Module.activateModule('prefab', true, 'focusOnProperty', 'name');
+	            }, 1);
 	        }
+	    }
+	});
+	listenKeyDown(function (k) {
+	    if (k === key.esc) {
+	        unfocus();
 	    }
 	});
 	var editor = null;
@@ -10262,12 +10334,8 @@
 	    function Editor(game$$1) {
 	        assert$1(game$$1);
 	        this.layout = new Layout();
+	        document.body.innerHTML = '';
 	        mount(document.body, this.layout);
-	        listenKeyDown(function (k) {
-	            if (k === key.esc) {
-	                unfocus();
-	            }
-	        });
 	    }
 	    Editor.prototype.update = function () {
 	        if (!game)
@@ -10287,7 +10355,15 @@
 	        serverToClientEnabled: false
 	    });
 	});
-	//# sourceMappingURL=editor.js.map
+	function parseTextAndNumber(textAndNumber) {
+	    var endingNumberMatch = textAndNumber.match(/\d+$/); // ending number
+	    var num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
+	    var nameWithoutNumber = endingNumberMatch ? textAndNumber.substring(0, textAndNumber.length - endingNumberMatch[0].length) : textAndNumber;
+	    return {
+	        text: nameWithoutNumber,
+	        number: num
+	    };
+	}
 
 	// import Property from '../core/property';
 	// window.Property = Property;

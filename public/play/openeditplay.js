@@ -25,6 +25,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -163,6 +164,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -227,11 +229,13 @@
 	    callback();
 	    externalChange = false;
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -614,6 +618,7 @@
 	        return children;
 	    }
 	});
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -713,6 +718,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -848,6 +854,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -980,6 +987,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1029,6 +1037,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1175,6 +1184,7 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1276,13 +1286,18 @@
 	        return this;
 	    };
 	    PropertyOwner.defineProperties = function (Class, propertyTypes) {
+	        var _a;
 	        Class.prototype._propertyOwnerClass = Class;
 	        var ClassAsTypeHolder = Class;
-	        ClassAsTypeHolder._propertyTypes = propertyTypes;
+	        // debugger;
+	        if (!ClassAsTypeHolder._propertyTypes) {
+	            ClassAsTypeHolder._propertyTypes = [];
+	        }
+	        (_a = ClassAsTypeHolder._propertyTypes).push.apply(_a, propertyTypes);
 	        ClassAsTypeHolder._propertyTypesByName = {};
-	        propertyTypes.forEach(function (propertyType) {
+	        ClassAsTypeHolder._propertyTypes.forEach(function (propertyType) {
 	            var propertyTypeName = propertyType.name;
-	            assert(Class.prototype[propertyTypeName] === undefined, 'Property name ' + propertyTypeName + ' clashes');
+	            assert(!Class.prototype.hasOwnProperty(propertyTypeName), 'Property name ' + propertyTypeName + ' clashes');
 	            ClassAsTypeHolder._propertyTypesByName[propertyTypeName] = propertyType;
 	            Object.defineProperty(Class.prototype, propertyTypeName, {
 	                get: function () {
@@ -1298,6 +1313,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1678,6 +1694,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1734,6 +1751,7 @@
 	    }
 	    return texturesAndAnchors[hash];
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1769,8 +1787,12 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
+	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
 	var propertyTypes = [
 	    Prop('name', 'No name', Prop.string)
 	];
@@ -1821,6 +1843,18 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Game, propertyTypes);
 	Game.prototype.isRoot = true;
+	/*
+	// Export so that other components can have this component as parent
+	Component.register({
+	    name: 'GameProperties',
+	    description: 'Contains all game specific settings',
+	    category: 'MainProperties',
+	    allowMultiple: false,
+	    properties: [
+	        Prop('gameProperty1', 3, Prop.float, Prop.float.range(0.01, 1000))
+	    ]
+	});
+	*/
 	Serializable.registerSerializable(Game, 'gam', function (json) {
 	    if (json.c) {
 	        json.c.sort(function (a, b) {
@@ -1837,6 +1871,7 @@
 	    if (game)
 	        { listener(game); }
 	}
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -1924,6 +1959,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2006,6 +2042,8 @@
 	// Requires listenMouseMove on the same element to get the mouse position
 	function listenMouseDown(element, handler) {
 	    var domHandler = function (event) {
+	        if (event.button !== 0)
+	            { return; }
 	        if (typeof element['_mx'] === 'number')
 	            { handler(new Vector(element['_mx'], element['_my'])); }
 	        else
@@ -2059,6 +2097,7 @@
 	        });
 	    }
 	}
+	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2070,6 +2109,12 @@
 	    EditorEvent["EDITOR_PRE_DELETE_SELECTION"] = "pre delete selection";
 	    EditorEvent["EDITOR_LOADED"] = "editor loaded";
 	    EditorEvent["EDITOR_RESET"] = "reset";
+	    EditorEvent["EDITOR_FORCE_UPDATE"] = "editor force update";
+	    EditorEvent["EDITOR_UNFOCUS"] = "editor unfocus";
+	    EditorEvent["EDITOR_PLAY"] = "play";
+	    EditorEvent["EDITOR_PAUSE"] = "pause";
+	    EditorEvent["EDITOR_CLONE"] = "clone";
+	    EditorEvent["EDITOR_DELETE"] = "delete";
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2095,6 +2140,7 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -2122,6 +2168,7 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2143,7 +2190,6 @@
 	            }
 	        }
 	        scene = _this;
-	        window['scene'] = _this;
 	        _this.canvas = document.querySelector('canvas.openEditPlayCanvas');
 	        _this.renderer = getRenderer(_this.canvas);
 	        _this.mouseListeners = [
@@ -2391,6 +2437,7 @@
 	    if (scene)
 	        { listener(scene); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -2411,6 +2458,11 @@
 	    }
 	    Component.prototype.makeUpAName = function () {
 	        return this.componentClass.componentName;
+	    };
+	    Component.prototype.clone = function () {
+	        var component = _super.prototype.clone.call(this);
+	        component._componentId = this._componentId;
+	        return component;
 	    };
 	    Component.prototype.delete = function () {
 	        // Component.delete never returns false because entity doesn't have components as children
@@ -2494,6 +2546,9 @@
 	        this._listenRemoveFunctions.length = 0;
 	    };
 	    Component.prototype.listenProperty = function (component, propertyName, callback) {
+	        // @ifndef OPTIMIZE
+	        assert(component, 'listenProperty called without a component');
+	        // @endif
 	        this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	    };
 	    Component.prototype.toJSON = function () {
@@ -2589,6 +2644,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2742,6 +2798,7 @@
 	    }
 
 	*/
+	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -2763,6 +2820,7 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -2805,7 +2863,8 @@
 	        });
 	        return components;
 	    };
-	    Entity.prototype.clone = function () {
+	    Entity.prototype.clone = function (parent) {
+	        if (parent === void 0) { parent = null; }
 	        var entity = new Entity();
 	        entity.prototype = this.prototype.clone();
 	        entity.sleeping = this.sleeping;
@@ -2813,7 +2872,17 @@
 	        this.components.forEach(function (value, key) {
 	            components.push.apply(components, value.map(function (c) { return c.clone(); }));
 	        });
-	        entity.addComponents(components);
+	        entity.addComponents(components, { fullInit: false });
+	        if (parent) {
+	            parent.addChild(entity);
+	        }
+	        var children = [];
+	        this.forEachChild('ent', function (ent) {
+	            children.push(ent.clone(entity));
+	        });
+	        if (!entity.sleeping) {
+	            Entity.initComponents(components);
+	        }
 	        return entity;
 	    };
 	    /*
@@ -2846,14 +2915,18 @@
 	    Entity.preInitComponents = function (components) {
 	        if (Entity.ENTITY_CREATION_DEBUGGING)
 	            { console.log('preInit components for', components[0].entity.makeUpAName()); }
-	        for (var i = 0; i < components.length; i++)
-	            { components[i]._preInit(); }
+	        for (var i = 0; i < components.length; i++) {
+	            assert(!components[i].entity.sleeping, 'entity can not be sleeping when pre initing components');
+	            components[i]._preInit();
+	        }
 	    };
 	    Entity.initComponents = function (components) {
 	        if (Entity.ENTITY_CREATION_DEBUGGING)
 	            { console.log("init " + components.length + " components for", components[0].entity.makeUpAName()); }
-	        for (var i = 0; i < components.length; i++)
-	            { components[i]._init(); }
+	        for (var i = 0; i < components.length; i++) {
+	            assert(!components[i].entity.sleeping, 'entity can not be sleeping when initing components');
+	            components[i]._init();
+	        }
 	    };
 	    Entity.makeComponentsSleep = function (components) {
 	        for (var i = 0; i < components.length; i++)
@@ -2868,6 +2941,7 @@
 	        if (this.sleeping)
 	            { return false; }
 	        this.components.forEach(function (value, key) { return Entity.makeComponentsSleep(value); });
+	        this.forEachChild('ent', function (entity) { return entity.sleep(); });
 	        this.sleeping = true;
 	        return true;
 	    };
@@ -2875,9 +2949,10 @@
 	        assert(this._alive, ALIVE_ERROR);
 	        if (!this.sleeping)
 	            { return false; }
+	        this.sleeping = false;
 	        this.components.forEach(function (value, key) { return Entity.preInitComponents(value); });
 	        this.components.forEach(function (value, key) { return Entity.initComponents(value); });
-	        this.sleeping = false;
+	        this.forEachChild('ent', function (entity) { return entity.wakeUp(); });
 	        return true;
 	    };
 	    Entity.prototype.delete = function () {
@@ -2958,6 +3033,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3147,8 +3223,7 @@
 	     * Only works for Prefabs and Prototypes. Not for EntityPrototypes.
 	     */
 	    Prototype.prototype.getEntityPrototypesThatUseThisPrototype = function () {
-	        var this$1 = this;
-
+	        var _this = this;
 	        var entityPrototypes = [];
 	        var levels = new Set();
 	        if (this.threeLetterType !== 'prt' && this.threeLetterType !== 'pfa') {
@@ -3158,18 +3233,20 @@
 	            };
 	        }
 	        var levelArray = game.getChildren('lvl');
-	        for (var i = levelArray.length - 1; i >= 0; i--) {
-	            var levelEntityPrototypes = levelArray[i].getChildren('epr');
+	        var _loop_1 = function (i) {
 	            var foundInThisLevel = false;
-	            for (var j = levelEntityPrototypes.length - 1; j >= 0; j--) {
-	                if (levelEntityPrototypes[j].prototype === this$1) {
-	                    entityPrototypes.push(levelEntityPrototypes[j]);
+	            levelArray[i].forEachChild('epr', function (epr) {
+	                if (epr.prototype === _this) {
+	                    entityPrototypes.push(epr);
 	                    foundInThisLevel = true;
 	                }
-	            }
+	            }, true);
 	            if (foundInThisLevel) {
 	                levels.add(levelArray[i]);
 	            }
+	        };
+	        for (var i = levelArray.length - 1; i >= 0; i--) {
+	            _loop_1(i);
 	        }
 	        this.forEachChild(this.threeLetterType, function (prt) {
 	            var results = prt.getEntityPrototypesThatUseThisPrototype();
@@ -3249,6 +3326,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3381,7 +3459,8 @@
 	        }
 	        return this.createEntity(scene);
 	    };
-	    EntityPrototype.prototype.detachFromPrototype = function () {
+	    EntityPrototype.prototype.replaceWithVersionThatIsDetachedFromPrototype = function () {
+	        // TODO
 	        this.name = this.makeUpAName();
 	        var inheritedComponentDatas = this.getInheritedComponentDatas(function (cda) {
 	            return cda.name !== 'Transform';
@@ -3398,6 +3477,14 @@
 	        this.addChildren(children);
 	        this.prototype = null;
 	        return this;
+	    };
+	    /**
+	     * WARNING! Only Transform and name are preserved. All other data is lost.
+	     * This should only be called with a prefab that has been created using:
+	     * Prefab.createFromPrototype(entityPrototype)
+	     * */
+	    EntityPrototype.prototype.replaceWithVersionThatIsAttachedToPrototype = function (prototype) {
+	        // TODO
 	    };
 	    // Optimize this away
 	    EntityPrototype.prototype.setRootType = function (rootType) {
@@ -3429,16 +3516,29 @@
 	        // @endif
 	        return entityPrototype;
 	    };
+	    EntityPrototype.create = function (name, position) {
+	        if (name === void 0) { name = 'Empty'; }
+	        if (position === void 0) { position = new Vector(0, 0); }
+	        var entityPrototype = new EntityPrototype();
+	        var transform = createEntityPrototypeTransform(entityPrototype.id);
+	        transform.setValue('position', position);
+	        var nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
+	        entityPrototype.initWithChildren([nameProperty, transform]);
+	        return entityPrototype;
+	    };
+	    Object.defineProperty(EntityPrototype.prototype, "position", {
+	        get: function () {
+	            return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value;
+	        },
+	        set: function (position) {
+	            this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value = position;
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
 	    return EntityPrototype;
 	}(Prototype));
-	Object.defineProperty(EntityPrototype.prototype, 'position', {
-	    get: function () {
-	        return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value;
-	    },
-	    set: function (position) {
-	        return this.getTransform().findChild('prp', function (prp) { return prp.name === 'position'; }).value = position;
-	    }
-	});
+	// PropertyOwner.defineProperties(EntityPrototype, propertyTypes);
 	function createEntityPrototypeNameProperty(entityPrototypeId, name) {
 	    if (name === void 0) { name = ''; }
 	    return EntityPrototype._propertyTypesByName.name.createProperty({
@@ -3465,22 +3565,13 @@
 	    transform.addChild(angle);
 	    return transform;
 	}
-	EntityPrototype.create = function (name, position) {
-	    if (name === void 0) { name = 'Empty'; }
-	    if (position === void 0) { position = new Vector(0, 0); }
-	    var entityPrototype = new EntityPrototype();
-	    var transform = createEntityPrototypeTransform(entityPrototype.id);
-	    transform.setValue('position', position);
-	    var nameProperty = createEntityPrototypeNameProperty(entityPrototype.id, name);
-	    entityPrototype.initWithChildren([nameProperty, transform]);
-	    return entityPrototype;
-	};
 	Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
 	    var entityPrototype = new EntityPrototype(json.id);
 	    entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
 	    // assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
-	    if (json.t && !entityPrototype.prototype)
-	        { console.warn("EntityPrototype thougt it had a prototype or prefab " + json.t + " but it was not found."); }
+	    if (json.t && !entityPrototype.prototype) {
+	        console.error("EntityPrototype " + json.id + " thought it had a prototype or prefab " + json.t + " but it was not found.");
+	    }
 	    var nameId = json.id + '_n';
 	    var transformId = json.id + '_t';
 	    var positionId = json.id + '_p';
@@ -3510,6 +3601,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3607,8 +3699,9 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
-	var propertyTypes$2 = [
+	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
 	];
 	var Level = /** @class */ (function (_super) {
@@ -3628,8 +3721,11 @@
 	    };
 	    return Level;
 	}(PropertyOwner));
-	PropertyOwner.defineProperties(Level, propertyTypes$2);
+	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3732,6 +3828,7 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3755,6 +3852,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3928,6 +4026,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -3967,6 +4066,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4024,7 +4124,8 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/
+	*/ 
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4072,6 +4173,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4284,6 +4386,7 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4309,6 +4412,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4337,6 +4441,8 @@
 	    ],
 	    prototype: {
 	        init: function () {
+	            var this$1 = this;
+
 	            //ParticleContainer does not work properly!
 	            var _this = this;
 	            // maxSize < 40 will crash
@@ -4378,7 +4484,11 @@
 	            this.listenProperty(this, 'globalCoordinates', function () {
 	                _this.updateGlobalCoordinatesProperty();
 	            });
-	            this.Physics = this.entity.getComponent('Physics');
+	            var physicsEntity = this.entity;
+	            while (physicsEntity && physicsEntity.threeLetterType === 'ent' && !this.Physics) {
+	                this$1.Physics = physicsEntity.getComponent('Physics');
+	                physicsEntity = physicsEntity.getParent();
+	            }
 	        },
 	        updateGlobalCoordinatesProperty: function () {
 	            var _this = this;
@@ -4597,6 +4707,7 @@
 	}
 	var zeroPoint$1 = new PIXI$1.Point();
 	var tempPoint$1 = new PIXI$1.Point();
+	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4606,6 +4717,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -4807,6 +4919,9 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -4849,6 +4964,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5093,6 +5209,7 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -5135,6 +5252,7 @@
 	window.addEventListener('resize', resizeCanvas);
 	forEachScene(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
+	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5210,6 +5328,7 @@
 	    };
 	    return TouchControl;
 	}());
+	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5344,6 +5463,7 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
+	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5360,6 +5480,9 @@
 	        levels[levelIndex].createScene().play();
 	    }
 	    play();
+	    if (window['introLogo']) {
+	        window['introLogo'].style.display = 'none';
+	    }
 	    game$$1.listen(GameEvent.GAME_LEVEL_COMPLETED, function () {
 	        levelIndex++;
 	        play();
@@ -5381,6 +5504,7 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

@@ -150,7 +150,8 @@ export default class EntityPrototype extends Prototype {
 		return this.createEntity(scene);
 	}
 
-	detachFromPrototype() {
+	replaceWithVersionThatIsDetachedFromPrototype() {
+		// TODO
 		this.name = this.makeUpAName();
 
 		let inheritedComponentDatas = this.getInheritedComponentDatas((cda: ComponentData) => {
@@ -170,6 +171,15 @@ export default class EntityPrototype extends Prototype {
 
 		this.prototype = null;
 		return this;
+	}
+
+	/**
+	 * WARNING! Only Transform and name are preserved. All other data is lost.
+	 * This should only be called with a prefab that has been created using:
+	 * Prefab.createFromPrototype(entityPrototype)
+	 * */
+	replaceWithVersionThatIsAttachedToPrototype(prototype: Prototype) {
+		// TODO
 	}
 
 	// Optimize this away
@@ -267,8 +277,9 @@ Serializable.registerSerializable(EntityPrototype, 'epr', json => {
 	entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
 
 	// assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
-	if (json.t && !entityPrototype.prototype)
-		console.warn(`EntityPrototype thougt it had a prototype or prefab ${json.t} but it was not found.`);
+	if (json.t && !entityPrototype.prototype) {
+		console.error(`EntityPrototype ${json.id} thought it had a prototype or prefab ${json.t} but it was not found.`);
+	}
 
 	let nameId = json.id + '_n';
 	let transformId = json.id + '_t';

@@ -1,16 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <link rel="icon" type="image/png" href="/img/logo_graphics.png"/>
+    <link href="/img/logo_white.png" rel="preload" as="image">
+    <link rel="icon" type="image/png" href="/img/logo_graphics.png" />
     <meta charset="UTF-8">
     <title>Open Edit Play</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/edit/openeditplay.editor.dependencies.js"></script>
-    <script src="/edit/openeditplay.editor.js"></script>
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="/edit/openeditplay.editor.dependencies.js" defer></script>
+    <script src="/edit/openeditplay.editor.js" defer></script>
     <link type="text/css" rel="stylesheet" href="/edit/css/jstree/style.min.css">
     <link type="text/css" rel="stylesheet" href="/edit/css/openeditplay.editor.dependencies.css">
     <link type="text/css" rel="stylesheet" href="/edit/css/openeditplay.editor.css">
+    <style>
+        #introLogo {
+            position: fixed;
+            left: 50%;
+            top: 30%;
+            transform: translateX(-50%);
+            text-align: center;
+            user-select: none;
+            opacity: 1;
+            transition: opacity 200ms;
+        }
+        #introLogo.hiding {
+            opacity: 0;
+        }
+        #introLogo div {
+            font-weight: bold;
+            font-size: 30px;
+        }
+    </style>
+    <script>
+        window['timeOfPageLoad'] = new Date();
+    </script>
 </head>
+
 <body>
+    <div id="introLogo">
+        <div>Open Edit Play</div>
+        <img src="/img/logo_white.png">
+    </div>
 </body>
+
 </html>

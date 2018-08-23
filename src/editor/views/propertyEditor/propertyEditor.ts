@@ -212,6 +212,7 @@ class Container {
 		if (inheritedComponentDatas.length === 0)
 			addButton.classList.add('clickMeEffect');
 
+			/*
 		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
 			onclick: () => {
 				redomDispatch(this, 'makingChanges');
@@ -226,6 +227,7 @@ class Container {
 				redomDispatch(this, 'propertyEditorSelect', clone);
 			}
 		}));
+		*/
 		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type (OLD!!!)', {
 			onclick: () => {
 				redomDispatch(this, 'makingChanges');

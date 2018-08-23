@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <link rel="icon" type="image/png" href="/img/logo_graphics.png"/>
+    <link href="/img/logo_white.png" rel="preload" as="image">
+    <link rel="icon" type="image/png" href="/img/logo_graphics.png" />
     <meta charset="UTF-8">
 
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable = no">
@@ -11,25 +13,47 @@
 
     <title>Open Edit Play</title>
     <link type="text/css" rel="stylesheet" href="/play/css/openeditplay.player.css">
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="openeditplay.dependencies.js"></script>
-    <script src="openeditplay.js"></script>
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="openeditplay.dependencies.js" defer></script>
+    <script src="openeditplay.js" defer></script>
+    <style>
+        #introLogo {
+            position: fixed;
+            left: 50%;
+            top: 30%;
+            transform: translateX(-50%);
+            text-align: center;
+            opacity: 0.9;
+            user-select: none;
+        }
+
+        #introLogo div {
+            font-weight: bold;
+            font-size: 30px;
+        }
+    </style>
 </head>
+
 <body>
-<div id="screen">
-    <a id="backButton" href="/" ontouchstart="setTimeout('window.history.back();', 50);"> Back </a>
-    <canvas id="canvas" class="openEditPlayCanvas"></canvas>
-    <div id="fullscreenInfo">Click for fullscreen</div>
-    <div id="touchUI">
-        <div id="touchUp"><span class="text">Up</span></div>
-        <div id="touchDown"><span class="text">Down</span></div>
-        <div id="touchLeft"><span class="text">Left</span></div>
-        <div id="touchRight"><span class="text">Right</span></div>
-        <div id="touchJump"><span class="text">Jump</span></div>
-        <div id="touchA"><span class="letter">A</span></div>
-        <div id="touchB"><span class="letter">B</span></div>
+    <div id="screen">
+        <a id="backButton" href="/" ontouchstart="setTimeout('window.history.back();', 50);"> Back </a>
+        <canvas id="canvas" class="openEditPlayCanvas"></canvas>
+        <div id="fullscreenInfo">Click for fullscreen</div>
+        <div id="touchUI">
+            <div id="touchUp"><span class="text">Up</span></div>
+            <div id="touchDown"><span class="text">Down</span></div>
+            <div id="touchLeft"><span class="text">Left</span></div>
+            <div id="touchRight"><span class="text">Right</span></div>
+            <div id="touchJump"><span class="text">Jump</span></div>
+            <div id="touchA"><span class="letter">A</span></div>
+            <div id="touchB"><span class="letter">B</span></div>
+        </div>
+        <div id="debug"></div>
     </div>
-    <div id="debug"></div>
-</div>
+    <div id="introLogo">
+        <div>Open Edit Play</div>
+        <img src="/img/logo_white.png">
+    </div>
 </body>
+
 </html>

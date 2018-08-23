@@ -4,8 +4,8 @@ import { changeType } from '../../core/change';
 import assert from '../../util/assert';
 import Vector from '../../util/vector';
 import { centerWidgetRadius } from '../widget/widget'
-import {filterChildren} from "../../core/serializable";
-import {Component} from "../../core/component";
+import { filterChildren } from "../../core/serializable";
+import { Component } from "../../core/component";
 import { selectedLevel } from '../editorSelection';
 import Entity from '../../core/entity';
 import EntityPrototype from '../../core/entityPrototype';
@@ -19,7 +19,7 @@ export function shouldSyncLevelAndScene() {
 
 function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
 	let component = entity.getComponents(componentName)
-	.filter(c => c._componentId === componentId)[0];
+		.filter(c => c._componentId === componentId)[0];
 
 	if (component)
 		component._properties[sourceProperty.name].value = sourceProperty.value;
@@ -43,7 +43,7 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 	function goThroughChildren(prototype) {
 		prototype.getChildren('prt').forEach(proto => {
 			if (typeof prototypeFilter === 'function') {
-				if (prototypeFilter(proto)) {
+				if (prototypeFilter(proto))  {
 					affectedPrototypes.add(proto);
 					goThroughChildren(proto);
 				}
@@ -66,7 +66,7 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 
 // Call setChangeOrigin(this) before calling this
 // Does modifications to entities in editor scene based on levels prototypes
-export function syncAChangeBetweenSceneAndLevel(change) {
+export function syncAChangeFromGameToScene(change) {
 	if (!scene || !scene.level) return;
 
 	if (!shouldSyncLevelAndScene())
@@ -78,9 +78,10 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 	let ref = change.reference;
 	assert(ref && ref._rootType);
 
-	let threeLetterType = ref && ref.threeLetterType || null;
 	if (ref._rootType !== 'gam')
 		return;
+
+	let threeLetterType = ref && ref.threeLetterType || null;
 
 	if (change.type === changeType.addSerializableToTree) {
 		if (threeLetterType === 'epr') {
@@ -222,23 +223,28 @@ export function syncAChangeBetweenSceneAndLevel(change) {
 export function copyEntitiesToScene(entities: Entity[]) {
 	if (scene) {
 		if (shouldSyncLevelAndScene()) {
-			let entityPrototypes = entities.map(entity => {
+			let newEntities = entities.map(entity => {
+				let parentEntity = entity.getParent() as Entity;
+				let parentEntityPrototype: EntityPrototype;
+				if (parentEntity && parentEntity.threeLetterType === 'ent') {
+					parentEntityPrototype = parentEntity.prototype as EntityPrototype;
+				}
 				let epr = entity.prototype.clone() as EntityPrototype;
 				epr.position = entity.position;
-				return epr;
+				(parentEntityPrototype || selectedLevel).addChild(epr);
+				return epr.createEntity(parentEntity || scene);
 			});
-			selectedLevel.addChildren(entityPrototypes);
-			return entityPrototypes.map(epr => epr.createEntity(scene));
+			return newEntities;
 		} else {
-			let newEntities = entities.map(e => e.clone());
-			scene.addChildren(newEntities);
+			let newEntities = entities.map(e => e.clone(e.getParent()));
+			// scene.addChildren(newEntities);
 			return newEntities;
 		}
 	}
 	return null;
 }
 
-export function getWidgetUnderMouse(mousePos: Vector) : Component {
+export function getWidgetUnderMouse(mousePos: Vector): Component {
 	let nearestWidget = null;
 	let nearestDistanceSq = Infinity;
 
@@ -263,7 +269,7 @@ export function getWidgetUnderMouse(mousePos: Vector) : Component {
 
 	return nearestWidget;
 }
-export function getEntitiesInSelection(start, end) {
+export function getEntitiesInSelection(start, end)  {
 	let entities = [];
 
 	let minX = Math.min(start.x, end.x);
@@ -346,22 +352,24 @@ export function moveEntities(entities, change) {
 	});
 }
 
-export function setEntityPositions(entities, position) {
+export function setEntityPositions(entities: Entity[], position: Vector) {
 	if (entities.length === 0)
 		return;
 
-	let averagePosition = new Vector(0, 0);
+	let globalPositions = entities.map(e => e.Transform.getGlobalPosition());
 
-	entities.forEach(entity => {
-		averagePosition.add(entity.position);
+	let averageGlobalPosition = new Vector(0, 0);
+
+	globalPositions.forEach(globalPosition => {
+		averageGlobalPosition.add(globalPosition);
 	});
 
-	averagePosition.divideScalar(entities.length);
+	averageGlobalPosition.divideScalar(entities.length);
 
-	let change = averagePosition.multiplyScalar(-1).add(position);
+	let change = averageGlobalPosition.multiplyScalar(-1).add(position);
 
 	entities.forEach(entity => {
-		entity.position = entity.position.add(change);
+		entity.Transform.setGlobalPosition(entity.Transform.getGlobalPosition().add(change));
 	});
 }
 

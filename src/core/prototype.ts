@@ -239,14 +239,15 @@ export default class Prototype extends PropertyOwner {
 
 		let levelArray = game.getChildren('lvl') as Level[];
 		for (let i = levelArray.length - 1; i >= 0; i--) {
-			let levelEntityPrototypes = levelArray[i].getChildren('epr') as Array<EntityPrototype>;
 			let foundInThisLevel = false;
-			for (let j = levelEntityPrototypes.length - 1; j >= 0; j--) {
-				if (levelEntityPrototypes[j].prototype === this) {
-					entityPrototypes.push(levelEntityPrototypes[j]);
+
+			levelArray[i].forEachChild('epr', (epr: EntityPrototype) => {
+				if (epr.prototype === this) {
+					entityPrototypes.push(epr);
 					foundInThisLevel = true;
 				}
-			}
+			}, true);
+
 			if (foundInThisLevel) {
 				levels.add(levelArray[i]);
 			}

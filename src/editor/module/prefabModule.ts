@@ -37,6 +37,9 @@ class PrefabModule extends Module {
 		}
 	}
 	activate(command, parameter) {
+		if (command === 'focusOnProperty') {
+			this.propertyEditor.el.querySelector(`.property[name='${parameter}'] input`).select();
+		}
 	}
 }
 

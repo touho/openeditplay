@@ -37,6 +37,13 @@ const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, k
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 10;
 
+/**
+ * Data flow:
+ * SceneModule is in charge of scene entities.
+ * If changes are made to prototypes, SceneModule will update changes to entities.
+ * If changes are made to entities, it won't affect entityPrototypes automatically.
+ */
+
 class SceneModule extends Module {
 	canvas: HTMLCanvasElement;
 	homeButton: HTMLElement;
@@ -60,6 +67,11 @@ class SceneModule extends Module {
 	 * It's because newEntities must be able to have parents with funny transforms.
 	 * */
 	newEntities: Entity[] = [];
+
+	/**
+	 * Press 'v' to clone these to newEntities. copiedEntities are sleeping.
+	 */
+	copiedEntities: Entity[] = [];
 
 	constructor() {
 		super();
@@ -145,9 +157,11 @@ class SceneModule extends Module {
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
 			if (['ent', 'epr'].includes(editorSelection.type) && this.selectedEntities.length > 0) {
+				// Entities are put to scene tree. Game tree won't have newEntities items.
+
 				this.deleteNewEntities();
 				let entities = filterChildren(this.selectedEntities) as Entity[];
-				this.newEntities.push(...entities.map(e => e.clone()));
+				this.newEntities.push(...entities.map(e => e.clone(e.getParent())));
 				this.copyEntities(this.newEntities);
 				this.clearSelectedEntities();
 				sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
@@ -196,7 +210,6 @@ class SceneModule extends Module {
 
 		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'sceneModule', this);
 
-		this.copiedEntities = []; // Press 'v' to clone these to newEntities. copiedEntities are sleeping.
 		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
 		this.previousMousePosInMouseCoordinates = null;
@@ -421,16 +434,15 @@ class SceneModule extends Module {
 				}
 			}
 
-
 			if (scene && scene.resetting)
 				return performanceTool.stop('Editor: Scene');
 
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
-				this.deleteNewEntities();
+				this.deleteNewEntities(); // Why? If someone else does anything in editor, new entities are gone..
 				setChangeOrigin(this);
 
-				sceneEdit.syncAChangeBetweenSceneAndLevel(change);
+				sceneEdit.syncAChangeFromGameToScene(change);
 				this.draw();
 			}
 			performanceTool.stop('Editor: Scene');

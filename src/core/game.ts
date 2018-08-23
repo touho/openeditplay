@@ -10,6 +10,8 @@ import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
 import { globalEventDispatcher, GameEvent } from './eventDispatcher';
 
+console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
+
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
 ];

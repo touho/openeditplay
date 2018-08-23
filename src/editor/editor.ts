@@ -36,6 +36,9 @@ import { GameEvent, globalEventDispatcher } from '../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from './editorEventDispatcher';
 import { editorSelection, selectInEditor, setLevel, selectedLevel, unfocus } from './editorSelection';
 import { listenKeyDown, key } from '../util/input';
+import Prefab from '../core/prefab';
+import Prototype from '../core/prototype';
+import Module from './module/module';
 
 editorEventDispacher.getEventPromise('modulesRegistered').then(() => {
 	editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
@@ -61,11 +64,18 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, change);
 	if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 		let game = change.reference;
-		editor = new Editor(game);
-		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
-		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
-	}
-	if (editor) {
+
+		let timeSincePageLoad = window['timeOfPageLoad'] ? (Date.now() - window['timeOfPageLoad']) : 100;
+		setTimeout(() => {
+			document.getElementById('introLogo').classList.add('hiding');
+			setTimeout(() => {
+				editor = new Editor(game);
+				editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
+				editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
+				editor.update();
+			}, 50);
+		}, Math.max(800 - timeSincePageLoad, 10));
+	} else if (editor) {
 		if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
 			if (selectedLevel === change.reference) {
 				setLevel(null);
@@ -110,19 +120,39 @@ editorEventDispacher.listen(EditorEvent.EDITOR_DELETE, () => {
 editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
 	if (editorSelection.focused && editorSelection.items.length > 0) {
 		if (['pfa', 'prt'].includes(editorSelection.type)) {
-			let filteredSerializabled = filterChildren(editorSelection.items);
-			let clones: Serializable[] = [];
+			let filteredSerializabled = filterChildren(editorSelection.items) as Prototype[];
+			let clones: Prototype[] = [];
 			setChangeOrigin(editor);
-			filteredSerializabled.forEach((serializable: Serializable) => {
-				let parent = serializable.getParent();
-				let clone = serializable.clone();
+			filteredSerializabled.forEach((serializable: Prototype) => {
+				let parent = serializable.getParent() as Serializable;
+				let clone = serializable.clone() as Prototype;
+
 				if (parent) {
+					let { text, number } = parseTextAndNumber(serializable.name);
+					let nameSuggestion = text + number++;
+					while (parent.findChild(editorSelection.type, (prt: Prototype) => prt.name === nameSuggestion)) {
+						nameSuggestion = text + number++;
+					}
+					clone.name = nameSuggestion;
+
 					parent.addChild(clone);
 				}
+
 				clones.push(clone);
 			});
 			selectInEditor(clones, editor);
+
+			// If there wasn't setTimeout, 'c' character that user just pressed would end up being in the name input.
+			setTimeout(() => {
+				Module.activateModule('prefab', true, 'focusOnProperty', 'name');
+			}, 1);
 		}
+	}
+});
+
+listenKeyDown(k => {
+	if (k === key.esc) {
+		unfocus();
 	}
 });
 
@@ -134,13 +164,8 @@ class Editor {
 	constructor(game) {
 		assert(game);
 		this.layout = new Layout();
+		document.body.innerHTML = '';
 		mount(document.body, this.layout);
-
-		listenKeyDown(k => {
-			if (k === key.esc) {
-				unfocus();
-			}
-		});
 	}
 
 	update() {
@@ -163,3 +188,14 @@ globalEventDispatcher.listen('noEditAccess', () => {
 		serverToClientEnabled: false
 	});
 });
+
+function parseTextAndNumber(textAndNumber) {
+	let endingNumberMatch = textAndNumber.match(/\d+$/); // ending number
+	let num = endingNumberMatch ? parseInt(endingNumberMatch[0]) + 1 : 2;
+	let nameWithoutNumber = endingNumberMatch ? textAndNumber.substring(0, textAndNumber.length - endingNumberMatch[0].length) : textAndNumber;
+
+	return {
+		text: nameWithoutNumber,
+		number: num
+	};
+}

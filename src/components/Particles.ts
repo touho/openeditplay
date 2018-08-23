@@ -6,6 +6,7 @@ import { isClient } from '../util/environment';
 
 import { PHYSICS_SCALE } from './Physics';
 import { GameEvent } from '../core/eventDispatcher';
+import Entity from '../core/entity';
 
 Component.register({
 	name: 'Particles',
@@ -84,7 +85,11 @@ Component.register({
 				this.updateGlobalCoordinatesProperty();
 			});
 
-			this.Physics = this.entity.getComponent('Physics');
+			let physicsEntity = this.entity as Entity;
+			while (physicsEntity && physicsEntity.threeLetterType === 'ent' && !this.Physics) {
+				this.Physics = physicsEntity.getComponent('Physics');
+				physicsEntity = physicsEntity.getParent() as Entity;
+			}
 		},
 
 		updateGlobalCoordinatesProperty() {
