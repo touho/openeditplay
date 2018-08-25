@@ -116,6 +116,17 @@ Prop.string = createDataType({
 	fromJSON: x => x
 });
 
+// longString can have longer length in editor input
+export interface DataTypeContainer { longString?: DataTypeDefinition; }
+Prop.longString = createDataType({
+	name: 'longString',
+	validators: {
+		default: x => x ? String(x) : ''
+	},
+	toJSON: x => x,
+	fromJSON: x => x
+});
+
 export interface DataTypeContainer { bool?: DataTypeDefinition; }
 Prop.bool = createDataType({
 	name: 'bool',

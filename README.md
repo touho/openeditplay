@@ -31,3 +31,7 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 ### TODO ###
 - Animation component
 - If scaled entity has child entity that has particles, particles should be scaled.
+- Object instance value/component saving
+- Multiedit of objects
+- Camera viewport
+- When detaching from prototype, don't include every single property etc. Save space.

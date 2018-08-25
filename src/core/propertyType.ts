@@ -62,6 +62,13 @@ export interface PropType extends Function, DataTypeContainer {
 		description: 'Example',
 		validator: PropertyType.
  */
+/**
+ *
+ * @param propertyName - name of property. name will be converted propertyName -> Property Name in editor.
+ * @param defaultValue - initial value of property
+ * @param type - Prop.<type>, for example Prop.int, Prop.bool, prop.float
+ * @param optionalParameters - "description", validator Prop.float.range(0, 1)
+ */
 const Prop: PropType = function Prop(propertyName: string, defaultValue: any, type: DataTypeDefinition, ...optionalParameters) {
 	let dataType = type();
 	let validator = dataType.validators.default();

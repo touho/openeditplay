@@ -183,8 +183,8 @@ function watch(path, callback, runNow) {
 		path = [path];
 	path = path.map(p => p.startsWith('/') ? p : ROOT + p);
 	return chokidar.watch(path)
-	.on('change', callback)
-	.on('unlink', callback);
+		.on('change', callback)
+		.on('unlink', callback);
 }
 
 module.exports.watch = watch;
@@ -280,26 +280,33 @@ function autobuildJs(entry, destination, options) {
 			case 'FATAL':
 				var err = event.error;
 
-			function syntaxError(filename, message) {
-				console.log(`Rollup error: ${message}`);
-				console.log(`Fix ${filename} to continue`);
-				setTimeout(() => {
-					let watcher = watch(filename, () => {
-						watcher.close();
-						autobuildJs(entry, destination, options);
-					});
-				}, 200);
-			}
+				function guessFileFromError(error) {
+					let guessedFileMatch = error.message.match(/\s([^ ]*\.(js|ts))\b/);
+					if (guessedFileMatch) {
+						return guessedFileMatch[1];
+					} else if (error.id) {
+						return error.id
+					} else {
+						console.log('Could not guess file', error);
+						return '???';
+					}
+				}
 
+				function syntaxError(filename, message) {
+					console.log(`Rollup error: ${message}`);
+					console.log(`Fix ${filename} to continue`);
+					setTimeout(() => {
+						let watcher = watch(filename, () => {
+							watcher.close();
+							autobuildJs(entry, destination, options);
+						});
+					}, 200);
+				}
 				// Rollup stops watching when it encounters an sendError.
 				// That's not something we want, so wait until the faulty
 				// file changes and then restart the watcher.
 				if (err instanceof SyntaxError) {
-					let guessedFileMatch = err.message.match(/\s([^ ]*\.js)\b/);
-					if (guessedFileMatch) {
-						let guessedFile = guessedFileMatch[1];
-						syntaxError(guessedFile, err.message);
-					}
+					syntaxError(guessFileFromError(err), err.message);
 				} else if (err.code === 'PARSE_ERROR') {
 					syntaxError(err.file, err.message);
 				} else if (err.message === 'Maximum call stack size exceeded') {
@@ -321,6 +328,6 @@ function autobuildJs(entry, destination, options) {
 }
 
 module.exports.autobuildJs = autobuildJs;
-process.on('uncaughtException', function (err) {
+process.on('uncaughtException', function(err) {
 	console.error("Node.js Exception. " + err + " - " + err.stack);
 });

@@ -100,7 +100,7 @@ div.selectionView {
   position: absolute;
   transform: translateY(-50%);
 
-  height: 80%;
+  height: 50px;
 
   padding: 5px 20px;
   top: 50%;
@@ -132,6 +132,10 @@ div.topSceneControlButtons.topSceneControlButtonsPaused div.button[controlButton
   color: white;
   text-shadow: 0 0 20px white;
   animation: blinkPlayButton 2s 0s infinite;
+}
+div.topSceneControlButtons div.button[controlButtonType='rec'] {
+  color: #ff3333;
+  text-shadow: 0 0 17px white;
 }
 
 div.topSceneControlButton {

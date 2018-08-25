@@ -11,7 +11,7 @@ let editors: {
 export default editors;
 
 const MAX_STRING_LENGTH = 32;
-const MAX_LONG_STRING_LENGTH = 200;
+const MAX_LONG_STRING_LENGTH = 65500; // in database, value is stored as TEXT.
 
 editors.default = editors.string = (container, oninput, onchange, options) => {
 	let input: HTMLInputElement = <HTMLInputElement>el('input', {

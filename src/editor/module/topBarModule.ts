@@ -6,6 +6,7 @@ import { GameEvent } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { setSceneTool, sceneToolName, editorSelection, unfocus } from '../editorSelection';
 import { Button } from '../views/popup/Popup';
+import { editorGlobals } from '../editorGlobals';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -77,6 +78,12 @@ export class TopBarModule extends Module {
 			type: 'pause',
 			callback: () => editorEventDispacher.dispatch(EditorEvent.EDITOR_PAUSE)
 		};
+		let recButtonData = {
+			title: 'Recording animation keyframes...',
+			icon: 'fa-circle',
+			type: 'rec',
+			callback: () => {} // It's just there to show that we are in a mode. Reset button is used to cancel it.
+		};
 
 		let playButton = new SceneControlButton(playButtonData);
 		let stopButton = new SceneControlButton({
@@ -88,10 +95,13 @@ export class TopBarModule extends Module {
 
 		const updateButtons = () => {
 			setTimeout(() => {
-				if (scene.playing)
+				if (scene.playing) {
 					playButton.update(pauseButtonData);
-				else
+				} else if (editorGlobals.recording) {
+					playButton.update(recButtonData);
+				} else {
 					playButton.update(playButtonData);
+				}
 
 				let paused = !scene.playing && !scene.isInInitialState();
 				this.controlButtons.classList.toggle('topSceneControlButtonsPaused', paused);
@@ -105,6 +115,7 @@ export class TopBarModule extends Module {
 			scene.listen(GameEvent.SCENE_RESET, updateButtons);
 			scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 			scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
+			editorEventDispacher.listen(EditorEvent.EDITOR_REC_MODE, updateButtons);
 		});
 
 		mount(this.controlButtons, playButton);

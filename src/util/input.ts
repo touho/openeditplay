@@ -68,6 +68,15 @@ export const key = {
 	questionMark: 191
 };
 
+let mouseDown = false;
+export function isMouseButtonDown() {
+	return mouseDown;
+}
+
+
+document.addEventListener('mousedown', event => event.button === 0 && (mouseDown = true));
+document.addEventListener('mouseup', event => event.button === 0 && (mouseDown = false));
+
 export function listenMouseMove(element: HTMLElement, handler: (vec: Vector) => void): () => void {
 	let domHandler = event => {
 		let x = event.pageX;

@@ -12,7 +12,7 @@
         "allowJs": true,
         "outDir": "./testDist/",
         //"strictNullChecks": true
-        "lib": ["es7", "dom"],
+        "lib": ["es7", "DOM"],
         "sourceMap": true,
         "types" : ["redom"]
     },

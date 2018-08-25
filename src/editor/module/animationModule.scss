@@ -1,0 +1,36 @@
+div.animationModule {
+    table.animationTimeline {
+        width: 100%;
+        user-select: none;
+        border-collapse: collapse;
+        position: relative;
+    }
+
+
+    th.frameHeader {
+        border-right: 1px solid gray;
+        height: 30px;
+    }
+    th.frameHeader.selected {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    button.recordButton {
+        color: white;
+        text-shadow: 0px 0px 4px red;
+        i {
+            color: #ff3333;
+            text-shadow: 0px 0px 4px white;
+        }
+    }
+
+    td.trackFrame {
+        border-top: 1px solid black;
+        text-align: center;
+    }
+    td.trackFrame:first-child {
+        text-align: left;
+        padding-left: 10px;
+        width: auto !important;
+    }
+}

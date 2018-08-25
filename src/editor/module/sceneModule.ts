@@ -32,6 +32,7 @@ import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { selectInEditor, editorSelection, unfocus } from '../editorSelection';
 import Prefab from '../../core/prefab';
 import CreateObject from '../views/popup/createObject';
+import { editorGlobals } from '../editorGlobals';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -227,6 +228,7 @@ class SceneModule extends Module {
 		this.entitiesInSelection = [];
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, () => {
+			editorGlobals.recording = false;
 			unfocus();
 
 			setChangeOrigin(this);
@@ -239,6 +241,8 @@ class SceneModule extends Module {
 		editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, () => {
 			if (!scene || !scene.level)
 				return;
+
+			editorGlobals.recording = false;
 
 			unfocus();
 
@@ -257,6 +261,8 @@ class SceneModule extends Module {
 		editorEventDispacher.listen(EditorEvent.EDITOR_PAUSE, () => {
 			if (!scene || !scene.level)
 				return;
+
+			editorGlobals.recording = false;
 
 			unfocus();
 

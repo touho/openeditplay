@@ -70,7 +70,7 @@ export default class Prototype extends PropertyOwner {
 		 }
 	]
 	 */
-	getInheritedComponentDatas(filter = null) {
+	getInheritedComponentDatas(filter: (cda: ComponentData) => boolean = null) {
 		let data = getDataFromPrototype(this, this, filter);
 		let array = Object.keys(data).map(key => data[key]);
 		let inheritedComponentData;
@@ -84,6 +84,18 @@ export default class Prototype extends PropertyOwner {
 		}
 
 		return array.sort(sortInheritedComponentDatas);
+	}
+
+	hasComponentData(componentName) {
+		let componentData = this.findChild('cda', (cda: ComponentData) => cda.name === componentName);
+		if (componentData) {
+			return true;
+		}
+		let parentPrototype = this.getParentPrototype();
+		if (parentPrototype) {
+			return parentPrototype.hasComponentData(componentName);
+		}
+		return false;
 	}
 
 	createAndAddPropertyForComponentData(inheritedComponentData, propertyName, propertyValue) {
@@ -113,8 +125,8 @@ export default class Prototype extends PropertyOwner {
 		return property;
 	}
 
-	findComponentDataByComponentId(componentId, alsoFindFromParents = false) {
-		let child = this.findChild('cda', (componentData: ComponentData) => componentData.componentId === componentId);
+	findComponentDataByComponentId(componentId: string, alsoFindFromParents = false): ComponentData {
+		let child = this.findChild('cda', (componentData: ComponentData) => componentData.componentId === componentId) as ComponentData;
 		if (child)
 			return child;
 		if (alsoFindFromParents) {
@@ -125,7 +137,7 @@ export default class Prototype extends PropertyOwner {
 		return null;
 	}
 
-	getOwnComponentDataOrInherit(componentId) {
+	getOwnComponentDataOrInherit(componentId: string) {
 		let componentData = this.findComponentDataByComponentId(componentId, false);
 		if (!componentData) {
 			let inheritedComponentData = this.findComponentDataByComponentId(componentId, true);
@@ -135,7 +147,7 @@ export default class Prototype extends PropertyOwner {
 			componentData = new ComponentData(inheritedComponentData.name, false, componentId);
 			this.addChild(componentData);
 		}
-		return componentData
+		return componentData;
 	}
 
 	findOwnProperty(componentId, propertyName) {

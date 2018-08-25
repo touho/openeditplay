@@ -14,6 +14,7 @@ import './module/objectModule';
 import './module/levelModule';
 import './module/gameModule';
 
+import './module/animationModule';
 import './module/performanceModule';
 import './module/perSecondModule';
 

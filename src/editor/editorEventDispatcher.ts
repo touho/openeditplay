@@ -14,7 +14,8 @@ export enum EditorEvent {
     EDITOR_PLAY = 'play',
     EDITOR_PAUSE = 'pause',
     EDITOR_CLONE = 'clone',
-    EDITOR_DELETE = 'delete'
+    EDITOR_DELETE = 'delete',
+    EDITOR_REC_MODE = 'rec mode' // mode just turned on. get state from editorGlobals.recording
 };
 
 // Wrapper that takes only EditorEvents

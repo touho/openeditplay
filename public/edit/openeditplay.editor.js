@@ -789,6 +789,13 @@
 	        description: 'Example',
 	        validator: PropertyType.
 	 */
+	/**
+	 *
+	 * @param propertyName - name of property. name will be converted propertyName -> Property Name in editor.
+	 * @param defaultValue - initial value of property
+	 * @param type - Prop.<type>, for example Prop.int, Prop.bool, prop.float
+	 * @param optionalParameters - "description", validator Prop.float.range(0, 1)
+	 */
 	var Prop = function Prop(propertyName, defaultValue, type) {
 	    var arguments$1 = arguments;
 
@@ -1149,6 +1156,14 @@
 	});
 	Prop.string = createDataType({
 	    name: 'string',
+	    validators: {
+	        default: function (x) { return x ? String(x) : ''; }
+	    },
+	    toJSON: function (x) { return x; },
+	    fromJSON: function (x) { return x; }
+	});
+	Prop.longString = createDataType({
+	    name: 'longString',
 	    validators: {
 	        default: function (x) { return x ? String(x) : ''; }
 	    },
@@ -2217,6 +2232,12 @@
 	    minus: 189,
 	    questionMark: 191
 	};
+	var mouseDown = false;
+	function isMouseButtonDown() {
+	    return mouseDown;
+	}
+	document.addEventListener('mousedown', function (event) { return event.button === 0 && (mouseDown = true); });
+	document.addEventListener('mouseup', function (event) { return event.button === 0 && (mouseDown = false); });
 	function listenMouseMove(element, handler) {
 	    var domHandler = function (event) {
 	        var x = event.pageX;
@@ -2298,6 +2319,7 @@
 	    EditorEvent["EDITOR_PAUSE"] = "pause";
 	    EditorEvent["EDITOR_CLONE"] = "clone";
 	    EditorEvent["EDITOR_DELETE"] = "delete";
+	    EditorEvent["EDITOR_REC_MODE"] = "rec mode"; // mode just turned on. get state from editorGlobals.recording
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -3339,6 +3361,17 @@
 	            delete inheritedComponentData.propertyHash;
 	        }
 	        return array.sort(sortInheritedComponentDatas);
+	    };
+	    Prototype.prototype.hasComponentData = function (componentName) {
+	        var componentData = this.findChild('cda', function (cda) { return cda.name === componentName; });
+	        if (componentData) {
+	            return true;
+	        }
+	        var parentPrototype = this.getParentPrototype();
+	        if (parentPrototype) {
+	            return parentPrototype.hasComponentData(componentName);
+	        }
+	        return false;
 	    };
 	    Prototype.prototype.createAndAddPropertyForComponentData = function (inheritedComponentData, propertyName, propertyValue) {
 	        var propertyType = inheritedComponentData.componentClass._propertyTypesByName[propertyName];
@@ -5184,6 +5217,30 @@
 	});
 	//# sourceMappingURL=CharacterController.js.map
 
+	// Export so that other components can have this component as parent
+	Component.register({
+	    name: 'Animation',
+	    description: 'Allows animation of children',
+	    category: 'Graphics',
+	    icon: 'fa-bars',
+	    properties: [
+	        Prop('animationData', '{}', Prop.longString, 'temporary var for development')
+	    ],
+	    prototype: {
+	        constructor: function () {
+	        },
+	        preInit: function () {
+	        },
+	        init: function () {
+	        },
+	        sleep: function () {
+	        },
+	        delete: function () {
+	        }
+	    }
+	});
+	//# sourceMappingURL=Animation.js.map
+
 	//# sourceMappingURL=index.js.map
 
 	/*
@@ -5904,6 +5961,19 @@
 	});
 	//# sourceMappingURL=editorSelection.js.map
 
+	var EditorGlobals = /** @class */ (function () {
+	    function EditorGlobals() {
+	        this.jee = 'joo';
+	        /**
+	         * If true, all entity changed are recorded as a KeyFrame. Mode will turn off when resetting the scene (stop button).
+	         */
+	        this.recording = false;
+	    }
+	    return EditorGlobals;
+	}());
+	var editorGlobals = new EditorGlobals();
+	//# sourceMappingURL=editorGlobals.js.map
+
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
 	    function TopBarModule() {
@@ -5956,6 +6026,12 @@
 	            type: 'pause',
 	            callback: function () { return editorEventDispacher.dispatch(EditorEvent.EDITOR_PAUSE); }
 	        };
+	        var recButtonData = {
+	            title: 'Recording animation keyframes...',
+	            icon: 'fa-circle',
+	            type: 'rec',
+	            callback: function () { } // It's just there to show that we are in a mode. Reset button is used to cancel it.
+	        };
 	        var playButton = new SceneControlButton(playButtonData);
 	        var stopButton = new SceneControlButton({
 	            title: 'Reset (R)',
@@ -5965,10 +6041,15 @@
 	        });
 	        var updateButtons = function () {
 	            setTimeout(function () {
-	                if (scene.playing)
-	                    { playButton.update(pauseButtonData); }
-	                else
-	                    { playButton.update(playButtonData); }
+	                if (scene.playing) {
+	                    playButton.update(pauseButtonData);
+	                }
+	                else if (editorGlobals.recording) {
+	                    playButton.update(recButtonData);
+	                }
+	                else {
+	                    playButton.update(playButtonData);
+	                }
 	                var paused = !scene.playing && !scene.isInInitialState();
 	                _this.controlButtons.classList.toggle('topSceneControlButtonsPaused', paused);
 	            }, 0);
@@ -5979,6 +6060,7 @@
 	            scene.listen(GameEvent.SCENE_RESET, updateButtons);
 	            scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 	            scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
+	            editorEventDispacher.listen(EditorEvent.EDITOR_REC_MODE, updateButtons);
 	        });
 	        mount(this.controlButtons, playButton);
 	        mount(this.controlButtons, stopButton);
@@ -6095,7 +6177,7 @@
 	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelAndScene() {
-	    return scene && scene.isInInitialState() && selectedLevel;
+	    return scene && scene.isInInitialState() && selectedLevel && !editorGlobals.recording;
 	}
 	function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
 	    var component = entity.getComponents(componentName)
@@ -7258,6 +7340,7 @@
 	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
 	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, function () {
+	            editorGlobals.recording = false;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
@@ -7267,6 +7350,7 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, function () {
 	            if (!scene || !scene.level)
 	                { return; }
+	            editorGlobals.recording = false;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.clearState();
@@ -7280,6 +7364,7 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_PAUSE, function () {
 	            if (!scene || !scene.level)
 	                { return; }
+	            editorGlobals.recording = false;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.clearState();
@@ -8950,7 +9035,7 @@
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
 	var editors = {};
 	var MAX_STRING_LENGTH = 32;
-	var MAX_LONG_STRING_LENGTH = 200;
+	var MAX_LONG_STRING_LENGTH = 65500; // in database, value is stored as TEXT.
 	editors.default = editors.string = function (container, oninput, onchange, options) {
 	    var input = el('input', {
 	        placeholder: options.placeholder || '',
@@ -9937,6 +10022,349 @@
 	}(Module));
 	Module.register(GameModule, 'right');
 	//# sourceMappingURL=gameModule.js.map
+
+	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
+	var animation;
+	(function (animation) {
+	    var Animation = /** @class */ (function () {
+	        function Animation(name, tracks) {
+	            if (tracks === void 0) { tracks = []; }
+	            this.name = name;
+	            this.tracks = tracks;
+	        }
+	        /**
+	         *
+	         * @param entityPrototypeId
+	         * @param componendId
+	         * @param value jsoned property value
+	         */
+	        Animation.prototype.saveValue = function (entityPrototypeId, componendId, propertyName, frameNumber, value) {
+	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
+	            if (!track) {
+	                track = new Track(entityPrototypeId, componendId, propertyName);
+	                this.tracks.push(track);
+	            }
+	            track.saveValue(frameNumber, value);
+	        };
+	        Animation.create = function (json) {
+	            var tracks = (json.tracks || []).map(Track.create);
+	            return new Animation(json.name, tracks);
+	        };
+	        return Animation;
+	    }());
+	    animation.Animation = Animation;
+	    var Track = /** @class */ (function () {
+	        function Track(eprId, cId, prpName, keyFrames) {
+	            if (keyFrames === void 0) { keyFrames = {}; }
+	            this.eprId = eprId;
+	            this.cId = cId;
+	            this.prpName = prpName;
+	            this.keyFrames = keyFrames;
+	        }
+	        Track.prototype.saveValue = function (frameNumber, value) {
+	            this.keyFrames[frameNumber] = value;
+	        };
+	        Track.create = function (json) {
+	            var keyFrames = json.keyFrames || {};
+	            return new Track(json.eprId, json.cId, json.prpName, keyFrames);
+	        };
+	        return Track;
+	    }());
+	    animation.Track = Track;
+	})(animation || (animation = {}));
+	//# sourceMappingURL=animation.js.map
+
+	var AnimationModule = /** @class */ (function (_super) {
+	    __extends(AnimationModule, _super);
+	    function AnimationModule() {
+	        var _this = _super.call(this) || this;
+	        _this.animations = [];
+	        _this.animationComponentId = null;
+	        _this.editedEntityPrototype = null;
+	        _this.animationData = {};
+	        _this.selectedFrame = null;
+	        _this.selectedAnimation = null;
+	        _this.addElements(el('div.animationModule', el('div', el('button.button', 'Add animation', { onclick: function () { return _this.addAnimation(); } }), _this.animationSelector = new AnimationSelector(), el('button.button', 'Add keyframe', { onclick: function () { return _this.addKeyframe(); } }), el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
+	            onclick: function () {
+	                editorGlobals.recording = true;
+	                editorEventDispacher.dispatch(EditorEvent.EDITOR_REC_MODE);
+	            }
+	        })), _this.animationTimelineView = new AnimationTimelineView()));
+	        _this.name = 'Animation';
+	        _this.id = 'animation';
+	        redomListen(_this, 'frameSelected', function (frameNumber) {
+	            _this.selectedFrame = frameNumber;
+	        });
+	        redomListen(_this, 'animationSelected', function (animation$$1) {
+	            _this.selectedAnimation = animation$$1;
+	            _this.animationTimelineView.update(_this.selectedAnimation);
+	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	            if (!editorGlobals.recording)
+	                { return; }
+	            if (change.reference.threeLetterType !== 'prp')
+	                { return; }
+	            if (change.type === changeType.setPropertyValue) {
+	                var property = change.reference;
+	                var component = property.getParent();
+	                if (!component || component.threeLetterType !== 'com')
+	                    { return; }
+	                var entity = component.getParent();
+	                if (!entity || entity.threeLetterType !== 'ent')
+	                    { return; }
+	                var entityPrototype = entity.prototype;
+	                if (!entityPrototype)
+	                    { return; }
+	                var isChildOfEdited = !!entityPrototype.findParent('epr', function (epr) { return epr === _this.editedEntityPrototype; });
+	                if (!isChildOfEdited)
+	                    { return; }
+	                _this.saveValue(entityPrototype, component._componentId, property);
+	            }
+	        });
+	        return _this;
+	    }
+	    AnimationModule.prototype.update = function () {
+	        if (editorGlobals.recording && this.editedEntityPrototype && this.editedEntityPrototype._alive) {
+	            return true;
+	        }
+	        if (editorSelection.type === 'epr' && editorSelection.items.length === 1) {
+	            var entityPrototype = editorSelection.items[0];
+	            if (entityPrototype.hasComponentData('Animation') && entityPrototype.previouslyCreatedEntity) {
+	                var inheritedComponentDatas = entityPrototype.getInheritedComponentDatas(function (cda) { return cda.name === 'Animation'; });
+	                if (inheritedComponentDatas.length === 1) {
+	                    var inheritedComponentData = inheritedComponentDatas[0];
+	                    this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+	                    return true;
+	                }
+	                return false;
+	            }
+	        }
+	        /*
+	        How about Prefab?
+
+	        Editing must be done in entities.
+	        How do I make sure that entityPrototypes haven't overridden stuff?
+	        Sounds a little troublesome to edit prefab using entities.
+	        Would be cool if this could be done someday.
+
+	        else if (editorSelection.type === 'pfa' && editorSelection.items.length === 1) {
+	            let prefab = editorSelection.items[0] as Prefab;
+	            let animationComponentData = entityPrototype.findChild('cda', (cda: ComponentData) => cda.name === 'Animation') as ComponentData;
+	        } */
+	        return false;
+	    };
+	    AnimationModule.prototype.updateRaw = function (entity, inheritedComponentData) {
+	        this.editedEntityPrototype = inheritedComponentData.generatedForPrototype;
+	        this.animationComponentId = inheritedComponentData.componentId;
+	        var animationDataString = inheritedComponentData.properties.find(function (prop) { return prop.name === 'animationData'; }).value;
+	        try {
+	            this.animationData = JSON.parse(animationDataString);
+	        }
+	        catch (e) {
+	            this.animationData = {};
+	        }
+	        var animationsJSON = this.animationData.animations || [];
+	        this.animations = animationsJSON.map(function (a) { return animation.Animation.create(a); });
+	        // We are sneaky and store Animation objects in jsonable object.
+	        this.animationData.animations = this.animations;
+	        this.animationSelector.update(this.animations);
+	        this.selectedAnimation = this.animationSelector.getSelectedAnimation();
+	        this.animationTimelineView.update(this.selectedAnimation);
+	        this.selectedFrame = this.selectedFrame || 1;
+	        this.animationTimelineView.selectFrame(this.selectedFrame);
+	    };
+	    AnimationModule.prototype.addAnimation = function () {
+	        var name = prompt('name', 'idle');
+	        if (name) {
+	            this.animations.push(new animation.Animation(name));
+	            this.updateAnimationData();
+	        }
+	    };
+	    AnimationModule.prototype.addKeyframe = function () {
+	        /*
+	        this.selectedAnimation.keyFrames.push(new animation.KeyFrame(this.selectedFrame));
+	        this.updateAnimationData();
+	        */
+	    };
+	    AnimationModule.prototype.updateAnimationData = function () {
+	        var componentData = this.editedEntityPrototype.getOwnComponentDataOrInherit(this.animationComponentId);
+	        componentData.setValue('animationData', JSON.stringify(this.animationData));
+	        this.animationTimelineView.update(this.selectedAnimation);
+	    };
+	    AnimationModule.prototype.saveValue = function (entityPrototype, componendId, property) {
+	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.selectedFrame, property.propertyType.type.toJSON(property._value));
+	        this.updateAnimationData();
+	    };
+	    AnimationModule.prototype.free = function () {
+	    };
+	    return AnimationModule;
+	}(Module));
+	Module.register(AnimationModule, 'bottom');
+	var AnimationSelector = /** @class */ (function () {
+	    function AnimationSelector() {
+	        var _this = this;
+	        this.el = el('select.animationSelector', {
+	            onchange: function () { return redomDispatch(_this, 'animationSelected', _this.getSelectedAnimation()); }
+	        });
+	        this.list = list(this.el, AnimationSelectorOption, (function (key$$1) { return key$$1; }));
+	    }
+	    AnimationSelector.prototype.update = function (animations) {
+	        this.animations = animations;
+	        this.list.update(animations.map(function (anim) { return anim.name; }));
+	    };
+	    AnimationSelector.prototype.getSelectedAnimation = function () {
+	        var _this = this;
+	        return this.animations.find(function (anim) { return anim.name === _this.el.value; });
+	    };
+	    return AnimationSelector;
+	}());
+	var AnimationSelectorOption = /** @class */ (function () {
+	    function AnimationSelectorOption() {
+	        this.el = el('option');
+	    }
+	    AnimationSelectorOption.prototype.update = function (name) {
+	        this.el.setAttribute('value', name);
+	        this.el.innerText = name;
+	    };
+	    return AnimationSelectorOption;
+	}());
+	var AnimationTimelineView = /** @class */ (function () {
+	    function AnimationTimelineView() {
+	        this.el = el('table.animationTimeline', el('thead', this.frameNumbers = list('tr', FrameNumberHeader, 'frame')), this.trackList = list('tbody', TrackView));
+	    }
+	    AnimationTimelineView.prototype.update = function (animation$$1) {
+	        if (!animation$$1) {
+	            return;
+	        }
+	        var frameCount = 24;
+	        var frameNumbers = [];
+	        var cellWidth = (80 / frameCount).toFixed(2) + '%';
+	        for (var frame = 0; frame <= frameCount; frame++) {
+	            frameNumbers.push({
+	                frame: frame,
+	                cellWidth: frame === 0 ? 'auto' : cellWidth
+	            });
+	        }
+	        this.frameNumbers.update(frameNumbers);
+	        var trackUpdateData = animation$$1.tracks.map(function (track) {
+	            return {
+	                name: track.prpName,
+	                keyFrames: track.keyFrames,
+	                frameCount: frameCount
+	            };
+	        });
+	        this.trackList.update(trackUpdateData);
+	    };
+	    AnimationTimelineView.prototype.selectFrame = function (frame) {
+	        var views = this.frameNumbers.views;
+	        for (var _i = 0, views_1 = views; _i < views_1.length; _i++) {
+	            var view = views_1[_i];
+	            if (view.frameNumber === frame) {
+	                view.select();
+	                break;
+	            }
+	        }
+	    };
+	    return AnimationTimelineView;
+	}());
+	var FrameNumberHeader = /** @class */ (function () {
+	    function FrameNumberHeader() {
+	        var _this = this;
+	        this.el = el('th.frameHeader', {
+	            onmousedown: function () { return _this.select(); },
+	            onmouseover: function () { return isMouseButtonDown() && _this.select(); }
+	        });
+	    }
+	    FrameNumberHeader.prototype.update = function (data) {
+	        this.el.style.width = data.cellWidth;
+	        this.frameNumber = data.frame;
+	        this.el.textContent = data.frame || '';
+	    };
+	    FrameNumberHeader.prototype.select = function () {
+	        var selectedFrameElement = this.el.parentElement.querySelector('.selected');
+	        if (selectedFrameElement) {
+	            selectedFrameElement.classList.remove('selected');
+	        }
+	        this.el.classList.add('selected');
+	        redomDispatch(this, 'frameSelected', this.frameNumber);
+	    };
+	    return FrameNumberHeader;
+	}());
+	var TrackView = /** @class */ (function () {
+	    function TrackView() {
+	        this.el = el('tr.track');
+	        this.list = list(this.el, TrackFrameView);
+	    }
+	    TrackView.prototype.update = function (trackData) {
+	        var trackFrameData = [];
+	        trackFrameData.push({
+	            frame: 0,
+	            name: trackData.name,
+	        });
+	        var keyFrames = trackData.keyFrames;
+	        for (var frame = 1; frame <= trackData.frameCount; frame++) {
+	            var keyFrame = keyFrames[frame];
+	            trackFrameData.push({
+	                frame: frame,
+	                keyFrame: keyFrame
+	            });
+	        }
+	        this.list.update(trackFrameData);
+	    };
+	    return TrackView;
+	}());
+	var TrackFrameView = /** @class */ (function () {
+	    function TrackFrameView() {
+	        this.el = el('td.trackFrame');
+	    }
+	    TrackFrameView.prototype.update = function (data) {
+	        if (data.frame === 0) {
+	            this.el.textContent = data.name;
+	        }
+	        else {
+	            this.el.innerHTML = '';
+	            if (data.keyFrame) {
+	                mount(this, el('i.fa.fa-star'));
+	            }
+	        }
+	    };
+	    return TrackFrameView;
+	}());
+	/*
+	class AnimationFrameView implements RedomElement {
+	    el: HTMLElement;
+	    frameNumber: number;
+	    frameNumberText: Text;
+	    keyFrameContainer: HTMLElement;
+	    constructor(public parent?: AnimationTimelineView) {
+	        this.el = el('div.animationFrame',
+	            this.frameNumberText = text(''),
+	            this.keyFrameContainer = el('div.keyFrameContainer'),
+	            {
+	                onmousedown: () => this.select(),
+	                onmouseover: () => isMouseButtonDown() && this.select()
+	            }
+	        );
+	    }
+	    select() {
+	        let selectedFrameElement = this.el.parentElement.querySelector('.selected');
+	        if (selectedFrameElement) {
+	            selectedFrameElement.classList.remove('selected');
+	        }
+	        this.el.classList.add('selected');
+	        redomDispatch(this, 'frameSelected', this.frameNumber);
+	    }
+	    update(data) {
+	        this.frameNumber = data.frame;
+	        this.frameNumberText.textContent = data.frame;
+	        if (data.keyFrame) {
+	            this.keyFrameContainer.textContent = 'KEY';
+	        } else {
+	            this.keyFrameContainer.textContent = '';
+	        }
+	    }
+	}
+	*/
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
