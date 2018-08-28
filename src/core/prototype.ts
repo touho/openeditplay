@@ -177,10 +177,10 @@ export default class Prototype extends PropertyOwner {
 		// let childEntityPrototypes = this.getChildren('epr');
 		// childEntityPrototypes.forEach(epr => epr.createEntity(entity));
 
+		this.previouslyCreatedEntity = entity;
+
 		// Components have only been preinited. Lets call the init now.
 		Entity.initComponents(components);
-
-		this.previouslyCreatedEntity = entity;
 
 		if (!_skipNewEntityEvent)
 			globalEventDispatcher.dispatch('new entity created', entity);

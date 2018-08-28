@@ -14,9 +14,9 @@ export class Color {
 			this.g = r.g;
 			this.b = r.b;
 		} else if (typeof r === 'number') {
-			this.r = r;
-			this.g = g;
-			this.b = b;
+			this.r = Math.round(r);
+			this.g = Math.round(g);
+			this.b = Math.round(b);
 		} else if (typeof r === 'string') {
 			let rgb = hexToRgb(r);
 			this.r = rgb.r;
@@ -34,6 +34,35 @@ export class Color {
 	}
 	toString() {
 		return `[${this.r},${this.g},${this.b}]`;
+	}
+	/**
+	 *
+	 * @param color Color to interpolate to
+	 * @param t 0 .. 1
+	 */
+	interpolateLinear(color: Color, t: number) {
+		return new Color(
+			Math.round(this.r + (color.r - this.r) * t),
+			Math.round(this.g + (color.g - this.g) * t),
+			Math.round(this.b + (color.b - this.b) * t)
+		);
+	}
+	interpolateCubic(color: Color, control1: Color, control2: Color, t: number) {
+		let t2 = 1 - t;
+		return new Color(
+			Math.round(t2 ** 3 * this.r +
+				3 * t2 * t2 * t * control1.r +
+				3 * t2 * t * t * control2.r +
+				t ** 3 * color.r),
+			Math.round(t2 ** 3 * this.g +
+				3 * t2 * t2 * t * control1.g +
+				3 * t2 * t * t * control2.g +
+				t ** 3 * color.g),
+			Math.round(t2 ** 3 * this.b +
+				3 * t2 * t2 * t * control1.b +
+				3 * t2 * t * t * control2.b +
+				t ** 3 * color.b)
+		);
 	}
 }
 

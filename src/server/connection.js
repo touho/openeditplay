@@ -5,6 +5,8 @@ const createNewGame = require('./game/createNewGame');
 
 let connection = module.exports;
 
+const PRINT_ALL_CHANGES = true;
+
 let socketServer;
 connection.init = function (httpServer) {
 	socketServer = require('socket.io')(httpServer);
@@ -86,6 +88,13 @@ class Connection {
 
 		try {
 			for (let change of changes) {
+				if (PRINT_ALL_CHANGES) {
+					let logObj = Object.assign({}, change);
+					if (logObj.v && JSON.stringify(logObj.v).length > 60) {
+						logObj.v = JSON.stringify(logObj.v).substring(0, 60);
+					}
+					console.log(JSON.stringify(logObj));
+				}
 				this.changeCount++;
 				try {
 					await dbSync.writeChangeToDatabase(change, this.gameId, this);

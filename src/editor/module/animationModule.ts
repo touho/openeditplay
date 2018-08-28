@@ -3,7 +3,7 @@ import Module from './module';
 import * as performance from '../../util/performance';
 import { scene } from '../../core/scene';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { editorSelection } from '../editorSelection';
+import { editorSelection, unfocus, selectInEditor } from '../editorSelection';
 import EntityPrototype from '../../core/entityPrototype';
 import ComponentData from '../../core/componentData';
 import Prefab from '../../core/prefab';
@@ -11,9 +11,9 @@ import debug from '../../player/debug';
 import Property from '../../core/property';
 import { animation } from '../../features/animation/animation';
 import { redomDispatch, redomListen } from '../../util/redomEvents';
-import { isMouseButtonDown } from '../../util/input';
+import { isMouseButtonDown, listenKeyDown, key, keyPressed } from '../../util/input';
 import { editorGlobals } from '../editorGlobals';
-import { Change, changeType } from '../../core/change';
+import { Change, changeType, setChangeOrigin } from '../../core/change';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
 
@@ -21,12 +21,14 @@ class AnimationModule extends Module {
 	animations: animation.Animation[] = [];
 	animationComponentId: string = null;
 	editedEntityPrototype: EntityPrototype = null;
-	animationData: any = {};
+	animationData: animation.AnimationData = null;
 	animationSelector: AnimationSelector;
 	animationTimelineView: AnimationTimelineView;
 
 	selectedFrame: number = null;
 	selectedAnimation: animation.Animation = null;
+
+	focusedKeyFrameViews: TrackFrameView[] = [];
 
 	constructor() {
 		super();
@@ -36,9 +38,11 @@ class AnimationModule extends Module {
 				el('div',
 					el('button.button', 'Add animation', { onclick: () => this.addAnimation() }),
 					this.animationSelector = new AnimationSelector(),
-					el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
+					// el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
 					el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
 						onclick: () => {
+							// Selecting nothing will force user to select entity instead of entity prototype when editing animations.
+							selectInEditor([], this);
 							editorGlobals.recording = true;
 							editorEventDispacher.dispatch(EditorEvent.EDITOR_REC_MODE);
 						}
@@ -53,6 +57,13 @@ class AnimationModule extends Module {
 
 		redomListen(this, 'frameSelected', frameNumber => {
 			this.selectedFrame = frameNumber;
+			// TODO: draw entity in new pose.
+			let entity = this.editedEntityPrototype.previouslyCreatedEntity;
+			if (entity) {
+				setChangeOrigin(this);
+				let animationComponent = entity.getComponents('Animation').find(comp => comp._componentId === this.animationComponentId);
+				animationComponent.animator.currentAnimation.setFrame(frameNumber);
+			}
 		});
 		redomListen(this, 'animationSelected', animation => {
 			this.selectedAnimation = animation;
@@ -63,6 +74,10 @@ class AnimationModule extends Module {
 			if (!editorGlobals.recording)
 				return;
 
+			if (change.origin === this) {
+				return;
+			}
+
 			if (change.reference.threeLetterType !== 'prp')
 				return;
 
@@ -70,7 +85,7 @@ class AnimationModule extends Module {
 				let property = change.reference as Property;
 
 				let component = property.getParent() as Component;
-				if (!component || component.threeLetterType !== 'com')
+				if (!component || component.threeLetterType !== 'com' || component.componentClass.componentName === 'Animation')
 					return;
 
 				let entity = component.getParent() as Entity;
@@ -85,7 +100,74 @@ class AnimationModule extends Module {
 				if (!isChildOfEdited)
 					return;
 
+				setChangeOrigin(this);
 				this.saveValue(entityPrototype, component._componentId, property);
+			}
+		});
+
+		listenKeyDown(keyCode => {
+			if (keyCode === key.backspace) {
+				if (this._selected && this._enabled && !editorSelection.focused) {
+					this.focusedKeyFrameViews.forEach(view => {
+						delete view.trackKeyFrames[view.frame]
+					});
+					unfocus();
+					this.updateAnimationData();
+				}
+			}
+		});
+		redomListen(this, 'selectKeyFrameView', keyFrameView => {
+			if (editorSelection.focused) {
+				// If something else is focused, unfocus. But we don't want to unfocus TrackFrameViews which are focused more hackily.
+				unfocus();
+			}
+
+			let keyFrameList: TrackFrameView[] = Array.isArray(keyFrameView) ? keyFrameView : [keyFrameView];
+			keyFrameList = keyFrameList.filter(frameView => frameView.isKeyFrame());
+			let allAreSelected = !keyFrameList.find(frameView => !this.focusedKeyFrameViews.includes(frameView));
+
+			if (keyPressed(key.shift)) {
+				if (keyFrameList.length > 0) {
+					if (allAreSelected) {
+						for (let frameView of keyFrameList) {
+							let indexOfFrame = this.focusedKeyFrameViews.indexOf(frameView);
+							if (indexOfFrame >= 0) {
+								this.focusedKeyFrameViews.splice(indexOfFrame, 1);
+							}
+							frameView.el.classList.remove('selected');
+						}
+					} else {
+						for (let frameView of keyFrameList) {
+							if (!this.focusedKeyFrameViews.includes(frameView)) {
+								this.focusedKeyFrameViews.push(frameView);
+							}
+							frameView.el.classList.add('selected');
+						}
+					}
+				}
+			} else {
+				// unfocus();
+
+				this.animationTimelineView.el.querySelectorAll('td.trackFrame.selected').forEach(frameView => {
+					frameView.classList.remove('selected');
+				});
+
+				this.focusedKeyFrameViews.length = 0;
+
+				if (keyFrameList.length > 0) {
+					this.focusedKeyFrameViews.push(...keyFrameList);
+					for (let frameView of keyFrameList) {
+						frameView.el.classList.add('selected');
+					}
+				}
+			}
+		});
+		editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, () => {
+			if (this.focusedKeyFrameViews.length > 0) {
+				this.animationTimelineView.el.querySelectorAll('td.trackFrame.selected').forEach(frameView => {
+					frameView.classList.remove('selected');
+				})
+				this.focusedKeyFrameViews.length = 0;
 			}
 		});
 	}
@@ -99,8 +181,10 @@ class AnimationModule extends Module {
 			if (entityPrototype.hasComponentData('Animation') && entityPrototype.previouslyCreatedEntity) {
 				let inheritedComponentDatas = entityPrototype.getInheritedComponentDatas((cda: ComponentData) => cda.name === 'Animation');
 				if (inheritedComponentDatas.length === 1) {
-					let inheritedComponentData = inheritedComponentDatas[0];
-					this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+					if (this.editedEntityPrototype !== entityPrototype) {
+						let inheritedComponentData = inheritedComponentDatas[0];
+						this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+					}
 					return true;
 				}
 				return false;
@@ -127,18 +211,11 @@ class AnimationModule extends Module {
 		this.animationComponentId = inheritedComponentData.componentId;
 		let animationDataString = inheritedComponentData.properties.find((prop: Property) => prop.name === 'animationData').value;
 
-		try {
-			this.animationData = JSON.parse(animationDataString);
-		} catch (e) {
-			this.animationData = {};
-		}
-
-		let animationsJSON = this.animationData.animations || [];
-		this.animations = animationsJSON.map(a => animation.Animation.create(a));
+		this.animationData = animation.parseAnimationData(animationDataString);
 
 		// We are sneaky and store Animation objects in jsonable object.
-		this.animationData.animations = this.animations;
-
+		this.animationData.animations = this.animationData.animations.map(animation.Animation.create);
+		this.animations = this.animationData.animations as animation.Animation[];
 
 		this.animationSelector.update(this.animations);
 		this.selectedAnimation = this.animationSelector.getSelectedAnimation();
@@ -150,22 +227,27 @@ class AnimationModule extends Module {
 	addAnimation() {
 		let name = prompt('name', 'idle');
 		if (name) {
+			setChangeOrigin(this);
 			this.animations.push(new animation.Animation(name));
 			this.updateAnimationData();
 		}
 	}
 
-	addKeyframe() {
-		/*
-		this.selectedAnimation.keyFrames.push(new animation.KeyFrame(this.selectedFrame));
-		this.updateAnimationData();
-		*/
-	}
-
 	updateAnimationData() {
 		let componentData = this.editedEntityPrototype.getOwnComponentDataOrInherit(this.animationComponentId);
+
+		// Delete empty tracks:
+		for (let anim of this.animations) {
+			anim.deleteEmptyTracks();
+		}
+
 		componentData.setValue('animationData', JSON.stringify(this.animationData));
 		this.animationTimelineView.update(this.selectedAnimation);
+
+		// Reload entity Animator:
+		this.editedEntityPrototype.previouslyCreatedEntity.getComponents('Animation').forEach(comp => {
+			comp.animationData = componentData.getValue('animationData');
+		});
 	}
 
 	saveValue(entityPrototype: EntityPrototype, componendId: string, property: Property) {
@@ -218,9 +300,23 @@ class AnimationTimelineView implements RedomElement {
 			),
 			this.trackList = list('tbody', TrackView)
 		);
+
+		redomListen(this, 'selectAllOnFrame', frame => {
+			let views = [];
+			this.trackList.views.forEach((trackView: TrackView) => {
+				trackView.list.views.forEach((frameView: TrackFrameView) => {
+					if (frameView.frame === frame) {
+						views.push(frameView);
+					}
+				})
+			});
+			redomDispatch(this, 'selectKeyFrameView', views);
+		});
 	}
 	update(animation: animation.Animation) {
 		if (!animation) {
+			this.frameNumbers.update([]);
+			this.trackList.update([]);
 			return;
 		}
 
@@ -262,7 +358,8 @@ class FrameNumberHeader implements RedomElement {
 	constructor() {
 		this.el = el('th.frameHeader', {
 			onmousedown: () => this.select(),
-			onmouseover: () => isMouseButtonDown() && this.select()
+			onmouseover: () => isMouseButtonDown() && this.select(),
+			ondblclick: () => redomDispatch(this, 'selectAllOnFrame', this.frameNumber)
 		});
 	}
 	update(data) {
@@ -271,6 +368,8 @@ class FrameNumberHeader implements RedomElement {
 		this.el.textContent = data.frame || '';
 	}
 	select() {
+		if (this.frameNumber === 0) return;
+
 		let selectedFrameElement = this.el.parentElement.querySelector('.selected');
 		if (selectedFrameElement) {
 			selectedFrameElement.classList.remove('selected');
@@ -285,18 +384,25 @@ class TrackView implements RedomElement {
 	constructor() {
 		this.el = el('tr.track');
 		this.list = list(this.el, TrackFrameView)
+
+		redomListen(this, 'selectKeyFramesInTrack', () => {
+			let keyFrameViews = this.list.views.filter((view: TrackFrameView) => view.isKeyFrame());
+			redomDispatch(this, 'selectKeyFrameView', keyFrameViews);
+		});
 	}
 	update(trackData) {
+		let keyFrames = trackData.keyFrames;
 		let trackFrameData = [];
 		trackFrameData.push({
 			frame: 0,
 			name: trackData.name,
+			keyFrames
 		});
-		let keyFrames = trackData.keyFrames;
 		for (let frame = 1; frame <= trackData.frameCount; frame++) {
 			let keyFrame = keyFrames[frame];
 			trackFrameData.push({
 				frame,
+				keyFrames,
 				keyFrame
 			});
 
@@ -307,15 +413,36 @@ class TrackView implements RedomElement {
 }
 class TrackFrameView implements RedomElement {
 	el: HTMLElement;
+	icon: HTMLElement;
+	trackKeyFrames: { [frame: number]: any };
+	frame: number;
 	constructor() {
-		this.el = el('td.trackFrame');
+		this.el = el('td.trackFrame', {
+			onclick: () => {
+				if (this.frame === 0) {
+					return;
+				}
+				redomDispatch(this, 'selectKeyFrameView', this);
+			},
+			ondblclick: () => {
+				if (this.frame === 0) {
+					redomDispatch(this, 'selectKeyFramesInTrack');
+				}
+			}
+		});
+	}
+	isKeyFrame() {
+		return this.trackKeyFrames[this.frame] != null;
 	}
 	update(data) {
-		if (data.frame === 0) {
+		this.frame = data.frame;
+		this.trackKeyFrames = data.keyFrames;
+
+		this.el.innerHTML = '';
+		if (this.frame === 0) {
 			this.el.textContent = data.name;
 		} else {
-			this.el.innerHTML = '';
-			if (data.keyFrame) {
+			if (this.isKeyFrame()) {
 				mount(this, el('i.fa.fa-star'));
 			}
 		}

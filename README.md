@@ -30,6 +30,7 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 
 ### TODO ###
 - Animation component
+- BUG: When creating the first animation, duplicate property insert appears.
 - If scaled entity has child entity that has particles, particles should be scaled.
 - Object instance value/component saving
 - Multiedit of objects

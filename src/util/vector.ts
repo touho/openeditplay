@@ -82,6 +82,9 @@ export default class Vector {
 			dy = this.y - vec.y;
 		return dx * dx + dy * dy;
 	}
+	angleTo(vec: Vector) {
+		return Math.acos(this.dot(vec) / (this.length() * vec.length()));
+	}
 	normalize() {
 		return this.setLength(1);
 	}
@@ -125,6 +128,21 @@ export default class Vector {
 	}
 	toArray(): Array<number> {
 		return [this.x, this.y];
+	}
+	interpolateLinear(other: Vector, t: number): Vector {
+		return new Vector(this.x + (other.x - this.x) * t, this.y + (other.y - this.y) * t);
+	}
+	interpolateCubic(other: Vector, control1: Vector, control2: Vector, t: number): Vector {
+		let t2 = 1 - t;
+		return new Vector(
+			t2 ** 3 * this.x +
+			3 * t2 * t2 * t * control1.x +
+			3 * t2 * t * t * control2.x +
+			t ** 3 * other.x,
+			t2 ** 3 * this.y +
+			3 * t2 * t2 * t * control1.y +
+			3 * t2 * t * t * control2.y +
+			t ** 3 * other.y);
 	}
 
 	static fromObject(obj: { x: number, y: number }) {

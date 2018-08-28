@@ -612,6 +612,10 @@ div.animationModule td.trackFrame:first-child {
   padding-left: 10px;
   width: auto !important;
 }
+div.animationModule td.trackFrame.selected {
+  color: yellow;
+  text-shadow: 0 0 12px white;
+}
 .jstree-default .jstree-search {
   color: #ccc8c6;
   left: 10px;

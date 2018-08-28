@@ -33,4 +33,8 @@ div.animationModule {
         padding-left: 10px;
         width: auto !important;
     }
+    td.trackFrame.selected {
+        color: yellow;
+        text-shadow: 0 0 12px white;
+    }
 }

@@ -1,5 +1,40 @@
 // Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 export namespace animation {
+
+    export type AnimationData = {
+        animations: AnimationDataAnimation[];
+    };
+    export type AnimationDataTrack = {
+        eprId: string;
+        cId: string;
+        prpName: string;
+        keyFrames: { [frame: number]: any }
+    };
+    export type AnimationDataAnimation = {
+        name: string;
+        tracks: AnimationDataTrack[];
+    };
+
+    // export function parseAnimationData
+
+    /**
+     * @param animationDataString data from Animation component
+     */
+    export function parseAnimationData(animationDataString) {
+        let animationData;
+        try {
+			animationData = JSON.parse(animationDataString);
+		} catch (e) {
+			animationData = {};
+        }
+
+        animationData.animations = animationData.animations || [];
+        return animationData as AnimationData;
+    }
+
+    /**
+     * Helper class for editor. Just JSON.stringify this to get valid animationData animation out.
+     */
     export class Animation {
         constructor(public name: string, public tracks: Track[] = []) {
 
@@ -18,6 +53,14 @@ export namespace animation {
                 this.tracks.push(track);
             }
             track.saveValue(frameNumber, value);
+        }
+
+        deleteEmptyTracks() {
+            for (let i = this.tracks.length - 1; i >= 0; i--) {
+                if (Object.keys(this.tracks[i].keyFrames).length === 0) {
+                    this.tracks.splice(i, 1);
+                }
+            }
         }
 
         static create(json) {

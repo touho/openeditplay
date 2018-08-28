@@ -175,6 +175,9 @@
 	    deleteAllChildren: 'c',
 	};
 	var origin;
+	function resetOrigin() {
+	    origin = null;
+	}
 	function getChangeOrigin() {
 	    return origin;
 	}
@@ -184,6 +187,7 @@
 	    // @ifndef OPTIMIZE
 	    if (_origin !== origin) {
 	        origin = _origin;
+	        { setTimeout(resetOrigin, 0); }
 	    }
 	    // @endif
 	}
@@ -967,6 +971,9 @@
 	        var dx = this.x - vec.x, dy = this.y - vec.y;
 	        return dx * dx + dy * dy;
 	    };
+	    Vector.prototype.angleTo = function (vec) {
+	        return Math.acos(this.dot(vec) / (this.length() * vec.length()));
+	    };
 	    Vector.prototype.normalize = function () {
 	        return this.setLength(1);
 	    };
@@ -1010,6 +1017,19 @@
 	    Vector.prototype.toArray = function () {
 	        return [this.x, this.y];
 	    };
+	    Vector.prototype.interpolateLinear = function (other, t) {
+	        return new Vector(this.x + (other.x - this.x) * t, this.y + (other.y - this.y) * t);
+	    };
+	    Vector.prototype.interpolateCubic = function (other, control1, control2, t) {
+	        var t2 = 1 - t;
+	        return new Vector(Math.pow(t2, 3) * this.x +
+	            3 * t2 * t2 * t * control1.x +
+	            3 * t2 * t * t * control2.x +
+	            Math.pow(t, 3) * other.x, Math.pow(t2, 3) * this.y +
+	            3 * t2 * t2 * t * control1.y +
+	            3 * t2 * t * t * control2.y +
+	            Math.pow(t, 3) * other.y);
+	    };
 	    Vector.fromObject = function (obj) {
 	        return new Vector(obj.x, obj.y);
 	    };
@@ -1028,9 +1048,9 @@
 	            this.b = r.b;
 	        }
 	        else if (typeof r === 'number') {
-	            this.r = r;
-	            this.g = g;
-	            this.b = b;
+	            this.r = Math.round(r);
+	            this.g = Math.round(g);
+	            this.b = Math.round(b);
 	        }
 	        else if (typeof r === 'string') {
 	            var rgb = hexToRgb(r);
@@ -1050,6 +1070,27 @@
 	    };
 	    Color.prototype.toString = function () {
 	        return "[" + this.r + "," + this.g + "," + this.b + "]";
+	    };
+	    /**
+	     *
+	     * @param color Color to interpolate to
+	     * @param t 0 .. 1
+	     */
+	    Color.prototype.interpolateLinear = function (color, t) {
+	        return new Color(Math.round(this.r + (color.r - this.r) * t), Math.round(this.g + (color.g - this.g) * t), Math.round(this.b + (color.b - this.b) * t));
+	    };
+	    Color.prototype.interpolateCubic = function (color, control1, control2, t) {
+	        var t2 = 1 - t;
+	        return new Color(Math.round(Math.pow(t2, 3) * this.r +
+	            3 * t2 * t2 * t * control1.r +
+	            3 * t2 * t * t * control2.r +
+	            Math.pow(t, 3) * color.r), Math.round(Math.pow(t2, 3) * this.g +
+	            3 * t2 * t2 * t * control1.g +
+	            3 * t2 * t * t * control2.g +
+	            Math.pow(t, 3) * color.g), Math.round(Math.pow(t2, 3) * this.b +
+	            3 * t2 * t2 * t * control1.b +
+	            3 * t2 * t * t * control2.b +
+	            Math.pow(t, 3) * color.b));
 	    };
 	    return Color;
 	}());
@@ -2358,6 +2399,8 @@
 	function eventHappened(name, count) {
 	    if (count === void 0) { count = 1; }
 	    // @ifndef OPTIMIZE
+	    if (['Event performance snapshot', 'Event perSecond snapshot'].includes(name))
+	        { return; }
 	    currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
 	    // @endif
 	}
@@ -3441,9 +3484,9 @@
 	        this.forEachChild('epr', function (epr) { return epr.createEntity(entity, true); });
 	        // let childEntityPrototypes = this.getChildren('epr');
 	        // childEntityPrototypes.forEach(epr => epr.createEntity(entity));
+	        this.previouslyCreatedEntity = entity;
 	        // Components have only been preinited. Lets call the init now.
 	        Entity.initComponents(components);
-	        this.previouslyCreatedEntity = entity;
 	        if (!_skipNewEntityEvent)
 	            { globalEventDispatcher.dispatch('new entity created', entity); }
 	        return entity;
@@ -5217,6 +5260,85 @@
 	});
 	//# sourceMappingURL=CharacterController.js.map
 
+	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
+	var animation;
+	(function (animation) {
+	    // export function parseAnimationData
+	    /**
+	     * @param animationDataString data from Animation component
+	     */
+	    function parseAnimationData(animationDataString) {
+	        var animationData;
+	        try {
+	            animationData = JSON.parse(animationDataString);
+	        }
+	        catch (e) {
+	            animationData = {};
+	        }
+	        animationData.animations = animationData.animations || [];
+	        return animationData;
+	    }
+	    animation.parseAnimationData = parseAnimationData;
+	    /**
+	     * Helper class for editor. Just JSON.stringify this to get valid animationData animation out.
+	     */
+	    var Animation = /** @class */ (function () {
+	        function Animation(name, tracks) {
+	            if (tracks === void 0) { tracks = []; }
+	            this.name = name;
+	            this.tracks = tracks;
+	        }
+	        /**
+	         *
+	         * @param entityPrototypeId
+	         * @param componendId
+	         * @param value jsoned property value
+	         */
+	        Animation.prototype.saveValue = function (entityPrototypeId, componendId, propertyName, frameNumber, value) {
+	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
+	            if (!track) {
+	                track = new Track(entityPrototypeId, componendId, propertyName);
+	                this.tracks.push(track);
+	            }
+	            track.saveValue(frameNumber, value);
+	        };
+	        Animation.prototype.deleteEmptyTracks = function () {
+	            var this$1 = this;
+
+	            for (var i = this.tracks.length - 1; i >= 0; i--) {
+	                if (Object.keys(this$1.tracks[i].keyFrames).length === 0) {
+	                    this$1.tracks.splice(i, 1);
+	                }
+	            }
+	        };
+	        Animation.create = function (json) {
+	            var tracks = (json.tracks || []).map(Track.create);
+	            return new Animation(json.name, tracks);
+	        };
+	        return Animation;
+	    }());
+	    animation.Animation = Animation;
+	    var Track = /** @class */ (function () {
+	        function Track(eprId, cId, prpName, keyFrames) {
+	            if (keyFrames === void 0) { keyFrames = {}; }
+	            this.eprId = eprId;
+	            this.cId = cId;
+	            this.prpName = prpName;
+	            this.keyFrames = keyFrames;
+	        }
+	        Track.prototype.saveValue = function (frameNumber, value) {
+	            this.keyFrames[frameNumber] = value;
+	        };
+	        Track.create = function (json) {
+	            var keyFrames = json.keyFrames || {};
+	            return new Track(json.eprId, json.cId, json.prpName, keyFrames);
+	        };
+	        return Track;
+	    }());
+	    animation.Track = Track;
+	})(animation || (animation = {}));
+	//# sourceMappingURL=animation.js.map
+
 	// Export so that other components can have this component as parent
 	Component.register({
 	    name: 'Animation',
@@ -5227,19 +5349,235 @@
 	        Prop('animationData', '{}', Prop.longString, 'temporary var for development')
 	    ],
 	    prototype: {
+	        animator: null,
 	        constructor: function () {
 	        },
 	        preInit: function () {
 	        },
 	        init: function () {
+	            var _this = this;
+	            this.listenProperty(this, 'animationData', function () { return _this.loadAnimation(); });
+	            this.loadAnimation();
+	        },
+	        onUpdate: function (dt) {
+	            this.animator.update(dt);
+	        },
+	        loadAnimation: function () {
+	            if (this.animator) {
+	                this.animator.delete();
+	            }
+	            this.animator = new Animator(animation.parseAnimationData(this.animationData));
 	        },
 	        sleep: function () {
-	        },
-	        delete: function () {
+	            this.animator.delete();
+	            this.animator = null;
 	        }
 	    }
 	});
-	//# sourceMappingURL=Animation.js.map
+	var controlPointDistanceFactor = 0.5;
+	var Animator = /** @class */ (function () {
+	    function Animator(animationData) {
+	        this.time = 0;
+	        this.animations = animationData.animations.map(function (anim) { return new AnimatorAnimation(anim); });
+	        this.currentAnimation = this.animations[0];
+	    }
+	    Animator.prototype.update = function (dt) {
+	        this.time += dt;
+	        if (this.time > 1) {
+	            this.time -= 1;
+	        }
+	        var totalFrames = 24;
+	        var frame = (this.time * totalFrames + 1);
+	        if (!this.currentAnimation) {
+	            return;
+	        }
+	        this.currentAnimation.setFrame(frame);
+	    };
+	    Animator.prototype.setAnimation = function (name) {
+	        var anim = this.animations.find(function (anim) { return anim.name === name; });
+	        if (anim) {
+	            this.currentAnimation = anim;
+	            this.time = 0;
+	        }
+	    };
+	    Animator.prototype.delete = function () {
+	        delete this.animations;
+	    };
+	    return Animator;
+	}());
+	var AnimatorAnimation = /** @class */ (function () {
+	    function AnimatorAnimation(animationJSON) {
+	        this.name = animationJSON.name;
+	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData); });
+	    }
+	    AnimatorAnimation.prototype.setFrame = function (frame) {
+	        for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
+	            var track = _a[_i];
+	            track.setFrame(frame);
+	        }
+	    };
+	    return AnimatorAnimation;
+	}());
+	var AnimatorTrack = /** @class */ (function () {
+	    function AnimatorTrack(trackData) {
+	        var this$1 = this;
+
+	        this.currentKeyFrameIndex = 0;
+	        this.keyFrames = [];
+	        this.entityPrototype = getSerializable(trackData.eprId);
+	        var componentData = this.entityPrototype.findComponentDataByComponentId(trackData.cId, true);
+	        var componentName = componentData.componentClass.componentName;
+	        this.entity = this.entityPrototype.previouslyCreatedEntity;
+	        assert$1(this.entity, 'must have entity');
+	        var component = this.entity.getComponents(componentName).find(function (c) { return c._componentId === trackData.cId; });
+	        assert$1(component, 'component must be found');
+	        this.animatedProperty = component._properties[trackData.prpName];
+	        var keyFrameFrames = Object.keys(trackData.keyFrames).map(function (key) { return ~~key; }).sort(function (a, b) { return a - b; });
+	        for (var _i = 0, keyFrameFrames_1 = keyFrameFrames; _i < keyFrameFrames_1.length; _i++) {
+	            var frame = keyFrameFrames_1[_i];
+	            var value = this$1.animatedProperty.propertyType.type.fromJSON(trackData.keyFrames[frame]);
+	            this$1.keyFrames.push({
+	                frame: frame,
+	                value: value,
+	                control1: value,
+	                control2: value
+	            });
+	        }
+	        var propertyTypeName = this.animatedProperty.propertyType.type.name;
+	        var color = function (value) { return Math.min(Math.max(value, 0), 255); };
+	        for (var i = 0; i < this.keyFrames.length; i++) {
+	            var prev = this$1.keyFrames[i];
+	            var curr = this$1.keyFrames[(i + 1) % this$1.keyFrames.length];
+	            var next = this$1.keyFrames[(i + 2) % this$1.keyFrames.length];
+	            if (propertyTypeName === 'float') {
+	                var controlPoints = calculateControlPointsForScalar(prev.value, curr.value, next.value);
+	                curr.control1 = controlPoints.control1;
+	                curr.control2 = controlPoints.control2;
+	            }
+	            else if (propertyTypeName === 'vector') {
+	                /*
+	                let xControl = calculateControlPointsForScalar(prev.value.x, curr.value.x, next.value.x);
+	                let yControl = calculateControlPointsForScalar(prev.value.y, curr.value.y, next.value.y);
+	                curr.control1 = new Vector(xControl.control1, yControl.control1);
+	                curr.control2 = new Vector(xControl.control2, yControl.control2);
+	                */
+	                // The bigger angle, the further away are control points.
+	                var prevValue = prev.value;
+	                var currValue = curr.value;
+	                var nextValue = next.value;
+	                var prevToCurr = currValue.clone().subtract(prevValue);
+	                var currToNext = nextValue.clone().subtract(currValue);
+	                var angleFactor = Math.abs(prevToCurr.angleTo(currToNext) / Math.PI);
+	                var prevControlDist = prevToCurr.length() * controlPointDistanceFactor * angleFactor;
+	                var nextControlDist = currToNext.length() * controlPointDistanceFactor * angleFactor;
+	                var prevNextDirection = nextValue.clone().subtract(prevValue).setLength(1);
+	                curr.control1 = currValue.clone().subtract(prevNextDirection.clone().multiplyScalar(prevControlDist));
+	                curr.control2 = currValue.clone().add(prevNextDirection.multiplyScalar(nextControlDist));
+	            }
+	            else if (propertyTypeName === 'color') {
+	                var rControl = calculateControlPointsForScalar(prev.value.r, curr.value.r, next.value.r);
+	                var gControl = calculateControlPointsForScalar(prev.value.g, curr.value.g, next.value.g);
+	                var bControl = calculateControlPointsForScalar(prev.value.b, curr.value.b, next.value.b);
+	                curr.control1 = new Color(color(rControl.control1), color(gControl.control1), color(bControl.control1));
+	                curr.control2 = new Color(color(rControl.control2), color(gControl.control2), color(bControl.control2));
+	            }
+	        }
+	    }
+	    /**
+	     * @param frame float because of interpolation
+	     */
+	    AnimatorTrack.prototype.setFrame = function (frame) {
+	        var keyFrames = this.keyFrames;
+	        if (keyFrames.length === 0) {
+	            return;
+	        }
+	        var prev, next;
+	        // This is optimal enough. This for loop takes 0 time compared to setting the property value.
+	        for (var i = 0; i < keyFrames.length; i++) {
+	            if (keyFrames[i].frame > frame) {
+	                next = keyFrames[i];
+	                prev = keyFrames[(i - 1 + keyFrames.length) % keyFrames.length];
+	                break;
+	            }
+	        }
+	        if (!prev) {
+	            prev = keyFrames[keyFrames.length - 1];
+	            next = keyFrames[0];
+	        }
+	        var newValue;
+	        if (prev === next) {
+	            newValue = prev.value;
+	        }
+	        else {
+	            var prevFrame = prev.frame;
+	            if (prevFrame > frame) {
+	                prevFrame -= 24;
+	            }
+	            var nextFrame = next.frame;
+	            if (nextFrame < frame) {
+	                nextFrame += 24;
+	            }
+	            var t = (frame - prevFrame) / (nextFrame - prevFrame);
+	            newValue = interpolateBezier(prev.value, prev.control2, next.control1, next.value, t, this.animatedProperty.propertyType);
+	            // newValue = interpolateLinear(prev.value, next.value, t, this.animatedProperty.propertyType);
+	        }
+	        if (this.animatedProperty.value !== newValue) {
+	            this.animatedProperty.value = newValue;
+	        }
+	    };
+	    return AnimatorTrack;
+	}());
+	// Returns angle that is at most Math.PI away.
+	function getClosestAngle(origin, target) {
+	    var diff = target - origin;
+	    if (diff > Math.PI) {
+	        return target - Math.PI * 2;
+	    }
+	    else if (diff < -Math.PI) {
+	        return target + Math.PI * 2;
+	    }
+	    return target;
+	}
+	function interpolateBezier(value1, value2, value3, value4, t, propertyType) {
+	    var typeName = propertyType.type.name;
+	    if (typeName === 'float') {
+	        if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
+	            // It's angle we are dealing with.
+	            value2 = getClosestAngle(value1, value2);
+	            value3 = getClosestAngle(value1, value3);
+	            value4 = getClosestAngle(value1, value4);
+	        }
+	        var t2 = 1 - t;
+	        return Math.pow(t2, 3) * value1 +
+	            3 * t2 * t2 * t * value2 +
+	            3 * t2 * t * t * value3 +
+	            Math.pow(t, 3) * value4;
+	    }
+	    else if (typeName === 'vector') {
+	        return value1.interpolateCubic(value4, value2, value3, t);
+	    }
+	    else if (typeName === 'color') {
+	        return value1.interpolateCubic(value4, value2, value3, t);
+	    }
+	    else {
+	        return value1;
+	    }
+	}
+	function calculateControlPointsForScalar(prev, curr, next) {
+	    if (curr >= prev && curr >= next || curr <= prev && curr <= next) {
+	        return {
+	            control1: curr,
+	            control2: curr
+	        };
+	    }
+	    var prevDist = Math.abs(curr - prev);
+	    var nextDist = Math.abs(next - curr);
+	    var prevNextDirection = (next - prev) < 0 ? -1 : 1;
+	    return {
+	        control1: curr + prevNextDirection * prevDist * controlPointDistanceFactor,
+	        control2: curr - prevNextDirection * nextDist * controlPointDistanceFactor,
+	    };
+	}
 
 	//# sourceMappingURL=index.js.map
 
@@ -10023,57 +10361,6 @@
 	Module.register(GameModule, 'right');
 	//# sourceMappingURL=gameModule.js.map
 
-	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
-	var animation;
-	(function (animation) {
-	    var Animation = /** @class */ (function () {
-	        function Animation(name, tracks) {
-	            if (tracks === void 0) { tracks = []; }
-	            this.name = name;
-	            this.tracks = tracks;
-	        }
-	        /**
-	         *
-	         * @param entityPrototypeId
-	         * @param componendId
-	         * @param value jsoned property value
-	         */
-	        Animation.prototype.saveValue = function (entityPrototypeId, componendId, propertyName, frameNumber, value) {
-	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
-	            if (!track) {
-	                track = new Track(entityPrototypeId, componendId, propertyName);
-	                this.tracks.push(track);
-	            }
-	            track.saveValue(frameNumber, value);
-	        };
-	        Animation.create = function (json) {
-	            var tracks = (json.tracks || []).map(Track.create);
-	            return new Animation(json.name, tracks);
-	        };
-	        return Animation;
-	    }());
-	    animation.Animation = Animation;
-	    var Track = /** @class */ (function () {
-	        function Track(eprId, cId, prpName, keyFrames) {
-	            if (keyFrames === void 0) { keyFrames = {}; }
-	            this.eprId = eprId;
-	            this.cId = cId;
-	            this.prpName = prpName;
-	            this.keyFrames = keyFrames;
-	        }
-	        Track.prototype.saveValue = function (frameNumber, value) {
-	            this.keyFrames[frameNumber] = value;
-	        };
-	        Track.create = function (json) {
-	            var keyFrames = json.keyFrames || {};
-	            return new Track(json.eprId, json.cId, json.prpName, keyFrames);
-	        };
-	        return Track;
-	    }());
-	    animation.Track = Track;
-	})(animation || (animation = {}));
-	//# sourceMappingURL=animation.js.map
-
 	var AnimationModule = /** @class */ (function (_super) {
 	    __extends(AnimationModule, _super);
 	    function AnimationModule() {
@@ -10081,11 +10368,16 @@
 	        _this.animations = [];
 	        _this.animationComponentId = null;
 	        _this.editedEntityPrototype = null;
-	        _this.animationData = {};
+	        _this.animationData = null;
 	        _this.selectedFrame = null;
 	        _this.selectedAnimation = null;
-	        _this.addElements(el('div.animationModule', el('div', el('button.button', 'Add animation', { onclick: function () { return _this.addAnimation(); } }), _this.animationSelector = new AnimationSelector(), el('button.button', 'Add keyframe', { onclick: function () { return _this.addKeyframe(); } }), el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
+	        _this.focusedKeyFrameViews = [];
+	        _this.addElements(el('div.animationModule', el('div', el('button.button', 'Add animation', { onclick: function () { return _this.addAnimation(); } }), _this.animationSelector = new AnimationSelector(), 
+	        // el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
+	        el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
 	            onclick: function () {
+	                // Selecting nothing will force user to select entity instead of entity prototype when editing animations.
+	                selectInEditor([], _this);
 	                editorGlobals.recording = true;
 	                editorEventDispacher.dispatch(EditorEvent.EDITOR_REC_MODE);
 	            }
@@ -10094,6 +10386,13 @@
 	        _this.id = 'animation';
 	        redomListen(_this, 'frameSelected', function (frameNumber) {
 	            _this.selectedFrame = frameNumber;
+	            // TODO: draw entity in new pose.
+	            var entity = _this.editedEntityPrototype.previouslyCreatedEntity;
+	            if (entity) {
+	                setChangeOrigin(_this);
+	                var animationComponent = entity.getComponents('Animation').find(function (comp) { return comp._componentId === _this.animationComponentId; });
+	                animationComponent.animator.currentAnimation.setFrame(frameNumber);
+	            }
 	        });
 	        redomListen(_this, 'animationSelected', function (animation$$1) {
 	            _this.selectedAnimation = animation$$1;
@@ -10102,12 +10401,15 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (!editorGlobals.recording)
 	                { return; }
+	            if (change.origin === _this) {
+	                return;
+	            }
 	            if (change.reference.threeLetterType !== 'prp')
 	                { return; }
 	            if (change.type === changeType.setPropertyValue) {
 	                var property = change.reference;
 	                var component = property.getParent();
-	                if (!component || component.threeLetterType !== 'com')
+	                if (!component || component.threeLetterType !== 'com' || component.componentClass.componentName === 'Animation')
 	                    { return; }
 	                var entity = component.getParent();
 	                if (!entity || entity.threeLetterType !== 'ent')
@@ -10118,7 +10420,74 @@
 	                var isChildOfEdited = !!entityPrototype.findParent('epr', function (epr) { return epr === _this.editedEntityPrototype; });
 	                if (!isChildOfEdited)
 	                    { return; }
+	                setChangeOrigin(_this);
 	                _this.saveValue(entityPrototype, component._componentId, property);
+	            }
+	        });
+	        listenKeyDown(function (keyCode) {
+	            if (keyCode === key.backspace) {
+	                if (_this._selected && _this._enabled && !editorSelection.focused) {
+	                    _this.focusedKeyFrameViews.forEach(function (view) {
+	                        delete view.trackKeyFrames[view.frame];
+	                    });
+	                    unfocus();
+	                    _this.updateAnimationData();
+	                }
+	            }
+	        });
+	        redomListen(_this, 'selectKeyFrameView', function (keyFrameView) {
+	            var _a;
+	            if (editorSelection.focused) {
+	                // If something else is focused, unfocus. But we don't want to unfocus TrackFrameViews which are focused more hackily.
+	                unfocus();
+	            }
+	            var keyFrameList = Array.isArray(keyFrameView) ? keyFrameView : [keyFrameView];
+	            keyFrameList = keyFrameList.filter(function (frameView) { return frameView.isKeyFrame(); });
+	            var allAreSelected = !keyFrameList.find(function (frameView) { return !_this.focusedKeyFrameViews.includes(frameView); });
+	            if (keyPressed(key.shift)) {
+	                if (keyFrameList.length > 0) {
+	                    if (allAreSelected) {
+	                        for (var _i = 0, keyFrameList_1 = keyFrameList; _i < keyFrameList_1.length; _i++) {
+	                            var frameView = keyFrameList_1[_i];
+	                            var indexOfFrame = _this.focusedKeyFrameViews.indexOf(frameView);
+	                            if (indexOfFrame >= 0) {
+	                                _this.focusedKeyFrameViews.splice(indexOfFrame, 1);
+	                            }
+	                            frameView.el.classList.remove('selected');
+	                        }
+	                    }
+	                    else {
+	                        for (var _b = 0, keyFrameList_2 = keyFrameList; _b < keyFrameList_2.length; _b++) {
+	                            var frameView = keyFrameList_2[_b];
+	                            if (!_this.focusedKeyFrameViews.includes(frameView)) {
+	                                _this.focusedKeyFrameViews.push(frameView);
+	                            }
+	                            frameView.el.classList.add('selected');
+	                        }
+	                    }
+	                }
+	            }
+	            else {
+	                // unfocus();
+	                _this.animationTimelineView.el.querySelectorAll('td.trackFrame.selected').forEach(function (frameView) {
+	                    frameView.classList.remove('selected');
+	                });
+	                _this.focusedKeyFrameViews.length = 0;
+	                if (keyFrameList.length > 0) {
+	                    (_a = _this.focusedKeyFrameViews).push.apply(_a, keyFrameList);
+	                    for (var _c = 0, keyFrameList_3 = keyFrameList; _c < keyFrameList_3.length; _c++) {
+	                        var frameView = keyFrameList_3[_c];
+	                        frameView.el.classList.add('selected');
+	                    }
+	                }
+	            }
+	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {
+	            if (_this.focusedKeyFrameViews.length > 0) {
+	                _this.animationTimelineView.el.querySelectorAll('td.trackFrame.selected').forEach(function (frameView) {
+	                    frameView.classList.remove('selected');
+	                });
+	                _this.focusedKeyFrameViews.length = 0;
 	            }
 	        });
 	        return _this;
@@ -10132,8 +10501,10 @@
 	            if (entityPrototype.hasComponentData('Animation') && entityPrototype.previouslyCreatedEntity) {
 	                var inheritedComponentDatas = entityPrototype.getInheritedComponentDatas(function (cda) { return cda.name === 'Animation'; });
 	                if (inheritedComponentDatas.length === 1) {
-	                    var inheritedComponentData = inheritedComponentDatas[0];
-	                    this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+	                    if (this.editedEntityPrototype !== entityPrototype) {
+	                        var inheritedComponentData = inheritedComponentDatas[0];
+	                        this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+	                    }
 	                    return true;
 	                }
 	                return false;
@@ -10157,16 +10528,10 @@
 	        this.editedEntityPrototype = inheritedComponentData.generatedForPrototype;
 	        this.animationComponentId = inheritedComponentData.componentId;
 	        var animationDataString = inheritedComponentData.properties.find(function (prop) { return prop.name === 'animationData'; }).value;
-	        try {
-	            this.animationData = JSON.parse(animationDataString);
-	        }
-	        catch (e) {
-	            this.animationData = {};
-	        }
-	        var animationsJSON = this.animationData.animations || [];
-	        this.animations = animationsJSON.map(function (a) { return animation.Animation.create(a); });
+	        this.animationData = animation.parseAnimationData(animationDataString);
 	        // We are sneaky and store Animation objects in jsonable object.
-	        this.animationData.animations = this.animations;
+	        this.animationData.animations = this.animationData.animations.map(animation.Animation.create);
+	        this.animations = this.animationData.animations;
 	        this.animationSelector.update(this.animations);
 	        this.selectedAnimation = this.animationSelector.getSelectedAnimation();
 	        this.animationTimelineView.update(this.selectedAnimation);
@@ -10176,20 +10541,24 @@
 	    AnimationModule.prototype.addAnimation = function () {
 	        var name = prompt('name', 'idle');
 	        if (name) {
+	            setChangeOrigin(this);
 	            this.animations.push(new animation.Animation(name));
 	            this.updateAnimationData();
 	        }
 	    };
-	    AnimationModule.prototype.addKeyframe = function () {
-	        /*
-	        this.selectedAnimation.keyFrames.push(new animation.KeyFrame(this.selectedFrame));
-	        this.updateAnimationData();
-	        */
-	    };
 	    AnimationModule.prototype.updateAnimationData = function () {
 	        var componentData = this.editedEntityPrototype.getOwnComponentDataOrInherit(this.animationComponentId);
+	        // Delete empty tracks:
+	        for (var _i = 0, _a = this.animations; _i < _a.length; _i++) {
+	            var anim = _a[_i];
+	            anim.deleteEmptyTracks();
+	        }
 	        componentData.setValue('animationData', JSON.stringify(this.animationData));
 	        this.animationTimelineView.update(this.selectedAnimation);
+	        // Reload entity Animator:
+	        this.editedEntityPrototype.previouslyCreatedEntity.getComponents('Animation').forEach(function (comp) {
+	            comp.animationData = componentData.getValue('animationData');
+	        });
 	    };
 	    AnimationModule.prototype.saveValue = function (entityPrototype, componendId, property) {
 	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.selectedFrame, property.propertyType.type.toJSON(property._value));
@@ -10230,10 +10599,24 @@
 	}());
 	var AnimationTimelineView = /** @class */ (function () {
 	    function AnimationTimelineView() {
+	        var _this = this;
 	        this.el = el('table.animationTimeline', el('thead', this.frameNumbers = list('tr', FrameNumberHeader, 'frame')), this.trackList = list('tbody', TrackView));
+	        redomListen(this, 'selectAllOnFrame', function (frame) {
+	            var views = [];
+	            _this.trackList.views.forEach(function (trackView) {
+	                trackView.list.views.forEach(function (frameView) {
+	                    if (frameView.frame === frame) {
+	                        views.push(frameView);
+	                    }
+	                });
+	            });
+	            redomDispatch(_this, 'selectKeyFrameView', views);
+	        });
 	    }
 	    AnimationTimelineView.prototype.update = function (animation$$1) {
 	        if (!animation$$1) {
+	            this.frameNumbers.update([]);
+	            this.trackList.update([]);
 	            return;
 	        }
 	        var frameCount = 24;
@@ -10272,7 +10655,8 @@
 	        var _this = this;
 	        this.el = el('th.frameHeader', {
 	            onmousedown: function () { return _this.select(); },
-	            onmouseover: function () { return isMouseButtonDown() && _this.select(); }
+	            onmouseover: function () { return isMouseButtonDown() && _this.select(); },
+	            ondblclick: function () { return redomDispatch(_this, 'selectAllOnFrame', _this.frameNumber); }
 	        });
 	    }
 	    FrameNumberHeader.prototype.update = function (data) {
@@ -10281,6 +10665,8 @@
 	        this.el.textContent = data.frame || '';
 	    };
 	    FrameNumberHeader.prototype.select = function () {
+	        if (this.frameNumber === 0)
+	            { return; }
 	        var selectedFrameElement = this.el.parentElement.querySelector('.selected');
 	        if (selectedFrameElement) {
 	            selectedFrameElement.classList.remove('selected');
@@ -10292,20 +10678,27 @@
 	}());
 	var TrackView = /** @class */ (function () {
 	    function TrackView() {
+	        var _this = this;
 	        this.el = el('tr.track');
 	        this.list = list(this.el, TrackFrameView);
+	        redomListen(this, 'selectKeyFramesInTrack', function () {
+	            var keyFrameViews = _this.list.views.filter(function (view) { return view.isKeyFrame(); });
+	            redomDispatch(_this, 'selectKeyFrameView', keyFrameViews);
+	        });
 	    }
 	    TrackView.prototype.update = function (trackData) {
+	        var keyFrames = trackData.keyFrames;
 	        var trackFrameData = [];
 	        trackFrameData.push({
 	            frame: 0,
 	            name: trackData.name,
+	            keyFrames: keyFrames
 	        });
-	        var keyFrames = trackData.keyFrames;
 	        for (var frame = 1; frame <= trackData.frameCount; frame++) {
 	            var keyFrame = keyFrames[frame];
 	            trackFrameData.push({
 	                frame: frame,
+	                keyFrames: keyFrames,
 	                keyFrame: keyFrame
 	            });
 	        }
@@ -10315,15 +10708,33 @@
 	}());
 	var TrackFrameView = /** @class */ (function () {
 	    function TrackFrameView() {
-	        this.el = el('td.trackFrame');
+	        var _this = this;
+	        this.el = el('td.trackFrame', {
+	            onclick: function () {
+	                if (_this.frame === 0) {
+	                    return;
+	                }
+	                redomDispatch(_this, 'selectKeyFrameView', _this);
+	            },
+	            ondblclick: function () {
+	                if (_this.frame === 0) {
+	                    redomDispatch(_this, 'selectKeyFramesInTrack');
+	                }
+	            }
+	        });
 	    }
+	    TrackFrameView.prototype.isKeyFrame = function () {
+	        return this.trackKeyFrames[this.frame] != null;
+	    };
 	    TrackFrameView.prototype.update = function (data) {
-	        if (data.frame === 0) {
+	        this.frame = data.frame;
+	        this.trackKeyFrames = data.keyFrames;
+	        this.el.innerHTML = '';
+	        if (this.frame === 0) {
 	            this.el.textContent = data.name;
 	        }
 	        else {
-	            this.el.innerHTML = '';
-	            if (data.keyFrame) {
+	            if (this.isKeyFrame()) {
 	                mount(this, el('i.fa.fa-star'));
 	            }
 	        }
@@ -10365,6 +10776,7 @@
 	    }
 	}
 	*/
+	//# sourceMappingURL=animationModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -10791,6 +11203,7 @@
 	    Editor.prototype.update = function () {
 	        if (!game)
 	            { return; }
+	        eventHappened('editor update');
 	        this.layout.update();
 	    };
 	    return Editor;

@@ -15,6 +15,7 @@ let perSecondSnapshot = [];
 let currentPerSecondMeters = {};
 export function eventHappened(name, count = 1) {
 	// @ifndef OPTIMIZE
+	if (['Event performance snapshot', 'Event perSecond snapshot'].includes(name)) return;
 	currentPerSecondMeters[name] = (currentPerSecondMeters[name] || 0) + count;
 	// @endif
 }

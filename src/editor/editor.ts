@@ -171,6 +171,9 @@ class Editor {
 
 	update() {
 		if (!game) return;
+
+		performance.eventHappened('editor update');
+
 		this.layout.update();
 	}
 }
