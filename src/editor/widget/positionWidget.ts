@@ -14,6 +14,7 @@ export default class PositionWidget extends Widget {
 			globalPosition.add(mousePositionChange);
 			transform.setGlobalPosition(globalPosition);
 		});
+		this.component.Transform.position = mousePositionChange.add(this.component.Transform.position);
 	}
 
 	updateVisibility() {

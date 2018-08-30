@@ -1,7 +1,8 @@
-import {Component, Prop} from '../core/component';
+import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import {Color} from '../util/color';
-import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../features/graphics';
+import { Color } from '../util/color';
+import { default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor, hitTest } from '../features/graphics';
+import { globalEventDispatcher, GameEvent } from '../core/eventDispatcher';
 
 Component.register({
 	name: 'Sprite',
@@ -33,6 +34,15 @@ Component.register({
 
 			this.sprite = PIXI.Sprite.fromImage('/img/' + this.resource);
 			this.sprite.anchor.set(this.anchor.x, this.anchor.y);
+
+			this.sprite.interactive = true;
+			this.sprite.on('pointerdown', (pointerDownEvent) => {
+				if (hitTest(this.sprite, pointerDownEvent, this.scene.stage)) {
+					// Only run in editor because player version has more stripped version of PIXI.
+					globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
+					this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
+				}
+			});
 
 			this.Transform.container.addChild(this.sprite);
 		},

@@ -10,6 +10,8 @@ export enum GameEvent {
     GLOBAL_CHANGE_OCCURED = 'change',
     GLOBAL_SCENE_CREATED = 'scene created',
     GLOBAL_GAME_CREATED = 'game created',
+    GLOBAL_ENTITY_CLICKED = 'global entity clicked', // parameters(entity, component)
+    ENTITY_CLICKED = 'entity clicked', // parameters(component)
 }
 
 export type ListenerFunction = Function & { priority?: number };

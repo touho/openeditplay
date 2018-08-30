@@ -15,17 +15,7 @@ export default class AngleWidget extends Widget {
 	}
 
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
-		// Master entity is the entity whose widget we are dragging.
-		// If parent and child entity are selected and we are dragging child widget, masterEntity is the parent.
-		let masterEntity = this.component.entity;
-		while (!affectedEntities.find(ent => ent === masterEntity)) {
-			masterEntity = masterEntity.getParent();
-			if (!masterEntity || masterEntity.threeLetterType !== 'ent') {
-				assert('Master entity not found when editing angle of entity.');
-			}
-		}
-
-		let T = masterEntity.getComponent('Transform');
+		let T = this.component.Transform;
 		let entityPosition = T.getGlobalPosition();
 
 		let relativeMousePosition = mousePosition.clone().subtract(entityPosition);
@@ -49,6 +39,8 @@ export default class AngleWidget extends Widget {
 			let Transform = entity.getComponent('Transform');
 			Transform.angle = Transform.angle + angleDifference;
 		});
+
+		T.angle += angleDifference;
 	}
 
 	updatePosition() {

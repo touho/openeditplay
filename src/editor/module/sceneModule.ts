@@ -9,7 +9,7 @@ import {
 	key,
 	keyPressed
 } from '../../util/input';
-import Scene, { scene } from '../../core/scene';
+import Scene, { scene, forEachScene } from '../../core/scene';
 import { game } from '../../core/game';
 import EntityPrototype from '../../core/entityPrototype';
 import assert from '../../util/assert';
@@ -24,6 +24,8 @@ import * as performanceTool from '../../util/performance';
 import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../core/property';
 
 import '../components/EditorWidget';
+import '../components/EditorSelection';
+
 import { filterChildren } from "../../core/serializable";
 import { limit } from "../../util/callLimiter";
 import Level from '../../core/level';
@@ -33,6 +35,7 @@ import { selectInEditor, editorSelection, unfocus } from '../editorSelection';
 import Prefab from '../../core/prefab';
 import CreateObject from '../views/popup/createObject';
 import { editorGlobals } from '../editorGlobals';
+import ComponentData from '../../core/componentData';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -54,6 +57,9 @@ class SceneModule extends Module {
 	canvasParentSize: Vector = new Vector(0, 0);
 	previousMousePosInWorldCoordinates: Vector = new Vector(0, 0);
 	parentToAddNewEntitiesOn: EntityPrototype = null;
+	previouslyEntityClicked: Date = new Date(0);
+
+	widgetEntity: Entity = null;
 
 	/**
 	 * selectedEntities is the entity that is used in editing.
@@ -110,7 +116,7 @@ class SceneModule extends Module {
 						this.cameraPositionOrZoomUpdated();
 						this.draw();
 					},
-					title: 'Zoom in (+)'
+					title: 'Zoom in (+ or E)'
 				}),
 				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', {
 					onclick: () => {
@@ -119,7 +125,7 @@ class SceneModule extends Module {
 						this.cameraPositionOrZoomUpdated();
 						this.draw();
 					},
-					title: 'Zoom out (-)'
+					title: 'Zoom out (- or Q)'
 				}),
 				this.globeButton = el('i.fa.fa-globe.iconButton.button', {
 					onclick: () => {
@@ -198,6 +204,10 @@ class SceneModule extends Module {
 			if (editorSelection.type === 'ent' && sceneEdit.shouldSyncLevelAndScene()) {
 				editorSelection.items.forEach((e: Entity) => e.prototype.delete());
 			}
+		});
+
+		globalEventDispatcher.listen(GameEvent.GLOBAL_ENTITY_CLICKED, (entity: Entity, component: Component) => {
+			this.entityClicked(entity, component);
 		});
 
 		let fixAspectRatio = () => this.fixAspectRatio();
@@ -349,15 +359,23 @@ class SceneModule extends Module {
 			scene.layers.editorLayer = new PIXI.Container();
 			scene.layers.move.addChild(scene.layers.editorLayer);
 
-			scene.widgetLayer = new PIXI.Container();
+			scene.layers.widgetLayer = new PIXI.Container();
 			scene.layers.positionHelperLayer = new PIXI.Container();
 			scene.selectionLayer = new PIXI.Container();
 
 			scene.layers.editorLayer.addChild(
-				scene.widgetLayer,
+				scene.layers.widgetLayer,
 				scene.layers.positionHelperLayer,
 				scene.selectionLayer
 			);
+		});
+		globalEventDispatcher.listen('scene load level', (scene, level) => {
+			if (this.widgetEntity && this.widgetEntity._alive) {
+				this.widgetEntity.delete();
+			}
+			let epr = EntityPrototype.create('WidgetEntity');
+			epr.addChild(new ComponentData('EditorWidget'));
+			this.widgetEntity = epr.createEntity(scene);
 		});
 
 		// Change in serializable tree
@@ -384,7 +402,7 @@ class SceneModule extends Module {
 		globalEventDispatcher.listen('new entity created', entity => {
 			let handleEntity = entity => {
 				entity.addComponents([
-					Component.create('EditorWidget')
+					Component.create('EditorSelection')
 				]);
 				let transform = entity.getComponent('Transform');
 				transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, position => {
@@ -415,6 +433,10 @@ class SceneModule extends Module {
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
+			if (scene && scene.resetting || change.origin === this) {
+				return;
+			}
+
 			performanceTool.start('Editor: Scene');
 
 			if (change.type === 'editorSelection') {
@@ -441,9 +463,6 @@ class SceneModule extends Module {
 					this.selectEntities(change.reference.items);
 				}
 			}
-
-			if (scene && scene.resetting)
-				return performanceTool.stop('Editor: Scene');
 
 			// console.log('sceneModule change', change);
 			if (change.origin !== this) {
@@ -499,6 +518,8 @@ class SceneModule extends Module {
 
 		listenMouseMove(this.el, this.onMouseMove.bind(this));
 		listenMouseDown(this.el, mousePos => {
+			// Also see what happens in GameEvent.GLOBAL_ENTITY_CLICKED
+
 			if (!scene || !mousePos || scene.playing) // !mousePos if mouse has not moved since refresh
 				return;
 
@@ -511,22 +532,21 @@ class SceneModule extends Module {
 			if (this.newEntities.length > 0)
 				sceneEdit.copyEntitiesToScene(this.newEntities);
 			else if (this.widgetUnderMouse) {
-				if (this.selectedEntities.indexOf(this.widgetUnderMouse.component.entity) < 0) {
-					if (!keyPressed(key.shift))
-						this.clearSelectedEntities();
-					this.selectedEntities.push(this.widgetUnderMouse.component.entity);
-					this.widgetUnderMouse.component.select();
-					this.selectSelectedEntitiesInEditor();
-				}
+				// this.entityClicked(this.widgetUnderMouse.component.entity);
 				this.entitiesToEdit.push(...this.selectedEntities);
 			} else {
-				this.clearSelectedEntities();
 				this.selectionStart = mousePos;
 				this.selectionEnd = mousePos.clone();
 				this.destroySelectionArea();
 				this.selectionArea = new PIXI.Graphics();
 				scene.selectionLayer.addChild(this.selectionArea);
-				unfocus();
+
+				setTimeout(() => {
+					if (!keyPressed(key.shift) && new Date().getTime() - this.previouslyEntityClicked.getTime() > 300) {
+						this.clearSelectedEntities();
+						unfocus();
+					}
+				}, 10);
 			}
 
 			this.draw();
@@ -542,6 +562,9 @@ class SceneModule extends Module {
 			this.entitiesToEdit.length = 0;
 
 			if (this.entitiesInSelection.length > 0) {
+				if (keyPressed(key.shift)) {
+					this.entitiesInSelection.push(...this.selectedEntities);
+				}
 				this.selectEntities(this.entitiesInSelection);
 				/*
 				this.selectedEntities.push(...this.entitiesInSelection);
@@ -590,6 +613,26 @@ class SceneModule extends Module {
 		});
 	}
 
+	entityClicked(entity: Entity, component?: Component) {
+		if (!scene || scene.playing) // !mousePos if mouse has not moved since refresh
+			return;
+
+		this.previouslyEntityClicked = new Date();
+
+		if (this.selectedEntities.indexOf(entity) < 0) {
+			// debugger;
+			if (!keyPressed(key.shift)) {
+				this.clearSelectedEntities();
+			}
+			this.selectedEntities.push(entity);
+
+			this.updateEditorWidget();
+
+			entity.getComponent('EditorSelection').select();
+			this.selectSelectedEntitiesInEditor();
+		}
+	}
+
 	// mousePos is optional. returns true if scene has been drawn
 	onMouseMove(mouseCoordinatePosition) {
 		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
@@ -597,6 +640,7 @@ class SceneModule extends Module {
 
 		performanceTool.start('Editor: Scene');
 
+		// let mousePosInScreenCoordinates = mouseCoordinatePosition || this.previousMousePosInMouseCoordinates;
 		let mousePos = scene.mouseToWorld(mouseCoordinatePosition || this.previousMousePosInMouseCoordinates);
 
 		if (mouseCoordinatePosition)
@@ -640,7 +684,7 @@ class SceneModule extends Module {
 			if (this.entitiesInSelection.length > 0) {
 				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, false);
 			}
-			this.entitiesInSelection = sceneEdit.getEntitiesInSelection(this.selectionStart, this.selectionEnd);
+			this.entitiesInSelection = sceneEdit.getEntitiesInSelection(scene.worldToMouse(this.selectionStart), scene.worldToMouse(this.selectionEnd));
 			sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, true);
 
 			needsDraw = true;
@@ -860,16 +904,20 @@ class SceneModule extends Module {
 		this.clearSelectedEntities();
 		this.selectedEntities.push(...entities);
 		this.selectedEntities.forEach(entity => {
-			entity.getComponent('EditorWidget').select();
+			entity.getComponent('EditorSelection').select();
 		});
+
+		this.updateEditorWidget();
 	}
 
 	clearSelectedEntities() {
 		this.selectedEntities.forEach(entity => {
 			if (entity._alive)
-				entity.getComponent('EditorWidget').deselect();
+				entity.getComponent('EditorSelection').deselect();
 		});
 		this.selectedEntities.length = 0;
+
+		this.updateEditorWidget();
 	}
 
 	clearState() {
@@ -973,6 +1021,14 @@ class SceneModule extends Module {
 			return;
 		this.selectionArea.destroy();
 		this.selectionArea = null;
+	}
+	updateEditorWidget() {
+		if (!this.widgetEntity) {
+			return;
+		}
+		setChangeOrigin(this);
+		let editorWidget = this.widgetEntity.getComponent('EditorWidget');
+		editorWidget.entitiesSelected(this.selectedEntities);
 	}
 }
 

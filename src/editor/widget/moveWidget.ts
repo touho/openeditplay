@@ -66,24 +66,16 @@ export default class MoveWidget extends Widget {
 	}
 
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
-		// Master entity is the entity whose widget we are dragging.
-		// If parent and child entity are selected and we are dragging child widget, masterEntity is the parent.
-		let masterEntity = this.component.entity;
-		while (!affectedEntities.find(ent => ent === masterEntity)) {
-			masterEntity = masterEntity.getParent() as Entity;
-			if (!masterEntity || masterEntity.threeLetterType !== 'ent') {
-				assert('Master entity not found when editing angle of entity.');
-			}
-		}
-
 		let rotatedRelativePosition = this.relativePosition.clone();
 		if (!this.globalCoordinates)
-			rotatedRelativePosition.rotate(masterEntity.getComponent('Transform').getGlobalAngle());
+			rotatedRelativePosition.rotate(this.component.entity.getComponent('Transform').getGlobalAngle());
 
 		let moveVector = mousePositionChange.getProjectionOn(rotatedRelativePosition);
 		affectedEntities.forEach(entity => {
 			let Transform = entity.getComponent('Transform');
 			Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
 		});
+
+		this.component.Transform.position = moveVector.add(this.component.Transform.position);
 	}
 }

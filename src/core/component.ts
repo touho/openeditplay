@@ -146,6 +146,10 @@ export class Component extends PropertyOwner {
 		// @endif
 		this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	}
+	removeListenerOnSleep(listenerFunction: () => void) {
+		assert(!this.entity.sleeping, 'Cannot call removeListenerOnSleep in sleep mode.');
+		this._listenRemoveFunctions.push(listenerFunction);
+	}
 	toJSON() {
 		return Object.assign(super.toJSON(), {
 			n: this.componentClass.componentName,

@@ -86,7 +86,7 @@ export function syncAChangeFromGameToScene(change) {
 
 	if (change.type === changeType.addSerializableToTree) {
 		if (threeLetterType === 'epr') {
-			let epr = ref;
+			let epr = ref as EntityPrototype;
 			if (epr.findParent('lvl') === selectedLevel)
 				epr.createEntity(scene);
 		} else if (threeLetterType === 'cda') {
@@ -263,27 +263,31 @@ export function getWidgetUnderMouse(mousePos: Vector): Component {
 	scene.getComponents('EditorWidget').forEach(editorWidget => {
 		if (editorWidget.selected) {
 			editorWidget.widgets.forEach(testWidget);
-		} else {
+		} /*else {
 			testWidget(editorWidget.position);
-		}
+		}*/
 	});
 
 	return nearestWidget;
 }
-export function getEntitiesInSelection(start, end)  {
+export function getEntitiesInSelection(start: Vector, end: Vector)  {
 	let entities = [];
 
-	let minX = Math.min(start.x, end.x);
-	let maxX = Math.max(start.x, end.x);
-	let minY = Math.min(start.y, end.y);
-	let maxY = Math.max(start.y, end.y);
+	let minX = Math.min(start.x, end.x) * scene.pixelDensity.x;
+	let maxX = Math.max(start.x, end.x) * scene.pixelDensity.x;
+	let minY = Math.min(start.y, end.y) * scene.pixelDensity.y;
+	let maxY = Math.max(start.y, end.y) * scene.pixelDensity.y;
 
 	scene.forEachChild('ent', (ent: Entity) => {
-		let p = ent.getComponent('EditorWidget').positionHelper;
-		if (p.x < minX) return;
-		if (p.x > maxX) return;
-		if (p.y < minY) return;
-		if (p.y > maxY) return;
+		// This is an optimized way of getting Transform component
+		// getBounds is actually faster than this anonymous function.
+		let bounds = ent.components.get('Transform')[0].container.getBounds();
+
+		if (bounds.x < minX) return;
+		if (bounds.x + bounds.width > maxX) return;
+		if (bounds.y < minY) return;
+		if (bounds.y + bounds.height > maxY) return;
+
 		entities.push(ent);
 	}, true);
 
@@ -404,8 +408,7 @@ export function entityModifiedInEditor(entity, change) {
 
 export function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	entities.forEach(entity => {
-		let editorWidget = entity.getComponent('EditorWidget');
-		editorWidget.inSelectionArea = inSelectionArea;
-		editorWidget.position.updateVisibility();
+		let Selection = entity.getComponent('EditorSelection');
+		Selection.setIsInSelectionArea(inSelectionArea);
 	});
 }

@@ -334,8 +334,19 @@ export default class Scene extends Serializable {
 			this.layers.move.pivot.y + mousePosition.y / this.cameraZoom * this.pixelDensity.y
 		);
 	}
+	worldToMouse(worldPosition: Vector) {
+		return new Vector(
+			(worldPosition.x - this.layers.move.pivot.x) * this.cameraZoom / this.pixelDensity.x,
+			(worldPosition.y - this.layers.move.pivot.y) * this.cameraZoom / this.pixelDensity.y
+		);
+	}
 	screenPixelsToWorldPixels(screenPixels: number) {
 		return screenPixels / this.cameraZoom * this.pixelDensity.x;
+	}
+	getEntitiesAtScreenPoint(screenPoint: Vector) {
+		for (const child of this.stage.children) {
+
+		}
 	}
 
 	setZoom(zoomLevel) {

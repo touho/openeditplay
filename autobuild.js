@@ -44,14 +44,14 @@ if (!global.TARGET_NONE) {
 	];
 	const editorJsDependencies = [
 		'node_modules/jquery/dist/jquery.min.js',
-		'src/external/jstree.js',
-		'src/external/p2.js',
-		'src/external/pixi.js',
+		'src/external/jstree.min.js',
+		'src/external/p2.min.js',
+		'src/external/pixi.without.extras.js',
 		'src/external/pixi-filters.js'
 	];
 	const jsDependencies = [ // 519kb (155kb gzipped)
 		'src/external/p2.min.js',
-		'src/external/pixi.min.js',
+		'src/external/pixi.min.without.extras.and.interaction.js',
 		'src/external/pixi-filters.js'
 		// 'src/external/pixi.stripped.min.js'
 	];

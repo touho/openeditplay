@@ -45,7 +45,7 @@ export default Component.register({
 	}
 });
 
-const controlPointDistanceFactor = 0.5;
+const controlPointDistanceFactor = 0.33;
 
 class Animator {
 	time: number = 0;
@@ -125,6 +125,7 @@ class AnimatorTrack {
 			});
 		}
 		let propertyTypeName = this.animatedProperty.propertyType.type.name;
+		let propertyType = this.animatedProperty.propertyType;
 		const color = value => Math.min(Math.max(value, 0), 255);
 		for (let i = 0; i < this.keyFrames.length; i++) {
 			let prev = this.keyFrames[i];
@@ -132,19 +133,20 @@ class AnimatorTrack {
 			let next = this.keyFrames[(i + 2) % this.keyFrames.length];
 
 			if (propertyTypeName === 'float') {
-				let controlPoints = calculateControlPointsForScalar(prev.value, curr.value, next.value);
+				let controlPoints;
+				if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
+					// It's angle we are dealing with.
+					controlPoints = calculateControlPointsForScalar(
+						getClosestAngle(curr.value, prev.value),
+						curr.value,
+						getClosestAngle(curr.value, next.value)
+					);
+				} else {
+					controlPoints = calculateControlPointsForScalar(prev.value, curr.value, next.value);
+				}
 				curr.control1 = controlPoints.control1;
 				curr.control2 = controlPoints.control2;
 			} else if (propertyTypeName === 'vector') {
-				/*
-				let xControl = calculateControlPointsForScalar(prev.value.x, curr.value.x, next.value.x);
-				let yControl = calculateControlPointsForScalar(prev.value.y, curr.value.y, next.value.y);
-				curr.control1 = new Vector(xControl.control1, yControl.control1);
-				curr.control2 = new Vector(xControl.control2, yControl.control2);
-				*/
-
-				// The bigger angle, the further away are control points.
-
 				let prevValue = prev.value as Vector;
 				let currValue = curr.value as Vector;
 				let nextValue = next.value as Vector;
@@ -152,7 +154,7 @@ class AnimatorTrack {
 				let prevToCurr = currValue.clone().subtract(prevValue);
 				let currToNext = nextValue.clone().subtract(currValue);
 
-				let angleFactor = Math.abs(prevToCurr.angleTo(currToNext) / Math.PI);
+				let angleFactor = prevToCurr.closestAngleTo(currToNext) * 2 / Math.PI;
 
 				let prevControlDist = prevToCurr.length() * controlPointDistanceFactor * angleFactor;
 				let nextControlDist = currToNext.length() * controlPointDistanceFactor * angleFactor;
@@ -218,6 +220,7 @@ class AnimatorTrack {
 		if (this.animatedProperty.value !== newValue) {
 			this.animatedProperty.value = newValue;
 		}
+		return newValue;
 	}
 }
 
@@ -272,14 +275,6 @@ function interpolateLinear(value1, value2, t: number, propertyType: PropertyType
 	}
 }
 
-function linearVectorInterpolation() {
-
-}
-
-function linearScalarInterpolation() {
-
-}
-
 function calculateControlPointsForScalar(prev: number, curr: number, next: number) {
 	if (curr >= prev && curr >= next || curr <= prev && curr <= next) {
 		return {
@@ -294,7 +289,7 @@ function calculateControlPointsForScalar(prev: number, curr: number, next: numbe
 	let prevNextDirection = (next - prev) < 0 ? -1 : 1;
 
 	return {
-		control1: curr + prevNextDirection * prevDist * controlPointDistanceFactor,
-		control2: curr - prevNextDirection * nextDist * controlPointDistanceFactor,
+		control1: curr - prevNextDirection * prevDist * controlPointDistanceFactor,
+		control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	};
 }

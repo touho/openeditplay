@@ -8,6 +8,11 @@ import MoveWidget from '../widget/moveWidget';
 import { GameEvent } from '../../core/eventDispatcher';
 import { sceneToolName } from '../editorSelection';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import PIXI from '../../features/graphics';
+import Entity from '../../core/entity';
+import Vector from '../../util/vector';
+import { scene } from '../../core/scene';
+import { filterChildren } from '../../core/serializable';
 
 let primaryColor = 'white';
 let hoverColor = 'yellow';
@@ -45,7 +50,6 @@ export default Component.register({
 		activeWidget: null, // widget being dragged
 		widgets: null, // All 5 widgets are always here
 		mouseOnWidget: null, // If mouse is hovering on a visible widget,
-		inSelectionArea: false,
 
 		// Widgets
 		xScale: null,
@@ -56,25 +60,11 @@ export default Component.register({
 
 		listeners: null,
 
-		positionHelper: null,
-
 		constructor() {
-			// this.createWidgets();
-
-
-			// this.widgets = [
-			// 	this.position = new PositionWidget(this),
-			// 	this.xScale = new ScaleWidget(this, 1, 0),
-			// 	this.yScale = new ScaleWidget(this, 0, 1),
-			// 	this.scale = new ScaleWidget(this, 1, 1),
-			// 	this.angle = new AngleWidget(this)
-			// ];
-			// return;
-
-			this.createWidgets();
 			editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, () => {
 				this.createWidgets();
 			});
+			this.createWidgets();
 		},
 		createWidgets() {
 			let positionWasInited = this.position && this.position.graphics;
@@ -142,7 +132,51 @@ export default Component.register({
 				for (let i = 0; i < this.widgets.length; ++i) {
 					this.widgets[i].updateVisibility();
 				}
+				this.Transform.container.filters = null;
 			}
+		},
+		entitiesSelected(selectedEntities: Entity[]) {
+			if (selectedEntities.length === 0) {
+				this.deselect();
+				return;
+			}
+			selectedEntities = filterChildren(selectedEntities) as Entity[];
+			let averagePosition = new Vector(0, 0);
+			for (const entity of selectedEntities) {
+				averagePosition.add(entity.Transform.getGlobalPosition());
+			}
+			averagePosition.divideScalar(selectedEntities.length);
+
+			/* DO NOT DELETE
+
+			Kind of neat way, but didn't quite work. For example rotating didn't rotate around widget. Dunno how to solve.
+
+
+			let totalBounds = null;
+			for (const entity of selectedEntities) {
+				let bounds = entity.Transform.container.getBounds();
+				if (bounds.width !== 0 && bounds.height !== 0) {
+					if (totalBounds) {
+						totalBounds.enlarge(bounds);
+					} else {
+						totalBounds = bounds;
+					}
+				}
+			}
+			let center = new Vector(totalBounds.x + totalBounds.width / 2, totalBounds.y + totalBounds.height / 2);
+
+			// from pixi coordinates to mouse coordinates:
+			center.multiply(scene.pixelDensity);
+
+			// from mouse coordinates to world coordinates:
+			center = scene.mouseToWorld(center);
+			*/
+
+			// Don't need to set global because EditorWidget isn't ever a child of a moving thing.
+			this.Transform.position = averagePosition;
+			this.Transform.angle = selectedEntities[0].Transform.getGlobalAngle();
+
+			this.select();
 		},
 		updateWidgets() {
 			for (let i = 0; i < this.widgets.length; ++i) {
@@ -157,8 +191,6 @@ export default Component.register({
 					this.requiresWidgetUpdate = true;
 					return;
 				}
-
-				this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 
 				this.updateWidgets();
 			};
@@ -177,7 +209,6 @@ export default Component.register({
 
 			this.listeners.push(this.scene.listen(GameEvent.SCENE_PAUSE, () => {
 				if (this.requiresWidgetUpdate) {
-					this.positionHelper.position.copy(this.Transform.getGlobalPosition());
 					this.updateWidgets();
 					this.requiresWidgetUpdate = false;
 				}
@@ -187,16 +218,6 @@ export default Component.register({
 			if (this.position)
 				this.position.init();
 
-			this.positionHelper = new PIXI.Graphics();
-			this.positionHelper.beginFill(0xFFFFFF);
-			this.positionHelper.drawCircle(0, 0, 2.7);
-			this.positionHelper.endFill();
-			this.positionHelper.beginFill(0x000000);
-			this.positionHelper.drawCircle(0, 0, 1.3);
-			this.positionHelper.endFill();
-			this.positionHelper.position.copy(this.Transform.getGlobalPosition());
-			this.scene.layers.positionHelperLayer.addChild(this.positionHelper);
-
 			this.listeners.push(this.scene.listen(GameEvent.SCENE_ZOOM_CHANGED, () => this.updateZoomLevel()));
 			this.updateZoomLevel();
 
@@ -205,7 +226,6 @@ export default Component.register({
 
 		updateZoomLevel() {
 			let invZoom = 1 / this.scene.cameraZoom;
-			this.positionHelper.scale.set(invZoom, invZoom);
 
 			this.widgets.forEach(w => {
 				w.graphics && w.graphics.scale.set(invZoom, invZoom);
@@ -222,9 +242,6 @@ export default Component.register({
 
 			this.listeners.forEach(listener => listener());
 			this.listeners = null;
-
-			this.positionHelper.destroy();
-			this.positionHelper = null;
 		},
 		delete() {
 			this.widgets.forEach(widget => {

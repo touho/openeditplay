@@ -82,8 +82,23 @@ export default class Vector {
 			dy = this.y - vec.y;
 		return dx * dx + dy * dy;
 	}
+	// returns -pi .. pi
 	angleTo(vec: Vector) {
-		return Math.acos(this.dot(vec) / (this.length() * vec.length()));
+		let lengthPart = this.length() * vec.length();
+		if (lengthPart > 0) {
+			return Math.acos(this.dot(vec) / lengthPart);
+		} else {
+			return 0;
+		}
+	}
+	// returns 0 .. pi / 2
+	closestAngleTo(vec: Vector) {
+		let angle = Math.abs(this.angleTo(vec));
+		if (angle > Math.PI * 0.5) {
+			return Math.abs(Math.PI - angle);
+		} else {
+			return angle;
+		}
 	}
 	normalize() {
 		return this.setLength(1);

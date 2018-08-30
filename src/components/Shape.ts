@@ -1,7 +1,8 @@
-import {Component, Prop} from '../core/component';
+import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import {Color} from '../util/color';
-import {default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor} from '../features/graphics';
+import { Color } from '../util/color';
+import { default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor, hitTest } from '../features/graphics';
+import { GameEvent, globalEventDispatcher } from '../core/eventDispatcher';
 
 Component.register({
 	name: 'Shape',
@@ -20,6 +21,7 @@ Component.register({
 		Prop('borderWidth', 1, Prop.float, Prop.float.range(0, 30))
 	],
 	prototype: {
+		graphicsContainPointFunc: null,
 		init() {
 			this.initSprite();
 			this.Transform.listen('globalTransformChanged', transform => {
@@ -67,15 +69,34 @@ Component.register({
 				this.listenProperty(this, propName, redrawGraphics);
 			});
 		},
+		containsPoint(vec: Vector) {
+			if (this.graphicsContainPointFunc) {
+				return this.graphicsContainPointFunc(vec);
+			}
+			return false;
+		},
 		initSprite() {
 			let textureAndAnchor = this.getTextureAndAnchor();
 			this.sprite = new PIXI.Sprite(textureAndAnchor.texture);
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
+			this.graphicsContainPointFunc = textureAndAnchor.containsPoint;
+
+			this.sprite.interactive = true;
+			this.sprite.on('pointerdown', (pointerDownEvent) => {
+				let localMousePoint = this.sprite.toLocal(pointerDownEvent.data.global, this.scene.stage);
+
+				if (this.containsPoint(localMousePoint)) {
+					// Only run in editor because player version has more stripped version of PIXI.
+					globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
+					this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
+				}
+			});
 
 			this.Transform.container.addChild(this.sprite);
 		},
 		updateTexture() {
 			let textureAndAnchor = this.getTextureAndAnchor();
+			this.graphicsContainPointFunc = textureAndAnchor.containsPoint;
 			this.sprite.texture = textureAndAnchor.texture;
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 		},
@@ -86,7 +107,7 @@ Component.register({
 			if (!textureAndAnchor) {
 				let graphics = this.createGraphics();
 				textureAndAnchor = generateTextureAndAnchor(graphics, hash);
-				graphics.destroy();
+				// graphics.destroy();
 			}
 			return textureAndAnchor;
 		},
@@ -186,6 +207,7 @@ Component.register({
 		sleep() {
 			this.sprite.destroy();
 			this.sprite = null;
+			this.graphicsContainPointFunc = null;
 		}
 	}
 });

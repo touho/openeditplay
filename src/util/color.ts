@@ -42,26 +42,26 @@ export class Color {
 	 */
 	interpolateLinear(color: Color, t: number) {
 		return new Color(
-			Math.round(this.r + (color.r - this.r) * t),
-			Math.round(this.g + (color.g - this.g) * t),
-			Math.round(this.b + (color.b - this.b) * t)
+			this.r + (color.r - this.r) * t,
+			this.g + (color.g - this.g) * t,
+			this.b + (color.b - this.b) * t
 		);
 	}
 	interpolateCubic(color: Color, control1: Color, control2: Color, t: number) {
 		let t2 = 1 - t;
 		return new Color(
-			Math.round(t2 ** 3 * this.r +
+			t2 ** 3 * this.r +
 				3 * t2 * t2 * t * control1.r +
 				3 * t2 * t * t * control2.r +
-				t ** 3 * color.r),
-			Math.round(t2 ** 3 * this.g +
+				t ** 3 * color.r,
+			t2 ** 3 * this.g +
 				3 * t2 * t2 * t * control1.g +
 				3 * t2 * t * t * control2.g +
-				t ** 3 * color.g),
-			Math.round(t2 ** 3 * this.b +
+				t ** 3 * color.g,
+			t2 ** 3 * this.b +
 				3 * t2 * t2 * t * control1.b +
 				3 * t2 * t * t * control2.b +
-				t ** 3 * color.b)
+				t ** 3 * color.b
 		);
 	}
 }

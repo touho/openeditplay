@@ -53,6 +53,7 @@ configureNetSync({
 });
 
 loadedPromise.then(() => {
+	setChangeOrigin('editor');
 	setLevel(game.getChildren('lvl')[0] as Level);
 });
 

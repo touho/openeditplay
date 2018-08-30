@@ -56,17 +56,7 @@ export default class ScaleWidget extends Widget {
 	}
 
 	onDrag(mousePosition, mousePositionChange, affectedEntities) {
-		// Master entity is the entity whose widget we are dragging.
-		// If parent and child entity are selected and we are dragging child widget, masterEntity is the parent.
-		let masterEntity = this.component.entity;
-		while (!affectedEntities.find(ent => ent === masterEntity)) {
-			masterEntity = masterEntity.getParent();
-			if (!masterEntity || masterEntity.threeLetterType !== 'ent') {
-				assert('Master entity not found when editing angle of entity.');
-			}
-		}
-
-		let entityGlobalPosition = masterEntity.getComponent('Transform').getGlobalPosition();
+		let entityGlobalPosition = this.component.entity.getComponent('Transform').getGlobalPosition();
 
 		let oldMousePosition = mousePosition.clone().subtract(mousePositionChange);
 		let widgetPosition = Vector.fromObject(this);
