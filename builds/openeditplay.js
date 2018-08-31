@@ -25,7 +25,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -66,6 +65,8 @@
 	    GameEvent["GLOBAL_CHANGE_OCCURED"] = "change";
 	    GameEvent["GLOBAL_SCENE_CREATED"] = "scene created";
 	    GameEvent["GLOBAL_GAME_CREATED"] = "game created";
+	    GameEvent["GLOBAL_ENTITY_CLICKED"] = "global entity clicked";
+	    GameEvent["ENTITY_CLICKED"] = "entity clicked";
 	})(GameEvent || (GameEvent = {}));
 	var eventDispatcherCallbacks = {
 	    eventDispatchedCallback: null // (eventName, listenerCount) => void
@@ -164,7 +165,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -175,9 +175,6 @@
 	    deleteAllChildren: 'c',
 	};
 	var origin;
-	function resetOrigin() {
-	    origin = null;
-	}
 	function getChangeOrigin() {
 	    return origin;
 	}
@@ -187,7 +184,6 @@
 	    // @ifndef OPTIMIZE
 	    if (_origin !== origin) {
 	        origin = _origin;
-	        { setTimeout(resetOrigin, 0); }
 	    }
 	    // @endif
 	}
@@ -233,13 +229,11 @@
 	    callback();
 	    externalChange = false;
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -622,7 +616,6 @@
 	        return children;
 	    }
 	});
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -722,7 +715,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -865,7 +857,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -947,8 +938,25 @@
 	        var dx = this.x - vec.x, dy = this.y - vec.y;
 	        return dx * dx + dy * dy;
 	    };
+	    // returns -pi .. pi
 	    Vector.prototype.angleTo = function (vec) {
-	        return Math.acos(this.dot(vec) / (this.length() * vec.length()));
+	        var lengthPart = this.length() * vec.length();
+	        if (lengthPart > 0) {
+	            return Math.acos(this.dot(vec) / lengthPart);
+	        }
+	        else {
+	            return 0;
+	        }
+	    };
+	    // returns 0 .. pi / 2
+	    Vector.prototype.closestAngleTo = function (vec) {
+	        var angle = Math.abs(this.angleTo(vec));
+	        if (angle > Math.PI * 0.5) {
+	            return Math.abs(Math.PI - angle);
+	        }
+	        else {
+	            return angle;
+	        }
 	    };
 	    Vector.prototype.normalize = function () {
 	        return this.setLength(1);
@@ -1014,7 +1022,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1085,7 +1092,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1240,7 +1246,6 @@
 	    toJSON: function (x) { return x.toHexString(); },
 	    fromJSON: function (x) { return new Color(x); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1369,7 +1374,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1750,7 +1754,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1793,6 +1796,11 @@
 	function getHashedTextureAndAnchor(hash) {
 	    return texturesAndAnchors[hash];
 	}
+	/**
+	 *
+	 * @param graphicsObject You should not destroy this object after generating texture. It is used for collision testing
+	 * @param hash
+	 */
 	function generateTextureAndAnchor(graphicsObject, hash) {
 	    if (!texturesAndAnchors[hash]) {
 	        var bounds = graphicsObject.getLocalBounds();
@@ -1802,12 +1810,57 @@
 	        };
 	        texturesAndAnchors[hash] = {
 	            texture: renderer.generateTexture(graphicsObject, PIXI.SCALE_MODES.LINEAR, 2),
-	            anchor: anchor
+	            anchor: anchor,
+	            graphicsObject: graphicsObject,
+	            containsPoint: function (point) {
+	                // Code copied from PIXI.js http://pixijs.download/release/docs/core_graphics_Graphics.js.html#line29
+	                for (var i = 0; i < graphicsObject.graphicsData.length; ++i) {
+	                    var data = graphicsObject.graphicsData[i];
+	                    if (!data.fill) {
+	                        continue;
+	                    }
+	                    if (data.shape) {
+	                        if (data.shape.contains(point.x, point.y)) {
+	                            return true;
+	                        }
+	                    }
+	                }
+	                return false;
+	            }
 	        };
 	    }
 	    return texturesAndAnchors[hash];
 	}
-	//# sourceMappingURL=graphics.js.map
+	var hitTestCanvas = document.createElement('canvas');
+	hitTestCanvas.width = 1;
+	hitTestCanvas.height = 1;
+	var hitTestContext = hitTestCanvas.getContext('2d');
+	function hitTest(sprite, pointerDownEvent, stage) {
+	    var localBounds = sprite.getLocalBounds();
+	    var textureSource = sprite.texture.baseTexture.source;
+	    var localMousePoint = sprite.toLocal(pointerDownEvent.data.global, stage);
+	    var xPart = (localMousePoint.x - localBounds.x) / (localBounds.width);
+	    var yPart = (localMousePoint.y - localBounds.y) / (localBounds.height);
+	    hitTestCanvas.width = hitTestCanvas.width; // A way to reset contents of the canvas
+	    hitTestContext.drawImage(textureSource, textureSource.width * xPart | 0, textureSource.height * yPart | 0, 1, 1, 0, 0, 1, 1);
+	    var imageData = hitTestContext.getImageData(0, 0, 1, 1);
+	    /*
+	    Position debugging
+	    const c = document.createElement('canvas');
+	    c.setAttribute('style', 'position: fixed;top:0px;left:0px;');
+	    c.width = src.width;
+	    c.height = src.height;
+	    const co = c.getContext('2d');
+	    co.drawImage(src, 0, 0);
+	    co.fillStyle = `rgb(${imageData.data[0]},${imageData.data[1]},${imageData.data[2]})`; ['red', 'green', 'blue', 'purple', 'white', 'yellow'][Math.random() * 6 | 0];
+	    co.strokeStyle = 'purple';
+
+	    co.fillRect((src.width * xPart | 0) - 10, (src.width * yPart | 0) - 10, 20, 20);
+	    co.strokeRect(xPart * c.width - 10, yPart * c.height - 10, 20, 20);
+	    document.body.appendChild(c);
+	    */
+	    return imageData.data[3] > 30;
+	}
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1843,9 +1896,6 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -1927,7 +1977,6 @@
 	    if (game)
 	        { listener(game); }
 	}
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2015,7 +2064,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2156,7 +2204,6 @@
 	        });
 	    }
 	}
-	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2200,7 +2247,6 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
-	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -2230,7 +2276,6 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2275,10 +2320,6 @@
 	        this.stage = new PIXI$1.Container();
 	        this.cameraPosition = new Vector(0, 0);
 	        this.cameraZoom = 1;
-	        this.stage.interactive = true;
-	        this.stage.on('click', function () {
-	            console.log('You clicked stage');
-	        });
 	        var self = this;
 	        function createLayer(parent) {
 	            if (parent === void 0) { parent = self.stage; }
@@ -2477,6 +2518,9 @@
 	    Scene.prototype.mouseToWorld = function (mousePosition) {
 	        return new Vector(this.layers.move.pivot.x + mousePosition.x / this.cameraZoom * this.pixelDensity.x, this.layers.move.pivot.y + mousePosition.y / this.cameraZoom * this.pixelDensity.y);
 	    };
+	    Scene.prototype.worldToMouse = function (worldPosition) {
+	        return new Vector((worldPosition.x - this.layers.move.pivot.x) * this.cameraZoom / this.pixelDensity.x, (worldPosition.y - this.layers.move.pivot.y) * this.cameraZoom / this.pixelDensity.y);
+	    };
 	    Scene.prototype.screenPixelsToWorldPixels = function (screenPixels) {
 	        return screenPixels / this.cameraZoom * this.pixelDensity.x;
 	    };
@@ -2621,6 +2665,10 @@
 	        // @endif
 	        this._listenRemoveFunctions.push(component._properties[propertyName].listen(GameEvent.PROPERTY_VALUE_CHANGE, callback));
 	    };
+	    Component.prototype.removeListenerOnSleep = function (listenerFunction) {
+	        assert(!this.entity.sleeping, 'Cannot call removeListenerOnSleep in sleep mode.');
+	        this._listenRemoveFunctions.push(listenerFunction);
+	    };
 	    Component.prototype.toJSON = function () {
 	        return Object.assign(_super.prototype.toJSON.call(this), {
 	            n: this.componentClass.componentName,
@@ -2714,7 +2762,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2868,7 +2915,6 @@
 	    }
 
 	*/
-	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -2890,7 +2936,6 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3103,7 +3148,6 @@
 	    }
 	    return entity;
 	});
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3407,7 +3451,6 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3699,7 +3742,6 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3797,7 +3839,6 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3821,9 +3862,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3926,7 +3964,6 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3950,7 +3987,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -3969,6 +4005,7 @@
 	        Prop('borderWidth', 1, Prop.float, Prop.float.range(0, 30))
 	    ],
 	    prototype: {
+	        graphicsContainPointFunc: null,
 	        init: function () {
 	            var _this = this;
 	            this.initSprite();
@@ -4012,14 +4049,32 @@
 	                _this.listenProperty(_this, propName, redrawGraphics);
 	            });
 	        },
+	        containsPoint: function (vec) {
+	            if (this.graphicsContainPointFunc) {
+	                return this.graphicsContainPointFunc(vec);
+	            }
+	            return false;
+	        },
 	        initSprite: function () {
+	            var _this = this;
 	            var textureAndAnchor = this.getTextureAndAnchor();
 	            this.sprite = new PIXI$1.Sprite(textureAndAnchor.texture);
 	            this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
+	            this.graphicsContainPointFunc = textureAndAnchor.containsPoint;
+	            this.sprite.interactive = true;
+	            this.sprite.on('pointerdown', function (pointerDownEvent) {
+	                var localMousePoint = _this.sprite.toLocal(pointerDownEvent.data.global, _this.scene.stage);
+	                if (_this.containsPoint(localMousePoint)) {
+	                    // Only run in editor because player version has more stripped version of PIXI.
+	                    globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, _this.entity, _this);
+	                    _this.entity.dispatch(GameEvent.ENTITY_CLICKED, _this);
+	                }
+	            });
 	            this.Transform.container.addChild(this.sprite);
 	        },
 	        updateTexture: function () {
 	            var textureAndAnchor = this.getTextureAndAnchor();
+	            this.graphicsContainPointFunc = textureAndAnchor.containsPoint;
 	            this.sprite.texture = textureAndAnchor.texture;
 	            this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 	        },
@@ -4029,7 +4084,7 @@
 	            if (!textureAndAnchor) {
 	                var graphics = this.createGraphics();
 	                textureAndAnchor = generateTextureAndAnchor(graphics, hash);
-	                graphics.destroy();
+	                // graphics.destroy();
 	            }
 	            return textureAndAnchor;
 	        },
@@ -4121,10 +4176,10 @@
 	        sleep: function () {
 	            this.sprite.destroy();
 	            this.sprite = null;
+	            this.graphicsContainPointFunc = null;
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4151,15 +4206,19 @@
 	            });
 	        },
 	        initSprite: function () {
+	            var _this = this;
 	            if (this.sprite) {
 	                this.sprite.destroy();
 	            }
 	            this.sprite = PIXI$1.Sprite.fromImage('/img/' + this.resource);
 	            this.sprite.anchor.set(this.anchor.x, this.anchor.y);
 	            this.sprite.interactive = true;
-	            this.sprite.buttonMode = true;
-	            this.sprite.on('click', function () {
-	                console.log('likked');
+	            this.sprite.on('pointerdown', function (pointerDownEvent) {
+	                if (hitTest(_this.sprite, pointerDownEvent, _this.scene.stage)) {
+	                    // Only run in editor because player version has more stripped version of PIXI.
+	                    globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, _this.entity, _this);
+	                    _this.entity.dispatch(GameEvent.ENTITY_CLICKED, _this);
+	                }
 	            });
 	            this.Transform.container.addChild(this.sprite);
 	        },
@@ -4169,7 +4228,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4227,8 +4285,7 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/ 
-	//# sourceMappingURL=Spawner.js.map
+	*/
 
 	Component.register({
 	    name: 'Trigger',
@@ -4276,7 +4333,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4489,7 +4545,6 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4515,7 +4570,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4810,7 +4864,6 @@
 	}
 	var zeroPoint$1 = new PIXI$1.Point();
 	var tempPoint$1 = new PIXI$1.Point();
-	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4820,7 +4873,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5022,7 +5074,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
@@ -5101,7 +5152,6 @@
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
-	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5138,7 +5188,7 @@
 	        }
 	    }
 	});
-	var controlPointDistanceFactor = 0.5;
+	var controlPointDistanceFactor = 0.33;
 	var Animator = /** @class */ (function () {
 	    function Animator(animationData) {
 	        this.time = 0;
@@ -5208,30 +5258,31 @@
 	            });
 	        }
 	        var propertyTypeName = this.animatedProperty.propertyType.type.name;
+	        var propertyType = this.animatedProperty.propertyType;
 	        var color = function (value) { return Math.min(Math.max(value, 0), 255); };
 	        for (var i = 0; i < this.keyFrames.length; i++) {
 	            var prev = this$1.keyFrames[i];
 	            var curr = this$1.keyFrames[(i + 1) % this$1.keyFrames.length];
 	            var next = this$1.keyFrames[(i + 2) % this$1.keyFrames.length];
 	            if (propertyTypeName === 'float') {
-	                var controlPoints = calculateControlPointsForScalar(prev.value, curr.value, next.value);
+	                var controlPoints = void 0;
+	                if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
+	                    // It's angle we are dealing with.
+	                    controlPoints = calculateControlPointsForScalar(getClosestAngle(curr.value, prev.value), curr.value, getClosestAngle(curr.value, next.value));
+	                }
+	                else {
+	                    controlPoints = calculateControlPointsForScalar(prev.value, curr.value, next.value);
+	                }
 	                curr.control1 = controlPoints.control1;
 	                curr.control2 = controlPoints.control2;
 	            }
 	            else if (propertyTypeName === 'vector') {
-	                /*
-	                let xControl = calculateControlPointsForScalar(prev.value.x, curr.value.x, next.value.x);
-	                let yControl = calculateControlPointsForScalar(prev.value.y, curr.value.y, next.value.y);
-	                curr.control1 = new Vector(xControl.control1, yControl.control1);
-	                curr.control2 = new Vector(xControl.control2, yControl.control2);
-	                */
-	                // The bigger angle, the further away are control points.
 	                var prevValue = prev.value;
 	                var currValue = curr.value;
 	                var nextValue = next.value;
 	                var prevToCurr = currValue.clone().subtract(prevValue);
 	                var currToNext = nextValue.clone().subtract(currValue);
-	                var angleFactor = Math.abs(prevToCurr.angleTo(currToNext) / Math.PI);
+	                var angleFactor = prevToCurr.closestAngleTo(currToNext) * 2 / Math.PI;
 	                var prevControlDist = prevToCurr.length() * controlPointDistanceFactor * angleFactor;
 	                var nextControlDist = currToNext.length() * controlPointDistanceFactor * angleFactor;
 	                var prevNextDirection = nextValue.clone().subtract(prevValue).setLength(1);
@@ -5288,6 +5339,7 @@
 	        if (this.animatedProperty.value !== newValue) {
 	            this.animatedProperty.value = newValue;
 	        }
+	        return newValue;
 	    };
 	    return AnimatorTrack;
 	}());
@@ -5338,13 +5390,10 @@
 	    var nextDist = Math.abs(next - curr);
 	    var prevNextDirection = (next - prev) < 0 ? -1 : 1;
 	    return {
-	        control1: curr + prevNextDirection * prevDist * controlPointDistanceFactor,
-	        control2: curr - prevNextDirection * nextDist * controlPointDistanceFactor,
+	        control1: curr - prevNextDirection * prevDist * controlPointDistanceFactor,
+	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
-	//# sourceMappingURL=Animation.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5387,7 +5436,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5632,7 +5680,6 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -5675,7 +5722,6 @@
 	window.addEventListener('resize', resizeCanvas);
 	forEachScene(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
-	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5751,7 +5797,6 @@
 	    };
 	    return TouchControl;
 	}());
-	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5886,7 +5931,6 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
-	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5927,7 +5971,6 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map
