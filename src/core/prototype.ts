@@ -10,6 +10,7 @@ import { Component } from './component';
 import EntityPrototype from './entityPrototype';
 import Level from './level';
 import { globalEventDispatcher } from './eventDispatcher';
+import Property from './property';
 
 let propertyTypes = [
 	Prop('name', 'No name', Prop.string)
@@ -73,7 +74,7 @@ export default class Prototype extends PropertyOwner {
 	getInheritedComponentDatas(filter: (cda: ComponentData) => boolean = null) {
 		let data = getDataFromPrototype(this, this, filter);
 		let array = Object.keys(data).map(key => data[key]);
-		let inheritedComponentData;
+		let inheritedComponentData: InheritedComponentData = null;
 		for (let i = 0; i < array.length; ++i) {
 			inheritedComponentData = array[i];
 			inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(propertyType => {
@@ -301,8 +302,18 @@ PropertyOwner.defineProperties(Prototype, propertyTypes);
 
 Serializable.registerSerializable(Prototype, 'prt');
 
-function getDataFromPrototype(prototype: Prototype, originalPrototype: Prototype, filter?: (cda: ComponentData) => boolean, _depth = 0) {
-	let data;
+export type InheritedComponentData = {
+	ownComponentData: ComponentData;
+	componentClass: typeof Component;
+	componentId: string,
+	propertyHash?: { [propName: string]: Property }; // First this exists but will be deleted at the end.
+	properties?: Property[]; // In the end, this exists.
+	threeLetterType: 'icd';
+	generatedForPrototype: Prototype;
+};
+
+function getDataFromPrototype(prototype: Prototype, originalPrototype: Prototype, filter?: (cda: ComponentData) => boolean, _depth = 0): { [componentId: string]: InheritedComponentData } {
+	let data: { [componentId: string]: InheritedComponentData } = null;
 
 	let parentPrototype = prototype.getParentPrototype() as Prototype;
 	if (parentPrototype)
@@ -313,7 +324,7 @@ function getDataFromPrototype(prototype: Prototype, originalPrototype: Prototype
 	let componentDatas = prototype.getChildren('cda') as any as Array<ComponentData>;
 	if (filter)
 		componentDatas = componentDatas.filter(filter);
-	let componentData;
+	let componentData: ComponentData = null;
 	for (let i = 0; i < componentDatas.length; ++i) {
 		componentData = componentDatas[i];
 
@@ -336,8 +347,8 @@ function getDataFromPrototype(prototype: Prototype, originalPrototype: Prototype
 
 		let propertyHash = data[componentData.componentId].propertyHash;
 
-		let properties = componentData.getChildren('prp');
-		let property;
+		let properties = componentData.getChildren('prp') as Property[];
+		let property: Property = null;
 		for (let j = 0; j < properties.length; ++j) {
 			property = properties[j];
 			// Newest version of a property always overrides old property
@@ -348,6 +359,6 @@ function getDataFromPrototype(prototype: Prototype, originalPrototype: Prototype
 	return data;
 }
 
-function sortInheritedComponentDatas(a, b) {
+function sortInheritedComponentDatas(a: InheritedComponentData, b: InheritedComponentData) {
 	return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 }

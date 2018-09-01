@@ -1,9 +1,10 @@
 import Serializable from './serializable';
 import assert from '../util/assert';
 import * as performanceTool from '../util/performance';
-import Prototype from './prototype';
+import Prototype, { InheritedComponentData } from './prototype';
 import { Component } from './component';
 import { getSerializable } from './serializableManager';
+import Property from './property';
 
 const ALIVE_ERROR = 'entity is already dead';
 
@@ -158,6 +159,25 @@ export default class Entity extends Serializable {
 		this.forEachChild('ent', (entity: Entity) => entity.wakeUp());
 
 		return true;
+	}
+
+	resetComponents() {
+		// TODO: Reset all values of all components of this entity and subentities.
+
+		let inheritedComponentDatas = this.prototype.getInheritedComponentDatas();
+
+		inheritedComponentDatas.forEach((icd: InheritedComponentData) => {
+			let component = this.getComponents(icd.componentClass.componentName).find((comp: Component) => comp._componentId === icd.componentId);
+			icd.properties.forEach((prop: Property) => {
+				if (!component._properties[prop.name].valueEquals(prop.value)) {
+					component[prop.name] = prop.value;
+				}
+			});
+		});
+
+		// debugger; // TODO: do stuff with inheritedComponentDatas
+
+		this.forEachChild('ent', (ent: Entity) => ent.resetComponents());
 	}
 
 	delete() {

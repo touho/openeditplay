@@ -137,6 +137,10 @@ div.topSceneControlButtons div.button[controlButtonType='rec'] {
   color: #ff3333;
   text-shadow: 0 0 17px white;
 }
+div.topSceneControlButtons div.button[controlButtonType='preview'] {
+  color: #ffff00;
+  text-shadow: 0 0 16px #e7ff00;
+}
 
 div.topSceneControlButton {
   display: inline-block;

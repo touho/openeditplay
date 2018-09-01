@@ -25,6 +25,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -165,6 +166,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -229,11 +231,13 @@
 	    callback();
 	    externalChange = false;
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -616,6 +620,7 @@
 	        return children;
 	    }
 	});
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -674,6 +679,9 @@
 	            n: this.propertyType.name
 	        });
 	    };
+	    Property.prototype.valueEquals = function (otherValue) {
+	        return this.propertyType.type.equal(this._value, otherValue);
+	    };
 	    Object.defineProperty(Property.prototype, "type", {
 	        get: function () {
 	            return this.propertyType.type;
@@ -715,6 +723,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -815,7 +824,7 @@
 	function createDataType(_a) {
 	    var _b = _a.name, name = _b === void 0 ? '' : _b, _c = _a.validators, validators = _c === void 0 ? { default: function (x) { return x; } } : _c, // default must exist. if value is a reference(object), validator should copy the value.
 	    _d = _a.toJSON, // default must exist. if value is a reference(object), validator should copy the value.
-	    toJSON = _d === void 0 ? function (x) { return x; } : _d, _e = _a.fromJSON, fromJSON = _e === void 0 ? function (x) { return x; } : _e, _f = _a.clone, clone = _f === void 0 ? function (x) { return x; } : _f;
+	    toJSON = _d === void 0 ? function (x) { return x; } : _d, _e = _a.fromJSON, fromJSON = _e === void 0 ? function (x) { return x; } : _e, _f = _a.clone, clone = _f === void 0 ? function (x) { return x; } : _f, _g = _a.equal, equal = _g === void 0 ? function (a, b) { return a === b; } : _g;
 	    assert(name, 'name missing from property type');
 	    assert(typeof validators.default === 'function', 'default validator missing from property type: ' + name);
 	    assert(typeof toJSON === 'function', 'invalid toJSON for property type: ' + name);
@@ -825,7 +834,8 @@
 	        validators: validators,
 	        toJSON: toJSON,
 	        fromJSON: fromJSON,
-	        clone: clone
+	        clone: clone,
+	        equal: equal
 	    };
 	    var createType = function () { return type; };
 	    Object.keys(validators).forEach(function (validatorName) {
@@ -1022,6 +1032,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1075,6 +1086,9 @@
 	            3 * t2 * t * t * control2.b +
 	            Math.pow(t, 3) * color.b);
 	    };
+	    Color.prototype.isEqualTo = function (other) {
+	        return this.r === other.r && this.g === other.g && this.b === other.b;
+	    };
 	    return Color;
 	}());
 	function hexToRgb(hex) {
@@ -1092,6 +1106,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1175,7 +1190,8 @@
 	        y: Math.round(vec.y * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER
 	    }); },
 	    fromJSON: function (vec) { return Vector.fromObject(vec); },
-	    clone: function (vec) { return vec.clone(); }
+	    clone: function (vec) { return vec.clone(); },
+	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
 	Prop.string = createDataType({
 	    name: 'string',
@@ -1244,8 +1260,10 @@
 	        }
 	    },
 	    toJSON: function (x) { return x.toHexString(); },
-	    fromJSON: function (x) { return new Color(x); }
+	    fromJSON: function (x) { return new Color(x); },
+	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1374,6 +1392,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1754,6 +1773,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1861,6 +1881,7 @@
 	    */
 	    return imageData.data[3] > 30;
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1896,6 +1917,9 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -1977,6 +2001,7 @@
 	    if (game)
 	        { listener(game); }
 	}
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2064,6 +2089,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2204,6 +2230,7 @@
 	        });
 	    }
 	}
+	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2221,7 +2248,7 @@
 	    EditorEvent["EDITOR_PAUSE"] = "pause";
 	    EditorEvent["EDITOR_CLONE"] = "clone";
 	    EditorEvent["EDITOR_DELETE"] = "delete";
-	    EditorEvent["EDITOR_REC_MODE"] = "rec mode"; // mode just turned on. get state from editorGlobals.recording
+	    EditorEvent["EDITOR_SCENE_MODE_CHANGED"] = "scene mode change"; // mode just turned on. get state from editorGlobals.recording
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2247,6 +2274,7 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -2276,6 +2304,7 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2552,6 +2581,7 @@
 	    if (scene)
 	        { listener(scene); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -2762,6 +2792,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2915,6 +2946,7 @@
 	    }
 
 	*/
+	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -2936,6 +2968,7 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3070,6 +3103,21 @@
 	        this.forEachChild('ent', function (entity) { return entity.wakeUp(); });
 	        return true;
 	    };
+	    Entity.prototype.resetComponents = function () {
+	        // TODO: Reset all values of all components of this entity and subentities.
+	        var _this = this;
+	        var inheritedComponentDatas = this.prototype.getInheritedComponentDatas();
+	        inheritedComponentDatas.forEach(function (icd) {
+	            var component = _this.getComponents(icd.componentClass.componentName).find(function (comp) { return comp._componentId === icd.componentId; });
+	            icd.properties.forEach(function (prop) {
+	                if (!component._properties[prop.name].valueEquals(prop.value)) {
+	                    component[prop.name] = prop.value;
+	                }
+	            });
+	        });
+	        // debugger; // TODO: do stuff with inheritedComponentDatas
+	        this.forEachChild('ent', function (ent) { return ent.resetComponents(); });
+	    };
 	    Entity.prototype.delete = function () {
 	        assert(this._alive, ALIVE_ERROR);
 	        this.sleep();
@@ -3148,6 +3196,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3203,7 +3252,7 @@
 	        if (filter === void 0) { filter = null; }
 	        var data = getDataFromPrototype(this, this, filter);
 	        var array = Object.keys(data).map(function (key) { return data[key]; });
-	        var inheritedComponentData;
+	        var inheritedComponentData = null;
 	        for (var i = 0; i < array.length; ++i) {
 	            inheritedComponentData = array[i];
 	            inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(function (propertyType) {
@@ -3410,7 +3459,7 @@
 	Serializable.registerSerializable(Prototype, 'prt');
 	function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	    if (_depth === void 0) { _depth = 0; }
-	    var data;
+	    var data = null;
 	    var parentPrototype = prototype.getParentPrototype();
 	    if (parentPrototype)
 	        { data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1); }
@@ -3419,7 +3468,7 @@
 	    var componentDatas = prototype.getChildren('cda');
 	    if (filter)
 	        { componentDatas = componentDatas.filter(filter); }
-	    var componentData;
+	    var componentData = null;
 	    for (var i = 0; i < componentDatas.length; ++i) {
 	        componentData = componentDatas[i];
 	        if (!data[componentData.componentId]) {
@@ -3439,7 +3488,7 @@
 	        }
 	        var propertyHash = data[componentData.componentId].propertyHash;
 	        var properties = componentData.getChildren('prp');
-	        var property = void 0;
+	        var property = null;
 	        for (var j = 0; j < properties.length; ++j) {
 	            property = properties[j];
 	            // Newest version of a property always overrides old property
@@ -3451,6 +3500,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3742,6 +3792,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3839,6 +3890,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3862,6 +3914,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -3964,6 +4019,7 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -3987,6 +4043,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4180,6 +4237,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4228,6 +4286,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4285,7 +4344,8 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/
+	*/ 
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4333,6 +4393,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4545,6 +4606,7 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4570,6 +4632,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4864,6 +4927,7 @@
 	}
 	var zeroPoint$1 = new PIXI$1.Point();
 	var tempPoint$1 = new PIXI$1.Point();
+	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4873,6 +4937,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5074,6 +5139,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
@@ -5152,6 +5218,7 @@
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
+	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5180,7 +5247,7 @@
 	            if (this.animator) {
 	                this.animator.delete();
 	            }
-	            this.animator = new Animator(animation.parseAnimationData(this.animationData));
+	            this.animator = new Animator(animation.parseAnimationData(this.animationData), this);
 	        },
 	        sleep: function () {
 	            this.animator.delete();
@@ -5190,7 +5257,8 @@
 	});
 	var controlPointDistanceFactor = 0.33;
 	var Animator = /** @class */ (function () {
-	    function Animator(animationData) {
+	    function Animator(animationData, component) {
+	        this.component = component;
 	        this.time = 0;
 	        this.animations = animationData.animations.map(function (anim) { return new AnimatorAnimation(anim); });
 	        this.currentAnimation = this.animations[0];
@@ -5208,6 +5276,12 @@
 	        this.currentAnimation.setFrame(frame);
 	    };
 	    Animator.prototype.setAnimation = function (name) {
+	        if (!name) {
+	            this.time = 0;
+	            this.currentAnimation = null;
+	            this.component.entity.resetComponents();
+	            return;
+	        }
 	        var anim = this.animations.find(function (anim) { return anim.name === name; });
 	        if (anim) {
 	            this.currentAnimation = anim;
@@ -5225,6 +5299,7 @@
 	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData); });
 	    }
 	    AnimatorAnimation.prototype.setFrame = function (frame) {
+	        assert(frame > 0, 'frame must be positive');
 	        for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
 	            var track = _a[_i];
 	            track.setFrame(frame);
@@ -5354,29 +5429,29 @@
 	    }
 	    return target;
 	}
-	function interpolateBezier(value1, value2, value3, value4, t, propertyType) {
+	function interpolateBezier(fromValue, control1Value, control2Value, targetValue, t, propertyType) {
 	    var typeName = propertyType.type.name;
 	    if (typeName === 'float') {
 	        if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
 	            // It's angle we are dealing with.
-	            value2 = getClosestAngle(value1, value2);
-	            value3 = getClosestAngle(value1, value3);
-	            value4 = getClosestAngle(value1, value4);
+	            control1Value = getClosestAngle(fromValue, control1Value);
+	            control2Value = getClosestAngle(fromValue, control2Value);
+	            targetValue = getClosestAngle(fromValue, targetValue);
 	        }
 	        var t2 = 1 - t;
-	        return Math.pow(t2, 3) * value1 +
-	            3 * t2 * t2 * t * value2 +
-	            3 * t2 * t * t * value3 +
-	            Math.pow(t, 3) * value4;
+	        return Math.pow(t2, 3) * fromValue +
+	            3 * t2 * t2 * t * control1Value +
+	            3 * t2 * t * t * control2Value +
+	            Math.pow(t, 3) * targetValue;
 	    }
 	    else if (typeName === 'vector') {
-	        return value1.interpolateCubic(value4, value2, value3, t);
+	        return fromValue.interpolateCubic(targetValue, control1Value, control2Value, t);
 	    }
 	    else if (typeName === 'color') {
-	        return value1.interpolateCubic(value4, value2, value3, t);
+	        return fromValue.interpolateCubic(targetValue, control1Value, control2Value, t);
 	    }
 	    else {
-	        return value1;
+	        return fromValue;
 	    }
 	}
 	function calculateControlPointsForScalar(prev, curr, next) {
@@ -5394,6 +5469,9 @@
 	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
+	//# sourceMappingURL=Animation.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5436,6 +5514,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5680,6 +5759,7 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -5722,6 +5802,7 @@
 	window.addEventListener('resize', resizeCanvas);
 	forEachScene(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
+	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5797,6 +5878,7 @@
 	    };
 	    return TouchControl;
 	}());
+	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -5931,6 +6013,7 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
+	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -5971,6 +6054,7 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

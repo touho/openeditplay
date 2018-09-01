@@ -4,15 +4,15 @@ export namespace animation {
     export type AnimationData = {
         animations: AnimationDataAnimation[];
     };
+    export type AnimationDataAnimation = {
+        name: string;
+        tracks: AnimationDataTrack[];
+    };
     export type AnimationDataTrack = {
         eprId: string;
         cId: string;
         prpName: string;
         keyFrames: { [frame: number]: any }
-    };
-    export type AnimationDataAnimation = {
-        name: string;
-        tracks: AnimationDataTrack[];
     };
 
     // export function parseAnimationData

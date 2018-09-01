@@ -371,6 +371,10 @@ div.topSceneControlButtons div.button[controlButtonType='rec'] {
   color: #ff3333;
   text-shadow: 0 0 17px white;
 }
+div.topSceneControlButtons div.button[controlButtonType='preview'] {
+  color: #ffff00;
+  text-shadow: 0 0 16px #e7ff00;
+}
 div.topSceneControlButton {
   display: inline-block;
   padding: 5px 15px;
@@ -602,6 +606,13 @@ div.animationModule button.recordButton {
 div.animationModule button.recordButton i {
   color: #ff3333;
   text-shadow: 0px 0px 4px white;
+}
+div.animationModule button.recordButton.selected {
+  background: #ff3333;
+}
+div.animationModule button.recordButton.selected i {
+  /* color: #ff3333;*/
+  /* text-shadow: 0px 0px 4px white;*/
 }
 div.animationModule td.trackFrame {
   border-top: 1px solid black;

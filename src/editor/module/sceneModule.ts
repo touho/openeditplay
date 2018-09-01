@@ -26,7 +26,7 @@ import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../c
 import '../components/EditorWidget';
 import '../components/EditorSelection';
 
-import { filterChildren } from "../../core/serializable";
+import Serializable, { filterChildren } from "../../core/serializable";
 import { limit } from "../../util/callLimiter";
 import Level from '../../core/level';
 import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
@@ -34,7 +34,7 @@ import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { selectInEditor, editorSelection, unfocus } from '../editorSelection';
 import Prefab from '../../core/prefab';
 import CreateObject from '../views/popup/createObject';
-import { editorGlobals } from '../editorGlobals';
+import { editorGlobals, SceneMode } from '../editorGlobals';
 import ComponentData from '../../core/componentData';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
@@ -238,7 +238,7 @@ class SceneModule extends Module {
 		this.entitiesInSelection = [];
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, () => {
-			editorGlobals.recording = false;
+			editorGlobals.sceneMode = SceneMode.NORMAL;
 			unfocus();
 
 			setChangeOrigin(this);
@@ -252,7 +252,7 @@ class SceneModule extends Module {
 			if (!scene || !scene.level)
 				return;
 
-			editorGlobals.recording = false;
+			editorGlobals.sceneMode = SceneMode.NORMAL;
 
 			unfocus();
 
@@ -272,7 +272,7 @@ class SceneModule extends Module {
 			if (!scene || !scene.level)
 				return;
 
-			editorGlobals.recording = false;
+			editorGlobals.sceneMode = SceneMode.NORMAL;
 
 			unfocus();
 
@@ -400,6 +400,9 @@ class SceneModule extends Module {
 		});
 
 		globalEventDispatcher.listen('new entity created', entity => {
+			if (!entity.prototype._rootType) {
+				return; // Temporary entity such as editor widget entity. No need to sync data from scene to game.
+			}
 			let handleEntity = entity => {
 				entity.addComponents([
 					Component.create('EditorSelection')
@@ -621,14 +624,12 @@ class SceneModule extends Module {
 
 		if (this.selectedEntities.indexOf(entity) < 0) {
 			// debugger;
-			if (!keyPressed(key.shift)) {
-				this.clearSelectedEntities();
+			if (keyPressed(key.shift)) {
+				this.selectEntities([...this.selectedEntities, entity]);
+			} else {
+				this.selectEntities([entity]);
 			}
-			this.selectedEntities.push(entity);
 
-			this.updateEditorWidget();
-
-			entity.getComponent('EditorSelection').select();
 			this.selectSelectedEntitiesInEditor();
 		}
 	}
@@ -901,6 +902,17 @@ class SceneModule extends Module {
 	}
 
 	selectEntities(entities: Entity[]) {
+		if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+			entities = entities.filter((entity: Entity) => {
+				let parent: Serializable = entity.prototype;
+				while (parent && parent !== editorGlobals.animationEntityPrototype) {
+					parent = parent._parent;
+				}
+				return parent === editorGlobals.animationEntityPrototype;
+			});
+		} else if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+			editorGlobals.sceneMode = SceneMode.NORMAL;
+		}
 		this.clearSelectedEntities();
 		this.selectedEntities.push(...entities);
 		this.selectedEntities.forEach(entity => {
@@ -942,7 +954,7 @@ class SceneModule extends Module {
 	}
 
 	selectSelectedEntitiesInEditor() {
-		if (sceneEdit.shouldSyncLevelAndScene()) {
+		if (sceneEdit.shouldSyncLevelAndScene() || editorGlobals.sceneMode === SceneMode.RECORDING) {
 			selectInEditor(this.selectedEntities.map(ent => ent.prototype), this);
 			editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 			Module.activateOneOfModules(['type', 'object'], false);

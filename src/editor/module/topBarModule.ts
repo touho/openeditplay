@@ -6,7 +6,7 @@ import { GameEvent } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { setSceneTool, sceneToolName, editorSelection, unfocus } from '../editorSelection';
 import { Button } from '../views/popup/Popup';
-import { editorGlobals } from '../editorGlobals';
+import { editorGlobals, SceneMode } from '../editorGlobals';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -82,7 +82,20 @@ export class TopBarModule extends Module {
 			title: 'Recording animation keyframes...',
 			icon: 'fa-circle',
 			type: 'rec',
-			callback: () => {} // It's just there to show that we are in a mode. Reset button is used to cancel it.
+			callback: () => {
+				editorGlobals.sceneMode = SceneMode.NORMAL;
+			}
+		};
+		let previewButtonData = {
+			title: 'Previewing animation frame...',
+			icon: 'fa-eye',
+			type: 'preview',
+			callback: () => {
+				editorGlobals.sceneMode = SceneMode.NORMAL;
+				if (editorGlobals.animationEntityPrototype && editorGlobals.animationEntityPrototype.previouslyCreatedEntity) {
+					editorGlobals.animationEntityPrototype.previouslyCreatedEntity.resetComponents();
+				}
+			}
 		};
 
 		let playButton = new SceneControlButton(playButtonData);
@@ -97,10 +110,12 @@ export class TopBarModule extends Module {
 			setTimeout(() => {
 				if (scene.playing) {
 					playButton.update(pauseButtonData);
-				} else if (editorGlobals.recording) {
-					playButton.update(recButtonData);
-				} else {
+				} else if (editorGlobals.sceneMode === SceneMode.NORMAL) {
 					playButton.update(playButtonData);
+				} else if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+					playButton.update(recButtonData);
+				} else if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+					playButton.update(previewButtonData);
 				}
 
 				let paused = !scene.playing && !scene.isInInitialState();
@@ -115,7 +130,7 @@ export class TopBarModule extends Module {
 			scene.listen(GameEvent.SCENE_RESET, updateButtons);
 			scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 			scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
-			editorEventDispacher.listen(EditorEvent.EDITOR_REC_MODE, updateButtons);
+			editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, updateButtons);
 		});
 
 		mount(this.controlButtons, playButton);

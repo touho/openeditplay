@@ -75,6 +75,10 @@ export default class Property extends Serializable {
 		});
 	}
 
+	valueEquals(otherValue) {
+		return this.propertyType.type.equal(this._value,otherValue);
+	}
+
 	get type() {
 		return this.propertyType.type;
 	}

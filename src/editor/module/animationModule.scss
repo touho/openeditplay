@@ -23,6 +23,13 @@ div.animationModule {
             text-shadow: 0px 0px 4px white;
         }
     }
+    button.recordButton.selected {
+        background: #ff3333;
+        i {
+            // color: #ff3333;
+            // text-shadow: 0px 0px 4px white;
+        }
+    }
 
     td.trackFrame {
         border-top: 1px solid black;

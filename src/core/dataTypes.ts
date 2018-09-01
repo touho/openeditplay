@@ -103,7 +103,8 @@ Prop.vector = createDataType({
 		y: Math.round(vec.y * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER
 	}),
 	fromJSON: vec => Vector.fromObject(vec),
-	clone: vec => vec.clone()
+	clone: vec => vec.clone(),
+	equal: (a: Vector, b: Vector) => a.isEqualTo(b)
 });
 
 export interface DataTypeContainer { string?: DataTypeDefinition; }
@@ -181,5 +182,6 @@ Prop.color = createDataType({
 		}
 	},
 	toJSON: x => x.toHexString(),
-	fromJSON: x => new Color(x)
+	fromJSON: x => new Color(x),
+	equal: (a: Color, b: Color) => a.isEqualTo(b)
 });

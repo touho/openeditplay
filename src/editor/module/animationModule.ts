@@ -1,7 +1,7 @@
 import { el, list, mount, RedomElement, List, text } from 'redom';
 import Module from './module';
 import * as performance from '../../util/performance';
-import { scene } from '../../core/scene';
+import Scene, { scene } from '../../core/scene';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { editorSelection, unfocus, selectInEditor } from '../editorSelection';
 import EntityPrototype from '../../core/entityPrototype';
@@ -12,10 +12,12 @@ import Property from '../../core/property';
 import { animation } from '../../features/animation/animation';
 import { redomDispatch, redomListen } from '../../util/redomEvents';
 import { isMouseButtonDown, listenKeyDown, key, keyPressed } from '../../util/input';
-import { editorGlobals } from '../editorGlobals';
+import { editorGlobals, SceneMode } from '../editorGlobals';
 import { Change, changeType, setChangeOrigin } from '../../core/change';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
+import { getSerializable } from '../../core/serializableManager';
+import EditorSelection from '../components/EditorSelection';
 
 class AnimationModule extends Module {
 	animations: animation.Animation[] = [];
@@ -25,10 +27,11 @@ class AnimationModule extends Module {
 	animationSelector: AnimationSelector;
 	animationTimelineView: AnimationTimelineView;
 
-	selectedFrame: number = null;
 	selectedAnimation: animation.Animation = null;
 
 	focusedKeyFrameViews: TrackFrameView[] = [];
+
+	recordButton: HTMLButtonElement;
 
 	constructor() {
 		super();
@@ -39,12 +42,16 @@ class AnimationModule extends Module {
 					el('button.button', 'Add animation', { onclick: () => this.addAnimation() }),
 					this.animationSelector = new AnimationSelector(),
 					// el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
-					el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
+					this.recordButton = <HTMLButtonElement>el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
 						onclick: () => {
-							// Selecting nothing will force user to select entity instead of entity prototype when editing animations.
-							selectInEditor([], this);
-							editorGlobals.recording = true;
-							editorEventDispacher.dispatch(EditorEvent.EDITOR_REC_MODE);
+							if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+								editorGlobals.sceneMode = SceneMode.NORMAL;
+							} else {
+								editorGlobals.sceneMode = SceneMode.RECORDING;
+							}
+						},
+						style: {
+							display: 'none' // until an animation is selected
 						}
 					}),
 				),
@@ -52,27 +59,47 @@ class AnimationModule extends Module {
 			)
 		);
 
+		editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, () => {
+			if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+				this.recordButton.classList.add('selected');
+				selectInEditor([], this);
+			} else {
+				this.recordButton.classList.remove('selected');
+				if (editorGlobals.sceneMode === SceneMode.NORMAL && this.editedEntityPrototype) {
+					selectInEditor([this.editedEntityPrototype], this);
+				}
+			}
+		});
+
 		this.name = 'Animation';
 		this.id = 'animation';
 
 		redomListen(this, 'frameSelected', frameNumber => {
-			this.selectedFrame = frameNumber;
-			// TODO: draw entity in new pose.
-			let entity = this.editedEntityPrototype.previouslyCreatedEntity;
-			if (entity) {
-				setChangeOrigin(this);
-				let animationComponent = entity.getComponents('Animation').find(comp => comp._componentId === this.animationComponentId);
-				animationComponent.animator.currentAnimation.setFrame(frameNumber);
-			}
+			this.setFrameInEntity();
 		});
 		redomListen(this, 'animationSelected', animation => {
 			this.selectedAnimation = animation;
 			this.animationTimelineView.update(this.selectedAnimation);
+			let component = this.getEntityComponent();
+			component.animator.setAnimation(animation && animation.name); // send falsy if initial pose should be selected
+			this.animationTimelineView.selectFrame(1);
+
+			this.recordButton.style.display = animation ? 'inline-block' : 'none';
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
-			if (!editorGlobals.recording)
+			if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+				if (change.type === 'editorSelection' && this.editedEntityPrototype) {
+					let editorSelection = change.reference as any;
+					if (editorSelection.items.length === 1 && editorSelection.items[0] === this.editedEntityPrototype) {
+						// Do nothing
+					} else {
+						this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+						this.editedEntityPrototype = null;
+					}
+				}
 				return;
+			}
 
 			if (change.origin === this) {
 				return;
@@ -171,8 +198,21 @@ class AnimationModule extends Module {
 			}
 		});
 	}
+	getEntityComponent() {
+		if (scene.playing) {
+			return null;
+		}
+		if (!this.editedEntityPrototype) {
+			return null;
+		}
+		let entity = this.editedEntityPrototype.previouslyCreatedEntity;
+		if (entity) {
+			return entity.getComponents('Animation').find(comp => comp._componentId === this.animationComponentId);
+		}
+		return null;
+	}
 	update() {
-		if (editorGlobals.recording && this.editedEntityPrototype && this.editedEntityPrototype._alive) {
+		if (editorGlobals.sceneMode === SceneMode.RECORDING && this.editedEntityPrototype && this.editedEntityPrototype._alive) {
 			return true;
 		}
 
@@ -183,7 +223,7 @@ class AnimationModule extends Module {
 				if (inheritedComponentDatas.length === 1) {
 					if (this.editedEntityPrototype !== entityPrototype) {
 						let inheritedComponentData = inheritedComponentDatas[0];
-						this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+						this.updateRaw(inheritedComponentData);
 					}
 					return true;
 				}
@@ -205,9 +245,18 @@ class AnimationModule extends Module {
 		} */
 		return false;
 	}
+	activate() {
+		let component = this.getEntityComponent();
+		if (!component) {
+			return;
+		}
+		component.animator.setAnimation(this.selectedAnimation && this.selectedAnimation.name); // send falsy if initial pose should be selected
+		this.setFrameInEntity();
+	}
 
-	updateRaw(entity, inheritedComponentData) {
+	updateRaw(inheritedComponentData) {
 		this.editedEntityPrototype = inheritedComponentData.generatedForPrototype;
+		editorGlobals.animationEntityPrototype = inheritedComponentData.generatedForPrototype;
 		this.animationComponentId = inheritedComponentData.componentId;
 		let animationDataString = inheritedComponentData.properties.find((prop: Property) => prop.name === 'animationData').value;
 
@@ -217,19 +266,24 @@ class AnimationModule extends Module {
 		this.animationData.animations = this.animationData.animations.map(animation.Animation.create);
 		this.animations = this.animationData.animations as animation.Animation[];
 
+		this.updateChildren();
+	}
+
+	updateChildren() {
 		this.animationSelector.update(this.animations);
 		this.selectedAnimation = this.animationSelector.getSelectedAnimation();
 		this.animationTimelineView.update(this.selectedAnimation);
-		this.selectedFrame = this.selectedFrame || 1;
-		this.animationTimelineView.selectFrame(this.selectedFrame);
 	}
 
 	addAnimation() {
 		let name = prompt('name', 'idle');
 		if (name) {
 			setChangeOrigin(this);
-			this.animations.push(new animation.Animation(name));
+			let newAnimation = new animation.Animation(name);
+			this.animations.push(newAnimation);
 			this.updateAnimationData();
+			this.updateChildren();
+			this.animationSelector.select(name);
 		}
 	}
 
@@ -245,14 +299,31 @@ class AnimationModule extends Module {
 		this.animationTimelineView.update(this.selectedAnimation);
 
 		// Reload entity Animator:
-		this.editedEntityPrototype.previouslyCreatedEntity.getComponents('Animation').forEach(comp => {
-			comp.animationData = componentData.getValue('animationData');
-		});
+		let component = this.getEntityComponent();
+		if (component) {
+			component.animationData = componentData.getValue('animationData');
+		}
 	}
 
 	saveValue(entityPrototype: EntityPrototype, componendId: string, property: Property) {
-		this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.selectedFrame, property.propertyType.type.toJSON(property._value));
+		this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
 		this.updateAnimationData();
+	}
+
+	setFrameInEntity() {
+		if (scene.playing) {
+			return;
+		}
+		let component = this.getEntityComponent();
+		if (component) {
+			setChangeOrigin(this);
+			if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+				editorGlobals.sceneMode = SceneMode.PREVIEW;
+			}
+			if (component.animator.currentAnimation) {
+				component.animator.currentAnimation.setFrame(this.animationTimelineView.selectedFrame);
+			}
+		}
 	}
 
 	free() {
@@ -273,8 +344,15 @@ class AnimationSelector implements RedomElement {
 	}
 	update(animations: animation.Animation[]) {
 		this.animations = animations;
-		this.list.update(animations.map(anim => anim.name));
+		this.list.update([null, ...animations.map(anim => anim.name)]);
 	}
+	select(name: string) {
+		this.el.value = name || '';
+		this.el.onchange(null);
+	}
+	/**
+	 * If this returns null, it means the initial pose the entity is without animations
+	 */
 	getSelectedAnimation() {
 		return this.animations.find(anim => anim.name === this.el.value);
 	}
@@ -285,14 +363,15 @@ class AnimationSelectorOption implements RedomElement {
 		this.el = el('option');
 	}
 	update(name) {
-		this.el.setAttribute('value', name);
-		this.el.innerText = name;
+		this.el.setAttribute('value', name || '');
+		this.el.innerText = name || 'Initial pose';
 	}
 }
 class AnimationTimelineView implements RedomElement {
 	el: HTMLElement;
 	frameNumbers: List;
 	trackList: List;
+	selectedFrame: number;
 	constructor() {
 		this.el = el('table.animationTimeline',
 			el('thead',
@@ -312,9 +391,11 @@ class AnimationTimelineView implements RedomElement {
 			});
 			redomDispatch(this, 'selectKeyFrameView', views);
 		});
+		redomListen(this, 'frameSelected', frame => this.selectedFrame = frame);
 	}
 	update(animation: animation.Animation) {
 		if (!animation) {
+			this.selectedFrame = 0;
 			this.frameNumbers.update([]);
 			this.trackList.update([]);
 			return;
@@ -333,8 +414,9 @@ class AnimationTimelineView implements RedomElement {
 		this.frameNumbers.update(frameNumbers);
 
 		let trackUpdateData = animation.tracks.map(track => {
+			let entityPrototype = getSerializable(track.eprId) as EntityPrototype;
 			return {
-				name: track.prpName,
+				name: entityPrototype.makeUpAName() + ' ' + track.prpName,
 				keyFrames: track.keyFrames,
 				frameCount
 			};
@@ -343,6 +425,7 @@ class AnimationTimelineView implements RedomElement {
 		this.trackList.update(trackUpdateData);
 	}
 	selectFrame(frame) {
+		this.selectedFrame = frame;
 		let views = (this.frameNumbers as any).views as FrameNumberHeader[];
 		for (let view of views) {
 			if (view.frameNumber === frame) {

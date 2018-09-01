@@ -64,6 +64,9 @@ export class Color {
 				t ** 3 * color.b
 		);
 	}
+	isEqualTo(other: Color) {
+		return this.r === other.r && this.g === other.g && this.b === other.b;
+	}
 }
 
 export function hexToRgb(hex) {

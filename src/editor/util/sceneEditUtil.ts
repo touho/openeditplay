@@ -10,12 +10,12 @@ import { selectedLevel } from '../editorSelection';
 import Entity from '../../core/entity';
 import EntityPrototype from '../../core/entityPrototype';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
-import { editorGlobals } from '../editorGlobals';
+import { editorGlobals, SceneMode } from '../editorGlobals';
 
 let radius = 10;
 
 export function shouldSyncLevelAndScene() {
-	return scene && scene.isInInitialState() && selectedLevel && !editorGlobals.recording;
+	return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
 }
 
 function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {

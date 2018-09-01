@@ -125,6 +125,7 @@ type DataType = {
 	toJSON?: Function;
 	fromJSON?: Function;
 	clone?: Function;
+	equal?: (a, b) => boolean
 };
 export type DataTypeDefinition = Function;
 
@@ -133,7 +134,8 @@ export function createDataType({
 	validators = { default: x => x }, // default must exist. if value is a reference(object), validator should copy the value.
 	toJSON = x => x,
 	fromJSON = x => x,
-	clone = x => x
+	clone = x => x,
+	equal = (a, b) => a === b
 }: DataType): DataTypeDefinition {
 	assert(name, 'name missing from property type');
 	assert(typeof validators.default === 'function', 'default validator missing from property type: ' + name);
@@ -145,7 +147,8 @@ export function createDataType({
 		validators,
 		toJSON,
 		fromJSON,
-		clone
+		clone,
+		equal
 	};
 	let createType = () => type;
 

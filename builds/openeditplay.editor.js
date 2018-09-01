@@ -25,6 +25,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -165,6 +166,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -229,11 +231,13 @@
 	    callback();
 	    externalChange = false;
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -631,6 +635,7 @@
 	        return true;
 	    });
 	}
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -698,6 +703,9 @@
 	            n: this.propertyType.name
 	        });
 	    };
+	    Property.prototype.valueEquals = function (otherValue) {
+	        return this.propertyType.type.equal(this._value, otherValue);
+	    };
 	    Object.defineProperty(Property.prototype, "type", {
 	        get: function () {
 	            return this.propertyType.type;
@@ -739,6 +747,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -839,7 +848,7 @@
 	function createDataType(_a) {
 	    var _b = _a.name, name = _b === void 0 ? '' : _b, _c = _a.validators, validators = _c === void 0 ? { default: function (x) { return x; } } : _c, // default must exist. if value is a reference(object), validator should copy the value.
 	    _d = _a.toJSON, // default must exist. if value is a reference(object), validator should copy the value.
-	    toJSON = _d === void 0 ? function (x) { return x; } : _d, _e = _a.fromJSON, fromJSON = _e === void 0 ? function (x) { return x; } : _e, _f = _a.clone, clone = _f === void 0 ? function (x) { return x; } : _f;
+	    toJSON = _d === void 0 ? function (x) { return x; } : _d, _e = _a.fromJSON, fromJSON = _e === void 0 ? function (x) { return x; } : _e, _f = _a.clone, clone = _f === void 0 ? function (x) { return x; } : _f, _g = _a.equal, equal = _g === void 0 ? function (a, b) { return a === b; } : _g;
 	    assert(name, 'name missing from property type');
 	    assert(typeof validators.default === 'function', 'default validator missing from property type: ' + name);
 	    assert(typeof toJSON === 'function', 'invalid toJSON for property type: ' + name);
@@ -849,7 +858,8 @@
 	        validators: validators,
 	        toJSON: toJSON,
 	        fromJSON: fromJSON,
-	        clone: clone
+	        clone: clone,
+	        equal: equal
 	    };
 	    var createType = function () { return type; };
 	    Object.keys(validators).forEach(function (validatorName) {
@@ -881,6 +891,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1046,6 +1057,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1099,6 +1111,9 @@
 	            3 * t2 * t * t * control2.b +
 	            Math.pow(t, 3) * color.b);
 	    };
+	    Color.prototype.isEqualTo = function (other) {
+	        return this.r === other.r && this.g === other.g && this.b === other.b;
+	    };
 	    return Color;
 	}());
 	function hexToRgb(hex) {
@@ -1116,6 +1131,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1199,7 +1215,8 @@
 	        y: Math.round(vec.y * FLOAT_JSON_PRECISION_MULTIPLIER) / FLOAT_JSON_PRECISION_MULTIPLIER
 	    }); },
 	    fromJSON: function (vec) { return Vector.fromObject(vec); },
-	    clone: function (vec) { return vec.clone(); }
+	    clone: function (vec) { return vec.clone(); },
+	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
 	Prop.string = createDataType({
 	    name: 'string',
@@ -1268,8 +1285,10 @@
 	        }
 	    },
 	    toJSON: function (x) { return x.toHexString(); },
-	    fromJSON: function (x) { return new Color(x); }
+	    fromJSON: function (x) { return new Color(x); },
+	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1398,6 +1417,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1950,6 +1970,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI$1;
 	if (isClient) {
@@ -2057,6 +2078,7 @@
 	    */
 	    return imageData.data[3] > 30;
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2092,6 +2114,9 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -2168,6 +2193,7 @@
 	    }
 	    return new Game(json.id);
 	});
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2255,6 +2281,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2390,6 +2417,7 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
+	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2407,7 +2435,7 @@
 	    EditorEvent["EDITOR_PAUSE"] = "pause";
 	    EditorEvent["EDITOR_CLONE"] = "clone";
 	    EditorEvent["EDITOR_DELETE"] = "delete";
-	    EditorEvent["EDITOR_REC_MODE"] = "rec mode"; // mode just turned on. get state from editorGlobals.recording
+	    EditorEvent["EDITOR_SCENE_MODE_CHANGED"] = "scene mode change"; // mode just turned on. get state from editorGlobals.recording
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
 	var EditorEventDispatcher = /** @class */ (function () {
@@ -2433,6 +2461,7 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -2518,6 +2547,7 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2795,6 +2825,7 @@
 	    if (scene)
 	        { listener(scene); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -3005,6 +3036,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -3158,6 +3190,7 @@
 	    }
 
 	*/
+	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3179,6 +3212,7 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3313,6 +3347,21 @@
 	        this.forEachChild('ent', function (entity) { return entity.wakeUp(); });
 	        return true;
 	    };
+	    Entity.prototype.resetComponents = function () {
+	        // TODO: Reset all values of all components of this entity and subentities.
+	        var _this = this;
+	        var inheritedComponentDatas = this.prototype.getInheritedComponentDatas();
+	        inheritedComponentDatas.forEach(function (icd) {
+	            var component = _this.getComponents(icd.componentClass.componentName).find(function (comp) { return comp._componentId === icd.componentId; });
+	            icd.properties.forEach(function (prop) {
+	                if (!component._properties[prop.name].valueEquals(prop.value)) {
+	                    component[prop.name] = prop.value;
+	                }
+	            });
+	        });
+	        // debugger; // TODO: do stuff with inheritedComponentDatas
+	        this.forEachChild('ent', function (ent) { return ent.resetComponents(); });
+	    };
 	    Entity.prototype.delete = function () {
 	        assert(this._alive, ALIVE_ERROR);
 	        this.sleep();
@@ -3391,6 +3440,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3446,7 +3496,7 @@
 	        if (filter === void 0) { filter = null; }
 	        var data = getDataFromPrototype(this, this, filter);
 	        var array = Object.keys(data).map(function (key) { return data[key]; });
-	        var inheritedComponentData;
+	        var inheritedComponentData = null;
 	        for (var i = 0; i < array.length; ++i) {
 	            inheritedComponentData = array[i];
 	            inheritedComponentData.properties = inheritedComponentData.componentClass._propertyTypes.map(function (propertyType) {
@@ -3653,7 +3703,7 @@
 	Serializable.registerSerializable(Prototype, 'prt');
 	function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	    if (_depth === void 0) { _depth = 0; }
-	    var data;
+	    var data = null;
 	    var parentPrototype = prototype.getParentPrototype();
 	    if (parentPrototype)
 	        { data = getDataFromPrototype(parentPrototype, originalPrototype, filter, _depth + 1); }
@@ -3662,7 +3712,7 @@
 	    var componentDatas = prototype.getChildren('cda');
 	    if (filter)
 	        { componentDatas = componentDatas.filter(filter); }
-	    var componentData;
+	    var componentData = null;
 	    for (var i = 0; i < componentDatas.length; ++i) {
 	        componentData = componentDatas[i];
 	        if (!data[componentData.componentId]) {
@@ -3682,7 +3732,7 @@
 	        }
 	        var propertyHash = data[componentData.componentId].propertyHash;
 	        var properties = componentData.getChildren('prp');
-	        var property = void 0;
+	        var property = null;
 	        for (var j = 0; j < properties.length; ++j) {
 	            property = properties[j];
 	            // Newest version of a property always overrides old property
@@ -3694,6 +3744,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3985,6 +4036,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -4082,6 +4134,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -4105,6 +4158,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -4207,6 +4263,7 @@
 	});
 	var zeroPoint = new PIXI$2.Point();
 	var tempPoint = new PIXI$2.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -4230,6 +4287,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4423,6 +4481,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4471,6 +4530,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4528,7 +4588,8 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/
+	*/ 
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4576,6 +4637,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4788,6 +4850,7 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4813,6 +4876,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -5107,6 +5171,7 @@
 	}
 	var zeroPoint$1 = new PIXI$2.Point();
 	var tempPoint$1 = new PIXI$2.Point();
+	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -5122,6 +5187,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5323,6 +5389,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
@@ -5401,6 +5468,7 @@
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
+	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5429,7 +5497,7 @@
 	            if (this.animator) {
 	                this.animator.delete();
 	            }
-	            this.animator = new Animator(animation.parseAnimationData(this.animationData));
+	            this.animator = new Animator(animation.parseAnimationData(this.animationData), this);
 	        },
 	        sleep: function () {
 	            this.animator.delete();
@@ -5439,7 +5507,8 @@
 	});
 	var controlPointDistanceFactor = 0.33;
 	var Animator = /** @class */ (function () {
-	    function Animator(animationData) {
+	    function Animator(animationData, component) {
+	        this.component = component;
 	        this.time = 0;
 	        this.animations = animationData.animations.map(function (anim) { return new AnimatorAnimation(anim); });
 	        this.currentAnimation = this.animations[0];
@@ -5457,6 +5526,12 @@
 	        this.currentAnimation.setFrame(frame);
 	    };
 	    Animator.prototype.setAnimation = function (name) {
+	        if (!name) {
+	            this.time = 0;
+	            this.currentAnimation = null;
+	            this.component.entity.resetComponents();
+	            return;
+	        }
 	        var anim = this.animations.find(function (anim) { return anim.name === name; });
 	        if (anim) {
 	            this.currentAnimation = anim;
@@ -5474,6 +5549,7 @@
 	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData); });
 	    }
 	    AnimatorAnimation.prototype.setFrame = function (frame) {
+	        assert(frame > 0, 'frame must be positive');
 	        for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
 	            var track = _a[_i];
 	            track.setFrame(frame);
@@ -5603,29 +5679,29 @@
 	    }
 	    return target;
 	}
-	function interpolateBezier(value1, value2, value3, value4, t, propertyType) {
+	function interpolateBezier(fromValue, control1Value, control2Value, targetValue, t, propertyType) {
 	    var typeName = propertyType.type.name;
 	    if (typeName === 'float') {
 	        if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
 	            // It's angle we are dealing with.
-	            value2 = getClosestAngle(value1, value2);
-	            value3 = getClosestAngle(value1, value3);
-	            value4 = getClosestAngle(value1, value4);
+	            control1Value = getClosestAngle(fromValue, control1Value);
+	            control2Value = getClosestAngle(fromValue, control2Value);
+	            targetValue = getClosestAngle(fromValue, targetValue);
 	        }
 	        var t2 = 1 - t;
-	        return Math.pow(t2, 3) * value1 +
-	            3 * t2 * t2 * t * value2 +
-	            3 * t2 * t * t * value3 +
-	            Math.pow(t, 3) * value4;
+	        return Math.pow(t2, 3) * fromValue +
+	            3 * t2 * t2 * t * control1Value +
+	            3 * t2 * t * t * control2Value +
+	            Math.pow(t, 3) * targetValue;
 	    }
 	    else if (typeName === 'vector') {
-	        return value1.interpolateCubic(value4, value2, value3, t);
+	        return fromValue.interpolateCubic(targetValue, control1Value, control2Value, t);
 	    }
 	    else if (typeName === 'color') {
-	        return value1.interpolateCubic(value4, value2, value3, t);
+	        return fromValue.interpolateCubic(targetValue, control1Value, control2Value, t);
 	    }
 	    else {
-	        return value1;
+	        return fromValue;
 	    }
 	}
 	function calculateControlPointsForScalar(prev, curr, next) {
@@ -5643,6 +5719,9 @@
 	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
+	//# sourceMappingURL=Animation.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5685,6 +5764,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5929,6 +6009,7 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=net.js.map
 
 	// DOM / ReDom event system
 	function redomDispatch(view, type, data) {
@@ -5948,6 +6029,7 @@
 	            { handler(event); }
 	    });
 	}
+	//# sourceMappingURL=redomEvents.js.map
 
 	var options$1 = null;
 	function loadOptions() {
@@ -5976,6 +6058,7 @@
 	    loadOptions();
 	    return options$1[id];
 	}
+	//# sourceMappingURL=options.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -6152,6 +6235,7 @@
 	    };
 	    return ModuleTab;
 	}());
+	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -6175,6 +6259,7 @@
 	    };
 	    return Layout;
 	}());
+	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -6271,6 +6356,7 @@
 	        resolve();
 	    });
 	});
+	//# sourceMappingURL=module.js.map
 
 	var selectedLevel = null;
 	var editorSelection = {
@@ -6353,18 +6439,43 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editorSelection', editorSelection);
 	});
+	//# sourceMappingURL=editorSelection.js.map
 
 	var EditorGlobals = /** @class */ (function () {
 	    function EditorGlobals() {
-	        this.jee = 'joo';
 	        /**
-	         * If true, all entity changed are recorded as a KeyFrame. Mode will turn off when resetting the scene (stop button).
+	         * If true, all entity changed are recorded as a KeyFrame.
 	         */
-	        this.recording = false;
+	        this._sceneMode = SceneMode.NORMAL;
+	        /**
+	         * What entityPrototype is selected in Animation view
+	         */
+	        this.animationEntityPrototype = null;
+	        this.temporaryEntityEditing = false;
 	    }
+	    Object.defineProperty(EditorGlobals.prototype, "sceneMode", {
+	        get: function () {
+	            return this._sceneMode;
+	        },
+	        set: function (recording) {
+	            if (recording !== this._sceneMode) {
+	                this._sceneMode = recording;
+	                editorEventDispacher.dispatch(EditorEvent.EDITOR_SCENE_MODE_CHANGED);
+	            }
+	        },
+	        enumerable: true,
+	        configurable: true
+	    });
 	    return EditorGlobals;
 	}());
+	var SceneMode;
+	(function (SceneMode) {
+	    SceneMode["NORMAL"] = "normal";
+	    SceneMode["RECORDING"] = "rec";
+	    SceneMode["PREVIEW"] = "preview";
+	})(SceneMode || (SceneMode = {}));
 	var editorGlobals = new EditorGlobals();
+	//# sourceMappingURL=editorGlobals.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -6422,7 +6533,20 @@
 	            title: 'Recording animation keyframes...',
 	            icon: 'fa-circle',
 	            type: 'rec',
-	            callback: function () { } // It's just there to show that we are in a mode. Reset button is used to cancel it.
+	            callback: function () {
+	                editorGlobals.sceneMode = SceneMode.NORMAL;
+	            }
+	        };
+	        var previewButtonData = {
+	            title: 'Previewing animation frame...',
+	            icon: 'fa-eye',
+	            type: 'preview',
+	            callback: function () {
+	                editorGlobals.sceneMode = SceneMode.NORMAL;
+	                if (editorGlobals.animationEntityPrototype && editorGlobals.animationEntityPrototype.previouslyCreatedEntity) {
+	                    editorGlobals.animationEntityPrototype.previouslyCreatedEntity.resetComponents();
+	                }
+	            }
 	        };
 	        var playButton = new SceneControlButton(playButtonData);
 	        var stopButton = new SceneControlButton({
@@ -6436,11 +6560,14 @@
 	                if (scene.playing) {
 	                    playButton.update(pauseButtonData);
 	                }
-	                else if (editorGlobals.recording) {
+	                else if (editorGlobals.sceneMode === SceneMode.NORMAL) {
+	                    playButton.update(playButtonData);
+	                }
+	                else if (editorGlobals.sceneMode === SceneMode.RECORDING) {
 	                    playButton.update(recButtonData);
 	                }
-	                else {
-	                    playButton.update(playButtonData);
+	                else if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+	                    playButton.update(previewButtonData);
 	                }
 	                var paused = !scene.playing && !scene.isInInitialState();
 	                _this.controlButtons.classList.toggle('topSceneControlButtonsPaused', paused);
@@ -6452,7 +6579,7 @@
 	            scene.listen(GameEvent.SCENE_RESET, updateButtons);
 	            scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 	            scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
-	            editorEventDispacher.listen(EditorEvent.EDITOR_REC_MODE, updateButtons);
+	            editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, updateButtons);
 	        });
 	        mount(this.controlButtons, playButton);
 	        mount(this.controlButtons, stopButton);
@@ -6566,9 +6693,10 @@
 	    };
 	    return SelectionButton;
 	}());
+	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelAndScene() {
-	    return scene && scene.isInInitialState() && selectedLevel && !editorGlobals.recording;
+	    return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
 	}
 	function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
 	    var component = entity.getComponents(componentName)
@@ -6887,6 +7015,7 @@
 	        Selection.setIsInSelectionArea(inSelectionArea);
 	    });
 	}
+	//# sourceMappingURL=sceneEditUtil.js.map
 
 	/*
 	Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
@@ -6978,6 +7107,7 @@
 	    };
 	    return Widget;
 	}());
+	//# sourceMappingURL=widget.js.map
 
 	var SHIFT_STEPS = 16;
 	var AngleWidget = /** @class */ (function (_super) {
@@ -7044,6 +7174,7 @@
 	    };
 	    return AngleWidget;
 	}(Widget));
+	//# sourceMappingURL=angleWidget.js.map
 
 	var PositionWidget = /** @class */ (function (_super) {
 	    __extends(PositionWidget, _super);
@@ -7082,6 +7213,7 @@
 	    };
 	    return PositionWidget;
 	}(Widget));
+	//# sourceMappingURL=positionWidget.js.map
 
 	var MIN_SCALE = 0.01;
 	var ScaleWidget = /** @class */ (function (_super) {
@@ -7149,6 +7281,7 @@
 	    };
 	    return ScaleWidget;
 	}(Widget));
+	//# sourceMappingURL=scaleWidget.js.map
 
 	var MoveWidget = /** @class */ (function (_super) {
 	    __extends(MoveWidget, _super);
@@ -7212,6 +7345,7 @@
 	    };
 	    return MoveWidget;
 	}(Widget));
+	//# sourceMappingURL=moveWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -7428,6 +7562,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=EditorWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -7500,6 +7635,7 @@
 	    ];
 	}
 	var inSelectionAreaFilter = createSelectionAreaFilters();
+	//# sourceMappingURL=EditorSelection.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7597,6 +7733,7 @@
 	    }
 	    return Layer;
 	}());
+	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7641,6 +7778,7 @@
 	    }
 	    return CreateObject;
 	}(Popup));
+	//# sourceMappingURL=createObject.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -7792,7 +7930,7 @@
 	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
 	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, function () {
-	            editorGlobals.recording = false;
+	            editorGlobals.sceneMode = SceneMode.NORMAL;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
@@ -7802,7 +7940,7 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, function () {
 	            if (!scene || !scene.level)
 	                { return; }
-	            editorGlobals.recording = false;
+	            editorGlobals.sceneMode = SceneMode.NORMAL;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.clearState();
@@ -7816,7 +7954,7 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_PAUSE, function () {
 	            if (!scene || !scene.level)
 	                { return; }
-	            editorGlobals.recording = false;
+	            editorGlobals.sceneMode = SceneMode.NORMAL;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.clearState();
@@ -7919,6 +8057,9 @@
 	            stop('Editor: Scene');
 	        });
 	        globalEventDispatcher.listen('new entity created', function (entity) {
+	            if (!entity.prototype._rootType) {
+	                return; // Temporary entity such as editor widget entity. No need to sync data from scene to game.
+	            }
 	            var handleEntity = function (entity) {
 	                entity.addComponents([
 	                    Component.create('EditorSelection')
@@ -8121,12 +8262,12 @@
 	        this.previouslyEntityClicked = new Date();
 	        if (this.selectedEntities.indexOf(entity) < 0) {
 	            // debugger;
-	            if (!keyPressed(key.shift)) {
-	                this.clearSelectedEntities();
+	            if (keyPressed(key.shift)) {
+	                this.selectEntities(this.selectedEntities.concat([entity]));
 	            }
-	            this.selectedEntities.push(entity);
-	            this.updateEditorWidget();
-	            entity.getComponent('EditorSelection').select();
+	            else {
+	                this.selectEntities([entity]);
+	            }
 	            this.selectSelectedEntitiesInEditor();
 	        }
 	    };
@@ -8354,6 +8495,18 @@
 	    };
 	    SceneModule.prototype.selectEntities = function (entities) {
 	        var _a;
+	        if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+	            entities = entities.filter(function (entity) {
+	                var parent = entity.prototype;
+	                while (parent && parent !== editorGlobals.animationEntityPrototype) {
+	                    parent = parent._parent;
+	                }
+	                return parent === editorGlobals.animationEntityPrototype;
+	            });
+	        }
+	        else if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+	            editorGlobals.sceneMode = SceneMode.NORMAL;
+	        }
 	        this.clearSelectedEntities();
 	        (_a = this.selectedEntities).push.apply(_a, entities);
 	        this.selectedEntities.forEach(function (entity) {
@@ -8387,7 +8540,7 @@
 	        this.newEntities.length = 0;
 	    };
 	    SceneModule.prototype.selectSelectedEntitiesInEditor = function () {
-	        if (shouldSyncLevelAndScene()) {
+	        if (shouldSyncLevelAndScene() || editorGlobals.sceneMode === SceneMode.RECORDING) {
 	            selectInEditor(this.selectedEntities.map(function (ent) { return ent.prototype; }), this);
 	            editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 	            Module.activateOneOfModules(['type', 'object'], false);
@@ -8476,6 +8629,7 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
+	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -8521,6 +8675,7 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
+	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
@@ -8642,6 +8797,7 @@
 	    var event = new DragAndDropStopEvent(idList, targetElement);
 	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
+	//# sourceMappingURL=treeView.js.map
 
 	var PositionAngleScale = /** @class */ (function () {
 	    function PositionAngleScale(position, angle, scale) {
@@ -8706,6 +8862,7 @@
 	    };
 	    return PositionAngleScale;
 	}());
+	//# sourceMappingURL=positionAngleScaleUtil.js.map
 
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
@@ -9004,6 +9161,7 @@
 	    return ObjectsModule;
 	}(Module));
 	Module.register(ObjectsModule, 'left');
+	//# sourceMappingURL=objectsModule.js.map
 
 	/**
 	 * Handles everything else than prototype deletion itself.
@@ -9075,6 +9233,7 @@
 	    }
 	    return PrototypeDeleteConfirmation;
 	}(Popup));
+	//# sourceMappingURL=PrototypeDeleteConfirmation.js.map
 
 	var TypesModule = /** @class */ (function (_super) {
 	    __extends(TypesModule, _super);
@@ -9308,6 +9467,7 @@
 	    }, 0);
 	});
 	// Module.register(TypesModule, 'left');
+	//# sourceMappingURL=typesModule.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -9418,6 +9578,7 @@
 	    return PrefabsModule;
 	}(Module));
 	Module.register(PrefabsModule, 'left');
+	//# sourceMappingURL=prefabsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -9511,6 +9672,7 @@
 	    };
 	    return LevelItem;
 	}());
+	//# sourceMappingURL=levelsModule.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -9598,6 +9760,7 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
+	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -9633,6 +9796,7 @@
 	    };
 	    return Confirmation;
 	}(Popup));
+	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -9750,6 +9914,7 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
+	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -9805,6 +9970,7 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
+	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -9813,6 +9979,7 @@
 	        element.classList.remove('skipPropertyEditorTransitions');
 	    }, 10);
 	}
+	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -10312,6 +10479,7 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
+	//# sourceMappingURL=propertyEditor.js.map
 
 	var TypeModule = /** @class */ (function (_super) {
 	    __extends(TypeModule, _super);
@@ -10355,6 +10523,7 @@
 	    return TypeModule;
 	}(Module));
 	Module.register(TypeModule, 'right');
+	//# sourceMappingURL=typeModule.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -10392,6 +10561,7 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
+	//# sourceMappingURL=prefabModule.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -10428,6 +10598,7 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
+	//# sourceMappingURL=objectModule.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -10462,6 +10633,7 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
+	//# sourceMappingURL=levelModule.js.map
 
 	var GameModule = /** @class */ (function (_super) {
 	    __extends(GameModule, _super);
@@ -10492,6 +10664,7 @@
 	    return GameModule;
 	}(Module));
 	Module.register(GameModule, 'right');
+	//# sourceMappingURL=gameModule.js.map
 
 	var AnimationModule = /** @class */ (function (_super) {
 	    __extends(AnimationModule, _super);
@@ -10501,38 +10674,60 @@
 	        _this.animationComponentId = null;
 	        _this.editedEntityPrototype = null;
 	        _this.animationData = null;
-	        _this.selectedFrame = null;
 	        _this.selectedAnimation = null;
 	        _this.focusedKeyFrameViews = [];
 	        _this.addElements(el('div.animationModule', el('div', el('button.button', 'Add animation', { onclick: function () { return _this.addAnimation(); } }), _this.animationSelector = new AnimationSelector(), 
 	        // el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
-	        el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
+	        _this.recordButton = el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
 	            onclick: function () {
-	                // Selecting nothing will force user to select entity instead of entity prototype when editing animations.
-	                selectInEditor([], _this);
-	                editorGlobals.recording = true;
-	                editorEventDispacher.dispatch(EditorEvent.EDITOR_REC_MODE);
+	                if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+	                    editorGlobals.sceneMode = SceneMode.NORMAL;
+	                }
+	                else {
+	                    editorGlobals.sceneMode = SceneMode.RECORDING;
+	                }
+	            },
+	            style: {
+	                display: 'none' // until an animation is selected
 	            }
 	        })), _this.animationTimelineView = new AnimationTimelineView()));
+	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, function () {
+	            if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+	                _this.recordButton.classList.add('selected');
+	                selectInEditor([], _this);
+	            }
+	            else {
+	                _this.recordButton.classList.remove('selected');
+	                if (editorGlobals.sceneMode === SceneMode.NORMAL && _this.editedEntityPrototype) {
+	                    selectInEditor([_this.editedEntityPrototype], _this);
+	                }
+	            }
+	        });
 	        _this.name = 'Animation';
 	        _this.id = 'animation';
 	        redomListen(_this, 'frameSelected', function (frameNumber) {
-	            _this.selectedFrame = frameNumber;
-	            // TODO: draw entity in new pose.
-	            var entity = _this.editedEntityPrototype.previouslyCreatedEntity;
-	            if (entity) {
-	                setChangeOrigin(_this);
-	                var animationComponent = entity.getComponents('Animation').find(function (comp) { return comp._componentId === _this.animationComponentId; });
-	                animationComponent.animator.currentAnimation.setFrame(frameNumber);
-	            }
+	            _this.setFrameInEntity();
 	        });
 	        redomListen(_this, 'animationSelected', function (animation$$1) {
 	            _this.selectedAnimation = animation$$1;
 	            _this.animationTimelineView.update(_this.selectedAnimation);
+	            var component = _this.getEntityComponent();
+	            component.animator.setAnimation(animation$$1 && animation$$1.name); // send falsy if initial pose should be selected
+	            _this.animationTimelineView.selectFrame(1);
+	            _this.recordButton.style.display = animation$$1 ? 'inline-block' : 'none';
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
-	            if (!editorGlobals.recording)
-	                { return; }
+	            if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+	                if (change.type === 'editorSelection' && _this.editedEntityPrototype) {
+	                    var editorSelection_1 = change.reference;
+	                    if (editorSelection_1.items.length === 1 && editorSelection_1.items[0] === _this.editedEntityPrototype) ;
+	                    else {
+	                        _this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+	                        _this.editedEntityPrototype = null;
+	                    }
+	                }
+	                return;
+	            }
 	            if (change.origin === _this) {
 	                return;
 	            }
@@ -10624,8 +10819,22 @@
 	        });
 	        return _this;
 	    }
+	    AnimationModule.prototype.getEntityComponent = function () {
+	        var _this = this;
+	        if (scene.playing) {
+	            return null;
+	        }
+	        if (!this.editedEntityPrototype) {
+	            return null;
+	        }
+	        var entity = this.editedEntityPrototype.previouslyCreatedEntity;
+	        if (entity) {
+	            return entity.getComponents('Animation').find(function (comp) { return comp._componentId === _this.animationComponentId; });
+	        }
+	        return null;
+	    };
 	    AnimationModule.prototype.update = function () {
-	        if (editorGlobals.recording && this.editedEntityPrototype && this.editedEntityPrototype._alive) {
+	        if (editorGlobals.sceneMode === SceneMode.RECORDING && this.editedEntityPrototype && this.editedEntityPrototype._alive) {
 	            return true;
 	        }
 	        if (editorSelection.type === 'epr' && editorSelection.items.length === 1) {
@@ -10635,7 +10844,7 @@
 	                if (inheritedComponentDatas.length === 1) {
 	                    if (this.editedEntityPrototype !== entityPrototype) {
 	                        var inheritedComponentData = inheritedComponentDatas[0];
-	                        this.updateRaw(entityPrototype.previouslyCreatedEntity, inheritedComponentData);
+	                        this.updateRaw(inheritedComponentData);
 	                    }
 	                    return true;
 	                }
@@ -10656,26 +10865,39 @@
 	        } */
 	        return false;
 	    };
-	    AnimationModule.prototype.updateRaw = function (entity, inheritedComponentData) {
+	    AnimationModule.prototype.activate = function () {
+	        var component = this.getEntityComponent();
+	        if (!component) {
+	            return;
+	        }
+	        component.animator.setAnimation(this.selectedAnimation && this.selectedAnimation.name); // send falsy if initial pose should be selected
+	        this.setFrameInEntity();
+	    };
+	    AnimationModule.prototype.updateRaw = function (inheritedComponentData) {
 	        this.editedEntityPrototype = inheritedComponentData.generatedForPrototype;
+	        editorGlobals.animationEntityPrototype = inheritedComponentData.generatedForPrototype;
 	        this.animationComponentId = inheritedComponentData.componentId;
 	        var animationDataString = inheritedComponentData.properties.find(function (prop) { return prop.name === 'animationData'; }).value;
 	        this.animationData = animation.parseAnimationData(animationDataString);
 	        // We are sneaky and store Animation objects in jsonable object.
 	        this.animationData.animations = this.animationData.animations.map(animation.Animation.create);
 	        this.animations = this.animationData.animations;
+	        this.updateChildren();
+	    };
+	    AnimationModule.prototype.updateChildren = function () {
 	        this.animationSelector.update(this.animations);
 	        this.selectedAnimation = this.animationSelector.getSelectedAnimation();
 	        this.animationTimelineView.update(this.selectedAnimation);
-	        this.selectedFrame = this.selectedFrame || 1;
-	        this.animationTimelineView.selectFrame(this.selectedFrame);
 	    };
 	    AnimationModule.prototype.addAnimation = function () {
 	        var name = prompt('name', 'idle');
 	        if (name) {
 	            setChangeOrigin(this);
-	            this.animations.push(new animation.Animation(name));
+	            var newAnimation = new animation.Animation(name);
+	            this.animations.push(newAnimation);
 	            this.updateAnimationData();
+	            this.updateChildren();
+	            this.animationSelector.select(name);
 	        }
 	    };
 	    AnimationModule.prototype.updateAnimationData = function () {
@@ -10688,13 +10910,29 @@
 	        componentData.setValue('animationData', JSON.stringify(this.animationData));
 	        this.animationTimelineView.update(this.selectedAnimation);
 	        // Reload entity Animator:
-	        this.editedEntityPrototype.previouslyCreatedEntity.getComponents('Animation').forEach(function (comp) {
-	            comp.animationData = componentData.getValue('animationData');
-	        });
+	        var component = this.getEntityComponent();
+	        if (component) {
+	            component.animationData = componentData.getValue('animationData');
+	        }
 	    };
 	    AnimationModule.prototype.saveValue = function (entityPrototype, componendId, property) {
-	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.selectedFrame, property.propertyType.type.toJSON(property._value));
+	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
 	        this.updateAnimationData();
+	    };
+	    AnimationModule.prototype.setFrameInEntity = function () {
+	        if (scene.playing) {
+	            return;
+	        }
+	        var component = this.getEntityComponent();
+	        if (component) {
+	            setChangeOrigin(this);
+	            if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+	                editorGlobals.sceneMode = SceneMode.PREVIEW;
+	            }
+	            if (component.animator.currentAnimation) {
+	                component.animator.currentAnimation.setFrame(this.animationTimelineView.selectedFrame);
+	            }
+	        }
 	    };
 	    AnimationModule.prototype.free = function () {
 	    };
@@ -10711,8 +10949,15 @@
 	    }
 	    AnimationSelector.prototype.update = function (animations) {
 	        this.animations = animations;
-	        this.list.update(animations.map(function (anim) { return anim.name; }));
+	        this.list.update([null].concat(animations.map(function (anim) { return anim.name; })));
 	    };
+	    AnimationSelector.prototype.select = function (name) {
+	        this.el.value = name || '';
+	        this.el.onchange(null);
+	    };
+	    /**
+	     * If this returns null, it means the initial pose the entity is without animations
+	     */
 	    AnimationSelector.prototype.getSelectedAnimation = function () {
 	        var _this = this;
 	        return this.animations.find(function (anim) { return anim.name === _this.el.value; });
@@ -10724,8 +10969,8 @@
 	        this.el = el('option');
 	    }
 	    AnimationSelectorOption.prototype.update = function (name) {
-	        this.el.setAttribute('value', name);
-	        this.el.innerText = name;
+	        this.el.setAttribute('value', name || '');
+	        this.el.innerText = name || 'Initial pose';
 	    };
 	    return AnimationSelectorOption;
 	}());
@@ -10744,9 +10989,11 @@
 	            });
 	            redomDispatch(_this, 'selectKeyFrameView', views);
 	        });
+	        redomListen(this, 'frameSelected', function (frame) { return _this.selectedFrame = frame; });
 	    }
 	    AnimationTimelineView.prototype.update = function (animation$$1) {
 	        if (!animation$$1) {
+	            this.selectedFrame = 0;
 	            this.frameNumbers.update([]);
 	            this.trackList.update([]);
 	            return;
@@ -10762,8 +11009,9 @@
 	        }
 	        this.frameNumbers.update(frameNumbers);
 	        var trackUpdateData = animation$$1.tracks.map(function (track) {
+	            var entityPrototype = getSerializable(track.eprId);
 	            return {
-	                name: track.prpName,
+	                name: entityPrototype.makeUpAName() + ' ' + track.prpName,
 	                keyFrames: track.keyFrames,
 	                frameCount: frameCount
 	            };
@@ -10771,6 +11019,7 @@
 	        this.trackList.update(trackUpdateData);
 	    };
 	    AnimationTimelineView.prototype.selectFrame = function (frame) {
+	        this.selectedFrame = frame;
 	        var views = this.frameNumbers.views;
 	        for (var _i = 0, views_1 = views; _i < views_1.length; _i++) {
 	            var view = views_1[_i];
@@ -10908,6 +11157,7 @@
 	    }
 	}
 	*/
+	//# sourceMappingURL=animationModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -11017,6 +11267,7 @@
 	    };
 	    return FPSMeter;
 	}());
+	//# sourceMappingURL=performanceModule.js.map
 
 	var PerSecondModule = /** @class */ (function (_super) {
 	    __extends(PerSecondModule, _super);
@@ -11058,6 +11309,7 @@
 	    };
 	    return PerSecondItem;
 	}());
+	//# sourceMappingURL=perSecondModule.js.map
 
 	var AnimationView = /** @class */ (function () {
 	    function AnimationView(serializable) {
@@ -11076,6 +11328,7 @@
 	    };
 	    return AnimationView;
 	}());
+	//# sourceMappingURL=animationView.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -11173,9 +11426,11 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, function (name, value) {
 	    help[name] = value;
 	});
+	//# sourceMappingURL=help.js.map
 
 	window.test = function () {
 	};
+	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -11211,6 +11466,7 @@
 	    };
 	    return OKPopup;
 	}(Popup));
+	//# sourceMappingURL=OKPopup.js.map
 
 	editorEventDispacher.getEventPromise('modulesRegistered').then(function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
@@ -11354,6 +11610,7 @@
 	        number: num
 	    };
 	}
+	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -11369,6 +11626,7 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

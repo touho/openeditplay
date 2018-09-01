@@ -35,8 +35,7 @@ export default Component.register({
 			if (this.animator) {
 				this.animator.delete();
 			}
-			this.animator = new Animator(animation.parseAnimationData(this.animationData));
-
+			this.animator = new Animator(animation.parseAnimationData(this.animationData), this);
 		},
 		sleep() {
 			this.animator.delete();
@@ -51,7 +50,7 @@ class Animator {
 	time: number = 0;
 	animations: AnimatorAnimation[];
 	currentAnimation: AnimatorAnimation;
-	constructor(animationData: animation.AnimationData) {
+	constructor(animationData: animation.AnimationData, public component: Component) {
 		this.animations = animationData.animations.map(anim => new AnimatorAnimation(anim));
 		this.currentAnimation = this.animations[0];
 	}
@@ -68,6 +67,12 @@ class Animator {
 		this.currentAnimation.setFrame(frame);
 	}
 	setAnimation(name: string) {
+		if (!name) {
+			this.time = 0;
+			this.currentAnimation = null;
+			this.component.entity.resetComponents();
+			return;
+		}
 		let anim = this.animations.find(anim => anim.name === name);
 		if (anim) {
 			this.currentAnimation = anim;
@@ -87,6 +92,7 @@ class AnimatorAnimation {
 		this.tracks = animationJSON.tracks.map(trackData => new AnimatorTrack(trackData));
 	}
 	setFrame(frame) {
+		assert(frame > 0, 'frame must be positive');
 		for (let track of this.tracks) {
 			track.setFrame(frame);
 		}
@@ -197,7 +203,6 @@ class AnimatorTrack {
 			next = keyFrames[0];
 		}
 
-
 		let newValue;
 		if (prev === next) {
 			newValue = prev.value;
@@ -235,43 +240,43 @@ function getClosestAngle(origin, target) {
 	return target;
 }
 
-function interpolateBezier(value1, value2, value3, value4, t: number, propertyType: PropertyType) {
+function interpolateBezier(fromValue, control1Value, control2Value, targetValue, t: number, propertyType: PropertyType) {
 	let typeName = propertyType.type.name;
 	if (typeName === 'float') {
 		if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
 			// It's angle we are dealing with.
-			value2 = getClosestAngle(value1, value2);
-			value3 = getClosestAngle(value1, value3);
-			value4 = getClosestAngle(value1, value4);
+			control1Value = getClosestAngle(fromValue, control1Value);
+			control2Value = getClosestAngle(fromValue, control2Value);
+			targetValue = getClosestAngle(fromValue, targetValue);
 		}
 		let t2 = 1 - t;
-		return t2 ** 3 * value1 +
-			3 * t2 * t2 * t * value2 +
-			3 * t2 * t * t * value3 +
-			t ** 3 * value4;
+		return t2 ** 3 * fromValue +
+			3 * t2 * t2 * t * control1Value +
+			3 * t2 * t * t * control2Value +
+			t ** 3 * targetValue;
 	} else if (typeName === 'vector') {
-		return value1.interpolateCubic(value4, value2, value3, t);
+		return fromValue.interpolateCubic(targetValue, control1Value, control2Value, t);
 	} else if (typeName === 'color') {
-		return value1.interpolateCubic(value4, value2, value3, t);
+		return fromValue.interpolateCubic(targetValue, control1Value, control2Value, t);
 	} else {
-		return value1;
+		return fromValue;
 	}
 }
 
-function interpolateLinear(value1, value2, t: number, propertyType: PropertyType) {
+function interpolateLinear(fromValue, targetValue, t: number, propertyType: PropertyType) {
 	let typeName = propertyType.type.name;
 	if (typeName === 'float') {
 		if (propertyType.getFlag(Prop.flagDegreesInEditor)) {
 			// It's angle we are dealing with.
-			value2 = getClosestAngle(value1, value2);
+			targetValue = getClosestAngle(fromValue, targetValue);
 		}
-		return value1 + t * (value2 - value1);
+		return fromValue + t * (targetValue - fromValue);
 	} else if (typeName === 'vector') {
-		return value1.interpolateLinear(value2, t);
+		return fromValue.interpolateLinear(targetValue, t);
 	} else if (typeName === 'color') {
-		return value1.interpolateLinear(value2, t);
+		return fromValue.interpolateLinear(targetValue, t);
 	} else {
-		return value1;
+		return fromValue;
 	}
 }
 
