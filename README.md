@@ -29,10 +29,18 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 
 
 ### TODO ###
-- Animation component
-- BUG: When creating the first animation, duplicate property insert appears.
+- DOM Widgets
+    - Should we have EditorWidget component or are widgets not in scene? Probably not in scene?
 - If scaled entity has child entity that has particles, particles should be scaled.
-- Object instance value/component saving
+- Animation:
+    - Animation frame count
+    - Animation speed: fps
+    - Move keyframe
+    - Track interpolation method discreet/linear/cubic
+    - Animation loop mode: no loop/loop/back and forth
+    - Animation module playing
+- Game / Level settings
+    - Camera viewport
 - Multiedit of objects
-- Camera viewport
+- Object instance value/component saving
 - When detaching from prototype, don't include every single property etc. Save space.
