@@ -13,11 +13,13 @@ You can not host this software for any audience.
 2. setup mysql credentials
 ```
 CREATE DATABASE openeditplay CHARACTER SET utf8;
-CREATE USER 'openeditplay'@'localhost' IDENTIFIED BY 'openeditplay';
+CREATE USER 'openeditplay'@'localhost' IDENTIFIED WITH mysql_native_password BY 'openeditplay';
 GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 ```
-3. `npm install`
-4. `node server`
+3. Navigate to project directory and type:
+`mysql -u openeditplay --password="openeditplay" --database=openeditplay < installation/resetDatabase.sql`
+4. `npm install`
+5. `node server`
 
 
 ### Amazon ###
@@ -44,3 +46,5 @@ GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 - Multiedit of objects
 - Object instance value/component saving
 - When detaching from prototype, don't include every single property etc. Save space.
+- When changing selection, don't animate property editor packed statuses. Slows down too much.
+- Proper sprite support

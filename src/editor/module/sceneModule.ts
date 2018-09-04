@@ -36,6 +36,7 @@ import Prefab from '../../core/prefab';
 import CreateObject from '../views/popup/createObject';
 import { editorGlobals, SceneMode } from '../editorGlobals';
 import ComponentData from '../../core/componentData';
+import { WidgetManager } from '../widget/widgetManager';
 
 const MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 const MIN_ZOOM = 0.1;
@@ -58,6 +59,8 @@ class SceneModule extends Module {
 	previousMousePosInWorldCoordinates: Vector = new Vector(0, 0);
 	parentToAddNewEntitiesOn: EntityPrototype = null;
 	previouslyEntityClicked: Date = new Date(0);
+
+	widgetManager: WidgetManager = new WidgetManager();
 
 	widgetEntity: Entity = null;
 
@@ -97,19 +100,19 @@ class SceneModule extends Module {
 				height: 0
 			}),
 			el('div.pauseInfo', `Paused. Editing objects will not affect the level.`),
-			el('i.fa.fa-pause.pauseInfo.topLeft'),
-			el('i.fa.fa-pause.pauseInfo.topRight'),
-			el('i.fa.fa-pause.pauseInfo.bottomLeft'),
-			el('i.fa.fa-pause.pauseInfo.bottomRight'),
+			el('i.fas.fa-pause.pauseInfo.topLeft'),
+			el('i.fas.fa-pause.pauseInfo.topRight'),
+			el('i.fas.fa-pause.pauseInfo.bottomLeft'),
+			el('i.fas.fa-pause.pauseInfo.bottomRight'),
 			el('div.sceneEditorSideBarButtons',
 
-				el('i.fa.fa-arrows.iconButton.button.movement', {
+				el('i.fas.fa-arrows.iconButton.button.movement', {
 					onclick: () => {
 						alert('Move in editor with arrow keys or WASD');
 					},
 					title: 'Move in editor with arrow keys or WASD'
 				}),
-				el('i.fa.fa-plus-circle.iconButton.button.zoomIn', {
+				el('i.fas.fa-plus-circle.iconButton.button.zoomIn', {
 					onclick: () => {
 						if (!scene) return;
 						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
@@ -118,7 +121,7 @@ class SceneModule extends Module {
 					},
 					title: 'Zoom in (+ or E)'
 				}),
-				el('i.fa.fa-minus-circle.iconButton.button.zoomOut', {
+				el('i.fas.fa-minus-circle.iconButton.button.zoomOut', {
 					onclick: () => {
 						if (!scene) return;
 						scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
@@ -127,7 +130,7 @@ class SceneModule extends Module {
 					},
 					title: 'Zoom out (- or Q)'
 				}),
-				this.globeButton = el('i.fa.fa-globe.iconButton.button', {
+				this.globeButton = el('i.fas.fa-globe.iconButton.button', {
 					onclick: () => {
 						if (!scene) return;
 
@@ -147,7 +150,7 @@ class SceneModule extends Module {
 					},
 					title: 'Zoom to globe (G)'
 				}),
-				this.homeButton = el('i.fa.fa-home.iconButton.button', {
+				this.homeButton = el('i.fas.fa-home.iconButton.button', {
 					onclick: () => {
 						if (!scene) return;
 						scene.cameraPosition.setScalars(0, 0); // If there are no players
@@ -161,6 +164,7 @@ class SceneModule extends Module {
 			)
 		);
 		this.el.classList.add('hideScenePauseInformation');
+		this.widgetManager.setParentElement(this.el);
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
 			if (['ent', 'epr'].includes(editorSelection.type) && this.selectedEntities.length > 0) {

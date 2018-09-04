@@ -12,7 +12,7 @@ class GameModule extends Module {
 		super();
 		this.addElements(
 			this.propertyEditor = new PropertyEditor(),
-			el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: () => {
+			el('button.dangerButton.button', el('i.fas.fa-times'), 'Delete Game', { onclick: () => {
 				if (confirm(`Delete game '${game.name}'? (Cannot be undone)`)) {
 					game.delete();
 				}

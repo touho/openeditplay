@@ -17,7 +17,7 @@ export default class ModuleContainer {
 		this.modules = [];
 		this.packButtonEnabled = !!packButtonIcon;
 		this.el = el(`div.moduleContainer.packable.${moduleContainerName}`,
-			this.packButton = packButtonIcon && el(`i.packButton.button.iconButton.fa.${packButtonIcon}`),
+			this.packButton = packButtonIcon && el(`i.packButton.button.iconButton.fas.${packButtonIcon}`),
 			this.tabs = list('div.tabs.select-none', ModuleTab),
 			this.moduleElements = el('div.moduleElements')
 		);

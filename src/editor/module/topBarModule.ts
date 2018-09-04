@@ -150,34 +150,42 @@ export class TopBarModule extends Module {
 		let tools = {
 			globalMoveTool: new SceneControlButton({
 				title: 'Global move tool (1)',
-				icon: 'fa-arrows',
+				icon: 'fa-arrows-alt',
 				callback: createCallback(() => {
 					setSceneTool('globalMoveTool');
 				})
 			}),
 			localMoveTool: new SceneControlButton({
 				title: 'Local move tool (2)',
-				icon: 'fa-arrows-alt',
+				icon: 'fa-expand-arrows-alt',
 				callback: createCallback(() => {
 					setSceneTool('localMoveTool');
 				})
 			}),
 			multiTool: new SceneControlButton({
 				title: 'Multitool tool (3)',
-				icon: 'fa-dot-circle-o',
+				icon: 'fa-hand-spock',
 				callback: createCallback(() => {
 					setSceneTool('multiTool');
 				})
 			})
 		};
 
-		this.addKeyboardShortcut(key[1], tools.globalMoveTool);
-		this.addKeyboardShortcut(key[2], tools.localMoveTool);
-		this.addKeyboardShortcut(key[3], tools.multiTool);
+		this.addKeyboardShortcut(key[1], tools.multiTool);
+		this.addKeyboardShortcut(key[2], tools.globalMoveTool);
+		this.addKeyboardShortcut(key[3], tools.localMoveTool);
 
-		mount(this.toolSelectionButtons, tools.globalMoveTool);
-		mount(this.toolSelectionButtons, tools.localMoveTool);
+
+
+		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-hand-spock', callback: createCallback(() => {}) }));
 		mount(this.toolSelectionButtons, tools.multiTool);
+		mount(this.toolSelectionButtons, tools.globalMoveTool);
+		// mount(this.toolSelectionButtons, tools.localMoveTool);
+
+		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-sync-alt', callback: createCallback(() => {}) }));
+		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-vector-square', callback: createCallback(() => {}) }));
+		mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-bezier-curve', callback: createCallback(() => {}) }));
+
 
 		tools[sceneToolName].click();
 		// this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
@@ -224,7 +232,7 @@ class SceneControlButton {
 		this.el.setAttribute('controlButtonType', data.type || '');
 		this.el.innerHTML = '';
 		this.callback = data.callback;
-		mount(this.el, el(`i.fa.${data.icon}`));
+		mount(this.el, el(`i.fas.${data.icon}`));
 	}
 	click() {
 		this.callback && this.callback(this.el);
@@ -237,7 +245,7 @@ class SelectionButton {
 	className: string = '';
 
 	constructor(data) {
-		this.el = el('i.fa.iconButton.button', {
+		this.el = el('i.fas.iconButton.button', {
 			onclick: () => this.click()
 		});
 		if (data)
@@ -277,7 +285,7 @@ export class TopButton {
 		this.callback = callback;
 		this.el = el('div.button.topIconTextButton',
 			el('div.topIconTextButtonContent',
-				this.icon = el(`i.fa.${iconClass}`),
+				this.icon = el(`i.fas.${iconClass}`),
 				this.text = el('span', text)
 			)
 		);

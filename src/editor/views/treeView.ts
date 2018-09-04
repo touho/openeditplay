@@ -11,7 +11,7 @@ export default class TreeView implements RedomElement {
 	constructor(options) {
 		this.options = Object.assign({
 			id: '',
-			defaultIcon: 'fa fa-book',
+			defaultIcon: 'fas fa-book',
 			selectionChangedCallback: null,
 			moveCallback: null, // if many items are moved, this is called many times
 			doubleClickCallback: null

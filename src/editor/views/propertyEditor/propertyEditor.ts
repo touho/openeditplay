@@ -143,7 +143,7 @@ class Container {
 				this.properties = list('div.propertyEditorProperties', PropertyElement, null),
 				this.containers = list('div', Container, null),
 				this.controls = el('div'),
-				el('i.button.logButton.fa.fa-eye', {
+				el('i.button.logButton.fas.fa-eye', {
 					onclick: () => {
 						console.log(this.item);
 						window['item'] = this.item;
@@ -204,7 +204,7 @@ class Container {
 		this.properties.update(this.item.getChildren('prp'));
 
 		let addButton;
-		mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
+		mount(this.controls, addButton = el('button.button', el('i.fas.fa-puzzle-piece'), 'Add Component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
@@ -213,7 +213,7 @@ class Container {
 			addButton.classList.add('clickMeEffect');
 
 			/*
-		mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
+		mount(this.controls, el('button.button', el('i.fas.fa-clone'), 'Clone Type', {
 			onclick: () => {
 				redomDispatch(this, 'makingChanges');
 				let clone = this.item.clone();
@@ -228,7 +228,7 @@ class Container {
 			}
 		}));
 		*/
-		mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type (OLD!!!)', {
+		mount(this.controls, el('button.dangerButton.button', el('i.fas.fa-times'), 'Delete Type (OLD!!!)', {
 			onclick: () => {
 				redomDispatch(this, 'makingChanges');
 				let entityPrototypeCount = (this.item as Prototype).countEntityPrototypes(true);
@@ -250,7 +250,7 @@ class Container {
 			prop._editorPlaceholder = this.item.makeUpAName();//.prototype.findChild('prp', prp => prp.name === prop.name).value;
 		});
 		this.properties.update(properties);
-		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add Component', {
+		mount(this.controls, el(`button.button`, el('i.fas.fa-puzzle-piece'), 'Add Component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
@@ -264,7 +264,7 @@ class Container {
 			prop._editorPlaceholder = this.item.makeUpAName();//.prototype.findChild('prp', prp => prp.name === prop.name).value;
 		});
 		this.properties.update(properties);
-		mount(this.controls, el(`button.button`, el('i.fa.fa-puzzle-piece'), 'Add Component', {
+		mount(this.controls, el(`button.button`, el('i.fas.fa-puzzle-piece'), 'Add Component', {
 			onclick: () => {
 				new ComponentAdder(this.item);
 			}
@@ -314,7 +314,7 @@ class Container {
 			return;
 
 		if (this.item.componentClass.allowMultiple) {
-			mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
+			mount(this.controls, el('button.button', el('i.fas.fa-clone'), 'Clone', {
 				onclick: () => {
 					redomDispatch(this, 'makingChanges');
 					if (this.item.ownComponentData) {
@@ -331,7 +331,7 @@ class Container {
 			}));
 		}
 		if (hasOwnProperties) {
-			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
+			mount(this.controls, el('button.dangerButton.button', el('i.fas.fa-refresh'), 'Reset', {
 				onclick: () => {
 					redomDispatch(this, 'makingChanges');
 					redomDispatch(this, 'markPropertyEditorDirty', 'fromReset');
@@ -344,7 +344,7 @@ class Container {
 			}));
 		}
 		if (this.item.ownComponentData && !parentComponentData) {
-			mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
+			mount(this.controls, el('button.dangerButton.button', el('i.fas.fa-times'), 'Delete', {
 				onclick: () => {
 					let deleteOperation = () => {
 						redomDispatch(this, 'makingChanges');
@@ -400,7 +400,7 @@ class Container {
 		if (this.titleText.textContent !== componentClass.componentName)
 			this.titleText.textContent = componentClass.componentName;
 
-		let className = 'icon fa ' + componentClass.icon;
+		let className = 'icon fas ' + componentClass.icon;
 		if (this.titleIcon.className !== className)
 			this.titleIcon.className = className;
 
@@ -536,7 +536,7 @@ class PropertyElement {
 				{
 					this.name.style.color = parent.componentClass.color;
 
-					mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
+					mount(this.content, el('i.fas.fa-times.button.resetButton.iconButton', {
 						onclick: () => {
 							redomDispatch(this, 'makingChanges');
 							this.reset();
@@ -545,7 +545,7 @@ class PropertyElement {
 				} else if (parent.threeLetterType === 'com') {
 					this.name.style.color = parent.constructor.color;
 
-					mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
+					mount(this.content, el('i.fas.fa-ellipsis-v.button.moreButton.iconButton', {
 						onclick: () => {
 							new ObjectMoreButtonContextMenu(this.property);
 						}

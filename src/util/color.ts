@@ -67,6 +67,10 @@ export class Color {
 	isEqualTo(other: Color) {
 		return this.r === other.r && this.g === other.g && this.b === other.b;
 	}
+	static fromHexString(hexString: string) {
+		let rgb = hexToRgb(hexString);
+		return new Color(rgb.r, rgb.g, rgb.b);
+	}
 }
 
 export function hexToRgb(hex) {

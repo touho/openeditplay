@@ -23,14 +23,14 @@ class TypesModule extends Module {
 		super();
 
 		this.addElements(
-			this.addButton = el('span.addTypeButton.button.fa.fa-plus'),
+			this.addButton = el('span.addTypeButton.button.fas.fa-plus'),
 			this.search = el('input'),
-			this.searchIcon = el('i.fa.fa-search.searchIcon'),
+			this.searchIcon = el('i.fas.fa-search.searchIcon'),
 			this.jstree = el('div'),
 			this.helperText = el('div.typesDragHelper',
-				el('i.fa.fa-long-arrow-right'),
+				el('i.fas.fa-long-arrow-right'),
 				'Drag',
-				el('i.fa.fa-long-arrow-right')
+				el('i.fas.fa-long-arrow-right')
 			)
 		);
 		this.id = 'types';
@@ -191,7 +191,7 @@ class TypesModule extends Module {
 				plugins: ['types', 'dnd', 'sort', 'search'/*, 'state'*/],
 				types: {
 					default: {
-						icon: 'fa fa-book'
+						icon: 'fas fa-book'
 					}
 				},
 				sort: function (a, b) {

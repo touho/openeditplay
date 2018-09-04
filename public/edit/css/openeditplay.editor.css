@@ -60,7 +60,7 @@ button.button.greenButton:hover {
   color: #b8ffc1;
   text-shadow: 0 0 2px #00ff22;
 }
-button.button i.fa {
+button.button i.fas {
   position: relative;
   left: -3px;
   top: 0px;
@@ -639,7 +639,8 @@ div.animationModule td.trackFrame.selected {
   display: none;
 }
 .jstree-default .jstree-search::before {
-  font-family: FontAwesome;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   content: '\f002';
   color: #8d8d8d;
   margin-left: 5px;
@@ -690,12 +691,15 @@ div.propertyEditor div.container[type='icd'] div.containerTitle, div.propertyEdi
 }
 div.propertyEditor div.container[type='icd'] div.containerTitle::before, div.propertyEditor div.container[type='com'] div.containerTitle::before {
   content: '\f0d7';
-  font-family: FontAwesome;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   display: inline-block;
   width: 42px;
   margin-left: 3px;
 }
 div.propertyEditor div.container.packed[type='icd'] div.containerTitle::before, div.propertyEditor div.container.packed[type='com'] div.containerTitle::before {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   content: '\f0da';
   position: relative;
   left: 2px;
@@ -902,6 +906,16 @@ div.popup div.buttonContainer {
 }
 .buttonWithDescription .description {
   margin-left: 5px;
+}
+div.widgetRoot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
+i.widgetControl {
+}
+i.widgetControl:hover {
+    text-shadow: 0 0 1px;
 }
 * {
   box-sizing: border-box;

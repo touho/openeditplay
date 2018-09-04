@@ -42,7 +42,7 @@ class AnimationModule extends Module {
 					el('button.button', 'Add animation', { onclick: () => this.addAnimation() }),
 					this.animationSelector = new AnimationSelector(),
 					// el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
-					this.recordButton = <HTMLButtonElement>el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
+					this.recordButton = <HTMLButtonElement>el('button.button.recordButton', el('i.fas.fa-circle'), 'Record key frames', {
 						onclick: () => {
 							if (editorGlobals.sceneMode === SceneMode.RECORDING) {
 								editorGlobals.sceneMode = SceneMode.NORMAL;
@@ -526,7 +526,7 @@ class TrackFrameView implements RedomElement {
 			this.el.textContent = data.name;
 		} else {
 			if (this.isKeyFrame()) {
-				mount(this, el('i.fa.fa-star'));
+				mount(this, el('i.fas.fa-star'));
 			}
 		}
 	}

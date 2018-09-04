@@ -25,6 +25,7 @@
 	    }
 	    // @endif
 	}
+	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -165,6 +166,7 @@
 	    }
 	    return low;
 	}
+	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -229,11 +231,13 @@
 	    callback();
 	    externalChange = false;
 	}
+	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
+	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -631,6 +635,7 @@
 	        return true;
 	    });
 	}
+	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -742,6 +747,7 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
+	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -885,6 +891,7 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
+	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1050,6 +1057,7 @@
 	    };
 	    return Vector;
 	}());
+	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1106,6 +1114,10 @@
 	    Color.prototype.isEqualTo = function (other) {
 	        return this.r === other.r && this.g === other.g && this.b === other.b;
 	    };
+	    Color.fromHexString = function (hexString) {
+	        var rgb = hexToRgb(hexString);
+	        return new Color(rgb.r, rgb.g, rgb.b);
+	    };
 	    return Color;
 	}());
 	function hexToRgb(hex) {
@@ -1123,6 +1135,7 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
+	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1279,6 +1292,7 @@
 	    fromJSON: function (x) { return new Color(x); },
 	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
+	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1407,6 +1421,7 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
+	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1959,6 +1974,7 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
+	//# sourceMappingURL=popup.js.map
 
 	var PIXI$1;
 	if (isClient) {
@@ -2066,6 +2082,7 @@
 	    */
 	    return imageData.data[3] > 30;
 	}
+	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2101,6 +2118,9 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
+	//# sourceMappingURL=backgroundGradient.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -2177,6 +2197,7 @@
 	    }
 	    return new Game(json.id);
 	});
+	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2264,6 +2285,7 @@
 	    }
 	    return material;
 	}
+	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2399,6 +2421,7 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
+	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2442,6 +2465,7 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
+	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -2527,6 +2551,7 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
+	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2804,6 +2829,7 @@
 	    if (scene)
 	        { listener(scene); }
 	}
+	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -3014,6 +3040,7 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
+	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -3167,6 +3194,7 @@
 	    }
 
 	*/
+	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3188,6 +3216,7 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
+	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3415,6 +3444,7 @@
 	    }
 	    return entity;
 	});
+	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3718,6 +3748,7 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
+	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -4009,6 +4040,7 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
+	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -4106,6 +4138,7 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
+	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -4129,6 +4162,9 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
+	//# sourceMappingURL=level.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -4231,6 +4267,7 @@
 	});
 	var zeroPoint = new PIXI$2.Point();
 	var tempPoint = new PIXI$2.Point();
+	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -4254,6 +4291,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4447,6 +4485,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4495,6 +4534,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4527,7 +4567,7 @@
 	            context.fillStyle = 'blue';
 	            context.strokeStyle = 'white';
 	            context.lineWidth = 1;
-	            context.font = '40px FontAwesome';
+	            context.font = '40px Font Awesome 5 Free';
 	            context.textAlign = 'center';
 	            context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 	            context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
@@ -4552,7 +4592,8 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/
+	*/ 
+	//# sourceMappingURL=Spawner.js.map
 
 	Component.register({
 	    name: 'Trigger',
@@ -4600,6 +4641,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4812,6 +4854,7 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
+	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4837,6 +4880,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -5131,6 +5175,7 @@
 	}
 	var zeroPoint$1 = new PIXI$2.Point();
 	var tempPoint$1 = new PIXI$2.Point();
+	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -5146,6 +5191,7 @@
 	    else
 	        { return value; }
 	}
+	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5347,6 +5393,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
@@ -5425,6 +5472,7 @@
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
+	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5675,6 +5723,9 @@
 	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
+	//# sourceMappingURL=Animation.js.map
+
+	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5717,6 +5768,7 @@
 	        }
 	    };
 	}
+	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5961,6 +6013,7 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=net.js.map
 
 	// DOM / ReDom event system
 	function redomDispatch(view, type, data) {
@@ -5980,6 +6033,7 @@
 	            { handler(event); }
 	    });
 	}
+	//# sourceMappingURL=redomEvents.js.map
 
 	var options$1 = null;
 	function loadOptions() {
@@ -6008,6 +6062,7 @@
 	    loadOptions();
 	    return options$1[id];
 	}
+	//# sourceMappingURL=options.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -6016,7 +6071,7 @@
 	        var _this = this;
 	        this.modules = [];
 	        this.packButtonEnabled = !!packButtonIcon;
-	        this.el = el("div.moduleContainer.packable." + moduleContainerName, this.packButton = packButtonIcon && el("i.packButton.button.iconButton.fa." + packButtonIcon), this.tabs = list('div.tabs.select-none', ModuleTab), this.moduleElements = el('div.moduleElements'));
+	        this.el = el("div.moduleContainer.packable." + moduleContainerName, this.packButton = packButtonIcon && el("i.packButton.button.iconButton.fas." + packButtonIcon), this.tabs = list('div.tabs.select-none', ModuleTab), this.moduleElements = el('div.moduleElements'));
 	        if (packButtonIcon) {
 	            var packId_1 = 'moduleContainerPacked_' + moduleContainerName;
 	            if (getOption(packId_1)) {
@@ -6184,6 +6239,7 @@
 	    };
 	    return ModuleTab;
 	}());
+	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -6207,6 +6263,7 @@
 	    };
 	    return Layout;
 	}());
+	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -6303,6 +6360,7 @@
 	        resolve();
 	    });
 	});
+	//# sourceMappingURL=module.js.map
 
 	var selectedLevel = null;
 	var editorSelection = {
@@ -6385,6 +6443,7 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editorSelection', editorSelection);
 	});
+	//# sourceMappingURL=editorSelection.js.map
 
 	var EditorGlobals = /** @class */ (function () {
 	    function EditorGlobals() {
@@ -6420,6 +6479,7 @@
 	    SceneMode["PREVIEW"] = "preview";
 	})(SceneMode || (SceneMode = {}));
 	var editorGlobals = new EditorGlobals();
+	//# sourceMappingURL=editorGlobals.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -6542,32 +6602,36 @@
 	        var tools = {
 	            globalMoveTool: new SceneControlButton({
 	                title: 'Global move tool (1)',
-	                icon: 'fa-arrows',
+	                icon: 'fa-arrows-alt',
 	                callback: createCallback(function () {
 	                    setSceneTool('globalMoveTool');
 	                })
 	            }),
 	            localMoveTool: new SceneControlButton({
 	                title: 'Local move tool (2)',
-	                icon: 'fa-arrows-alt',
+	                icon: 'fa-expand-arrows-alt',
 	                callback: createCallback(function () {
 	                    setSceneTool('localMoveTool');
 	                })
 	            }),
 	            multiTool: new SceneControlButton({
 	                title: 'Multitool tool (3)',
-	                icon: 'fa-dot-circle-o',
+	                icon: 'fa-hand-spock',
 	                callback: createCallback(function () {
 	                    setSceneTool('multiTool');
 	                })
 	            })
 	        };
-	        this.addKeyboardShortcut(key[1], tools.globalMoveTool);
-	        this.addKeyboardShortcut(key[2], tools.localMoveTool);
-	        this.addKeyboardShortcut(key[3], tools.multiTool);
-	        mount(this.toolSelectionButtons, tools.globalMoveTool);
-	        mount(this.toolSelectionButtons, tools.localMoveTool);
+	        this.addKeyboardShortcut(key[1], tools.multiTool);
+	        this.addKeyboardShortcut(key[2], tools.globalMoveTool);
+	        this.addKeyboardShortcut(key[3], tools.localMoveTool);
+	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-hand-spock', callback: createCallback(() => {}) }));
 	        mount(this.toolSelectionButtons, tools.multiTool);
+	        mount(this.toolSelectionButtons, tools.globalMoveTool);
+	        // mount(this.toolSelectionButtons, tools.localMoveTool);
+	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-sync-alt', callback: createCallback(() => {}) }));
+	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-vector-square', callback: createCallback(() => {}) }));
+	        mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-bezier-curve', callback: createCallback(function () { }) }));
 	        tools[sceneToolName].click();
 	        // this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	    };
@@ -6605,7 +6669,7 @@
 	        this.el.setAttribute('controlButtonType', data.type || '');
 	        this.el.innerHTML = '';
 	        this.callback = data.callback;
-	        mount(this.el, el("i.fa." + data.icon));
+	        mount(this.el, el("i.fas." + data.icon));
 	    };
 	    SceneControlButton.prototype.click = function () {
 	        this.callback && this.callback(this.el);
@@ -6616,7 +6680,7 @@
 	    function SelectionButton(data) {
 	        var _this = this;
 	        this.className = '';
-	        this.el = el('i.fa.iconButton.button', {
+	        this.el = el('i.fas.iconButton.button', {
 	            onclick: function () { return _this.click(); }
 	        });
 	        if (data)
@@ -6637,6 +6701,7 @@
 	    };
 	    return SelectionButton;
 	}());
+	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelAndScene() {
 	    return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
@@ -6958,6 +7023,7 @@
 	        Selection.setIsInSelectionArea(inSelectionArea);
 	    });
 	}
+	//# sourceMappingURL=sceneEditUtil.js.map
 
 	/*
 	Widget is the smallest little thing in editor scene that user can interact and edit entities in the scene.
@@ -7049,6 +7115,7 @@
 	    };
 	    return Widget;
 	}());
+	//# sourceMappingURL=widget.js.map
 
 	var SHIFT_STEPS = 16;
 	var AngleWidget = /** @class */ (function (_super) {
@@ -7115,6 +7182,7 @@
 	    };
 	    return AngleWidget;
 	}(Widget));
+	//# sourceMappingURL=angleWidget.js.map
 
 	var PositionWidget = /** @class */ (function (_super) {
 	    __extends(PositionWidget, _super);
@@ -7153,6 +7221,7 @@
 	    };
 	    return PositionWidget;
 	}(Widget));
+	//# sourceMappingURL=positionWidget.js.map
 
 	var MIN_SCALE = 0.01;
 	var ScaleWidget = /** @class */ (function (_super) {
@@ -7220,6 +7289,7 @@
 	    };
 	    return ScaleWidget;
 	}(Widget));
+	//# sourceMappingURL=scaleWidget.js.map
 
 	var MoveWidget = /** @class */ (function (_super) {
 	    __extends(MoveWidget, _super);
@@ -7283,6 +7353,7 @@
 	    };
 	    return MoveWidget;
 	}(Widget));
+	//# sourceMappingURL=moveWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -7499,6 +7570,7 @@
 	        }
 	    }
 	});
+	//# sourceMappingURL=EditorWidget.js.map
 
 	/*
 	How mouse interaction works?
@@ -7571,6 +7643,7 @@
 	    ];
 	}
 	var inSelectionAreaFilter = createSelectionAreaFilters();
+	//# sourceMappingURL=EditorSelection.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7625,7 +7698,7 @@
 	        this.el.textContent = button.text;
 	        this._prevIcon = button.icon;
 	        if (button.icon) {
-	            var icon = el('i.fa.' + button.icon);
+	            var icon = el('i.fas.' + button.icon);
 	            if (button.color)
 	                { icon.style.color = button.color; }
 	            mount(this.el, icon, this.el.firstChild);
@@ -7668,6 +7741,7 @@
 	    }
 	    return Layer;
 	}());
+	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7712,6 +7786,119 @@
 	    }
 	    return CreateObject;
 	}(Popup));
+	//# sourceMappingURL=createObject.js.map
+
+	var WidgetManager = /** @class */ (function () {
+	    function WidgetManager() {
+	        var _this = this;
+	        this.entities = [];
+	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	            var _a;
+	            _this.entities.length = 0;
+	            if (change.type === 'editorSelection' && editorSelection.type === 'epr') {
+	                var entityPrototypes = editorSelection.items;
+	                (_a = _this.entities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.previouslyCreatedEntity; }).filter(Boolean));
+	                _this.updateWidgets();
+	            }
+	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {
+	            _this.clear();
+	        });
+	        globalEventDispatcher.listen('scene load level', function () {
+	            _this.clear();
+	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, function (newTool) {
+	            _this.updateWidgets();
+	        });
+	    }
+	    WidgetManager.prototype.updateWidgets = function () {
+	        if (!this.widgetRoot) {
+	            return;
+	        }
+	        this.widgetRoot.update(this.entities);
+	    };
+	    WidgetManager.prototype.setParentElement = function (parent) {
+	        this.widgetRoot = new WidgetRoot();
+	        mount(parent, this.widgetRoot);
+	        this.updateWidgets();
+	    };
+	    WidgetManager.prototype.clear = function () {
+	        this.entities.length = 0;
+	        this.updateWidgets();
+	    };
+	    return WidgetManager;
+	}());
+	var WidgetRoot = /** @class */ (function () {
+	    function WidgetRoot() {
+	        this.el = el('div.widgetRoot');
+	    }
+	    WidgetRoot.prototype.update = function (entities) {
+	        this.entities = entities;
+	        this.el.innerHTML = '';
+	        // TODO: Calculate orientation of WidgetRoot from entities
+	        if (sceneToolName === 'multiTool' && entities.length > 0) {
+	            mount(this.el, new PositionWidget$1(this, 1, 0, '#ff0000'));
+	            mount(this.el, new PositionWidget$1(this, 0, 1, '#00ff00'));
+	        }
+	    };
+	    return WidgetRoot;
+	}());
+	var PositionWidget$1 = /** @class */ (function () {
+	    function PositionWidget(widgetRoot, dx, dy, color) {
+	        this.widgetRoot = widgetRoot;
+	        this.relativePosition = new Vector(dx, dy);
+	        var angle = -this.relativePosition.angleTo(new Vector(1, 0)) * 180 / Math.PI;
+	        var length = '70px';
+	        this.el = el('div', new WidgetLine(length, color), new WidgetControl('.fas.fa-caret-right', length, color), {
+	            style: {
+	                position: 'absolute',
+	                transform: "rotate(" + angle + "deg)"
+	            }
+	        });
+	    }
+	    PositionWidget.prototype.update = function (data) {
+	    };
+	    return PositionWidget;
+	}());
+	var WidgetLine = /** @class */ (function () {
+	    function WidgetLine(length, color) {
+	        this.length = length;
+	        this.color = color;
+	        this.el = el('div.widgetLine', {
+	            style: {
+	                width: length,
+	                backgroundColor: color,
+	                position: 'absolute',
+	                top: '0',
+	                left: '0',
+	                transform: 'translateY(-50%)',
+	                height: '5px'
+	            }
+	        });
+	    }
+	    WidgetLine.prototype.update = function (data) {
+	    };
+	    return WidgetLine;
+	}());
+	var WidgetControl = /** @class */ (function () {
+	    function WidgetControl(iconClass, distance, color) {
+	        this.el = el('i.widgetControl' + iconClass, {
+	            style: {
+	                position: 'absolute',
+	                left: distance,
+	                color: color,
+	                transform: 'translateY(-50%) scaleX(2)',
+	                fontSize: '30px'
+	            },
+	            onclick: function (e) { return e.stopPropagation(); },
+	            onmousedown: function (e) { return e.stopPropagation(); }
+	        });
+	    }
+	    WidgetControl.prototype.update = function (data) {
+	    };
+	    return WidgetControl;
+	}());
+	//# sourceMappingURL=widgetManager.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -7730,6 +7917,7 @@
 	        _this.previousMousePosInWorldCoordinates = new Vector(0, 0);
 	        _this.parentToAddNewEntitiesOn = null;
 	        _this.previouslyEntityClicked = new Date(0);
+	        _this.widgetManager = new WidgetManager();
 	        _this.widgetEntity = null;
 	        /**
 	         * selectedEntities is the entity that is used in editing.
@@ -7751,12 +7939,12 @@
 	            // width and height will be fixed after loading
 	            width: 0,
 	            height: 0
-	        }), el('div.pauseInfo', "Paused. Editing objects will not affect the level."), el('i.fa.fa-pause.pauseInfo.topLeft'), el('i.fa.fa-pause.pauseInfo.topRight'), el('i.fa.fa-pause.pauseInfo.bottomLeft'), el('i.fa.fa-pause.pauseInfo.bottomRight'), el('div.sceneEditorSideBarButtons', el('i.fa.fa-arrows.iconButton.button.movement', {
+	        }), el('div.pauseInfo', "Paused. Editing objects will not affect the level."), el('i.fas.fa-pause.pauseInfo.topLeft'), el('i.fas.fa-pause.pauseInfo.topRight'), el('i.fas.fa-pause.pauseInfo.bottomLeft'), el('i.fas.fa-pause.pauseInfo.bottomRight'), el('div.sceneEditorSideBarButtons', el('i.fas.fa-arrows.iconButton.button.movement', {
 	            onclick: function () {
 	                alert('Move in editor with arrow keys or WASD');
 	            },
 	            title: 'Move in editor with arrow keys or WASD'
-	        }), el('i.fa.fa-plus-circle.iconButton.button.zoomIn', {
+	        }), el('i.fas.fa-plus-circle.iconButton.button.zoomIn', {
 	            onclick: function () {
 	                if (!scene)
 	                    { return; }
@@ -7765,7 +7953,7 @@
 	                _this.draw();
 	            },
 	            title: 'Zoom in (+ or E)'
-	        }), el('i.fa.fa-minus-circle.iconButton.button.zoomOut', {
+	        }), el('i.fas.fa-minus-circle.iconButton.button.zoomOut', {
 	            onclick: function () {
 	                if (!scene)
 	                    { return; }
@@ -7774,7 +7962,7 @@
 	                _this.draw();
 	            },
 	            title: 'Zoom out (- or Q)'
-	        }), _this.globeButton = el('i.fa.fa-globe.iconButton.button', {
+	        }), _this.globeButton = el('i.fas.fa-globe.iconButton.button', {
 	            onclick: function () {
 	                if (!scene)
 	                    { return; }
@@ -7787,7 +7975,7 @@
 	                _this.draw();
 	            },
 	            title: 'Zoom to globe (G)'
-	        }), _this.homeButton = el('i.fa.fa-home.iconButton.button', {
+	        }), _this.homeButton = el('i.fas.fa-home.iconButton.button', {
 	            onclick: function () {
 	                if (!scene)
 	                    { return; }
@@ -7800,6 +7988,7 @@
 	            title: 'Go home to player or to default start position (H)'
 	        })));
 	        _this.el.classList.add('hideScenePauseInformation');
+	        _this.widgetManager.setParentElement(_this.el);
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, function () {
 	            var _a;
 	            if (['ent', 'epr'].includes(editorSelection.type) && _this.selectedEntities.length > 0) {
@@ -8562,6 +8751,7 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
+	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -8607,13 +8797,14 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
+	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
 	        var _this = this;
 	        this.options = Object.assign({
 	            id: '',
-	            defaultIcon: 'fa fa-book',
+	            defaultIcon: 'fas fa-book',
 	            selectionChangedCallback: null,
 	            moveCallback: null,
 	            doubleClickCallback: null
@@ -8728,6 +8919,7 @@
 	    var event = new DragAndDropStopEvent(idList, targetElement);
 	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
+	//# sourceMappingURL=treeView.js.map
 
 	var PositionAngleScale = /** @class */ (function () {
 	    function PositionAngleScale(position, angle, scale) {
@@ -8792,6 +8984,7 @@
 	    };
 	    return PositionAngleScale;
 	}());
+	//# sourceMappingURL=positionAngleScaleUtil.js.map
 
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
@@ -9090,6 +9283,7 @@
 	    return ObjectsModule;
 	}(Module));
 	Module.register(ObjectsModule, 'left');
+	//# sourceMappingURL=objectsModule.js.map
 
 	/**
 	 * Handles everything else than prototype deletion itself.
@@ -9161,13 +9355,14 @@
 	    }
 	    return PrototypeDeleteConfirmation;
 	}(Popup));
+	//# sourceMappingURL=PrototypeDeleteConfirmation.js.map
 
 	var TypesModule = /** @class */ (function (_super) {
 	    __extends(TypesModule, _super);
 	    function TypesModule() {
 	        var _this = _super.call(this) || this;
 	        _this.externalChange = false;
-	        _this.addElements(_this.addButton = el('span.addTypeButton.button.fa.fa-plus'), _this.search = el('input'), _this.searchIcon = el('i.fa.fa-search.searchIcon'), _this.jstree = el('div'), _this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right')));
+	        _this.addElements(_this.addButton = el('span.addTypeButton.button.fas.fa-plus'), _this.search = el('input'), _this.searchIcon = el('i.fas.fa-search.searchIcon'), _this.jstree = el('div'), _this.helperText = el('div.typesDragHelper', el('i.fas.fa-long-arrow-right'), 'Drag', el('i.fas.fa-long-arrow-right')));
 	        _this.id = 'types';
 	        _this.name = 'Types';
 	        _this.addButton.onclick = function () {
@@ -9306,7 +9501,7 @@
 	                plugins: ['types', 'dnd', 'sort', 'search' ],
 	                types: {
 	                    default: {
-	                        icon: 'fa fa-book'
+	                        icon: 'fas fa-book'
 	                    }
 	                },
 	                sort: function (a, b) {
@@ -9394,6 +9589,7 @@
 	    }, 0);
 	});
 	// Module.register(TypesModule, 'left');
+	//# sourceMappingURL=typesModule.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -9411,7 +9607,7 @@
 	                Module.activateModule('prefab', false);
 	            },
 	        });
-	        _this.addElements(_this.treeView, _this.helperText = el('div.typesDragHelper', el('i.fa.fa-long-arrow-right'), 'Drag', el('i.fa.fa-long-arrow-right')));
+	        _this.addElements(_this.treeView, _this.helperText = el('div.typesDragHelper', el('i.fas.fa-long-arrow-right'), 'Drag', el('i.fas.fa-long-arrow-right')));
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.type === changeType.addSerializableToTree) {
 	                if (change.reference.threeLetterType === 'pfa') {
@@ -9504,6 +9700,7 @@
 	    return PrefabsModule;
 	}(Module));
 	Module.register(PrefabsModule, 'left');
+	//# sourceMappingURL=prefabsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -9597,6 +9794,7 @@
 	    };
 	    return LevelItem;
 	}());
+	//# sourceMappingURL=levelsModule.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -9684,6 +9882,7 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
+	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -9719,6 +9918,7 @@
 	    };
 	    return Confirmation;
 	}(Popup));
+	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -9836,6 +10036,7 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
+	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -9891,6 +10092,7 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
+	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -9899,6 +10101,7 @@
 	        element.classList.remove('skipPropertyEditorTransitions');
 	    }, 10);
 	}
+	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -9992,7 +10195,7 @@
 	var Container = /** @class */ (function () {
 	    function Container() {
 	        var _this = this;
-	        this.el = el('div.container', this.title = el('div.containerTitle', this.titleText = el('span.containerTitleText'), this.titleIcon = el('i.icon.fa')), this.content = el('div.containerContent', this.properties = list('div.propertyEditorProperties', PropertyElement, null), this.containers = list('div', Container, null), this.controls = el('div'), el('i.button.logButton.fa.fa-eye', {
+	        this.el = el('div.container', this.title = el('div.containerTitle', this.titleText = el('span.containerTitleText'), this.titleIcon = el('i.icon.fa')), this.content = el('div.containerContent', this.properties = list('div.propertyEditorProperties', PropertyElement, null), this.containers = list('div', Container, null), this.controls = el('div'), el('i.button.logButton.fas.fa-eye', {
 	            onclick: function () {
 	                console.log(_this.item);
 	                window['item'] = _this.item;
@@ -10053,7 +10256,7 @@
 	        this.containers.update(inheritedComponentDatas);
 	        this.properties.update(this.item.getChildren('prp'));
 	        var addButton;
-	        mount(this.controls, addButton = el('button.button', el('i.fa.fa-puzzle-piece'), 'Add Component', {
+	        mount(this.controls, addButton = el('button.button', el('i.fas.fa-puzzle-piece'), 'Add Component', {
 	            onclick: function () {
 	                new ComponentAdder(_this.item);
 	            }
@@ -10061,7 +10264,7 @@
 	        if (inheritedComponentDatas.length === 0)
 	            { addButton.classList.add('clickMeEffect'); }
 	        /*
-	    mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone Type', {
+	    mount(this.controls, el('button.button', el('i.fas.fa-clone'), 'Clone Type', {
 	        onclick: () => {
 	            redomDispatch(this, 'makingChanges');
 	            let clone = this.item.clone();
@@ -10076,7 +10279,7 @@
 	        }
 	    }));
 	    */
-	        mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Type (OLD!!!)', {
+	        mount(this.controls, el('button.dangerButton.button', el('i.fas.fa-times'), 'Delete Type (OLD!!!)', {
 	            onclick: function () {
 	                redomDispatch(_this, 'makingChanges');
 	                var entityPrototypeCount = _this.item.countEntityPrototypes(true);
@@ -10100,7 +10303,7 @@
 	            prop._editorPlaceholder = _this.item.makeUpAName(); //.prototype.findChild('prp', prp => prp.name === prop.name).value;
 	        });
 	        this.properties.update(properties);
-	        mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add Component', {
+	        mount(this.controls, el("button.button", el('i.fas.fa-puzzle-piece'), 'Add Component', {
 	            onclick: function () {
 	                new ComponentAdder(_this.item);
 	            }
@@ -10115,7 +10318,7 @@
 	            prop._editorPlaceholder = _this.item.makeUpAName(); //.prototype.findChild('prp', prp => prp.name === prop.name).value;
 	        });
 	        this.properties.update(properties);
-	        mount(this.controls, el("button.button", el('i.fa.fa-puzzle-piece'), 'Add Component', {
+	        mount(this.controls, el("button.button", el('i.fas.fa-puzzle-piece'), 'Add Component', {
 	            onclick: function () {
 	                new ComponentAdder(_this.item);
 	            }
@@ -10162,7 +10365,7 @@
 	            && this.item.generatedForPrototype.threeLetterType === 'epr')
 	            { return; }
 	        if (this.item.componentClass.allowMultiple) {
-	            mount(this.controls, el('button.button', el('i.fa.fa-clone'), 'Clone', {
+	            mount(this.controls, el('button.button', el('i.fas.fa-clone'), 'Clone', {
 	                onclick: function () {
 	                    redomDispatch(_this, 'makingChanges');
 	                    if (_this.item.ownComponentData) {
@@ -10180,7 +10383,7 @@
 	            }));
 	        }
 	        if (hasOwnProperties) {
-	            mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-refresh'), 'Reset', {
+	            mount(this.controls, el('button.dangerButton.button', el('i.fas.fa-refresh'), 'Reset', {
 	                onclick: function () {
 	                    redomDispatch(_this, 'makingChanges');
 	                    redomDispatch(_this, 'markPropertyEditorDirty', 'fromReset');
@@ -10194,7 +10397,7 @@
 	            }));
 	        }
 	        if (this.item.ownComponentData && !parentComponentData) {
-	            mount(this.controls, el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete', {
+	            mount(this.controls, el('button.dangerButton.button', el('i.fas.fa-times'), 'Delete', {
 	                onclick: function () {
 	                    var componentName = _this.item.componentClass.componentName;
 	                    var parent = _this.item.ownComponentData.getParent();
@@ -10240,7 +10443,7 @@
 	    Container.prototype.updateComponentKindOfThing = function (componentClass) {
 	        if (this.titleText.textContent !== componentClass.componentName)
 	            { this.titleText.textContent = componentClass.componentName; }
-	        var className = 'icon fa ' + componentClass.icon;
+	        var className = 'icon fas ' + componentClass.icon;
 	        if (this.titleIcon.className !== className)
 	            { this.titleIcon.className = className; }
 	        if (this.componentClassColorCache !== componentClass.color) {
@@ -10357,7 +10560,7 @@
 	                // Can not delete anything from entity prototype transform
 	                {
 	                    this.name.style.color = parent_1.componentClass.color;
-	                    mount(this.content, el('i.fa.fa-times.button.resetButton.iconButton', {
+	                    mount(this.content, el('i.fas.fa-times.button.resetButton.iconButton', {
 	                        onclick: function () {
 	                            redomDispatch(_this, 'makingChanges');
 	                            _this.reset();
@@ -10366,7 +10569,7 @@
 	                }
 	                else if (parent_1.threeLetterType === 'com') {
 	                    this.name.style.color = parent_1.constructor.color;
-	                    mount(this.content, el('i.fa.fa-ellipsis-v.button.moreButton.iconButton', {
+	                    mount(this.content, el('i.fas.fa-ellipsis-v.button.moreButton.iconButton', {
 	                        onclick: function () {
 	                            new ObjectMoreButtonContextMenu(_this.property);
 	                        }
@@ -10398,6 +10601,7 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
+	//# sourceMappingURL=propertyEditor.js.map
 
 	var TypeModule = /** @class */ (function (_super) {
 	    __extends(TypeModule, _super);
@@ -10441,6 +10645,7 @@
 	    return TypeModule;
 	}(Module));
 	Module.register(TypeModule, 'right');
+	//# sourceMappingURL=typeModule.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -10478,6 +10683,7 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
+	//# sourceMappingURL=prefabModule.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -10514,6 +10720,7 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
+	//# sourceMappingURL=objectModule.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -10548,12 +10755,13 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
+	//# sourceMappingURL=levelModule.js.map
 
 	var GameModule = /** @class */ (function (_super) {
 	    __extends(GameModule, _super);
 	    function GameModule() {
 	        var _this = _super.call(this) || this;
-	        _this.addElements(_this.propertyEditor = new PropertyEditor(), el('button.dangerButton.button', el('i.fa.fa-times'), 'Delete Game', { onclick: function () {
+	        _this.addElements(_this.propertyEditor = new PropertyEditor(), el('button.dangerButton.button', el('i.fas.fa-times'), 'Delete Game', { onclick: function () {
 	                if (confirm("Delete game '" + game.name + "'? (Cannot be undone)")) {
 	                    game.delete();
 	                }
@@ -10578,6 +10786,7 @@
 	    return GameModule;
 	}(Module));
 	Module.register(GameModule, 'right');
+	//# sourceMappingURL=gameModule.js.map
 
 	var AnimationModule = /** @class */ (function (_super) {
 	    __extends(AnimationModule, _super);
@@ -10591,7 +10800,7 @@
 	        _this.focusedKeyFrameViews = [];
 	        _this.addElements(el('div.animationModule', el('div', el('button.button', 'Add animation', { onclick: function () { return _this.addAnimation(); } }), _this.animationSelector = new AnimationSelector(), 
 	        // el('button.button', 'Add keyframe', { onclick: () => this.addKeyframe() }),
-	        _this.recordButton = el('button.button.recordButton', el('i.fa.fa-circle'), 'Record key frames', {
+	        _this.recordButton = el('button.button.recordButton', el('i.fas.fa-circle'), 'Record key frames', {
 	            onclick: function () {
 	                if (editorGlobals.sceneMode === SceneMode.RECORDING) {
 	                    editorGlobals.sceneMode = SceneMode.NORMAL;
@@ -11029,7 +11238,7 @@
 	        }
 	        else {
 	            if (this.isKeyFrame()) {
-	                mount(this, el('i.fa.fa-star'));
+	                mount(this, el('i.fas.fa-star'));
 	            }
 	        }
 	    };
@@ -11070,6 +11279,7 @@
 	    }
 	}
 	*/
+	//# sourceMappingURL=animationModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -11179,6 +11389,7 @@
 	    };
 	    return FPSMeter;
 	}());
+	//# sourceMappingURL=performanceModule.js.map
 
 	var PerSecondModule = /** @class */ (function (_super) {
 	    __extends(PerSecondModule, _super);
@@ -11220,6 +11431,7 @@
 	    };
 	    return PerSecondItem;
 	}());
+	//# sourceMappingURL=perSecondModule.js.map
 
 	var AnimationView = /** @class */ (function () {
 	    function AnimationView(serializable) {
@@ -11238,6 +11450,7 @@
 	    };
 	    return AnimationView;
 	}());
+	//# sourceMappingURL=animationView.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -11335,9 +11548,11 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, function (name, value) {
 	    help[name] = value;
 	});
+	//# sourceMappingURL=help.js.map
 
 	window.test = function () {
 	};
+	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -11373,6 +11588,7 @@
 	    };
 	    return OKPopup;
 	}(Popup));
+	//# sourceMappingURL=OKPopup.js.map
 
 	editorEventDispacher.getEventPromise('modulesRegistered').then(function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
@@ -11516,6 +11732,7 @@
 	        number: num
 	    };
 	}
+	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -11531,6 +11748,7 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
+	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

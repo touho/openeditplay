@@ -7,10 +7,10 @@ db.query = async function (sql, params) {
 	return new Promise((resolve, reject) => {
 		connectionPool.getConnection(function (err, connection) {
 			if (err) {
-				console.error('SQL error', sql, params);
+				console.error('SQL error', sql, params, err);
 				return reject('Could not get MySQL connection');
 			}
-			
+
 			connection.query(sql, params, function (err, rows, fields) {
 				connection.release();
 				if (err) {

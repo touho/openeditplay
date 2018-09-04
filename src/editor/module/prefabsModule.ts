@@ -34,9 +34,9 @@ class PrefabsModule extends Module {
 		this.addElements(
 			this.treeView,
 			this.helperText = el('div.typesDragHelper',
-				el('i.fa.fa-long-arrow-right'),
+				el('i.fas.fa-long-arrow-right'),
 				'Drag',
-				el('i.fa.fa-long-arrow-right')
+				el('i.fas.fa-long-arrow-right')
 			)
 		);
 

@@ -36,7 +36,7 @@ Component.register({
 			context.fillStyle = 'blue';
 			context.strokeStyle = 'white';
 			context.lineWidth = 1;
-			context.font = '40px FontAwesome';
+			context.font = '40px Font Awesome 5 Free';
 			context.textAlign = 'center';
 			context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 			context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);

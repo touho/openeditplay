@@ -103,7 +103,7 @@ export class Button {
 
 		this._prevIcon = button.icon;
 		if (button.icon) {
-			let icon = el('i.fa.' + button.icon);
+			let icon = el('i.fas.' + button.icon);
 			if (button.color)
 				icon.style.color = button.color;
 			mount(this.el, icon, this.el.firstChild);

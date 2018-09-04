@@ -48,13 +48,16 @@ div.propertyEditor div.container[type='com'] div.containerTitle {
 div.propertyEditor div.container[type='icd'] div.containerTitle::before,
 div.propertyEditor div.container[type='com'] div.containerTitle::before {
   content: '\f0d7';
-  font-family: FontAwesome;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   display: inline-block;
   width: 42px;
   margin-left: 3px;
 }
 div.propertyEditor div.container.packed[type='icd'] div.containerTitle::before,
 div.propertyEditor div.container.packed[type='com'] div.containerTitle::before {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   content: '\f0da';
   position: relative;
   left: 2px;

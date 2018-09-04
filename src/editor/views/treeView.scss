@@ -10,7 +10,8 @@
   display: none;
 }
 .jstree-default .jstree-search::before {
-  font-family: FontAwesome;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
   content: '\f002';
   color: $editor-effect-color;
   margin-left: 5px;
