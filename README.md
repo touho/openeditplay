@@ -17,7 +17,9 @@ CREATE USER 'openeditplay'@'localhost' IDENTIFIED WITH mysql_native_password BY 
 GRANT ALL ON openeditplay.* TO 'openeditplay'@'localhost';
 ```
 3. Navigate to project directory and type:
-`mysql -u openeditplay --password="openeditplay" --database=openeditplay < installation/resetDatabase.sql`
+```
+mysql -u openeditplay --password="openeditplay" --database=openeditplay < installation/resetDatabase.sql
+```
 4. `npm install`
 5. `node server`
 
