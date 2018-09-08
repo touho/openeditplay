@@ -177,6 +177,9 @@
 	    deleteAllChildren: 'c',
 	};
 	var origin;
+	function resetOrigin() {
+	    origin = null;
+	}
 	function getChangeOrigin() {
 	    return origin;
 	}
@@ -186,6 +189,7 @@
 	    // @ifndef OPTIMIZE
 	    if (_origin !== origin) {
 	        origin = _origin;
+	        { setTimeout(resetOrigin, 0); }
 	    }
 	    // @endif
 	}
@@ -973,7 +977,7 @@
 	        var dx = this.x - vec.x, dy = this.y - vec.y;
 	        return dx * dx + dy * dy;
 	    };
-	    // returns -pi .. pi
+	    // returns 0 .. pi
 	    Vector.prototype.angleTo = function (vec) {
 	        var lengthPart = this.length() * vec.length();
 	        if (lengthPart > 0) {
@@ -1778,11 +1782,14 @@
 	    element = memoizeHTML(query).cloneNode(false);
 	  } else if (isNode(query)) {
 	    element = query.cloneNode(false);
+	  } else if (isFunction(query)) {
+	    var Query = query;
+	    element = new (Function.prototype.bind.apply( Query, [ null ].concat( args) ));
 	  } else {
 	    throw new Error('At least one argument required');
 	  }
 
-	  parseArguments(element, args);
+	  parseArguments(getEl(element), args);
 
 	  return element;
 	};
@@ -2370,7 +2377,7 @@
 	        }
 	        element['_mx'] = x;
 	        element['_my'] = y;
-	        handler && handler(new Vector(x, y));
+	        handler && handler(new Vector(x, y), event);
 	    };
 	    element.addEventListener('mousemove', domHandler);
 	    return function () { return element.removeEventListener('mousemove', domHandler); };
@@ -2381,9 +2388,9 @@
 	        if (event.button !== 0)
 	            { return; }
 	        if (typeof element['_mx'] === 'number')
-	            { handler(new Vector(element['_mx'], element['_my'])); }
+	            { handler(new Vector(element['_mx'], element['_my']), event); }
 	        else
-	            { handler(); }
+	            { handler(null, event); }
 	    };
 	    element.addEventListener('mousedown', domHandler);
 	    return function () { return element.removeEventListener('mousedown', domHandler); };
@@ -2393,12 +2400,12 @@
 	    // listen document body because many times mouse is accidentally dragged outside of element
 	    var domHandler = function (event) {
 	        if (typeof element['_mx'] === 'number')
-	            { handler(new Vector(element['_mx'], element['_my'])); }
+	            { handler(new Vector(element['_mx'], element['_my']), event); }
 	        else
-	            { handler(); }
+	            { handler(null, event); }
 	    };
 	    document.body.addEventListener('mouseup', domHandler);
-	    return function () { return element.removeEventListener('mouseup', domHandler); };
+	    return function () { return document.body.removeEventListener('mouseup', domHandler); };
 	}
 	////////////////////////////////////
 	var keys = {};
@@ -4941,7 +4948,7 @@
 	                        { p.sprite.blendMode = blendModes[blendMode]; }
 	                });
 	            });
-	            this.scene.layers.main.addChild(this.container);
+	            // this.scene.layers.main.addChild(this.container);
 	            this.initParticles();
 	            ['particleLifetime', 'particleCount'].forEach(function (propertyName) {
 	                _this.listenProperty(_this, propertyName, function () {
@@ -4971,14 +4978,18 @@
 	                        p.sprite.y += _this.container.position.y;
 	                    }
 	                });
-	                this.container.position.set(0, 0);
+	                // this.container.position.set(0, 0);
+	                this.container.setParent(this.scene.layers.main);
 	            }
 	            else {
-	                this.positionListener = this.Transform.listen('globalTransformChanged', function (Transform) {
-	                    var position = Transform.getGlobalPosition();
-	                    _this.container.position.set(position.x, position.y);
+	                /*
+	                this.positionListener = this.Transform.listen('globalTransformChanged', Transform => {
+	                    let position = Transform.getGlobalPosition();
+	                    this.container.position.set(position.x, position.y);
 	                });
-	                this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+	                */
+	                // this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+	                this.container.setParent(this.Transform.container);
 	                this.particles.forEach(function (p) {
 	                    if (p.sprite) {
 	                        p.sprite.x -= _this.container.position.x;
@@ -5048,9 +5059,8 @@
 	            p.age = this.scene.time - p.nextBirth;
 	            p.nextBirth += this.particleLifetime;
 	            if (this.globalCoordinates) {
-	                var pos = Vector.fromObject(this.container.toLocal(zeroPoint$1, this.Transform.container, tempPoint$1));
-	                p.sprite.x += pos.x;
-	                p.sprite.y += pos.y;
+	                // Change sprite position from Transform coordinates to main layer coordinates.
+	                Vector.fromObject(this.container.toLocal(p.sprite.position, this.Transform.container, p.sprite.position));
 	                if (this.Physics && this.Physics.body) {
 	                    var vel = this.Physics.body.velocity;
 	                    p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
@@ -5175,6 +5185,7 @@
 	}
 	var zeroPoint$1 = new PIXI$2.Point();
 	var tempPoint$1 = new PIXI$2.Point();
+	var temp2Point = new PIXI$2.Point();
 	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
@@ -6623,15 +6634,15 @@
 	            })
 	        };
 	        this.addKeyboardShortcut(key[1], tools.multiTool);
-	        this.addKeyboardShortcut(key[2], tools.globalMoveTool);
-	        this.addKeyboardShortcut(key[3], tools.localMoveTool);
+	        // this.addKeyboardShortcut(key[2], tools.globalMoveTool);
+	        // this.addKeyboardShortcut(key[3], tools.localMoveTool);
 	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-hand-spock', callback: createCallback(() => {}) }));
 	        mount(this.toolSelectionButtons, tools.multiTool);
-	        mount(this.toolSelectionButtons, tools.globalMoveTool);
+	        // mount(this.toolSelectionButtons, tools.globalMoveTool);
 	        // mount(this.toolSelectionButtons, tools.localMoveTool);
 	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-sync-alt', callback: createCallback(() => {}) }));
 	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-vector-square', callback: createCallback(() => {}) }));
-	        mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-bezier-curve', callback: createCallback(function () { }) }));
+	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-bezier-curve', callback: createCallback(() => {}) }));
 	        tools[sceneToolName].click();
 	        // this.multipurposeTool.click(); // if you change the default tool, scene.js must also be changed
 	    };
@@ -7788,17 +7799,21 @@
 	}(Popup));
 	//# sourceMappingURL=createObject.js.map
 
+	var WIDGET_DISTANCE = 50;
 	var WidgetManager = /** @class */ (function () {
 	    function WidgetManager() {
 	        var _this = this;
 	        this.entities = [];
+	        this.transformIsDirty = false;
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            var _a;
-	            _this.entities.length = 0;
-	            if (change.type === 'editorSelection' && editorSelection.type === 'epr') {
-	                var entityPrototypes = editorSelection.items;
-	                (_a = _this.entities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.previouslyCreatedEntity; }).filter(Boolean));
-	                _this.updateWidgets();
+	            if (change.type === 'editorSelection') {
+	                _this.entities.length = 0;
+	                if (editorSelection.type === 'epr') {
+	                    var entityPrototypes = filterChildren(editorSelection.items);
+	                    (_a = _this.entities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.previouslyCreatedEntity; }).filter(Boolean));
+	                    _this.updateWidgets();
+	                }
 	            }
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {
@@ -7810,12 +7825,21 @@
 	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, function (newTool) {
 	            _this.updateWidgets();
 	        });
+	        forEachScene(function (scene$$1) {
+	            scene$$1.listen(GameEvent.SCENE_DRAW, function () {
+	                if (_this.transformIsDirty) {
+	                    _this.widgetRoot.updateTransform();
+	                    _this.transformIsDirty = false;
+	                }
+	            });
+	        });
 	    }
 	    WidgetManager.prototype.updateWidgets = function () {
 	        if (!this.widgetRoot) {
 	            return;
 	        }
 	        this.widgetRoot.update(this.entities);
+	        this.transformIsDirty = false;
 	    };
 	    WidgetManager.prototype.setParentElement = function (parent) {
 	        this.widgetRoot = new WidgetRoot();
@@ -7826,6 +7850,11 @@
 	        this.entities.length = 0;
 	        this.updateWidgets();
 	    };
+	    WidgetManager.prototype.updateTransform = function () {
+	        if (this.widgetRoot) {
+	            this.transformIsDirty = true;
+	        }
+	    };
 	    return WidgetManager;
 	}());
 	var WidgetRoot = /** @class */ (function () {
@@ -7835,44 +7864,238 @@
 	    WidgetRoot.prototype.update = function (entities) {
 	        this.entities = entities;
 	        this.el.innerHTML = '';
-	        // TODO: Calculate orientation of WidgetRoot from entities
-	        if (sceneToolName === 'multiTool' && entities.length > 0) {
-	            mount(this.el, new PositionWidget$1(this, 1, 0, '#ff0000'));
-	            mount(this.el, new PositionWidget$1(this, 0, 1, '#00ff00'));
+	        if (entities.length === 0) {
+	            return;
 	        }
+	        this.updateTransform();
+	        if (sceneToolName === 'multiTool') {
+	            mount(this.el, new ScaleWidget$1(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000'));
+	            mount(this.el, new ScaleWidget$1(this, new Vector(0, 1), new Vector(0, 1), '#00ff00'));
+	            mount(this.el, new ScaleWidget$1(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff'));
+	            mount(this.el, new MoveWidget$1(this, 1, 0, '#ff0000'));
+	            mount(this.el, new MoveWidget$1(this, 0, 1, '#00ff00'));
+	            mount(this.el, new AngleWidget$1(this, 'circle'));
+	            mount(this.el, new PositionWidget$1(this));
+	        }
+	        else if (sceneToolName === 'globalMoveTool') {
+	            mount(this.el, new MoveWidget$1(this, 1, 0, '#ff0000'));
+	            mount(this.el, new MoveWidget$1(this, 0, 1, '#00ff00'));
+	            mount(this.el, new PositionWidget$1(this));
+	        }
+	    };
+	    WidgetRoot.prototype.updateTransform = function () {
+	        if (!this.entities || this.entities.length === 0) {
+	            return;
+	        }
+	        var averagePosition = new Vector(0, 0);
+	        for (var _i = 0, _a = this.entities; _i < _a.length; _i++) {
+	            var entity = _a[_i];
+	            averagePosition.add(entity.Transform.getGlobalPosition());
+	        }
+	        this.setPosition(averagePosition.divideScalar(this.entities.length));
+	        this.setAngle(this.entities[0].Transform.getGlobalAngle());
+	    };
+	    WidgetRoot.prototype.setPosition = function (worldPosition) {
+	        this.worldPosition = worldPosition;
+	        this.mousePosition = scene.worldToMouse(this.worldPosition);
+	        this.el.style.left = this.mousePosition.x + 'px';
+	        this.el.style.top = this.mousePosition.y + 'px';
+	    };
+	    WidgetRoot.prototype.move = function (worldMoveVector) {
+	        this.setPosition(this.worldPosition.add(worldMoveVector));
+	    };
+	    WidgetRoot.prototype.setAngle = function (angle) {
+	        this.angle = angle;
+	        var angleDeg = angle * 180 / Math.PI;
+	        this.el.style.transform = "rotate(" + angleDeg + "deg)";
+	    };
+	    WidgetRoot.prototype.rotate = function (angleDifference) {
+	        this.setAngle(this.angle + angleDifference);
 	    };
 	    return WidgetRoot;
 	}());
-	var PositionWidget$1 = /** @class */ (function () {
-	    function PositionWidget(widgetRoot, dx, dy, color) {
+	var MoveWidget$1 = /** @class */ (function () {
+	    function MoveWidget(widgetRoot, dx, dy, color) {
+	        var _this = this;
 	        this.widgetRoot = widgetRoot;
-	        this.relativePosition = new Vector(dx, dy);
-	        var angle = -this.relativePosition.angleTo(new Vector(1, 0)) * 180 / Math.PI;
-	        var length = '70px';
-	        this.el = el('div', new WidgetLine(length, color), new WidgetControl('.fas.fa-caret-right', length, color), {
+	        this.relativePosition = new Vector(dx, -dy);
+	        var angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
+	        // let angle = this.relativePosition.angleTo(new Vector(1, 0)) * 180 / Math.PI;
+	        this.el = el('div.widget.moveWidget', new WidgetLine(WIDGET_DISTANCE, color, 30), new WidgetControl('.fas.fa-caret-right', {
+	            left: WIDGET_DISTANCE + 'px',
+	            color: color,
+	            transform: 'scaleX(2) translateX(-5%) translateY(-50%)'
+	        }, function (worldChange, worldPos) {
+	            var rotatedRelativePosition = _this.relativePosition.clone();
+	            { rotatedRelativePosition.rotate(_this.widgetRoot.angle); }
+	            var moveVector = worldChange.getProjectionOn(rotatedRelativePosition);
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var Transform = entity.getComponent('Transform');
+	                Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
+	            });
+	            _this.widgetRoot.move(moveVector);
+	            // this.component.Transform.position = moveVector.add(this.component.Transform.position);
+	        }), {
 	            style: {
-	                position: 'absolute',
 	                transform: "rotate(" + angle + "deg)"
 	            }
 	        });
+	    }
+	    MoveWidget.prototype.update = function (data) {
+	    };
+	    return MoveWidget;
+	}());
+	var PositionWidget$1 = /** @class */ (function () {
+	    function PositionWidget(widgetRoot) {
+	        var _this = this;
+	        this.widgetRoot = widgetRoot;
+	        //'.fas.fa-circle'
+	        this.el = el('div.widget.positionWidget', new WidgetControl(el('div.widgetControl.positionWidgetControl', {
+	            style: {
+	                transform: 'translateX(-50%) translateY(-50%)'
+	            }
+	        }), null, function (worldChange, worldPos) {
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var transform = entity.getComponent('Transform');
+	                var globalPosition = transform.getGlobalPosition();
+	                globalPosition.add(worldChange);
+	                transform.setGlobalPosition(globalPosition);
+	            });
+	            _this.widgetRoot.move(worldChange);
+	            // this.component.Transform.position = mousePositionChange.add(this.component.Transform.position);
+	        }));
 	    }
 	    PositionWidget.prototype.update = function (data) {
 	    };
 	    return PositionWidget;
 	}());
+	var MIN_SCALE$2 = 0.01;
+	var ScaleWidget$1 = /** @class */ (function () {
+	    /**
+	     *
+	     * @param widgetRoot
+	     * @param relativePosition for example (1, 0) or (-1, 1)
+	     * @param color
+	     */
+	    function ScaleWidget(widgetRoot, relativePosition, scaleDirection, color) {
+	        var _this = this;
+	        this.widgetRoot = widgetRoot;
+	        this.relativePosition = relativePosition;
+	        this.scaleDirection = scaleDirection;
+	        this.scaleDirection.normalize();
+	        var length = this.relativePosition.length() * WIDGET_DISTANCE;
+	        var angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
+	        this.el = el('div.widget.scaleWidget', new WidgetLine(length, color, 30), new WidgetControl('.fas.fa-square', {
+	            left: length + 'px',
+	            color: color,
+	            transform: "translateX(-50%) translateY(-50%) rotate(" + -angle + "deg)"
+	        }, function (worldChange, worldPos) {
+	            var widgetRootWorldPosition = _this.widgetRoot.worldPosition;
+	            var oldMousePosition = worldPos.clone().subtract(worldChange);
+	            var widgetPosition = scene.mouseToWorld(scene.worldToMouse(widgetRootWorldPosition).add(_this.relativePosition.clone().multiplyScalar(WIDGET_DISTANCE)));
+	            var relativeWidgetPosition = widgetPosition.clone().subtract(widgetRootWorldPosition);
+	            var relativeMousePosition = worldPos.clone().subtract(widgetRootWorldPosition);
+	            var relativeOldMousePosition = oldMousePosition.subtract(widgetRootWorldPosition);
+	            var mousePositionValue = relativeWidgetPosition.dot(relativeMousePosition) / relativeWidgetPosition.lengthSq();
+	            var oldMousePositionValue = relativeWidgetPosition.dot(relativeOldMousePosition) / relativeWidgetPosition.lengthSq();
+	            var change = mousePositionValue - oldMousePositionValue;
+	            var changeVector = new Vector(1, 1).add(_this.scaleDirection.clone().multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var Transform = entity.getComponent('Transform');
+	                var newScale = Transform.scale.clone().multiply(changeVector);
+	                if (newScale.x < MIN_SCALE$2)
+	                    { newScale.x = MIN_SCALE$2; }
+	                if (newScale.y < MIN_SCALE$2)
+	                    { newScale.y = MIN_SCALE$2; }
+	                Transform.scale = newScale;
+	            });
+	        }), {
+	            style: {
+	                transform: "rotate(" + angle + "deg)"
+	            }
+	        });
+	    }
+	    ScaleWidget.prototype.update = function (data) {
+	    };
+	    return ScaleWidget;
+	}());
+	var AngleWidget$1 = /** @class */ (function () {
+	    function AngleWidget(widgetRoot, type) {
+	        if (type === void 0) { type = 'circle'; }
+	        var _this = this;
+	        this.widgetRoot = widgetRoot;
+	        var color = '#0000ff';
+	        this.el = el('div.widget.angleWidget', new WidgetControl(el('div.widgetControl', {
+	            style: {
+	                color: color
+	            }
+	        }), null, function (worldChange, worldPos) {
+	            var widgetRootWorldPosition = _this.widgetRoot.worldPosition;
+	            var oldMousePosition = worldPos.clone().subtract(worldChange);
+	            var relativeMousePosition = worldPos.clone().subtract(widgetRootWorldPosition);
+	            var relativeOldMousePosition = oldMousePosition.subtract(widgetRootWorldPosition);
+	            var angle = relativeMousePosition.horizontalAngle();
+	            var oldAngle = relativeOldMousePosition.horizontalAngle();
+	            var angleDifference = angle - oldAngle;
+	            // TODO: Needs to remember original drag cursor pos
+	            /*
+	            if (keyPressed(key.shift)) {
+	                let newWidgetAngle = this.widgetRoot.angle + angleDifference;
+	                newWidgetAngle += Math.PI / SHIFT_STEPS;
+	                newWidgetAngle -= newWidgetAngle % (Math.PI / SHIFT_STEPS * 2);
+	                angleDifference = newWidgetAngle - this.widgetRoot.angle;
+	            }*/
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var Transform = entity.getComponent('Transform');
+	                Transform.angle = Transform.angle + angleDifference;
+	            });
+	            _this.widgetRoot.rotate(angleDifference);
+	            /*
+	            let T = this.component.Transform;
+	            let entityPosition = T.getGlobalPosition();
+
+	            let relativeMousePosition = worldChange.clone().subtract(entityPosition);
+	            let relativeWidgetPosition = new Vector(this.x, this.y).subtract(entityPosition);
+
+	            let oldAngle = T.getGlobalAngle();
+	            let mouseAngle = Math.PI + relativeMousePosition.horizontalAngle();
+	            let widgetAngle = Math.PI + relativeWidgetPosition.horizontalAngle();
+
+	            let newAngle = oldAngle + (mouseAngle - widgetAngle);
+	            if (newAngle < 0)
+	                newAngle += Math.PI * 2;
+
+	            if (keyPressed(key.shift)) {
+	                newAngle += Math.PI / SHIFT_STEPS;
+	                newAngle -= newAngle % (Math.PI / SHIFT_STEPS * 2);
+	            }
+	            let angleDifference = newAngle - oldAngle;
+
+	            this.widgetRoot.entities.forEach(entity => {
+	                let Transform = entity.getComponent('Transform');
+	                Transform.angle = Transform.angle + angleDifference;
+	            });
+
+	            T.angle += angleDifference;
+	            */
+	        }));
+	    }
+	    AngleWidget.prototype.update = function (data) {
+	    };
+	    return AngleWidget;
+	}());
 	var WidgetLine = /** @class */ (function () {
-	    function WidgetLine(length, color) {
+	    function WidgetLine(length, color, startDrawingPos) {
+	        if (startDrawingPos === void 0) { startDrawingPos = 0; }
 	        this.length = length;
 	        this.color = color;
+	        this.startDrawingPos = startDrawingPos;
+	        this.startDrawingPos = this.startDrawingPos;
 	        this.el = el('div.widgetLine', {
 	            style: {
-	                width: length,
+	                left: this.startDrawingPos + 'px',
+	                width: (length - this.startDrawingPos) + 'px',
 	                backgroundColor: color,
-	                position: 'absolute',
-	                top: '0',
-	                left: '0',
-	                transform: 'translateY(-50%)',
-	                height: '5px'
 	            }
 	        });
 	    }
@@ -7881,17 +8104,48 @@
 	    return WidgetLine;
 	}());
 	var WidgetControl = /** @class */ (function () {
-	    function WidgetControl(iconClass, distance, color) {
-	        this.el = el('i.widgetControl' + iconClass, {
-	            style: {
-	                position: 'absolute',
-	                left: distance,
-	                color: color,
-	                transform: 'translateY(-50%) scaleX(2)',
-	                fontSize: '30px'
-	            },
-	            onclick: function (e) { return e.stopPropagation(); },
-	            onmousedown: function (e) { return e.stopPropagation(); }
+	    function WidgetControl(iconClass, style, callback, mouseDownCallback) {
+	        if (style === void 0) { style = {}; }
+	        var _this = this;
+	        var pressed = false;
+	        if (typeof iconClass === 'string') {
+	            this.el = el('i.widgetControl' + iconClass, {
+	                style: style
+	            });
+	        }
+	        else {
+	            this.el = iconClass;
+	        }
+	        var previousWorldPos = new Vector(0, 0);
+	        listenMouseDown(this.el, function (worldPos, mouseEvent) {
+	            mouseEvent.stopPropagation();
+	            pressed = true;
+	            if (mouseDownCallback) {
+	                mouseDownCallback(previousWorldPos);
+	            }
+	            document.getElementsByClassName('widgetRoot')[0].classList.add('dragging');
+	            _this.el.classList.add('dragging');
+	        });
+	        listenMouseUp(document.body, function () {
+	            pressed = false;
+	            document.getElementsByClassName('widgetRoot')[0].classList.remove('dragging');
+	            _this.el.classList.remove('dragging');
+	        });
+	        // TODO: Listen document body, but make the mouse position relative to canvas (0, 0)
+	        // It would cause less stuckness when mouse leaves canvas
+	        listenMouseMove(scene.canvas.parentElement, function (mousePos, event) {
+	            if (!pressed) {
+	                previousWorldPos.set(scene.mouseToWorld(mousePos));
+	                return;
+	            }
+	            var newWorldPos = scene.mouseToWorld(mousePos);
+	            var change = newWorldPos.subtract(previousWorldPos);
+	            if (change.isZero()) {
+	                return;
+	            }
+	            previousWorldPos.add(change);
+	            setChangeOrigin(_this);
+	            callback(change, previousWorldPos);
 	        });
 	    }
 	    WidgetControl.prototype.update = function (data) {
@@ -7945,25 +8199,29 @@
 	            },
 	            title: 'Move in editor with arrow keys or WASD'
 	        }), el('i.fas.fa-plus-circle.iconButton.button.zoomIn', {
-	            onclick: function () {
+	            onclick: function (mouseEvent) {
 	                if (!scene)
 	                    { return; }
 	                scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
 	                _this.cameraPositionOrZoomUpdated();
 	                _this.draw();
+	                mouseEvent.stopPropagation(); // Don't unfocus
+	                mouseEvent.preventDefault();
 	            },
 	            title: 'Zoom in (+ or E)'
 	        }), el('i.fas.fa-minus-circle.iconButton.button.zoomOut', {
-	            onclick: function () {
+	            onclick: function (mouseEvent) {
 	                if (!scene)
 	                    { return; }
 	                scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
 	                _this.cameraPositionOrZoomUpdated();
 	                _this.draw();
+	                mouseEvent.stopPropagation(); // Don't unfocus
+	                mouseEvent.preventDefault();
 	            },
 	            title: 'Zoom out (- or Q)'
 	        }), _this.globeButton = el('i.fas.fa-globe.iconButton.button', {
-	            onclick: function () {
+	            onclick: function (mouseEvent) {
 	                if (!scene)
 	                    { return; }
 	                var bounds = scene.layers.move.getLocalBounds();
@@ -7973,10 +8231,12 @@
 	                scene.setZoom(Math.min(Math.min(maxXZoom, maxYZoom) * 0.9, 1));
 	                _this.cameraPositionOrZoomUpdated();
 	                _this.draw();
+	                mouseEvent.stopPropagation(); // Don't unfocus
+	                mouseEvent.preventDefault();
 	            },
 	            title: 'Zoom to globe (G)'
 	        }), _this.homeButton = el('i.fas.fa-home.iconButton.button', {
-	            onclick: function () {
+	            onclick: function (mouseEvent) {
 	                if (!scene)
 	                    { return; }
 	                scene.cameraPosition.setScalars(0, 0); // If there are no players
@@ -7984,6 +8244,8 @@
 	                scene.setZoom(1);
 	                _this.cameraPositionOrZoomUpdated();
 	                _this.draw();
+	                mouseEvent.stopPropagation(); // Don't unfocus
+	                mouseEvent.preventDefault();
 	            },
 	            title: 'Go home to player or to default start position (H)'
 	        })));
@@ -8155,14 +8417,16 @@
 	            scene$$1.selectionLayer = new PIXI$2.Container();
 	            scene$$1.layers.editorLayer.addChild(scene$$1.layers.widgetLayer, scene$$1.layers.positionHelperLayer, scene$$1.selectionLayer);
 	        });
-	        globalEventDispatcher.listen('scene load level', function (scene$$1, level) {
-	            if (_this.widgetEntity && _this.widgetEntity._alive) {
-	                _this.widgetEntity.delete();
+	        /*
+	        globalEventDispatcher.listen('scene load level', (scene, level) => {
+	            if (this.widgetEntity && this.widgetEntity._alive) {
+	                this.widgetEntity.delete();
 	            }
-	            var epr = EntityPrototype.create('WidgetEntity');
+	            let epr = EntityPrototype.create('WidgetEntity');
 	            epr.addChild(new ComponentData('EditorWidget'));
-	            _this.widgetEntity = epr.createEntity(scene$$1);
+	            this.widgetEntity = epr.createEntity(scene);
 	        });
+	        */
 	        // Change in serializable tree
 	        editorEventDispacher.listen('prototypeClicked', function (prototype) {
 	            if (!scene)
@@ -8524,6 +8788,7 @@
 	            this.editorCameraPosition = scene.cameraPosition.clone();
 	            this.editorCameraZoom = scene.cameraZoom;
 	        }
+	        this.widgetManager.updateTransform();
 	    };
 	    SceneModule.prototype.update = function () {
 	        this.draw();
@@ -8740,12 +9005,14 @@
 	        this.selectionArea = null;
 	    };
 	    SceneModule.prototype.updateEditorWidget = function () {
+	        /*
 	        if (!this.widgetEntity) {
 	            return;
 	        }
 	        setChangeOrigin(this);
-	        var editorWidget = this.widgetEntity.getComponent('EditorWidget');
+	        let editorWidget = this.widgetEntity.getComponent('EditorWidget');
 	        editorWidget.entitiesSelected(this.selectedEntities);
+	        */
 	    };
 	    return SceneModule;
 	}(Module));
@@ -11245,7 +11512,7 @@
 	    return TrackFrameView;
 	}());
 	/*
-	class AnimationFrameView implements RedomElement {
+	class AnimationFrameView implements RedomComponent {
 	    el: HTMLElement;
 	    frameNumber: number;
 	    frameNumberText: Text;

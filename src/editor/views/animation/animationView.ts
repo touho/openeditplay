@@ -1,7 +1,7 @@
-import { RedomElement, el, mount } from 'redom';
+import { RedomComponent, el, mount } from 'redom';
 import Serializable from '../../../core/serializable';
 
-export default class AnimationView implements RedomElement {
+export default class AnimationView implements RedomComponent {
     el: HTMLElement;
     constructor(serializable: Serializable) {
         this.el = el('div.fullView.animationView',

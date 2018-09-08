@@ -77,7 +77,7 @@ export function isMouseButtonDown() {
 document.addEventListener('mousedown', event => event.button === 0 && (mouseDown = true));
 document.addEventListener('mouseup', event => event.button === 0 && (mouseDown = false));
 
-export function listenMouseMove(element: HTMLElement, handler: (vec: Vector) => void): () => void {
+export function listenMouseMove(element: HTMLElement, handler: (vec: Vector, event?) => void): () => void {
 	let domHandler = event => {
 		let x = event.pageX;
 		let y = event.pageY;
@@ -91,36 +91,36 @@ export function listenMouseMove(element: HTMLElement, handler: (vec: Vector) => 
 		element['_mx'] = x;
 		element['_my'] = y;
 
-		handler && handler(new Vector(x, y));
+		handler && handler(new Vector(x, y), event);
 	};
 	element.addEventListener('mousemove', domHandler);
 	return () => element.removeEventListener('mousemove', domHandler);
 }
 // Requires listenMouseMove on the same element to get the mouse position
-export function listenMouseDown(element: HTMLElement, handler: (vec?: Vector) => void) {
+export function listenMouseDown(element: HTMLElement, handler: (vec?: Vector, event?) => void) {
 	let domHandler = event => {
 		if (event.button !== 0)
 			return;
 
 		if (typeof element['_mx'] === 'number')
-			handler(new Vector(element['_mx'], element['_my']));
+			handler(new Vector(element['_mx'], element['_my']), event);
 		else
-			handler();
+			handler(null, event);
 	};
 	element.addEventListener('mousedown', domHandler);
 	return () => element.removeEventListener('mousedown', domHandler);
 }
 // Requires listenMouseMove on the same element to get the mouse position
-export function listenMouseUp(element: HTMLElement, handler: (vec?: Vector) => void) {
+export function listenMouseUp(element: HTMLElement, handler: (vec?: Vector, event?) => void) {
 	// listen document body because many times mouse is accidentally dragged outside of element
 	let domHandler = event => {
 		if (typeof element['_mx'] === 'number')
-			handler(new Vector(element['_mx'], element['_my']));
+			handler(new Vector(element['_mx'], element['_my']), event);
 		else
-			handler();
+			handler(null, event);
 	};
 	document.body.addEventListener('mouseup', domHandler);
-	return () => element.removeEventListener('mouseup', domHandler);
+	return () => document.body.removeEventListener('mouseup', domHandler);
 }
 
 ////////////////////////////////////

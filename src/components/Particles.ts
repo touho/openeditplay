@@ -71,7 +71,7 @@ Component.register({
 				});
 			});
 
-			this.scene.layers.main.addChild(this.container);
+			// this.scene.layers.main.addChild(this.container);
 
 			this.initParticles();
 			['particleLifetime', 'particleCount'].forEach(propertyName => {
@@ -104,13 +104,17 @@ Component.register({
 						p.sprite.y += this.container.position.y;
 					}
 				});
-				this.container.position.set(0, 0);
+				// this.container.position.set(0, 0);
+				this.container.setParent(this.scene.layers.main);
 			} else {
+				/*
 				this.positionListener = this.Transform.listen('globalTransformChanged', Transform => {
 					let position = Transform.getGlobalPosition();
 					this.container.position.set(position.x, position.y);
 				});
-				this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+				*/
+				// this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+				this.container.setParent(this.Transform.container);
 
 				this.particles.forEach(p => {
 					if (p.sprite) {
@@ -184,9 +188,8 @@ Component.register({
 			p.nextBirth += this.particleLifetime;
 
 			if (this.globalCoordinates) {
-				let pos = Vector.fromObject(this.container.toLocal(zeroPoint, this.Transform.container, tempPoint));
-				p.sprite.x += pos.x;
-				p.sprite.y += pos.y;
+				// Change sprite position from Transform coordinates to main layer coordinates.
+				Vector.fromObject(this.container.toLocal(p.sprite.position, this.Transform.container, p.sprite.position));
 
 				if (this.Physics && this.Physics.body) {
 					let vel = this.Physics.body.velocity;
@@ -335,3 +338,4 @@ function getParticleTexture(size, gradientHardness = 0, rgb = { r: 255, g: 255, 
 
 let zeroPoint = new PIXI.Point();
 let tempPoint = new PIXI.Point();
+let temp2Point = new PIXI.Point();

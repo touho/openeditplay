@@ -4,7 +4,7 @@ import Property from './property';
 import EventDispatcher, { GameEvent, globalEventDispatcher } from './eventDispatcher';
 
 let DEBUG_CHANGES = 0;
-let CHECK_FOR_INVALID_ORIGINS = 0; // TODO: Do stuff in editor with this set to true to find nasty bugs.
+let CHECK_FOR_INVALID_ORIGINS = 1; // TODO: Do stuff in editor with this set to true to find nasty bugs.
 
 export type Change = {
 	type: string;

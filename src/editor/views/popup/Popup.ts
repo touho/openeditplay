@@ -1,4 +1,4 @@
-import { el, mount, list, RedomElement } from 'redom';
+import { el, mount, list, RedomComponent } from 'redom';
 import { listenKeyDown, key } from '../../../util/input';
 
 export let popupDepth = 0;
@@ -7,13 +7,13 @@ type PopupParameters = {
 	title?: string,
 	cancelCallback?: Function,
 	width?: number,
-	content?: RedomElement
+	content?: RedomComponent
 };
 
 export default class Popup {
 	el: HTMLElement;
 	text: HTMLElement;
-	content: RedomElement;
+	content: RedomComponent;
 	depth: number;
 	keyListener: any;
 

@@ -1,4 +1,4 @@
-import { el, list, mount, RedomElement } from 'redom';
+import { el, list, mount, RedomComponent } from 'redom';
 import Module from './module';
 import * as performance from '../../util/performance';
 import { scene } from '../../core/scene';
@@ -25,7 +25,7 @@ class PerSecondModule extends Module {
 }
 Module.register(PerSecondModule, 'bottom');
 
-class PerSecondItem implements RedomElement {
+class PerSecondItem implements RedomComponent {
 	name: HTMLElement;
 	value: HTMLElement;
 	el: HTMLElement;

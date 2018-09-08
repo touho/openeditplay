@@ -113,25 +113,29 @@ class SceneModule extends Module {
 					title: 'Move in editor with arrow keys or WASD'
 				}),
 				el('i.fas.fa-plus-circle.iconButton.button.zoomIn', {
-					onclick: () => {
+					onclick: (mouseEvent) => {
 						if (!scene) return;
 						scene.setZoom(Math.min(MAX_ZOOM, scene.cameraZoom * 1.4));
 						this.cameraPositionOrZoomUpdated();
 						this.draw();
+						mouseEvent.stopPropagation(); // Don't unfocus
+						mouseEvent.preventDefault();
 					},
 					title: 'Zoom in (+ or E)'
 				}),
 				el('i.fas.fa-minus-circle.iconButton.button.zoomOut', {
-					onclick: () => {
+					onclick: (mouseEvent) => {
 						if (!scene) return;
 						scene.setZoom(Math.max(MIN_ZOOM, scene.cameraZoom / 1.4));
 						this.cameraPositionOrZoomUpdated();
 						this.draw();
+						mouseEvent.stopPropagation(); // Don't unfocus
+						mouseEvent.preventDefault();
 					},
 					title: 'Zoom out (- or Q)'
 				}),
 				this.globeButton = el('i.fas.fa-globe.iconButton.button', {
-					onclick: () => {
+					onclick: (mouseEvent) => {
 						if (!scene) return;
 
 						let bounds = scene.layers.move.getLocalBounds();
@@ -147,17 +151,21 @@ class SceneModule extends Module {
 						this.cameraPositionOrZoomUpdated();
 
 						this.draw();
+						mouseEvent.stopPropagation(); // Don't unfocus
+						mouseEvent.preventDefault();
 					},
 					title: 'Zoom to globe (G)'
 				}),
 				this.homeButton = el('i.fas.fa-home.iconButton.button', {
-					onclick: () => {
+					onclick: (mouseEvent) => {
 						if (!scene) return;
 						scene.cameraPosition.setScalars(0, 0); // If there are no players
 						scene.setCameraPositionToPlayer();
 						scene.setZoom(1);
 						this.cameraPositionOrZoomUpdated();
 						this.draw();
+						mouseEvent.stopPropagation(); // Don't unfocus
+						mouseEvent.preventDefault();
 					},
 					title: 'Go home to player or to default start position (H)'
 				})
@@ -373,6 +381,7 @@ class SceneModule extends Module {
 				scene.selectionLayer
 			);
 		});
+		/*
 		globalEventDispatcher.listen('scene load level', (scene, level) => {
 			if (this.widgetEntity && this.widgetEntity._alive) {
 				this.widgetEntity.delete();
@@ -381,6 +390,7 @@ class SceneModule extends Module {
 			epr.addChild(new ComponentData('EditorWidget'));
 			this.widgetEntity = epr.createEntity(scene);
 		});
+		*/
 
 		// Change in serializable tree
 		editorEventDispacher.listen('prototypeClicked', prototype => {
@@ -799,6 +809,7 @@ class SceneModule extends Module {
 			this.editorCameraPosition = scene.cameraPosition.clone();
 			this.editorCameraZoom = scene.cameraZoom;
 		}
+		this.widgetManager.updateTransform();
 	}
 
 	update() {
@@ -1039,12 +1050,14 @@ class SceneModule extends Module {
 		this.selectionArea = null;
 	}
 	updateEditorWidget() {
+		/*
 		if (!this.widgetEntity) {
 			return;
 		}
 		setChangeOrigin(this);
 		let editorWidget = this.widgetEntity.getComponent('EditorWidget');
 		editorWidget.entitiesSelected(this.selectedEntities);
+		*/
 	}
 }
 

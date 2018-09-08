@@ -1,4 +1,4 @@
-import { el, list, mount, RedomElement, List, text } from 'redom';
+import { el, list, mount, RedomComponent, List, text } from 'redom';
 import Module from './module';
 import * as performance from '../../util/performance';
 import Scene, { scene } from '../../core/scene';
@@ -332,7 +332,7 @@ class AnimationModule extends Module {
 }
 Module.register(AnimationModule, 'bottom');
 
-class AnimationSelector implements RedomElement {
+class AnimationSelector implements RedomComponent {
 	el: HTMLSelectElement;
 	list: List;
 	animations: animation.Animation[];
@@ -357,7 +357,7 @@ class AnimationSelector implements RedomElement {
 		return this.animations.find(anim => anim.name === this.el.value);
 	}
 }
-class AnimationSelectorOption implements RedomElement {
+class AnimationSelectorOption implements RedomComponent {
 	el: HTMLElement;
 	constructor() {
 		this.el = el('option');
@@ -367,7 +367,7 @@ class AnimationSelectorOption implements RedomElement {
 		this.el.innerText = name || 'Initial pose';
 	}
 }
-class AnimationTimelineView implements RedomElement {
+class AnimationTimelineView implements RedomComponent {
 	el: HTMLElement;
 	frameNumbers: List;
 	trackList: List;
@@ -435,7 +435,7 @@ class AnimationTimelineView implements RedomElement {
 		}
 	}
 }
-class FrameNumberHeader implements RedomElement {
+class FrameNumberHeader implements RedomComponent {
 	el: HTMLElement;
 	frameNumber: number;
 	constructor() {
@@ -461,7 +461,7 @@ class FrameNumberHeader implements RedomElement {
 		redomDispatch(this, 'frameSelected', this.frameNumber);
 	}
 }
-class TrackView implements RedomElement {
+class TrackView implements RedomComponent {
 	el: HTMLElement;
 	list: List;
 	constructor() {
@@ -494,7 +494,7 @@ class TrackView implements RedomElement {
 		this.list.update(trackFrameData);
 	}
 }
-class TrackFrameView implements RedomElement {
+class TrackFrameView implements RedomComponent {
 	el: HTMLElement;
 	icon: HTMLElement;
 	trackKeyFrames: { [frame: number]: any };
@@ -534,7 +534,7 @@ class TrackFrameView implements RedomElement {
 
 
 /*
-class AnimationFrameView implements RedomElement {
+class AnimationFrameView implements RedomComponent {
 	el: HTMLElement;
 	frameNumber: number;
 	frameNumberText: Text;

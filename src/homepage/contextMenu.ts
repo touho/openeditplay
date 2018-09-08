@@ -1,5 +1,5 @@
 
-import {el, mount, list, List, RedomElement} from 'redom';
+import {el, mount, list, List, RedomComponent} from 'redom';
 
 // item: {label, callback}
 export class ContextMenu {
@@ -38,7 +38,7 @@ export class ContextMenu {
 	}
 }
 
-class ContextMenuItem implements RedomElement {
+class ContextMenuItem implements RedomComponent {
 	el: HTMLElement;
 	callback: () => void;
 

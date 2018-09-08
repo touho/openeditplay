@@ -82,7 +82,7 @@ export default class Vector {
 			dy = this.y - vec.y;
 		return dx * dx + dy * dy;
 	}
-	// returns -pi .. pi
+	// returns 0 .. pi
 	angleTo(vec: Vector) {
 		let lengthPart = this.length() * vec.length();
 		if (lengthPart > 0) {

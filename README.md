@@ -33,9 +33,6 @@ mysql -u openeditplay --password="openeditplay" --database=openeditplay < instal
 
 
 ### TODO ###
-- DOM Widgets
-    - Should we have EditorWidget component or are widgets not in scene? Probably not in scene?
-- If scaled entity has child entity that has particles, particles should be scaled.
 - Animation:
     - Animation frame count
     - Animation speed: fps

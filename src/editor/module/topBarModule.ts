@@ -172,19 +172,19 @@ export class TopBarModule extends Module {
 		};
 
 		this.addKeyboardShortcut(key[1], tools.multiTool);
-		this.addKeyboardShortcut(key[2], tools.globalMoveTool);
-		this.addKeyboardShortcut(key[3], tools.localMoveTool);
+		// this.addKeyboardShortcut(key[2], tools.globalMoveTool);
+		// this.addKeyboardShortcut(key[3], tools.localMoveTool);
 
 
 
 		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-hand-spock', callback: createCallback(() => {}) }));
 		mount(this.toolSelectionButtons, tools.multiTool);
-		mount(this.toolSelectionButtons, tools.globalMoveTool);
+		// mount(this.toolSelectionButtons, tools.globalMoveTool);
 		// mount(this.toolSelectionButtons, tools.localMoveTool);
 
 		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-sync-alt', callback: createCallback(() => {}) }));
 		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-vector-square', callback: createCallback(() => {}) }));
-		mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-bezier-curve', callback: createCallback(() => {}) }));
+		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-bezier-curve', callback: createCallback(() => {}) }));
 
 
 		tools[sceneToolName].click();
