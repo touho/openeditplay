@@ -69,7 +69,9 @@ class AnimationModule extends Module {
 			} else {
 				this.recordButton.classList.remove('selected');
 				if (editorGlobals.sceneMode === SceneMode.NORMAL && this.editedEntityPrototype) {
-					selectInEditor([this.editedEntityPrototype], this);
+					this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+					// selectInEditor([this.editedEntityPrototype], this);
+					this.editedEntityPrototype = null;
 				}
 			}
 		});
@@ -120,6 +122,8 @@ class AnimationModule extends Module {
 					if (editorSelection.items.length === 1 && editorSelection.items[0] === this.editedEntityPrototype) {
 						// Do nothing
 					} else {
+						editorGlobals.sceneMode = SceneMode.NORMAL;
+						/*
 						if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
 							executeWithOrigin(this, () => {
 								this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
@@ -127,6 +131,7 @@ class AnimationModule extends Module {
 							editorGlobals.sceneMode = SceneMode.NORMAL;
 						}
 						this.editedEntityPrototype = null;
+						*/
 					}
 				}
 				return;
@@ -225,6 +230,10 @@ class AnimationModule extends Module {
 					frameView.classList.remove('selected');
 				})
 				this.focusedKeyFrameViews.length = 0;
+			}
+
+			if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+				editorGlobals.sceneMode = SceneMode.NORMAL;
 			}
 		});
 	}

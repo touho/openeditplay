@@ -18,14 +18,14 @@
 	    }
 	    // @ifndef OPTIMIZE
 	    if (!condition) {
-	        console.log.apply(console, ['Assert'].concat(messages, [new Error().stack, '\norigin', changeGetter.get()]));
-	        debugger;
+	        console.warn.apply(console, ['Assert'].concat(messages, ['\norigin', changeGetter.get()]));
+	        console.log(new Error().stack); // In own log call so that browser console can map from from bundle files to .ts files.
+	        debugger; // Check console for error messages
 	        if (!window['force'])
 	            { throw new Error(messages.join('; ')); }
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -53,6 +53,72 @@
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
 
+	var CircularDependencyDetector = /** @class */ (function () {
+	    function CircularDependencyDetector() {
+	        this.currentType = null;
+	        this.chain = [];
+	        this.timeout = null;
+	    }
+	    CircularDependencyDetector.prototype.enter = function (type, data) {
+	        var _this = this;
+	        if (data === void 0) { data = null; }
+	        this.chain.push({
+	            type: type,
+	            data: data,
+	            stack: (new Error()).stack
+	        });
+	        if (type !== this.currentType) {
+	            if (this.chain.find(function (link, i) { return link.type === type && i !== _this.chain.length - 1; })) {
+	                console.warn('Change event circular dependency');
+	                console.log('################################');
+	                for (var _i = 0, _a = this.chain; _i < _a.length; _i++) {
+	                    var part = _a[_i];
+	                    console.warn("%c" + part.type, 'font-weight: bold; font-size: 16px');
+	                    if (part.data && typeof part.data === 'object') {
+	                        for (var key in part.data) {
+	                            if (part.data[key] != null)
+	                                { console.warn(key + ':', part.data[key]); }
+	                        }
+	                    }
+	                    else {
+	                        console.warn(part.data);
+	                    }
+	                    console.warn(part.stack);
+	                    console.log('--------------------------------------');
+	                }
+	                assert(false, 'Change event circular dependency');
+	            }
+	            this.currentType = type;
+	            if (!this.timeout) {
+	                this.timeout = setTimeout(function () { return _this.reset(); }, 0);
+	            }
+	        }
+	    };
+	    CircularDependencyDetector.prototype.leave = function (type) {
+	        if (this.chain.length > 0 && this.chain[this.chain.length - 1].type === type) {
+	            this.chain.pop();
+	            this.currentType = this.chain.length > 0 ? this.chain[this.chain.length - 1].type : null;
+	        }
+	    };
+	    CircularDependencyDetector.prototype.reset = function () {
+	        this.currentType = null;
+	        this.chain.length = 0;
+	        this.timeout = null;
+	    };
+	    return CircularDependencyDetector;
+	}());
+	function test() {
+	    var c = new CircularDependencyDetector();
+	    c.enter('a');
+	    c.enter('a');
+	    c.enter('b');
+	    c.enter('b');
+	    c.leave('b');
+	    c.leave('b');
+	    c.enter('a');
+	}
+	test();
+
 	var GameEvent;
 	(function (GameEvent) {
 	    GameEvent["SCENE_START"] = "scene start";
@@ -72,6 +138,7 @@
 	var eventDispatcherCallbacks = {
 	    eventDispatchedCallback: null // (eventName, listenerCount) => void
 	};
+	var globalCircularDependencyDetector = new CircularDependencyDetector();
 	var EventDispatcher = /** @class */ (function () {
 	    function EventDispatcher() {
 	        this._listeners = {};
@@ -101,6 +168,10 @@
 	        var listeners = this._listeners[event];
 	        if (!listeners)
 	            { return; }
+	        var circularDependencyEvent = (a && a.reference) ? (event + a.reference.id) : event;
+	        globalCircularDependencyDetector.enter(circularDependencyEvent, {
+	            this: this, a: a, b: b, c: c
+	        });
 	        if (eventDispatcherCallbacks.eventDispatchedCallback)
 	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
 	        for (var i = 0; i < listeners.length; i++) {
@@ -115,6 +186,7 @@
 	            }
 	            // @endif
 	        }
+	        globalCircularDependencyDetector.leave(circularDependencyEvent);
 	    };
 	    /**
 	     * This is separate function for optimization.
@@ -153,6 +225,7 @@
 	    return EventDispatcher;
 	}());
 	var globalEventDispatcher = new EventDispatcher();
+	globalEventDispatcher['globalEventDispatcher'] = true; // for debugging
 	var listenerCounter = 0;
 	var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
 	function decideIndexOfListener(array, callback) {
@@ -166,7 +239,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -176,7 +248,11 @@
 	    move: 'm',
 	    deleteAllChildren: 'c',
 	};
+	var circularDependencyDetector = new CircularDependencyDetector();
 	var origin;
+	function resetOrigin() {
+	    origin = null;
+	}
 	function getChangeOrigin() {
 	    return origin;
 	}
@@ -186,6 +262,7 @@
 	    // @ifndef OPTIMIZE
 	    if (_origin !== origin) {
 	        origin = _origin;
+	        { setTimeout(resetOrigin, 0); }
 	    }
 	    // @endif
 	}
@@ -194,6 +271,7 @@
 	function addChange(type, reference) {
 	    // @ifndef OPTIMIZE
 	    assert(origin, 'Change without origin!');
+	    circularDependencyDetector.enter(type + (reference && reference.threeLetterType));
 	    // @endif
 	    if (!reference.id)
 	        { return; }
@@ -224,20 +302,25 @@
 	    // @endif
 	}
 	function executeExternal(callback) {
-	    setChangeOrigin('external');
-	    if (externalChange)
-	        { return callback(); }
-	    externalChange = true;
-	    callback();
-	    externalChange = false;
+	    executeWithOrigin('external', function () {
+	        if (externalChange)
+	            { return callback(); }
+	        externalChange = true;
+	        callback();
+	        externalChange = false;
+	    });
 	}
-	//# sourceMappingURL=change.js.map
+	function executeWithOrigin(origin, task) {
+	    var oldOrigin = origin;
+	    setChangeOrigin(origin);
+	    task();
+	    setChangeOrigin(oldOrigin);
+	}
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -620,7 +703,6 @@
 	        return children;
 	    }
 	});
-	//# sourceMappingURL=serializable.js.map
 
 	var changesEnabled = true;
 	var scenePropertyFilter = null;
@@ -723,7 +805,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -948,7 +1029,7 @@
 	        var dx = this.x - vec.x, dy = this.y - vec.y;
 	        return dx * dx + dy * dy;
 	    };
-	    // returns -pi .. pi
+	    // returns 0 .. pi
 	    Vector.prototype.angleTo = function (vec) {
 	        var lengthPart = this.length() * vec.length();
 	        if (lengthPart > 0) {
@@ -1032,7 +1113,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1089,6 +1169,10 @@
 	    Color.prototype.isEqualTo = function (other) {
 	        return this.r === other.r && this.g === other.g && this.b === other.b;
 	    };
+	    Color.fromHexString = function (hexString) {
+	        var rgb = hexToRgb(hexString);
+	        return new Color(rgb.r, rgb.g, rgb.b);
+	    };
 	    return Color;
 	}());
 	function hexToRgb(hex) {
@@ -1106,7 +1190,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1263,7 +1346,6 @@
 	    fromJSON: function (x) { return new Color(x); },
 	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1392,7 +1474,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -1729,11 +1810,14 @@
 	    element = memoizeHTML(query).cloneNode(false);
 	  } else if (isNode(query)) {
 	    element = query.cloneNode(false);
+	  } else if (isFunction(query)) {
+	    var Query = query;
+	    element = new (Function.prototype.bind.apply( Query, [ null ].concat( args) ));
 	  } else {
 	    throw new Error('At least one argument required');
 	  }
 
-	  parseArguments(element, args);
+	  parseArguments(getEl(element), args);
 
 	  return element;
 	};
@@ -1773,7 +1857,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -1881,7 +1964,6 @@
 	    */
 	    return imageData.data[3] > 30;
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -1917,9 +1999,6 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -2001,7 +2080,6 @@
 	    if (game)
 	        { listener(game); }
 	}
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2089,7 +2167,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2167,7 +2244,7 @@
 	        }
 	        element['_mx'] = x;
 	        element['_my'] = y;
-	        handler && handler(new Vector(x, y));
+	        handler && handler(new Vector(x, y), event);
 	    };
 	    element.addEventListener('mousemove', domHandler);
 	    return function () { return element.removeEventListener('mousemove', domHandler); };
@@ -2178,9 +2255,9 @@
 	        if (event.button !== 0)
 	            { return; }
 	        if (typeof element['_mx'] === 'number')
-	            { handler(new Vector(element['_mx'], element['_my'])); }
+	            { handler(new Vector(element['_mx'], element['_my']), event); }
 	        else
-	            { handler(); }
+	            { handler(null, event); }
 	    };
 	    element.addEventListener('mousedown', domHandler);
 	    return function () { return element.removeEventListener('mousedown', domHandler); };
@@ -2190,12 +2267,12 @@
 	    // listen document body because many times mouse is accidentally dragged outside of element
 	    var domHandler = function (event) {
 	        if (typeof element['_mx'] === 'number')
-	            { handler(new Vector(element['_mx'], element['_my'])); }
+	            { handler(new Vector(element['_mx'], element['_my']), event); }
 	        else
-	            { handler(); }
+	            { handler(null, event); }
 	    };
 	    document.body.addEventListener('mouseup', domHandler);
-	    return function () { return element.removeEventListener('mouseup', domHandler); };
+	    return function () { return document.body.removeEventListener('mouseup', domHandler); };
 	}
 	////////////////////////////////////
 	var keys = {};
@@ -2230,7 +2307,6 @@
 	        });
 	    }
 	}
-	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2274,7 +2350,7 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
-	//# sourceMappingURL=editorEventDispatcher.js.map
+	editorEventDispacher.dispatcher['editorEventDispatcher'] = true; // for debugging
 
 	var performance$1;
 	performance$1 = isClient ? window.performance : { now: Date.now };
@@ -2304,7 +2380,6 @@
 	        { cumulativePerformance[name] = millis; }
 	    // @endif
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2581,7 +2656,6 @@
 	    if (scene)
 	        { listener(scene); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -2792,7 +2866,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -2946,7 +3019,6 @@
 	    }
 
 	*/
-	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -2968,7 +3040,6 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3196,7 +3267,6 @@
 	    }
 	    return entity;
 	});
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3500,7 +3570,6 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3792,7 +3861,6 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -3890,7 +3958,6 @@
 	]
 	 */
 	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3914,9 +3981,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -4019,7 +4083,6 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -4043,7 +4106,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4237,7 +4299,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4286,7 +4347,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4319,7 +4379,7 @@
 	            context.fillStyle = 'blue';
 	            context.strokeStyle = 'white';
 	            context.lineWidth = 1;
-	            context.font = '40px FontAwesome';
+	            context.font = '40px Font Awesome 5 Free';
 	            context.textAlign = 'center';
 	            context.fillText('\uF21D', this.Transform.position.x + 2, this.Transform.position.y);
 	            context.strokeText('\uf21d', this.Transform.position.x + 2, this.Transform.position.y);
@@ -4344,8 +4404,7 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/ 
-	//# sourceMappingURL=Spawner.js.map
+	*/
 
 	Component.register({
 	    name: 'Trigger',
@@ -4393,7 +4452,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4606,7 +4664,6 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4632,7 +4689,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -4693,7 +4749,7 @@
 	                        { p.sprite.blendMode = blendModes[blendMode]; }
 	                });
 	            });
-	            this.scene.layers.main.addChild(this.container);
+	            // this.scene.layers.main.addChild(this.container);
 	            this.initParticles();
 	            ['particleLifetime', 'particleCount'].forEach(function (propertyName) {
 	                _this.listenProperty(_this, propertyName, function () {
@@ -4723,14 +4779,18 @@
 	                        p.sprite.y += _this.container.position.y;
 	                    }
 	                });
-	                this.container.position.set(0, 0);
+	                // this.container.position.set(0, 0);
+	                this.container.setParent(this.scene.layers.main);
 	            }
 	            else {
-	                this.positionListener = this.Transform.listen('globalTransformChanged', function (Transform) {
-	                    var position = Transform.getGlobalPosition();
-	                    _this.container.position.set(position.x, position.y);
+	                /*
+	                this.positionListener = this.Transform.listen('globalTransformChanged', Transform => {
+	                    let position = Transform.getGlobalPosition();
+	                    this.container.position.set(position.x, position.y);
 	                });
-	                this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+	                */
+	                // this.container.position.set(this.Transform.position.x, this.Transform.position.y);
+	                this.container.setParent(this.Transform.container);
 	                this.particles.forEach(function (p) {
 	                    if (p.sprite) {
 	                        p.sprite.x -= _this.container.position.x;
@@ -4800,9 +4860,8 @@
 	            p.age = this.scene.time - p.nextBirth;
 	            p.nextBirth += this.particleLifetime;
 	            if (this.globalCoordinates) {
-	                var pos = Vector.fromObject(this.container.toLocal(zeroPoint$1, this.Transform.container, tempPoint$1));
-	                p.sprite.x += pos.x;
-	                p.sprite.y += pos.y;
+	                // Change sprite position from Transform coordinates to main layer coordinates.
+	                Vector.fromObject(this.container.toLocal(p.sprite.position, this.Transform.container, p.sprite.position));
 	                if (this.Physics && this.Physics.body) {
 	                    var vel = this.Physics.body.velocity;
 	                    p.vx = p.vx + this.followObject * vel[0] / PHYSICS_SCALE;
@@ -4925,9 +4984,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	var zeroPoint$1 = new PIXI$1.Point();
-	var tempPoint$1 = new PIXI$1.Point();
-	//# sourceMappingURL=Particles.js.map
 
 	function absLimit(value, absMax) {
 	    if (value > absMax)
@@ -4937,7 +4993,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5139,11 +5194,13 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
 	(function (animation) {
+	    // Changing this will break games
+	    animation.DEFAULT_FRAME_COUNT = 24;
+	    animation.MAX_FRAME_COUNT = 100;
 	    // export function parseAnimationData
 	    /**
 	     * @param animationDataString data from Animation component
@@ -5164,10 +5221,13 @@
 	     * Helper class for editor. Just JSON.stringify this to get valid animationData animation out.
 	     */
 	    var Animation = /** @class */ (function () {
-	        function Animation(name, tracks) {
+	        // If frames is falsy, use DEFAULT_FRAME_COUNT
+	        function Animation(name, tracks, frames) {
 	            if (tracks === void 0) { tracks = []; }
+	            if (frames === void 0) { frames = undefined; }
 	            this.name = name;
 	            this.tracks = tracks;
+	            this.frames = frames;
 	        }
 	        /**
 	         *
@@ -5192,9 +5252,36 @@
 	                }
 	            }
 	        };
+	        Animation.prototype.deleteOutOfBoundsKeyFrames = function () {
+	            var frameCount = this.frames || animation.DEFAULT_FRAME_COUNT;
+	            for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
+	                var track = _a[_i];
+	                var keyFrameKeys = Object.keys(track.keyFrames);
+	                for (var _b = 0, keyFrameKeys_1 = keyFrameKeys; _b < keyFrameKeys_1.length; _b++) {
+	                    var keyFrameKey = keyFrameKeys_1[_b];
+	                    if (+keyFrameKey > frameCount) {
+	                        delete track.keyFrames[keyFrameKey];
+	                    }
+	                }
+	            }
+	        };
+	        Animation.prototype.getHighestKeyFrame = function () {
+	            var highestKeyFrame = 0;
+	            for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
+	                var track = _a[_i];
+	                var keyFrameKeys = Object.keys(track.keyFrames);
+	                for (var _b = 0, keyFrameKeys_2 = keyFrameKeys; _b < keyFrameKeys_2.length; _b++) {
+	                    var keyFrameKey = keyFrameKeys_2[_b];
+	                    if (+keyFrameKey > highestKeyFrame) {
+	                        highestKeyFrame = +keyFrameKey;
+	                    }
+	                }
+	            }
+	            return highestKeyFrame;
+	        };
 	        Animation.create = function (json) {
 	            var tracks = (json.tracks || []).map(Track.create);
-	            return new Animation(json.name, tracks);
+	            return new Animation(json.name, tracks, json.frames);
 	        };
 	        return Animation;
 	    }());
@@ -5218,7 +5305,6 @@
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
-	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5268,11 +5354,11 @@
 	        if (this.time > 1) {
 	            this.time -= 1;
 	        }
-	        var totalFrames = 24;
-	        var frame = (this.time * totalFrames + 1);
 	        if (!this.currentAnimation) {
 	            return;
 	        }
+	        var totalFrames = this.currentAnimation.frames;
+	        var frame = (this.time * totalFrames + 1);
 	        this.currentAnimation.setFrame(frame);
 	    };
 	    Animator.prototype.setAnimation = function (name) {
@@ -5290,13 +5376,16 @@
 	    };
 	    Animator.prototype.delete = function () {
 	        delete this.animations;
+	        delete this.currentAnimation;
 	    };
 	    return Animator;
 	}());
 	var AnimatorAnimation = /** @class */ (function () {
 	    function AnimatorAnimation(animationJSON) {
+	        var _this = this;
 	        this.name = animationJSON.name;
-	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData); });
+	        this.frames = animationJSON.frames || animation.DEFAULT_FRAME_COUNT;
+	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData, _this.frames); });
 	    }
 	    AnimatorAnimation.prototype.setFrame = function (frame) {
 	        assert(frame > 0, 'frame must be positive');
@@ -5308,9 +5397,10 @@
 	    return AnimatorAnimation;
 	}());
 	var AnimatorTrack = /** @class */ (function () {
-	    function AnimatorTrack(trackData) {
+	    function AnimatorTrack(trackData, frames) {
 	        var this$1 = this;
 
+	        this.frames = frames;
 	        this.currentKeyFrameIndex = 0;
 	        this.keyFrames = [];
 	        this.entityPrototype = getSerializable(trackData.eprId);
@@ -5401,11 +5491,11 @@
 	        else {
 	            var prevFrame = prev.frame;
 	            if (prevFrame > frame) {
-	                prevFrame -= 24;
+	                prevFrame -= this.frames;
 	            }
 	            var nextFrame = next.frame;
 	            if (nextFrame < frame) {
-	                nextFrame += 24;
+	                nextFrame += this.frames;
 	            }
 	            var t = (frame - prevFrame) / (nextFrame - prevFrame);
 	            newValue = interpolateBezier(prev.value, prev.control2, next.control1, next.value, t, this.animatedProperty.propertyType);
@@ -5469,9 +5559,6 @@
 	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
-	//# sourceMappingURL=Animation.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5514,7 +5601,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -5759,7 +5845,6 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=net.js.map
 
 	var previousWidth = null;
 	var previousHeight = null;
@@ -5802,7 +5887,6 @@
 	window.addEventListener('resize', resizeCanvas);
 	forEachScene(resizeCanvas);
 	var MAX_PIXELS = 800 * 600;
-	//# sourceMappingURL=canvasResize.js.map
 
 	var CONTROL_SIZE = 70; // pixels
 	var TouchControl = /** @class */ (function () {
@@ -5878,7 +5962,6 @@
 	    };
 	    return TouchControl;
 	}());
-	//# sourceMappingURL=TouchControl.js.map
 
 	var ARROW_HITBOX_RADIUS = 110;
 	var controls = {
@@ -6013,7 +6096,6 @@
 	    var center = getArrowCenter();
 	    return point.clone().subtract(center);
 	}
-	//# sourceMappingURL=touchControlManager.js.map
 
 	disableAllChanges();
 	configureNetSync({
@@ -6054,7 +6136,6 @@
 	    document.getElementById('fullscreenInfo').classList.remove('showSlowly');
 	}, 3000);
 	*/
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.js.map

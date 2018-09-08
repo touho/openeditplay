@@ -68,7 +68,10 @@ export class WidgetManager {
             this.transformIsDirty = true;
 
             // to activate movement effect when clicking down with mouse and dragging with keyboard movement
-            scene.canvas.parentElement.dispatchEvent(new Event('mousemove'));
+            // scene.canvas.parentElement.dispatchEvent(new Event('mousemove'));
+            for (const widget of this.widgetRoot.widgets) {
+                widget.control.onMouseMove();
+            }
         }
     }
 }
@@ -79,6 +82,7 @@ class WidgetRoot implements RedomComponent {
     worldPosition: Vector;
     mousePosition: Vector;
     angle: number;
+    widgets: Widget[] = [];
 
     constructor() {
         this.el = el('div.widgetRoot');
@@ -86,6 +90,7 @@ class WidgetRoot implements RedomComponent {
     update(entities) {
         this.entities = entities;
         this.el.innerHTML = '';
+        this.widgets.length = 0;
 
         if (entities.length === 0) {
             return;
@@ -94,18 +99,24 @@ class WidgetRoot implements RedomComponent {
         this.updateTransform();
 
         if (sceneToolName === 'multiTool') {
-            mount(this.el, new ScaleWidget(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000'));
-            mount(this.el, new ScaleWidget(this, new Vector(0, 1), new Vector(0, 1), '#00ff00'));
-            mount(this.el, new ScaleWidget(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff'));
-            mount(this.el, new MoveWidget(this, 1, 0, '#ff0000'));
-            mount(this.el, new MoveWidget(this, 0, 1, '#00ff00'));
-            mount(this.el, new AngleWidget(this, 'circle'));
-            mount(this.el, new PositionWidget(this));
+            this.widgets = [
+                new ScaleWidget(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000'),
+                new ScaleWidget(this, new Vector(0, 1), new Vector(0, 1), '#00ff00'),
+                new ScaleWidget(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff'),
+                new MoveWidget(this, 1, 0, '#ff0000'),
+                new MoveWidget(this, 0, 1, '#00ff00'),
+                new AngleWidget(this, 'circle'),
+                new PositionWidget(this)
+            ];
         } else if (sceneToolName === 'globalMoveTool') {
-            mount(this.el, new MoveWidget(this, 1, 0, '#ff0000'));
-            mount(this.el, new MoveWidget(this, 0, 1, '#00ff00'));
-            mount(this.el, new PositionWidget(this));
-
+            this.widgets = [
+                new MoveWidget(this, 1, 0, '#ff0000'),
+                new MoveWidget(this, 0, 1, '#00ff00'),
+                new PositionWidget(this)
+            ];
+        }
+        for (const widget of this.widgets) {
+            mount(this.el, widget);
         }
     }
 
@@ -141,16 +152,21 @@ class WidgetRoot implements RedomComponent {
     }
 }
 
-class MoveWidget implements RedomComponent {
+type Widget = RedomComponent & {
+    control: WidgetControl;
+};
+
+class MoveWidget implements Widget {
     el: HTMLElement;
     relativePosition: Vector;
+    control: WidgetControl;
     constructor(public widgetRoot: WidgetRoot, dx: number, dy: number, color: string) {
         this.relativePosition = new Vector(dx, -dy);
         let angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
         // let angle = this.relativePosition.angleTo(new Vector(1, 0)) * 180 / Math.PI;
         this.el = el('div.widget.moveWidget',
             new WidgetLine(WIDGET_DISTANCE, color, 30),
-            new WidgetControl('.fas.fa-caret-right', {
+            this.control = new WidgetControl('.fas.fa-caret-right', {
                 left: WIDGET_DISTANCE + 'px',
                 color,
                 transform: 'scaleX(2) translateX(-5%) translateY(-50%)'
@@ -182,13 +198,14 @@ class MoveWidget implements RedomComponent {
     }
 }
 
-class PositionWidget implements RedomComponent {
+class PositionWidget implements Widget {
     el: HTMLElement;
     relativePosition: Vector;
+    control: WidgetControl;
     constructor(public widgetRoot: WidgetRoot) {
         //'.fas.fa-circle'
         this.el = el('div.widget.positionWidget',
-            new WidgetControl(el('div.widgetControl.positionWidgetControl', {
+            this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl', {
                 style: {
                     transform: 'translateX(-50%) translateY(-50%)'
                 }
@@ -210,8 +227,9 @@ class PositionWidget implements RedomComponent {
 }
 
 const MIN_SCALE = 0.01;
-class ScaleWidget implements RedomComponent {
+class ScaleWidget implements Widget {
     el: HTMLElement;
+    control: WidgetControl;
     /**
      *
      * @param widgetRoot
@@ -226,7 +244,7 @@ class ScaleWidget implements RedomComponent {
 
         this.el = el('div.widget.scaleWidget',
             new WidgetLine(length, color, 30),
-            new WidgetControl('.fas.fa-square', {
+            this.control = new WidgetControl('.fas.fa-square', {
                 left: length + 'px',
                 color,
                 transform: `translateX(-50%) translateY(-50%) rotate(${-angle}deg)`
@@ -268,13 +286,14 @@ class ScaleWidget implements RedomComponent {
 }
 
 const SHIFT_STEPS = 16;
-class AngleWidget implements RedomComponent {
+class AngleWidget implements Widget {
     el: HTMLElement;
     relativePosition: Vector;
+    control: WidgetControl;
     constructor(public widgetRoot: WidgetRoot, type: 'circle' = 'circle') {
         let color = '#0000ff';
         this.el = el('div.widget.angleWidget',
-            new WidgetControl(el('div.widgetControl', {
+            this.control = new WidgetControl(el('div.widgetControl', {
                 style: {
                     color
                 }
@@ -359,8 +378,10 @@ class WidgetLine implements RedomComponent {
 
 class WidgetControl implements RedomComponent {
     el: HTMLElement;
-    constructor(iconClass: string | HTMLElement, style: object = {}, callback: (worldChange: Vector, worldPos: Vector) => void, mouseDownCallback?: (worldPosition: Vector) => void) {
-        let pressed = false;
+    previousWorldPos: Vector = new Vector(0, 0);
+    previousMousePos: Vector = new Vector(0, 0);
+    pressed: boolean = false;
+    constructor(iconClass: string | HTMLElement, style: object = {}, public callback: (worldChange: Vector, worldPos: Vector) => void, mouseDownCallback?: (worldPosition: Vector) => void) {
         if (typeof iconClass === 'string') {
             this.el = el('i.widgetControl' + iconClass, {
                 style
@@ -368,45 +389,46 @@ class WidgetControl implements RedomComponent {
         } else {
             this.el = iconClass;
         }
-        let previousWorldPos = new Vector(0, 0);
-        let previousMousePos = new Vector(0, 0);
         listenMouseDown(this.el, (worldPos: Vector, mouseEvent) => {
             mouseEvent.stopPropagation();
-            pressed = true;
+            this.pressed = true;
             if (mouseDownCallback) {
-                mouseDownCallback(previousWorldPos)
+                mouseDownCallback(this.previousWorldPos)
             }
             document.getElementsByClassName('widgetRoot')[0].classList.add('dragging');
             this.el.classList.add('dragging');
         });
         listenMouseUp(document.body, () => {
-            pressed = false;
+            this.pressed = false;
             document.getElementsByClassName('widgetRoot')[0].classList.remove('dragging');
             this.el.classList.remove('dragging');
         });
         // TODO: Listen document body, but make the mouse position relative to canvas (0, 0)
         // It would cause less stuckness when mouse leaves canvas
         listenMouseMove(scene.canvas.parentElement, (mousePos, event) => {
-            if (mousePos.isZero()) {
-                mousePos.set(previousMousePos);
-            }
-            previousMousePos.set(mousePos);
-            if (!pressed) {
-                previousWorldPos.set(scene.mouseToWorld(mousePos));
-                return;
-            }
-
-            let newWorldPos = scene.mouseToWorld(mousePos);
-            let change = newWorldPos.subtract(previousWorldPos);
-            if (change.isZero()) {
-                return;
-            }
-
-            previousWorldPos.add(change);
-
-            setChangeOrigin(this);
-            callback(change, previousWorldPos);
+            this.onMouseMove(mousePos);
         });
+    }
+    onMouseMove(mousePos: Vector = new Vector(0, 0)) {
+        if (mousePos.isZero()) {
+            mousePos.set(this.previousMousePos);
+        }
+        this.previousMousePos.set(mousePos);
+        if (!this.pressed) {
+            this.previousWorldPos.set(scene.mouseToWorld(mousePos));
+            return;
+        }
+
+        let newWorldPos = scene.mouseToWorld(mousePos);
+        let change = newWorldPos.subtract(this.previousWorldPos);
+        if (change.isZero()) {
+            return;
+        }
+
+        this.previousWorldPos.add(change);
+
+        setChangeOrigin(this);
+        this.callback(change, this.previousWorldPos);
     }
     update(data) {
     }

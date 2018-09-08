@@ -49,7 +49,8 @@ export default class EventDispatcher {
         if (!listeners)
             return;
 
-        globalCircularDependencyDetector.enter(event, {
+        let circularDependencyEvent = (a && a.reference) ? (event + a.reference.id) : event;
+        globalCircularDependencyDetector.enter(circularDependencyEvent, {
             this: this, a, b, c
         });
 
@@ -70,7 +71,7 @@ export default class EventDispatcher {
             // @endif
         }
 
-        globalCircularDependencyDetector.leave(event);
+        globalCircularDependencyDetector.leave(circularDependencyEvent);
     }
 
     /**
