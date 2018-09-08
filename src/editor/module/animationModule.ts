@@ -13,11 +13,12 @@ import { animation } from '../../features/animation/animation';
 import { redomDispatch, redomListen } from '../../util/redomEvents';
 import { isMouseButtonDown, listenKeyDown, key, keyPressed } from '../../util/input';
 import { editorGlobals, SceneMode } from '../editorGlobals';
-import { Change, changeType, setChangeOrigin } from '../../core/change';
+import { Change, changeType, setChangeOrigin, getChangeOrigin, executeWithOrigin } from '../../core/change';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
 import { getSerializable } from '../../core/serializableManager';
 import EditorSelection from '../components/EditorSelection';
+import Confirmation from '../views/popup/Confirmation';
 
 class AnimationModule extends Module {
 	animations: animation.Animation[] = [];
@@ -32,6 +33,7 @@ class AnimationModule extends Module {
 	focusedKeyFrameViews: TrackFrameView[] = [];
 
 	recordButton: HTMLButtonElement;
+	frameCountEditor: FrameCountEditor;
 
 	constructor() {
 		super();
@@ -54,6 +56,7 @@ class AnimationModule extends Module {
 							display: 'none' // until an animation is selected
 						}
 					}),
+					this.frameCountEditor = new FrameCountEditor()
 				),
 				this.animationTimelineView = new AnimationTimelineView()
 			)
@@ -79,12 +82,35 @@ class AnimationModule extends Module {
 		});
 		redomListen(this, 'animationSelected', animation => {
 			this.selectedAnimation = animation;
-			this.animationTimelineView.update(this.selectedAnimation);
+
+			this.updateChildren();
+
+			// this.animationTimelineView.update(this.selectedAnimation);
 			let component = this.getEntityComponent();
+			setChangeOrigin(this);
 			component.animator.setAnimation(animation && animation.name); // send falsy if initial pose should be selected
+			if (!animation && editorGlobals.sceneMode === SceneMode.PREVIEW) {
+				editorGlobals.sceneMode = SceneMode.NORMAL;
+			}
 			this.animationTimelineView.selectFrame(1);
 
 			this.recordButton.style.display = animation ? 'inline-block' : 'none';
+		});
+		redomListen(this, 'frameCountChanged', frameCount => {
+			if (!(frameCount > 0 && frameCount <= animation.MAX_FRAME_COUNT)) {
+				this.updateChildren();
+				return;
+			}
+			const setFrameCount = () => {
+				this.selectedAnimation.frames = frameCount === animation.DEFAULT_FRAME_COUNT ? undefined : frameCount;
+				this.updateAnimationData();
+			}
+			let highestKeyframe = this.selectedAnimation.getHighestKeyFrame();
+			if (highestKeyframe > frameCount) {
+				new Confirmation(`Are you sure you want to remove keyframes?`, null, setFrameCount, () => this.updateChildren());
+			} else {
+				setFrameCount();
+			}
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
@@ -94,7 +120,12 @@ class AnimationModule extends Module {
 					if (editorSelection.items.length === 1 && editorSelection.items[0] === this.editedEntityPrototype) {
 						// Do nothing
 					} else {
-						this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+						if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+							executeWithOrigin(this, () => {
+								this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+							})
+							editorGlobals.sceneMode = SceneMode.NORMAL;
+						}
 						this.editedEntityPrototype = null;
 					}
 				}
@@ -127,7 +158,6 @@ class AnimationModule extends Module {
 				if (!isChildOfEdited)
 					return;
 
-				setChangeOrigin(this);
 				this.saveValue(entityPrototype, component._componentId, property);
 			}
 		});
@@ -273,12 +303,16 @@ class AnimationModule extends Module {
 		this.animationSelector.update(this.animations);
 		this.selectedAnimation = this.animationSelector.getSelectedAnimation();
 		this.animationTimelineView.update(this.selectedAnimation);
+
+		if (this.selectedAnimation)
+			console.log('this.selectedAnimation.frames', this.selectedAnimation.frames);
+
+		this.frameCountEditor.update(this.selectedAnimation && (this.selectedAnimation.frames || animation.DEFAULT_FRAME_COUNT));
 	}
 
 	addAnimation() {
 		let name = prompt('name', 'idle');
 		if (name) {
-			setChangeOrigin(this);
 			let newAnimation = new animation.Animation(name);
 			this.animations.push(newAnimation);
 			this.updateAnimationData();
@@ -293,8 +327,10 @@ class AnimationModule extends Module {
 		// Delete empty tracks:
 		for (let anim of this.animations) {
 			anim.deleteEmptyTracks();
+			anim.deleteOutOfBoundsKeyFrames();
 		}
 
+		setChangeOrigin(this);
 		componentData.setValue('animationData', JSON.stringify(this.animationData));
 		this.animationTimelineView.update(this.selectedAnimation);
 
@@ -316,11 +352,12 @@ class AnimationModule extends Module {
 		}
 		let component = this.getEntityComponent();
 		if (component) {
-			setChangeOrigin(this);
-			if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
-				editorGlobals.sceneMode = SceneMode.PREVIEW;
-			}
 			if (component.animator.currentAnimation) {
+				if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+					editorGlobals.sceneMode = SceneMode.PREVIEW;
+				}
+
+				setChangeOrigin(this);
 				component.animator.currentAnimation.setFrame(this.animationTimelineView.selectedFrame);
 			}
 		}
@@ -367,6 +404,34 @@ class AnimationSelectorOption implements RedomComponent {
 		this.el.innerText = name || 'Initial pose';
 	}
 }
+
+class FrameCountEditor implements RedomComponent {
+	el: HTMLElement;
+	input: HTMLInputElement;
+	constructor() {
+		this.el = el('div.frameCountEditor',
+			'Frames',
+			this.input = <HTMLInputElement>el('input.genericInput', {
+				style: {
+					width: '45px'
+				},
+				type: 'number',
+				min: 1,
+				max: 100,
+				onchange: () => {
+					redomDispatch(this, 'frameCountChanged', +this.input.value);
+				}
+			})
+		);
+	}
+	update(frameCount) {
+		this.el.style.display = frameCount ? 'inline-block' : 'none';
+		if (frameCount) {
+			this.input.value = frameCount;
+		}
+	}
+}
+
 class AnimationTimelineView implements RedomComponent {
 	el: HTMLElement;
 	frameNumbers: List;
@@ -393,15 +458,15 @@ class AnimationTimelineView implements RedomComponent {
 		});
 		redomListen(this, 'frameSelected', frame => this.selectedFrame = frame);
 	}
-	update(animation: animation.Animation) {
-		if (!animation) {
+	update(currentAnimation: animation.Animation) {
+		if (!currentAnimation) {
 			this.selectedFrame = 0;
 			this.frameNumbers.update([]);
 			this.trackList.update([]);
 			return;
 		}
 
-		let frameCount = 24;
+		let frameCount = currentAnimation.frames || animation.DEFAULT_FRAME_COUNT;
 		let frameNumbers = [];
 		let cellWidth = (80 / frameCount).toFixed(2) + '%';
 		for (let frame = 0; frame <= frameCount; frame++) {
@@ -413,7 +478,7 @@ class AnimationTimelineView implements RedomComponent {
 
 		this.frameNumbers.update(frameNumbers);
 
-		let trackUpdateData = animation.tracks.map(track => {
+		let trackUpdateData = currentAnimation.tracks.map(track => {
 			let entityPrototype = getSerializable(track.eprId) as EntityPrototype;
 			return {
 				name: entityPrototype.makeUpAName() + ' ' + track.prpName,

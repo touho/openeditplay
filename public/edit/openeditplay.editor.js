@@ -18,8 +18,9 @@
 	    }
 	    // @ifndef OPTIMIZE
 	    if (!condition) {
-	        console.log.apply(console, ['Assert'].concat(messages, [new Error().stack, '\norigin', changeGetter.get()]));
-	        debugger;
+	        console.warn.apply(console, ['Assert'].concat(messages, ['\norigin', changeGetter.get()]));
+	        console.log(new Error().stack); // In own log call so that browser console can map from from bundle files to .ts files.
+	        debugger; // Check console for error messages
 	        if (!window['force'])
 	            { throw new Error(messages.join('; ')); }
 	    }
@@ -53,6 +54,73 @@
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	}
 
+	var CircularDependencyDetector = /** @class */ (function () {
+	    function CircularDependencyDetector() {
+	        this.currentType = null;
+	        this.chain = [];
+	        this.timeout = null;
+	    }
+	    CircularDependencyDetector.prototype.enter = function (type, data) {
+	        var _this = this;
+	        if (data === void 0) { data = null; }
+	        this.chain.push({
+	            type: type,
+	            data: data,
+	            stack: (new Error()).stack
+	        });
+	        if (type !== this.currentType) {
+	            if (this.chain.find(function (link, i) { return link.type === type && i !== _this.chain.length - 1; })) {
+	                console.warn('Change event circular dependency');
+	                console.log('################################');
+	                for (var _i = 0, _a = this.chain; _i < _a.length; _i++) {
+	                    var part = _a[_i];
+	                    console.warn("%c" + part.type, 'font-weight: bold; font-size: 16px');
+	                    if (part.data && typeof part.data === 'object') {
+	                        for (var key in part.data) {
+	                            if (part.data[key] != null)
+	                                { console.warn(key + ':', part.data[key]); }
+	                        }
+	                    }
+	                    else {
+	                        console.warn(part.data);
+	                    }
+	                    console.warn(part.stack);
+	                    console.log('--------------------------------------');
+	                }
+	                assert(false, 'Change event circular dependency');
+	            }
+	            this.currentType = type;
+	            if (!this.timeout) {
+	                this.timeout = setTimeout(function () { return _this.reset(); }, 0);
+	            }
+	        }
+	    };
+	    CircularDependencyDetector.prototype.leave = function (type) {
+	        if (this.chain.length > 0 && this.chain[this.chain.length - 1].type === type) {
+	            this.chain.pop();
+	            this.currentType = this.chain.length > 0 ? this.chain[this.chain.length - 1].type : null;
+	        }
+	    };
+	    CircularDependencyDetector.prototype.reset = function () {
+	        this.currentType = null;
+	        this.chain.length = 0;
+	        this.timeout = null;
+	    };
+	    return CircularDependencyDetector;
+	}());
+	function test() {
+	    var c = new CircularDependencyDetector();
+	    c.enter('a');
+	    c.enter('a');
+	    c.enter('b');
+	    c.enter('b');
+	    c.leave('b');
+	    c.leave('b');
+	    c.enter('a');
+	}
+	test();
+	//# sourceMappingURL=circularDependencyDetector.js.map
+
 	var GameEvent;
 	(function (GameEvent) {
 	    GameEvent["SCENE_START"] = "scene start";
@@ -72,6 +140,7 @@
 	var eventDispatcherCallbacks = {
 	    eventDispatchedCallback: null // (eventName, listenerCount) => void
 	};
+	var globalCircularDependencyDetector = new CircularDependencyDetector();
 	var EventDispatcher = /** @class */ (function () {
 	    function EventDispatcher() {
 	        this._listeners = {};
@@ -101,6 +170,9 @@
 	        var listeners = this._listeners[event];
 	        if (!listeners)
 	            { return; }
+	        globalCircularDependencyDetector.enter(event, {
+	            this: this, a: a, b: b, c: c
+	        });
 	        if (eventDispatcherCallbacks.eventDispatchedCallback)
 	            { eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length); }
 	        for (var i = 0; i < listeners.length; i++) {
@@ -115,6 +187,7 @@
 	            }
 	            // @endif
 	        }
+	        globalCircularDependencyDetector.leave(event);
 	    };
 	    /**
 	     * This is separate function for optimization.
@@ -153,6 +226,7 @@
 	    return EventDispatcher;
 	}());
 	var globalEventDispatcher = new EventDispatcher();
+	globalEventDispatcher['globalEventDispatcher'] = true; // for debugging
 	var listenerCounter = 0;
 	var NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;
 	function decideIndexOfListener(array, callback) {
@@ -176,6 +250,7 @@
 	    move: 'm',
 	    deleteAllChildren: 'c',
 	};
+	var circularDependencyDetector = new CircularDependencyDetector();
 	var origin;
 	function resetOrigin() {
 	    origin = null;
@@ -198,6 +273,7 @@
 	function addChange(type, reference) {
 	    // @ifndef OPTIMIZE
 	    assert(origin, 'Change without origin!');
+	    circularDependencyDetector.enter(type + (reference && reference.threeLetterType));
 	    // @endif
 	    if (!reference.id)
 	        { return; }
@@ -228,12 +304,19 @@
 	    // @endif
 	}
 	function executeExternal(callback) {
-	    setChangeOrigin('external');
-	    if (externalChange)
-	        { return callback(); }
-	    externalChange = true;
-	    callback();
-	    externalChange = false;
+	    executeWithOrigin('external', function () {
+	        if (externalChange)
+	            { return callback(); }
+	        externalChange = true;
+	        callback();
+	        externalChange = false;
+	    });
+	}
+	function executeWithOrigin(origin, task) {
+	    var oldOrigin = origin;
+	    setChangeOrigin(origin);
+	    task();
+	    setChangeOrigin(oldOrigin);
 	}
 	//# sourceMappingURL=change.js.map
 
@@ -654,6 +737,12 @@
 	}
 	function enableAllChanges() {
 	    changesEnabled = true;
+	}
+	function executeWithoutEntityPropertyChangeCreation(task) {
+	    var oldChangesEnabled = changesEnabled;
+	    changesEnabled = false;
+	    task();
+	    changesEnabled = oldChangesEnabled;
 	}
 	// Object of a property
 	var Property = /** @class */ (function (_super) {
@@ -2472,6 +2561,7 @@
 	    return EditorEventDispatcher;
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
+	editorEventDispacher.dispatcher['editorEventDispatcher'] = true; // for debugging
 	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
@@ -5183,9 +5273,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	var zeroPoint$1 = new PIXI$2.Point();
-	var tempPoint$1 = new PIXI$2.Point();
-	var temp2Point = new PIXI$2.Point();
 	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
@@ -5409,6 +5496,9 @@
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
 	(function (animation) {
+	    // Changing this will break games
+	    animation.DEFAULT_FRAME_COUNT = 24;
+	    animation.MAX_FRAME_COUNT = 100;
 	    // export function parseAnimationData
 	    /**
 	     * @param animationDataString data from Animation component
@@ -5429,10 +5519,13 @@
 	     * Helper class for editor. Just JSON.stringify this to get valid animationData animation out.
 	     */
 	    var Animation = /** @class */ (function () {
-	        function Animation(name, tracks) {
+	        // If frames is falsy, use DEFAULT_FRAME_COUNT
+	        function Animation(name, tracks, frames) {
 	            if (tracks === void 0) { tracks = []; }
+	            if (frames === void 0) { frames = undefined; }
 	            this.name = name;
 	            this.tracks = tracks;
+	            this.frames = frames;
 	        }
 	        /**
 	         *
@@ -5457,9 +5550,36 @@
 	                }
 	            }
 	        };
+	        Animation.prototype.deleteOutOfBoundsKeyFrames = function () {
+	            var frameCount = this.frames || animation.DEFAULT_FRAME_COUNT;
+	            for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
+	                var track = _a[_i];
+	                var keyFrameKeys = Object.keys(track.keyFrames);
+	                for (var _b = 0, keyFrameKeys_1 = keyFrameKeys; _b < keyFrameKeys_1.length; _b++) {
+	                    var keyFrameKey = keyFrameKeys_1[_b];
+	                    if (+keyFrameKey > frameCount) {
+	                        delete track.keyFrames[keyFrameKey];
+	                    }
+	                }
+	            }
+	        };
+	        Animation.prototype.getHighestKeyFrame = function () {
+	            var highestKeyFrame = 0;
+	            for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
+	                var track = _a[_i];
+	                var keyFrameKeys = Object.keys(track.keyFrames);
+	                for (var _b = 0, keyFrameKeys_2 = keyFrameKeys; _b < keyFrameKeys_2.length; _b++) {
+	                    var keyFrameKey = keyFrameKeys_2[_b];
+	                    if (+keyFrameKey > highestKeyFrame) {
+	                        highestKeyFrame = +keyFrameKey;
+	                    }
+	                }
+	            }
+	            return highestKeyFrame;
+	        };
 	        Animation.create = function (json) {
 	            var tracks = (json.tracks || []).map(Track.create);
-	            return new Animation(json.name, tracks);
+	            return new Animation(json.name, tracks, json.frames);
 	        };
 	        return Animation;
 	    }());
@@ -5533,11 +5653,11 @@
 	        if (this.time > 1) {
 	            this.time -= 1;
 	        }
-	        var totalFrames = 24;
-	        var frame = (this.time * totalFrames + 1);
 	        if (!this.currentAnimation) {
 	            return;
 	        }
+	        var totalFrames = this.currentAnimation.frames;
+	        var frame = (this.time * totalFrames + 1);
 	        this.currentAnimation.setFrame(frame);
 	    };
 	    Animator.prototype.setAnimation = function (name) {
@@ -5555,13 +5675,16 @@
 	    };
 	    Animator.prototype.delete = function () {
 	        delete this.animations;
+	        delete this.currentAnimation;
 	    };
 	    return Animator;
 	}());
 	var AnimatorAnimation = /** @class */ (function () {
 	    function AnimatorAnimation(animationJSON) {
+	        var _this = this;
 	        this.name = animationJSON.name;
-	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData); });
+	        this.frames = animationJSON.frames || animation.DEFAULT_FRAME_COUNT;
+	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData, _this.frames); });
 	    }
 	    AnimatorAnimation.prototype.setFrame = function (frame) {
 	        assert(frame > 0, 'frame must be positive');
@@ -5573,9 +5696,10 @@
 	    return AnimatorAnimation;
 	}());
 	var AnimatorTrack = /** @class */ (function () {
-	    function AnimatorTrack(trackData) {
+	    function AnimatorTrack(trackData, frames) {
 	        var this$1 = this;
 
+	        this.frames = frames;
 	        this.currentKeyFrameIndex = 0;
 	        this.keyFrames = [];
 	        this.entityPrototype = getSerializable(trackData.eprId);
@@ -5666,11 +5790,11 @@
 	        else {
 	            var prevFrame = prev.frame;
 	            if (prevFrame > frame) {
-	                prevFrame -= 24;
+	                prevFrame -= this.frames;
 	            }
 	            var nextFrame = next.frame;
 	            if (nextFrame < frame) {
-	                nextFrame += 24;
+	                nextFrame += this.frames;
 	            }
 	            var t = (frame - prevFrame) / (nextFrame - prevFrame);
 	            newValue = interpolateBezier(prev.value, prev.control2, next.control1, next.value, t, this.animatedProperty.propertyType);
@@ -6545,7 +6669,7 @@
 	            callback: function () { return editorEventDispacher.dispatch(EditorEvent.EDITOR_PAUSE); }
 	        };
 	        var recButtonData = {
-	            title: 'Recording animation keyframes...',
+	            title: 'Recording animation keyframes',
 	            icon: 'fa-circle',
 	            type: 'rec',
 	            callback: function () {
@@ -6553,12 +6677,13 @@
 	            }
 	        };
 	        var previewButtonData = {
-	            title: 'Previewing animation frame...',
+	            title: 'Previewing animation frame',
 	            icon: 'fa-eye',
 	            type: 'preview',
 	            callback: function () {
 	                editorGlobals.sceneMode = SceneMode.NORMAL;
 	                if (editorGlobals.animationEntityPrototype && editorGlobals.animationEntityPrototype.previouslyCreatedEntity) {
+	                    setChangeOrigin(_this);
 	                    editorGlobals.animationEntityPrototype.previouslyCreatedEntity.resetComponents();
 	                }
 	            }
@@ -6817,16 +6942,18 @@
 	        var cda_1 = property_2.findParent('cda');
 	        if (!cda_1)
 	            { return; }
-	        var prototype = cda_1.getParent();
-	        if (prototype.threeLetterType === 'epr') {
+	        var prototype_1 = cda_1.getParent();
+	        if (prototype_1.threeLetterType === 'epr') {
 	            // EntityPrototype
-	            if (prototype.previouslyCreatedEntity) {
-	                setEntityPropertyValue(prototype.previouslyCreatedEntity, cda_1.name, cda_1.componentId, property_2);
+	            if (prototype_1.previouslyCreatedEntity) {
+	                executeWithoutEntityPropertyChangeCreation(function () {
+	                    setEntityPropertyValue(prototype_1.previouslyCreatedEntity, cda_1.name, cda_1.componentId, property_2);
+	                });
 	            }
 	        }
 	        else {
 	            // Prototype
-	            var entities = getAffectedEntities(prototype, function (prt) { return prt.findOwnProperty(cda_1.componentId, property_2.name) === null; });
+	            var entities = getAffectedEntities(prototype_1, function (prt) { return prt.findOwnProperty(cda_1.componentId, property_2.name) === null; });
 	            entities.forEach(function (ent) {
 	                setEntityPropertyValue(ent, cda_1.name, cda_1.componentId, property_2);
 	            });
@@ -7746,6 +7873,7 @@
 	        this.el = el('div.popupLayer', {
 	            onclick: function () {
 	                popup.remove();
+	                console.log('popup.cancelCallback', popup.cancelCallback);
 	                popup.cancelCallback && popup.cancelCallback();
 	            }
 	        });
@@ -7853,6 +7981,8 @@
 	    WidgetManager.prototype.updateTransform = function () {
 	        if (this.widgetRoot) {
 	            this.transformIsDirty = true;
+	            // to activate movement effect when clicking down with mouse and dragging with keyboard movement
+	            scene.canvas.parentElement.dispatchEvent(new Event('mousemove'));
 	        }
 	    };
 	    return WidgetManager;
@@ -7992,7 +8122,7 @@
 	        }, function (worldChange, worldPos) {
 	            var widgetRootWorldPosition = _this.widgetRoot.worldPosition;
 	            var oldMousePosition = worldPos.clone().subtract(worldChange);
-	            var widgetPosition = scene.mouseToWorld(scene.worldToMouse(widgetRootWorldPosition).add(_this.relativePosition.clone().multiplyScalar(WIDGET_DISTANCE)));
+	            var widgetPosition = scene.mouseToWorld(scene.worldToMouse(widgetRootWorldPosition).add(_this.relativePosition.clone().rotate(_this.widgetRoot.angle).multiplyScalar(WIDGET_DISTANCE)));
 	            var relativeWidgetPosition = widgetPosition.clone().subtract(widgetRootWorldPosition);
 	            var relativeMousePosition = worldPos.clone().subtract(widgetRootWorldPosition);
 	            var relativeOldMousePosition = oldMousePosition.subtract(widgetRootWorldPosition);
@@ -8117,6 +8247,7 @@
 	            this.el = iconClass;
 	        }
 	        var previousWorldPos = new Vector(0, 0);
+	        var previousMousePos = new Vector(0, 0);
 	        listenMouseDown(this.el, function (worldPos, mouseEvent) {
 	            mouseEvent.stopPropagation();
 	            pressed = true;
@@ -8134,6 +8265,10 @@
 	        // TODO: Listen document body, but make the mouse position relative to canvas (0, 0)
 	        // It would cause less stuckness when mouse leaves canvas
 	        listenMouseMove(scene.canvas.parentElement, function (mousePos, event) {
+	            if (mousePos.isZero()) {
+	                mousePos.set(previousMousePos);
+	            }
+	            previousMousePos.set(mousePos);
 	            if (!pressed) {
 	                previousWorldPos.set(scene.mouseToWorld(mousePos));
 	                return;
@@ -8152,7 +8287,6 @@
 	    };
 	    return WidgetControl;
 	}());
-	//# sourceMappingURL=widgetManager.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -8454,22 +8588,34 @@
 	                transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (position) {
 	                    if (shouldSyncLevelAndScene()) {
 	                        var entityPrototype = entity.prototype;
-	                        var entityPrototypeTransform = entityPrototype.getTransform();
-	                        setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'position', '_p', function (a, b) { return a.isEqualTo(b); });
+	                        var entityPrototypeTransform_1 = entityPrototype.getTransform();
+	                        executeWithOrigin(_this, function () {
+	                            setOrCreateTransformDataPropertyValue(entityPrototypeTransform_1, transform, 'position', '_p', function (a, b) { return a.isEqualTo(b); });
+	                        });
+	                        _this.draw();
+	                        _this.widgetManager.updateTransform();
 	                    }
 	                });
 	                transform._properties.scale.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (scale) {
 	                    if (shouldSyncLevelAndScene()) {
 	                        var entityPrototype = entity.prototype;
-	                        var entityPrototypeTransform = entityPrototype.getTransform();
-	                        setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'scale', '_s', function (a, b) { return a.isEqualTo(b); });
+	                        var entityPrototypeTransform_2 = entityPrototype.getTransform();
+	                        executeWithOrigin(_this, function () {
+	                            setOrCreateTransformDataPropertyValue(entityPrototypeTransform_2, transform, 'scale', '_s', function (a, b) { return a.isEqualTo(b); });
+	                        });
+	                        _this.draw();
+	                        _this.widgetManager.updateTransform();
 	                    }
 	                });
 	                transform._properties.angle.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (angle) {
 	                    if (shouldSyncLevelAndScene()) {
 	                        var entityPrototype = entity.prototype;
-	                        var entityPrototypeTransform = entityPrototype.getTransform();
-	                        setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'angle', '_a', function (a, b) { return a === b; });
+	                        var entityPrototypeTransform_3 = entityPrototype.getTransform();
+	                        executeWithOrigin(_this, function () {
+	                            setOrCreateTransformDataPropertyValue(entityPrototypeTransform_3, transform, 'angle', '_a', function (a, b) { return a === b; });
+	                        });
+	                        _this.draw();
+	                        _this.widgetManager.updateTransform();
 	                    }
 	                });
 	            };
@@ -8840,6 +8986,7 @@
 	            // scene.renderer.resize(this.canvas.width, this.canvas.height);
 	            if (change) {
 	                globalEventDispatcher.dispatch('canvas resize', scene);
+	                this.widgetManager.updateTransform();
 	                this.draw();
 	            }
 	            // Lets see if it has changed after 200ms.
@@ -10159,15 +10306,19 @@
 	    - color
 	    - icon (fa-plus)
 	     */
-	    function Confirmation(question, buttonOptions, callback) {
+	    function Confirmation(question, buttonOptions, callback, cancelCallback) {
 	        var _this = _super.call(this, {
 	            title: question,
 	            width: '500px',
-	            content: list('div.confirmationButtons', Button)
+	            content: list('div.confirmationButtons', Button),
+	            cancelCallback: cancelCallback
 	        }) || this;
 	        _this.content.update([{
 	                text: 'Cancel',
-	                callback: function () { return _this.remove(); }
+	                callback: function () {
+	                    _this.remove();
+	                    _this.cancelCallback && _this.cancelCallback();
+	                }
 	            }, Object.assign({
 	                text: 'Confirm'
 	            }, buttonOptions, {
@@ -11079,7 +11230,7 @@
 	            style: {
 	                display: 'none' // until an animation is selected
 	            }
-	        })), _this.animationTimelineView = new AnimationTimelineView()));
+	        }), _this.frameCountEditor = new FrameCountEditor()), _this.animationTimelineView = new AnimationTimelineView()));
 	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, function () {
 	            if (editorGlobals.sceneMode === SceneMode.RECORDING) {
 	                _this.recordButton.classList.add('selected');
@@ -11099,11 +11250,33 @@
 	        });
 	        redomListen(_this, 'animationSelected', function (animation$$1) {
 	            _this.selectedAnimation = animation$$1;
-	            _this.animationTimelineView.update(_this.selectedAnimation);
+	            _this.updateChildren();
+	            // this.animationTimelineView.update(this.selectedAnimation);
 	            var component = _this.getEntityComponent();
+	            setChangeOrigin(_this);
 	            component.animator.setAnimation(animation$$1 && animation$$1.name); // send falsy if initial pose should be selected
+	            if (!animation$$1 && editorGlobals.sceneMode === SceneMode.PREVIEW) {
+	                editorGlobals.sceneMode = SceneMode.NORMAL;
+	            }
 	            _this.animationTimelineView.selectFrame(1);
 	            _this.recordButton.style.display = animation$$1 ? 'inline-block' : 'none';
+	        });
+	        redomListen(_this, 'frameCountChanged', function (frameCount) {
+	            if (!(frameCount > 0 && frameCount <= animation.MAX_FRAME_COUNT)) {
+	                _this.updateChildren();
+	                return;
+	            }
+	            var setFrameCount = function () {
+	                _this.selectedAnimation.frames = frameCount === animation.DEFAULT_FRAME_COUNT ? undefined : frameCount;
+	                _this.updateAnimationData();
+	            };
+	            var highestKeyframe = _this.selectedAnimation.getHighestKeyFrame();
+	            if (highestKeyframe > frameCount) {
+	                new Confirmation("Are you sure you want to remove keyframes?", null, setFrameCount, function () { return _this.updateChildren(); });
+	            }
+	            else {
+	                setFrameCount();
+	            }
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
@@ -11111,7 +11284,12 @@
 	                    var editorSelection_1 = change.reference;
 	                    if (editorSelection_1.items.length === 1 && editorSelection_1.items[0] === _this.editedEntityPrototype) ;
 	                    else {
-	                        _this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+	                        if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+	                            executeWithOrigin(_this, function () {
+	                                _this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+	                            });
+	                            editorGlobals.sceneMode = SceneMode.NORMAL;
+	                        }
 	                        _this.editedEntityPrototype = null;
 	                    }
 	                }
@@ -11136,7 +11314,6 @@
 	                var isChildOfEdited = !!entityPrototype.findParent('epr', function (epr) { return epr === _this.editedEntityPrototype; });
 	                if (!isChildOfEdited)
 	                    { return; }
-	                setChangeOrigin(_this);
 	                _this.saveValue(entityPrototype, component._componentId, property);
 	            }
 	        });
@@ -11277,11 +11454,13 @@
 	        this.animationSelector.update(this.animations);
 	        this.selectedAnimation = this.animationSelector.getSelectedAnimation();
 	        this.animationTimelineView.update(this.selectedAnimation);
+	        if (this.selectedAnimation)
+	            { console.log('this.selectedAnimation.frames', this.selectedAnimation.frames); }
+	        this.frameCountEditor.update(this.selectedAnimation && (this.selectedAnimation.frames || animation.DEFAULT_FRAME_COUNT));
 	    };
 	    AnimationModule.prototype.addAnimation = function () {
 	        var name = prompt('name', 'idle');
 	        if (name) {
-	            setChangeOrigin(this);
 	            var newAnimation = new animation.Animation(name);
 	            this.animations.push(newAnimation);
 	            this.updateAnimationData();
@@ -11295,7 +11474,9 @@
 	        for (var _i = 0, _a = this.animations; _i < _a.length; _i++) {
 	            var anim = _a[_i];
 	            anim.deleteEmptyTracks();
+	            anim.deleteOutOfBoundsKeyFrames();
 	        }
+	        setChangeOrigin(this);
 	        componentData.setValue('animationData', JSON.stringify(this.animationData));
 	        this.animationTimelineView.update(this.selectedAnimation);
 	        // Reload entity Animator:
@@ -11314,11 +11495,11 @@
 	        }
 	        var component = this.getEntityComponent();
 	        if (component) {
-	            setChangeOrigin(this);
-	            if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
-	                editorGlobals.sceneMode = SceneMode.PREVIEW;
-	            }
 	            if (component.animator.currentAnimation) {
+	                if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
+	                    editorGlobals.sceneMode = SceneMode.PREVIEW;
+	                }
+	                setChangeOrigin(this);
 	                component.animator.currentAnimation.setFrame(this.animationTimelineView.selectedFrame);
 	            }
 	        }
@@ -11363,6 +11544,29 @@
 	    };
 	    return AnimationSelectorOption;
 	}());
+	var FrameCountEditor = /** @class */ (function () {
+	    function FrameCountEditor() {
+	        var _this = this;
+	        this.el = el('div.frameCountEditor', 'Frames', this.input = el('input.genericInput', {
+	            style: {
+	                width: '45px'
+	            },
+	            type: 'number',
+	            min: 1,
+	            max: 100,
+	            onchange: function () {
+	                redomDispatch(_this, 'frameCountChanged', +_this.input.value);
+	            }
+	        }));
+	    }
+	    FrameCountEditor.prototype.update = function (frameCount) {
+	        this.el.style.display = frameCount ? 'inline-block' : 'none';
+	        if (frameCount) {
+	            this.input.value = frameCount;
+	        }
+	    };
+	    return FrameCountEditor;
+	}());
 	var AnimationTimelineView = /** @class */ (function () {
 	    function AnimationTimelineView() {
 	        var _this = this;
@@ -11380,14 +11584,14 @@
 	        });
 	        redomListen(this, 'frameSelected', function (frame) { return _this.selectedFrame = frame; });
 	    }
-	    AnimationTimelineView.prototype.update = function (animation$$1) {
-	        if (!animation$$1) {
+	    AnimationTimelineView.prototype.update = function (currentAnimation) {
+	        if (!currentAnimation) {
 	            this.selectedFrame = 0;
 	            this.frameNumbers.update([]);
 	            this.trackList.update([]);
 	            return;
 	        }
-	        var frameCount = 24;
+	        var frameCount = currentAnimation.frames || animation.DEFAULT_FRAME_COUNT;
 	        var frameNumbers = [];
 	        var cellWidth = (80 / frameCount).toFixed(2) + '%';
 	        for (var frame = 0; frame <= frameCount; frame++) {
@@ -11397,7 +11601,7 @@
 	            });
 	        }
 	        this.frameNumbers.update(frameNumbers);
-	        var trackUpdateData = animation$$1.tracks.map(function (track) {
+	        var trackUpdateData = currentAnimation.tracks.map(function (track) {
 	            var entityPrototype = getSerializable(track.eprId);
 	            return {
 	                name: entityPrototype.makeUpAName() + ' ' + track.prpName,
@@ -11899,7 +12103,9 @@
 	    }
 	    stop('Editor: General');
 	});
-	editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function () {
+	var circularDependencyDetector$1 = new CircularDependencyDetector();
+	editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	    circularDependencyDetector$1.enter(change.type + change.reference.threeLetterType + change.reference.type);
 	    editor && editorUpdateLimited();
 	});
 	editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {

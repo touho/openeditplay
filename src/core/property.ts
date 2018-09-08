@@ -22,6 +22,13 @@ export function enableAllChanges() {
 	changesEnabled = true;
 }
 
+export function executeWithoutEntityPropertyChangeCreation(task) {
+	let oldChangesEnabled = changesEnabled;
+	changesEnabled = false;
+	task();
+	changesEnabled = oldChangesEnabled;
+}
+
 // Object of a property
 export default class Property extends Serializable {
 	_value: any;

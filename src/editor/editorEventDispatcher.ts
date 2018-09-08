@@ -40,3 +40,4 @@ class EditorEventDispatcher {
 }
 
 export let editorEventDispacher = new EditorEventDispatcher();
+editorEventDispacher.dispatcher['editorEventDispatcher'] = true; // for debugging

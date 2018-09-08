@@ -1010,3 +1010,11 @@ button.clickMeEffect {
 span.clickMeEffect {
   text-shadow: 0 0 90px #999;
 }
+.genericInput {
+  background: rgba(0, 0, 0, 0.12);
+  border: 1px inset #444;
+  padding: 2px 3px;
+  outline: none;
+  color: inherit;
+  box-sizing: border-box;
+}

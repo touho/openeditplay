@@ -1,3 +1,5 @@
+import { CircularDependencyDetector } from "../util/circularDependencyDetector";
+
 export enum GameEvent {
     SCENE_START = 'scene start',
     SCENE_PLAY = 'scene play',
@@ -19,6 +21,8 @@ export type ListenerFunction = Function & { priority?: number };
 export let eventDispatcherCallbacks = {
     eventDispatchedCallback: null // (eventName, listenerCount) => void
 };
+
+const globalCircularDependencyDetector = new CircularDependencyDetector();
 
 export default class EventDispatcher {
     _listeners: { [event in GameEvent]?: Array<ListenerFunction> } = {};
@@ -45,6 +49,10 @@ export default class EventDispatcher {
         if (!listeners)
             return;
 
+        globalCircularDependencyDetector.enter(event, {
+            this: this, a, b, c
+        });
+
         if (eventDispatcherCallbacks.eventDispatchedCallback)
             eventDispatcherCallbacks.eventDispatchedCallback(event, listeners.length);
 
@@ -61,6 +69,8 @@ export default class EventDispatcher {
             }
             // @endif
         }
+
+        globalCircularDependencyDetector.leave(event);
     }
 
     /**
@@ -104,6 +114,7 @@ export default class EventDispatcher {
 }
 
 export let globalEventDispatcher = new EventDispatcher();
+globalEventDispatcher['globalEventDispatcher'] = true; // for debugging
 
 let listenerCounter = 0;
 const NUMBER_BIGGER_THAN_LISTENER_COUNT = 10000000000;

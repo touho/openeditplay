@@ -34,8 +34,8 @@ mysql -u openeditplay --password="openeditplay" --database=openeditplay < instal
 
 ### TODO ###
 - Animation:
-    - Animation frame count
     - Animation speed: fps
+    - Insert frame 1 keyframe if missing
     - Move keyframe
     - Track interpolation method discreet/linear/cubic
     - Animation loop mode: no loop/loop/back and forth

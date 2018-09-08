@@ -66,6 +66,9 @@ export class WidgetManager {
     updateTransform() {
         if (this.widgetRoot) {
             this.transformIsDirty = true;
+
+            // to activate movement effect when clicking down with mouse and dragging with keyboard movement
+            scene.canvas.parentElement.dispatchEvent(new Event('mousemove'));
         }
     }
 }
@@ -231,7 +234,7 @@ class ScaleWidget implements RedomComponent {
                 let widgetRootWorldPosition = this.widgetRoot.worldPosition;
 
                 let oldMousePosition = worldPos.clone().subtract(worldChange);
-                let widgetPosition = scene.mouseToWorld(scene.worldToMouse(widgetRootWorldPosition).add(this.relativePosition.clone().multiplyScalar(WIDGET_DISTANCE)));
+                let widgetPosition = scene.mouseToWorld(scene.worldToMouse(widgetRootWorldPosition).add(this.relativePosition.clone().rotate(this.widgetRoot.angle).multiplyScalar(WIDGET_DISTANCE)));
 
                 let relativeWidgetPosition = widgetPosition.clone().subtract(widgetRootWorldPosition);
                 let relativeMousePosition = worldPos.clone().subtract(widgetRootWorldPosition);
@@ -366,6 +369,7 @@ class WidgetControl implements RedomComponent {
             this.el = iconClass;
         }
         let previousWorldPos = new Vector(0, 0);
+        let previousMousePos = new Vector(0, 0);
         listenMouseDown(this.el, (worldPos: Vector, mouseEvent) => {
             mouseEvent.stopPropagation();
             pressed = true;
@@ -383,6 +387,10 @@ class WidgetControl implements RedomComponent {
         // TODO: Listen document body, but make the mouse position relative to canvas (0, 0)
         // It would cause less stuckness when mouse leaves canvas
         listenMouseMove(scene.canvas.parentElement, (mousePos, event) => {
+            if (mousePos.isZero()) {
+                mousePos.set(previousMousePos);
+            }
+            previousMousePos.set(mousePos);
             if (!pressed) {
                 previousWorldPos.set(scene.mouseToWorld(mousePos));
                 return;

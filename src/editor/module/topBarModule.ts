@@ -7,6 +7,7 @@ import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { setSceneTool, sceneToolName, editorSelection, unfocus } from '../editorSelection';
 import { Button } from '../views/popup/Popup';
 import { editorGlobals, SceneMode } from '../editorGlobals';
+import { setChangeOrigin } from '../../core/change';
 
 export class TopBarModule extends Module {
 	logo: HTMLElement;
@@ -79,7 +80,7 @@ export class TopBarModule extends Module {
 			callback: () => editorEventDispacher.dispatch(EditorEvent.EDITOR_PAUSE)
 		};
 		let recButtonData = {
-			title: 'Recording animation keyframes...',
+			title: 'Recording animation keyframes',
 			icon: 'fa-circle',
 			type: 'rec',
 			callback: () => {
@@ -87,12 +88,13 @@ export class TopBarModule extends Module {
 			}
 		};
 		let previewButtonData = {
-			title: 'Previewing animation frame...',
+			title: 'Previewing animation frame',
 			icon: 'fa-eye',
 			type: 'preview',
 			callback: () => {
 				editorGlobals.sceneMode = SceneMode.NORMAL;
 				if (editorGlobals.animationEntityPrototype && editorGlobals.animationEntityPrototype.previouslyCreatedEntity) {
+					setChangeOrigin(this);
 					editorGlobals.animationEntityPrototype.previouslyCreatedEntity.resetComponents();
 				}
 			}

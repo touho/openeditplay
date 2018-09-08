@@ -1,12 +1,17 @@
 // Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 export namespace animation {
 
+    // Changing this will break games
+    export const DEFAULT_FRAME_COUNT = 24;
+    export const MAX_FRAME_COUNT = 100;
+
     export type AnimationData = {
         animations: AnimationDataAnimation[];
     };
     export type AnimationDataAnimation = {
         name: string;
         tracks: AnimationDataTrack[];
+        frames?: number; // If falsy, use DEFAULT_FRAME_COUNT
     };
     export type AnimationDataTrack = {
         eprId: string;
@@ -36,8 +41,8 @@ export namespace animation {
      * Helper class for editor. Just JSON.stringify this to get valid animationData animation out.
      */
     export class Animation {
-        constructor(public name: string, public tracks: Track[] = []) {
-
+        // If frames is falsy, use DEFAULT_FRAME_COUNT
+        constructor(public name: string, public tracks: Track[] = [], public frames: number = undefined) {
         }
 
         /**
@@ -63,9 +68,34 @@ export namespace animation {
             }
         }
 
+        deleteOutOfBoundsKeyFrames() {
+            let frameCount = this.frames || DEFAULT_FRAME_COUNT;
+            for (const track of this.tracks) {
+                let keyFrameKeys = Object.keys(track.keyFrames);
+                for (const keyFrameKey of keyFrameKeys) {
+                    if (+keyFrameKey > frameCount) {
+                        delete track.keyFrames[keyFrameKey];
+                    }
+                }
+            }
+        }
+
+        getHighestKeyFrame() {
+            let highestKeyFrame = 0;
+            for (const track of this.tracks) {
+                let keyFrameKeys = Object.keys(track.keyFrames);
+                for (const keyFrameKey of keyFrameKeys) {
+                    if (+keyFrameKey > highestKeyFrame) {
+                        highestKeyFrame = +keyFrameKey;
+                    }
+                }
+            }
+            return highestKeyFrame;
+        }
+
         static create(json) {
             let tracks = (json.tracks || []).map(Track.create);
-            return new Animation(json.name, tracks);
+            return new Animation(json.name, tracks, json.frames);
         }
     }
 

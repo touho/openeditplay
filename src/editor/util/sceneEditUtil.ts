@@ -11,6 +11,7 @@ import Entity from '../../core/entity';
 import EntityPrototype from '../../core/entityPrototype';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { editorGlobals, SceneMode } from '../editorGlobals';
+import { disableAllChanges, executeWithoutEntityPropertyChangeCreation } from '../../core/property';
 
 let radius = 10;
 
@@ -135,7 +136,9 @@ export function syncAChangeFromGameToScene(change) {
 			// EntityPrototype
 
 			if (prototype.previouslyCreatedEntity) {
-				setEntityPropertyValue(prototype.previouslyCreatedEntity, cda.name, cda.componentId, property);
+				executeWithoutEntityPropertyChangeCreation(() => {
+					setEntityPropertyValue(prototype.previouslyCreatedEntity, cda.name, cda.componentId, property);
+				});
 			}
 		} else {
 			// Prototype

@@ -8,16 +8,20 @@ export default class Confirmation extends Popup {
 	- color
 	- icon (fa-plus)
 	 */
-	constructor(question, buttonOptions, callback) {
+	constructor(question: string, buttonOptions, callback, cancelCallback) {
 		super({
 			title: question,
 			width: '500px',
-			content: list('div.confirmationButtons', Button)
+			content: list('div.confirmationButtons', Button),
+			cancelCallback
 		});
 
 		this.content.update([{
 			text: 'Cancel',
-			callback: () => this.remove()
+			callback: () => {
+				this.remove();
+				this.cancelCallback && this.cancelCallback();
+			}
 		}, Object.assign({
 			text: 'Confirm'
 		}, buttonOptions, {

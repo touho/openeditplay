@@ -154,6 +154,8 @@ class Layer {
 		this.el = el('div.popupLayer', {
 			onclick: () => {
 				popup.remove();
+				console.log('popup.cancelCallback', popup.cancelCallback);
+
 				popup.cancelCallback && popup.cancelCallback();
 			}
 		});

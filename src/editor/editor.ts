@@ -22,7 +22,7 @@ import { el, list, mount } from 'redom';
 import { default as Game, game } from '../core/game';
 import Serializable, { filterChildren } from '../core/serializable';
 import {
-	changeType, setChangeOrigin
+	changeType, setChangeOrigin, Change
 } from '../core/change';
 import { serializables } from '../core/serializableManager';
 import assert from '../util/assert';
@@ -40,6 +40,9 @@ import { listenKeyDown, key } from '../util/input';
 import Prefab from '../core/prefab';
 import Prototype from '../core/prototype';
 import Module from './module/module';
+import { CircularDependencyDetector } from '../util/circularDependencyDetector';
+
+const DETECT_CHANGE_LOOPS = 1;
 
 editorEventDispacher.getEventPromise('modulesRegistered').then(() => {
 	editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
@@ -88,9 +91,12 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	performance.stop('Editor: General');
 });
 
-editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, () => {
+let circularDependencyDetector = new CircularDependencyDetector();
+editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
+	circularDependencyDetector.enter(change.type + change.reference.threeLetterType + (change.reference as any).type);
 	editor && editorUpdateLimited();
 });
+
 editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, () => {
 	editor && editorUpdateLimited();
 });

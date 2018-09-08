@@ -15,7 +15,7 @@ import EntityPrototype from '../../core/entityPrototype';
 import assert from '../../util/assert';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
-import { setChangeOrigin } from '../../core/change';
+import { setChangeOrigin, executeWithOrigin } from '../../core/change';
 import * as sceneEdit from '../util/sceneEditUtil';
 import Vector from '../../util/vector';
 import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
@@ -426,21 +426,36 @@ class SceneModule extends Module {
 					if (sceneEdit.shouldSyncLevelAndScene()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
-						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'position', '_p', (a, b) => a.isEqualTo(b));
+						executeWithOrigin(this, () => {
+							sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'position', '_p', (a, b) => a.isEqualTo(b));
+						});
+
+						this.draw();
+						this.widgetManager.updateTransform();
 					}
 				});
 				transform._properties.scale.listen(GameEvent.PROPERTY_VALUE_CHANGE, scale => {
 					if (sceneEdit.shouldSyncLevelAndScene()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
-						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'scale', '_s', (a, b) => a.isEqualTo(b));
+						executeWithOrigin(this, () => {
+							sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'scale', '_s', (a, b) => a.isEqualTo(b));
+						});
+
+						this.draw();
+						this.widgetManager.updateTransform();
 					}
 				});
 				transform._properties.angle.listen(GameEvent.PROPERTY_VALUE_CHANGE, angle => {
 					if (sceneEdit.shouldSyncLevelAndScene()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
-						sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'angle', '_a', (a, b) => a === b);
+						executeWithOrigin(this, () => {
+							sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'angle', '_a', (a, b) => a === b);
+						});
+
+						this.draw();
+						this.widgetManager.updateTransform();
 					}
 				});
 			};
@@ -873,6 +888,7 @@ class SceneModule extends Module {
 
 			if (change) {
 				globalEventDispatcher.dispatch('canvas resize', scene);
+				this.widgetManager.updateTransform();
 				this.draw();
 			}
 

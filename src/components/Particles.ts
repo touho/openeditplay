@@ -335,7 +335,3 @@ function getParticleTexture(size, gradientHardness = 0, rgb = { r: 255, g: 255, 
 	}
 	return textureCache[hash];
 }
-
-let zeroPoint = new PIXI.Point();
-let tempPoint = new PIXI.Point();
-let temp2Point = new PIXI.Point();

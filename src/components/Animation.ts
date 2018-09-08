@@ -59,11 +59,11 @@ class Animator {
 		if (this.time > 1) {
 			this.time -= 1;
 		}
-		let totalFrames = 24;
-		let frame = (this.time * totalFrames + 1);
 		if (!this.currentAnimation) {
 			return;
 		}
+		let totalFrames = this.currentAnimation.frames;
+		let frame = (this.time * totalFrames + 1);
 		this.currentAnimation.setFrame(frame);
 	}
 	setAnimation(name: string) {
@@ -81,15 +81,18 @@ class Animator {
 	}
 	delete() {
 		delete this.animations;
+		delete this.currentAnimation;
 	}
 }
 
 class AnimatorAnimation {
 	name: string;
 	tracks: AnimatorTrack[];
+	frames: number;
 	constructor(animationJSON: animation.AnimationDataAnimation) {
 		this.name = animationJSON.name;
-		this.tracks = animationJSON.tracks.map(trackData => new AnimatorTrack(trackData));
+		this.frames = animationJSON.frames || animation.DEFAULT_FRAME_COUNT;
+		this.tracks = animationJSON.tracks.map(trackData => new AnimatorTrack(trackData, this.frames));
 	}
 	setFrame(frame) {
 		assert(frame > 0, 'frame must be positive');
@@ -110,7 +113,7 @@ class AnimatorTrack {
 		control1: any;
 		control2: any;
 	}> = [];
-	constructor(trackData: animation.AnimationDataTrack) {
+	constructor(trackData: animation.AnimationDataTrack, public frames: number) {
 		this.entityPrototype = getSerializable(trackData.eprId) as EntityPrototype;
 		let componentData = this.entityPrototype.findComponentDataByComponentId(trackData.cId, true);
 		let componentName = componentData.componentClass.componentName;
@@ -209,12 +212,12 @@ class AnimatorTrack {
 		} else {
 			let prevFrame: number = prev.frame;
 			if (prevFrame > frame) {
-				prevFrame -= 24;
+				prevFrame -= this.frames;
 			}
 
 			let nextFrame: number = next.frame;
 			if (nextFrame < frame) {
-				nextFrame += 24;
+				nextFrame += this.frames;
 			}
 
 			let t = (frame - prevFrame) / (nextFrame - prevFrame);

@@ -2,6 +2,7 @@ import assert, { changeGetter as assertChangeGetter } from '../util/assert';
 import Serializable, { serializableCallbacks } from './serializable';
 import Property from './property';
 import EventDispatcher, { GameEvent, globalEventDispatcher } from './eventDispatcher';
+import { CircularDependencyDetector } from '../util/circularDependencyDetector';
 
 let DEBUG_CHANGES = 0;
 let CHECK_FOR_INVALID_ORIGINS = 1; // TODO: Do stuff in editor with this set to true to find nasty bugs.
@@ -25,6 +26,7 @@ export let changeType = {
 	deleteAllChildren: 'c', // id
 };
 
+let circularDependencyDetector = new CircularDependencyDetector();
 let origin;
 
 // @ifndef OPTIMIZE
@@ -58,6 +60,7 @@ let externalChange = false;
 export function addChange(type: string, reference: Serializable) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
+	circularDependencyDetector.enter(type + (reference && reference.threeLetterType));
 	// @endif
 
 	if (!reference.id) return;
@@ -97,9 +100,17 @@ export function addChange(type: string, reference: Serializable) {
 }
 
 export function executeExternal(callback) {
-	setChangeOrigin('external');
-	if (externalChange) return callback();
-	externalChange = true;
-	callback();
-	externalChange = false;
+	executeWithOrigin('external', () => {
+		if (externalChange) return callback();
+		externalChange = true;
+		callback();
+		externalChange = false;
+	});
+}
+
+export function executeWithOrigin(origin, task) {
+	const oldOrigin = origin;
+	setChangeOrigin(origin);
+	task();
+	setChangeOrigin(oldOrigin);
 }
