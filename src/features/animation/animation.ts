@@ -3,7 +3,9 @@ export namespace animation {
 
     // Changing this will break games
     export const DEFAULT_FRAME_COUNT = 24;
+    export const DEFAULT_FRAME_RATE = 24;
     export const MAX_FRAME_COUNT = 100;
+    export const MAX_FRAME_RATE = 100;
 
     export type AnimationData = {
         animations: AnimationDataAnimation[];
@@ -12,6 +14,7 @@ export namespace animation {
         name: string;
         tracks: AnimationDataTrack[];
         frames?: number; // If falsy, use DEFAULT_FRAME_COUNT
+        fps?: number; // If falsy, use DEFAULT_FRAME_RATE
     };
     export type AnimationDataTrack = {
         eprId: string;
@@ -28,9 +31,9 @@ export namespace animation {
     export function parseAnimationData(animationDataString) {
         let animationData;
         try {
-			animationData = JSON.parse(animationDataString);
-		} catch (e) {
-			animationData = {};
+            animationData = JSON.parse(animationDataString);
+        } catch (e) {
+            animationData = {};
         }
 
         animationData.animations = animationData.animations || [];
@@ -42,8 +45,12 @@ export namespace animation {
      */
     export class Animation {
         // If frames is falsy, use DEFAULT_FRAME_COUNT
-        constructor(public name: string, public tracks: Track[] = [], public frames: number = undefined) {
-        }
+        constructor(
+            public name: string,
+            public tracks: Track[] = [],
+            public frames: number = undefined,
+            public fps: number = undefined
+        ) {}
 
         /**
          *
@@ -52,7 +59,7 @@ export namespace animation {
          * @param value jsoned property value
          */
         saveValue(entityPrototypeId: string, componendId: string, propertyName: string, frameNumber: number, value: any) {
-            let track = this.tracks.find(track=> track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName);
+            let track = this.tracks.find(track => track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName);
             if (!track) {
                 track = new Track(entityPrototypeId, componendId, propertyName);
                 this.tracks.push(track);
@@ -93,9 +100,9 @@ export namespace animation {
             return highestKeyFrame;
         }
 
-        static create(json) {
+        static create(json)  {
             let tracks = (json.tracks || []).map(Track.create);
-            return new Animation(json.name, tracks, json.frames);
+            return new Animation(json.name, tracks, json.frames, json.fps);
         }
     }
 

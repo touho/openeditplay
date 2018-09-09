@@ -55,15 +55,16 @@ class Animator {
 		this.currentAnimation = this.animations[0];
 	}
 	update(dt) {
-		this.time += dt;
-		if (this.time > 1) {
-			this.time -= 1;
-		}
 		if (!this.currentAnimation) {
 			return;
 		}
+		const animationLength = this.currentAnimation.frames / this.currentAnimation.fps;
+		this.time += dt;
+		if (this.time > animationLength) {
+			this.time -= animationLength;
+		}
 		let totalFrames = this.currentAnimation.frames;
-		let frame = (this.time * totalFrames + 1);
+		let frame = this.time / animationLength * totalFrames + 1;
 		this.currentAnimation.setFrame(frame);
 	}
 	setAnimation(name: string) {
@@ -89,13 +90,15 @@ class AnimatorAnimation {
 	name: string;
 	tracks: AnimatorTrack[];
 	frames: number;
+	fps: number;
 	constructor(animationJSON: animation.AnimationDataAnimation) {
 		this.name = animationJSON.name;
 		this.frames = animationJSON.frames || animation.DEFAULT_FRAME_COUNT;
+		this.fps = animationJSON.fps || animation.DEFAULT_FRAME_RATE;
 		this.tracks = animationJSON.tracks.map(trackData => new AnimatorTrack(trackData, this.frames));
 	}
-	setFrame(frame) {
-		assert(frame > 0, 'frame must be positive');
+	setFrame(frame: number) {
+		assert(frame >= 1 && frame < this.frames + 1, 'invalid frame number: ' + frame);
 		for (let track of this.tracks) {
 			track.setFrame(frame);
 		}

@@ -34,6 +34,7 @@ class AnimationModule extends Module {
 
 	recordButton: HTMLButtonElement;
 	frameCountEditor: FrameCountEditor;
+	frameRateEditor: FrameRateEditor;
 
 	constructor() {
 		super();
@@ -56,7 +57,8 @@ class AnimationModule extends Module {
 							display: 'none' // until an animation is selected
 						}
 					}),
-					this.frameCountEditor = new FrameCountEditor()
+					this.frameCountEditor = new FrameCountEditor(),
+					this.frameRateEditor = new FrameRateEditor()
 				),
 				this.animationTimelineView = new AnimationTimelineView()
 			)
@@ -113,6 +115,14 @@ class AnimationModule extends Module {
 			} else {
 				setFrameCount();
 			}
+		});
+		redomListen(this, 'frameRateChanged', fps => {
+			if (!(fps > 0 && fps <= animation.MAX_FRAME_RATE)) {
+				this.updateChildren();
+				return;
+			}
+			this.selectedAnimation.fps = fps === animation.DEFAULT_FRAME_RATE ? undefined : fps;
+			this.updateAnimationData();
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
@@ -313,10 +323,8 @@ class AnimationModule extends Module {
 		this.selectedAnimation = this.animationSelector.getSelectedAnimation();
 		this.animationTimelineView.update(this.selectedAnimation);
 
-		if (this.selectedAnimation)
-			console.log('this.selectedAnimation.frames', this.selectedAnimation.frames);
-
 		this.frameCountEditor.update(this.selectedAnimation && (this.selectedAnimation.frames || animation.DEFAULT_FRAME_COUNT));
+		this.frameRateEditor.update(this.selectedAnimation && (this.selectedAnimation.fps || animation.DEFAULT_FRAME_RATE));
 	}
 
 	addAnimation() {
@@ -426,7 +434,7 @@ class FrameCountEditor implements RedomComponent {
 				},
 				type: 'number',
 				min: 1,
-				max: 100,
+				max: animation.MAX_FRAME_COUNT,
 				onchange: () => {
 					redomDispatch(this, 'frameCountChanged', +this.input.value);
 				}
@@ -437,6 +445,33 @@ class FrameCountEditor implements RedomComponent {
 		this.el.style.display = frameCount ? 'inline-block' : 'none';
 		if (frameCount) {
 			this.input.value = frameCount;
+		}
+	}
+}
+
+class FrameRateEditor implements RedomComponent {
+	el: HTMLElement;
+	input: HTMLInputElement;
+	constructor() {
+		this.el = el('div.frameRateEditor',
+			'Fps',
+			this.input = <HTMLInputElement>el('input.genericInput', {
+				style: {
+					width: '45px'
+				},
+				type: 'number',
+				min: 1,
+				max: animation.MAX_FRAME_RATE,
+				onchange: () => {
+					redomDispatch(this, 'frameRateChanged', +this.input.value);
+				}
+			})
+		);
+	}
+	update(fps) {
+		this.el.style.display = fps ? 'inline-block' : 'none';
+		if (fps) {
+			this.input.value = fps;
 		}
 	}
 }
