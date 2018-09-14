@@ -67,6 +67,15 @@ export namespace animation {
             track.saveValue(frameNumber, value);
         }
 
+        getKeyFrames(entityPrototypeId: string, componendId: string, propertyName: string) {
+            let track = this.tracks.find(track => track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName);
+            if (track) {
+                return track.keyFrames;
+            } else {
+                return null;
+            }
+        }
+
         deleteEmptyTracks() {
             for (let i = this.tracks.length - 1; i >= 0; i--) {
                 if (Object.keys(this.tracks[i].keyFrames).length === 0) {

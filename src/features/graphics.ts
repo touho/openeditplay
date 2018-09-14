@@ -1,4 +1,5 @@
 import { isClient } from '../util/environment';
+import Vector from '../util/vector';
 
 let PIXI;
 
@@ -98,13 +99,18 @@ const hitTestCanvas = document.createElement('canvas');
 hitTestCanvas.width = 1;
 hitTestCanvas.height = 1;
 const hitTestContext = hitTestCanvas.getContext('2d');
-export function hitTest(sprite, pointerDownEvent, stage) {
+export function hitTest(sprite, pixiCoordinates: Vector, stage) {
 	let localBounds = sprite.getLocalBounds();
 	let textureSource = sprite.texture.baseTexture.source;
 
-	let localMousePoint = sprite.toLocal(pointerDownEvent.data.global, stage);
+	let localMousePoint = sprite.toLocal(pixiCoordinates, stage);
+
 	let xPart = (localMousePoint.x - localBounds.x) / (localBounds.width);
 	let yPart = (localMousePoint.y - localBounds.y) / (localBounds.height);
+
+	if (xPart < 0 || xPart > 1 || yPart < 0 || yPart > 1) {
+		return false;
+	}
 
 	hitTestCanvas.width = hitTestCanvas.width; // A way to reset contents of the canvas
 	hitTestContext.drawImage(textureSource, textureSource.width * xPart | 0, textureSource.height * yPart | 0, 1, 1, 0, 0, 1, 1);
@@ -126,5 +132,5 @@ export function hitTest(sprite, pointerDownEvent, stage) {
 	document.body.appendChild(c);
 	*/
 
-	return imageData.data[3] > 30;
+	return imageData.data[3] > 30; // Alpha channel is over 30/255
 }

@@ -34,6 +34,7 @@ mysql -u openeditplay --password="openeditplay" --database=openeditplay < instal
 
 ### TODO ###
 - Animation:
+    - BUG: Recording properties from property editor
     - Insert frame 1 keyframe if missing
     - Move keyframe
     - Track interpolation method discreet/linear/cubic

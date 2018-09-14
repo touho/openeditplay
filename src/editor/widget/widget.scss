@@ -7,13 +7,14 @@ div.widgetRoot {
 
 .widgetRoot .widgetControl {
     text-shadow: none;
-    opacity: 0.8;
+    // opacity: 0.8;
 }
 .widgetRoot:not(.dragging) .widgetControl:hover,
 .widgetRoot.dragging .widgetControl.dragging {
     // text-shadow: 0 0 1px;
-    text-shadow: 0 0 4px;
-    opacity: 1;
+    filter: brightness(140%);
+    // text-shadow: 0 0 4px;
+    // opacity: 1;
 }
 
 .widgetRoot .widget {
@@ -21,22 +22,29 @@ div.widgetRoot {
     user-select: none;
 }
 
+.widgetRoot .moveWidget .widgetControl {
+    font-size: 22px;
+    transform: scaleX(2) translateX(-5%) translateY(-50%);
+}
+
 .widgetRoot .scaleWidget .widgetControl {
-    font-size: 15px;
+    font-size: 18px;
 }
 
 .widgetRoot .angleWidget .widgetControl {
-    font-size: 53px;
-    border: 4px solid;
+    font-size: 60px;
+    // border: 4px solid;
     border-radius: 50%;
     transform: translateX(-50%) translateY(-50%);
-    width: 60px;
-    height: 60px;
+    // width: 60px;
+    // height: 60px;
+    color: rgb(0, 0, 175);
+    opacity: 0.7;
 }
-.widgetRoot:not(.dragging) .angleWidget .widgetControl:hover,
-.widgetRoot.dragging .angleWidget .widgetControl.dragging {
-    opacity: 0.8;
-    box-shadow: 0 0 8px 0px, 0 0 8px 0px inset;
+
+.widgetRoot .angleWidget.littleAngleWidget .widgetControl {
+    font-size: 25px;
+    transform: translateX(-200%) translateY(-200%);
 }
 
 .widgetRoot .widgetLine {
@@ -44,7 +52,7 @@ div.widgetRoot {
     top: 0;
     left: 0;
     transform: translateY(-50%);
-    height: 2px;
+    height: 1px;
     opacity: 0.5;
 }
 
@@ -55,16 +63,18 @@ div.widgetRoot {
 
 .widgetRoot .positionWidget .widgetControl {
     color: yellow;
-    opacity: 0.6;
+    opacity: 0.4;
     // left: 0.5px;
     // top: 1px;
-    border-radius: 50%;
+    // border-radius: 50%;
     background: yellow;
-    width: 35px;
-    height: 35px;
+    border: 1px solid #ccc90a;
+    width: 30.5px;
+    height: 30.5px;
+    transform: translateY(-100%) translateX(-0.5px) translateY(0.5px);
 }
 .widgetRoot:not(.dragging) .positionWidget .widgetControl:hover,
 .widgetRoot.dragging .positionWidget .widgetControl.dragging {
-    opacity: 0.8;
-    box-shadow: 0 0 8px 4px;
+    opacity: 0.6;
+    // box-shadow: 0 0 8px 4px;
 }

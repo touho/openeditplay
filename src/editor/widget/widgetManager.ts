@@ -25,6 +25,8 @@ export class WidgetManager {
                     let entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[];
                     this.entities.push(...entityPrototypes.map(epr => epr.previouslyCreatedEntity).filter(Boolean));
                     this.updateWidgets();
+                } else if (editorSelection.items.length === 0) {
+                    this.updateWidgets();
                 }
             }
         });
@@ -98,14 +100,31 @@ class WidgetRoot implements RedomComponent {
 
         this.updateTransform();
 
-        if (sceneToolName === 'multiTool') {
+        if (sceneToolName === 'moveTool') {
             this.widgets = [
-                new ScaleWidget(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000'),
-                new ScaleWidget(this, new Vector(0, 1), new Vector(0, 1), '#00ff00'),
-                new ScaleWidget(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff'),
                 new MoveWidget(this, 1, 0, '#ff0000'),
                 new MoveWidget(this, 0, 1, '#00ff00'),
-                new AngleWidget(this, 'circle'),
+                new PositionWidget(this)
+            ];
+        } else if (sceneToolName === 'rotateTool') {
+            this.widgets = [
+                new AngleWidget(this, 'centerAngleWidget')
+            ];
+        } else if (sceneToolName === 'scaleTool') {
+            this.widgets = [
+                new ScaleWidget(this, new Vector(1, 0), new Vector(1, 0), '#ff0000', 5),
+                new ScaleWidget(this, new Vector(0, -1), new Vector(0, 1), '#00ff00', 5),
+                // new ScaleWidget(this, new Vector(0.85, -0.85), new Vector(1, 1), '#0000ff'),
+                new ScaleWidget(this, new Vector(0, 0), new Vector(1, 1), '#0000ff'),
+            ];
+        } else if (sceneToolName === 'multiTool') {
+            this.widgets = [
+                new ScaleWidget(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000', 0),
+                new ScaleWidget(this, new Vector(0, 1), new Vector(0, 1), '#00ff00', 0),
+                new ScaleWidget(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff', 0),
+                new MoveWidget(this, 1, 0, '#ff0000'),
+                new MoveWidget(this, 0, 1, '#00ff00'),
+                new AngleWidget(this, 'littleAngleWidget'),
                 new PositionWidget(this)
             ];
         } else if (sceneToolName === 'globalMoveTool') {
@@ -160,16 +179,15 @@ class MoveWidget implements Widget {
     el: HTMLElement;
     relativePosition: Vector;
     control: WidgetControl;
-    constructor(public widgetRoot: WidgetRoot, dx: number, dy: number, color: string) {
+    constructor(public widgetRoot: WidgetRoot, dx: number, dy: number, color: string, lineStartPixels: number = 30) {
         this.relativePosition = new Vector(dx, -dy);
         let angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
         // let angle = this.relativePosition.angleTo(new Vector(1, 0)) * 180 / Math.PI;
         this.el = el('div.widget.moveWidget',
-            new WidgetLine(WIDGET_DISTANCE, color, 30),
+            new WidgetLine(WIDGET_DISTANCE, color, lineStartPixels),
             this.control = new WidgetControl('.fas.fa-caret-right', {
                 left: WIDGET_DISTANCE + 'px',
-                color,
-                transform: 'scaleX(2) translateX(-5%) translateY(-50%)'
+                color
             }, (worldChange: Vector, worldPos: Vector) => {
                 let rotatedRelativePosition = this.relativePosition.clone();
 
@@ -207,7 +225,7 @@ class PositionWidget implements Widget {
         this.el = el('div.widget.positionWidget',
             this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl', {
                 style: {
-                    transform: 'translateX(-50%) translateY(-50%)'
+                    // transform: 'translateX(-50%) translateY(-50%)'
                 }
             }), null, (worldChange: Vector, worldPos: Vector) => {
 
@@ -236,14 +254,19 @@ class ScaleWidget implements Widget {
      * @param relativePosition for example (1, 0) or (-1, 1)
      * @param color
      */
-    constructor(public widgetRoot: WidgetRoot, public relativePosition: Vector, public scaleDirection: Vector, color: string) {
+    constructor(public widgetRoot: WidgetRoot, public relativePosition: Vector, public scaleDirection: Vector, color: string, lineStartPixels: number = 30) {
         this.scaleDirection.normalize();
 
         let length = this.relativePosition.length() * WIDGET_DISTANCE;
         let angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
 
+        if (relativePosition.isZero()) {
+            // hacky
+            relativePosition.setScalars(1, -1);
+        }
+
         this.el = el('div.widget.scaleWidget',
-            new WidgetLine(length, color, 30),
+            new WidgetLine(length, color, lineStartPixels),
             this.control = new WidgetControl('.fas.fa-square', {
                 left: length + 'px',
                 color,
@@ -290,14 +313,11 @@ class AngleWidget implements Widget {
     el: HTMLElement;
     relativePosition: Vector;
     control: WidgetControl;
-    constructor(public widgetRoot: WidgetRoot, type: 'circle' = 'circle') {
+    constructor(public widgetRoot: WidgetRoot, extraClass: 'centerAngleWidget' | 'littleAngleWidget' = 'centerAngleWidget') {
         let color = '#0000ff';
-        this.el = el('div.widget.angleWidget',
-            this.control = new WidgetControl(el('div.widgetControl', {
-                style: {
-                    color
-                }
-            }), null, (worldChange: Vector, worldPos: Vector) => {
+        this.el = el('div.widget.angleWidget.' + extraClass,
+            this.control = new WidgetControl('.fas.fa-sync-alt', {
+            }, (worldChange: Vector, worldPos: Vector) => {
                 let widgetRootWorldPosition = this.widgetRoot.worldPosition;
                 let oldMousePosition = worldPos.clone().subtract(worldChange);
 
@@ -410,6 +430,9 @@ class WidgetControl implements RedomComponent {
         });
     }
     onMouseMove(mousePos: Vector = new Vector(0, 0)) {
+        if (!scene) {
+            return;
+        }
         if (mousePos.isZero()) {
             mousePos.set(this.previousMousePos);
         }

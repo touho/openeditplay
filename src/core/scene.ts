@@ -340,6 +340,9 @@ export default class Scene extends Serializable {
 			(worldPosition.y - this.layers.move.pivot.y) * this.cameraZoom / this.pixelDensity.y
 		);
 	}
+	mouseToPIXI(mousePosition: Vector) {
+		return mousePosition.clone().multiply(this.pixelDensity);
+	}
 	screenPixelsToWorldPixels(screenPixels: number) {
 		return screenPixels / this.cameraZoom * this.pixelDensity.x;
 	}

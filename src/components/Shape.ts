@@ -81,16 +81,24 @@ Component.register({
 			this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 			this.graphicsContainPointFunc = textureAndAnchor.containsPoint;
 
-			this.sprite.interactive = true;
-			this.sprite.on('pointerdown', (pointerDownEvent) => {
-				let localMousePoint = this.sprite.toLocal(pointerDownEvent.data.global, this.scene.stage);
+			this.sprite.selectableEntityOfSprite = this.entity;
+			this.sprite.selectableEntityHitTest = (sprite, pixiCoordinates: Vector, stage) => {
+				let localMousePoint = sprite.toLocal(pixiCoordinates, stage);
+				return this.containsPoint(localMousePoint);
+			}
+			// this.sprite.interactive = true;
+			// this.sprite.on('pointerdown', (pointerDownEvent) => {
+			// 	console.log('pointerdown', pointerDownEvent.data.global);
+			// 	/*
+			// 	let localMousePoint = this.sprite.toLocal(pointerDownEvent.data.global, this.scene.stage);
 
-				if (this.containsPoint(localMousePoint)) {
-					// Only run in editor because player version has more stripped version of PIXI.
-					globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
-					this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
-				}
-			});
+			// 	if (this.containsPoint(localMousePoint)) {
+			// 		// Only run in editor because player version has more stripped version of PIXI.
+			// 		globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
+			// 		this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
+			// 	}
+			// 	*/
+			// });
 
 			this.Transform.container.addChild(this.sprite);
 		},

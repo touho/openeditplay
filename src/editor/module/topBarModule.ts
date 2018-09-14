@@ -164,8 +164,29 @@ export class TopBarModule extends Module {
 					setSceneTool('localMoveTool');
 				})
 			}),
+			moveTool: new SceneControlButton({
+				title: 'Move tool (1)',
+				icon: 'fa-arrows-alt',
+				callback: createCallback(() => {
+					setSceneTool('moveTool');
+				})
+			}),
+			rotateTool: new SceneControlButton({
+				title: 'Rotate tool (2)',
+				icon: 'fa-sync-alt',
+				callback: createCallback(() => {
+					setSceneTool('rotateTool');
+				})
+			}),
+			scaleTool: new SceneControlButton({
+				title: 'Scale tool (3)',
+				icon: 'fa-expand-arrows-alt',
+				callback: createCallback(() => {
+					setSceneTool('scaleTool');
+				})
+			}),
 			multiTool: new SceneControlButton({
-				title: 'Multitool tool (3)',
+				title: 'Multitool tool (4)',
 				icon: 'fa-hand-spock',
 				callback: createCallback(() => {
 					setSceneTool('multiTool');
@@ -173,13 +194,17 @@ export class TopBarModule extends Module {
 			})
 		};
 
-		this.addKeyboardShortcut(key[1], tools.multiTool);
-		// this.addKeyboardShortcut(key[2], tools.globalMoveTool);
-		// this.addKeyboardShortcut(key[3], tools.localMoveTool);
+		this.addKeyboardShortcut(key[1], tools.moveTool);
+		this.addKeyboardShortcut(key[2], tools.rotateTool);
+		this.addKeyboardShortcut(key[3], tools.scaleTool);
+		this.addKeyboardShortcut(key[4], tools.multiTool);
 
 
 
 		// mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-hand-spock', callback: createCallback(() => {}) }));
+		mount(this.toolSelectionButtons, tools.moveTool);
+		mount(this.toolSelectionButtons, tools.rotateTool);
+		mount(this.toolSelectionButtons, tools.scaleTool);
 		mount(this.toolSelectionButtons, tools.multiTool);
 		// mount(this.toolSelectionButtons, tools.globalMoveTool);
 		// mount(this.toolSelectionButtons, tools.localMoveTool);

@@ -1,5 +1,7 @@
 import assert from "./assert";
 
+const SAVE_STACK_TRACE = false;
+
 export class CircularDependencyDetector {
     currentType: string = null;
     chain: any[] = [];
@@ -9,7 +11,7 @@ export class CircularDependencyDetector {
         this.chain.push({
             type,
             data,
-            stack: (new Error()).stack
+            stack: SAVE_STACK_TRACE ? (new Error()).stack : null
         });
         if (type !== this.currentType) {
             if (this.chain.find((link, i) => link.type === type && i !== this.chain.length - 1)) {
@@ -25,7 +27,7 @@ export class CircularDependencyDetector {
                     } else {
                         console.warn(part.data);
                     }
-                    console.warn(part.stack);
+                    console.warn(part.stack || 'Turn SAVE_STACK_TRACE on to see stack traces. It will slow down the engine.');
                     console.log('--------------------------------------');
                 }
                 assert(false, 'Change event circular dependency');

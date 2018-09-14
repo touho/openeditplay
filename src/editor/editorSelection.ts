@@ -89,7 +89,7 @@ export function setLevel(level: Level) {
     editorEventDispacher.dispatch('setLevel', selectedLevel);
 }
 
-export let sceneToolName = 'multiTool'; // in top bar
+export let sceneToolName = 'moveTool'; // in top bar
 export function setSceneTool(newToolName: string) {
     if (sceneToolName !== newToolName) {
         sceneToolName = newToolName;

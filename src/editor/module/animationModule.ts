@@ -183,8 +183,8 @@ class AnimationModule extends Module {
 					this.focusedKeyFrameViews.forEach(view => {
 						delete view.trackKeyFrames[view.frame]
 					});
-					unfocus();
 					this.updateAnimationData();
+					unfocus();
 				}
 			}
 		});
@@ -359,6 +359,15 @@ class AnimationModule extends Module {
 	}
 
 	saveValue(entityPrototype: EntityPrototype, componendId: string, property: Property) {
+		// If this is the first keyframe, make sure there is a keyframe on frame 1.
+		if (this.animationTimelineView.selectedFrame !== 1) {
+			let keyFrames = this.selectedAnimation.getKeyFrames(entityPrototype.id, componendId, property.name);
+			if (!keyFrames || Object.keys(keyFrames).length === 0) {
+				let frame1Value = entityPrototype.getValue(componendId, property.name);
+				this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, frame1Value);
+			}
+		}
+
 		this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
 		this.updateAnimationData();
 	}
@@ -529,7 +538,9 @@ class AnimationTimelineView implements RedomComponent {
 				keyFrames: track.keyFrames,
 				frameCount
 			};
-		})
+		});
+
+		trackUpdateData.sort((a, b) => a.name.localeCompare(b.name));
 
 		this.trackList.update(trackUpdateData);
 	}

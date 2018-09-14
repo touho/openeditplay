@@ -19,7 +19,7 @@ import { setChangeOrigin, executeWithOrigin } from '../../core/change';
 import * as sceneEdit from '../util/sceneEditUtil';
 import Vector from '../../util/vector';
 import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
-import PIXI from '../../features/graphics';
+import PIXI, { hitTest } from '../../features/graphics';
 import * as performanceTool from '../../util/performance';
 import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../core/property';
 
@@ -58,7 +58,6 @@ class SceneModule extends Module {
 	canvasParentSize: Vector = new Vector(0, 0);
 	previousMousePosInWorldCoordinates: Vector = new Vector(0, 0);
 	parentToAddNewEntitiesOn: EntityPrototype = null;
-	previouslyEntityClicked: Date = new Date(0);
 
 	widgetManager: WidgetManager = new WidgetManager();
 
@@ -549,6 +548,23 @@ class SceneModule extends Module {
 		});
 
 		listenMouseMove(this.el, this.onMouseMove.bind(this));
+
+		function getEntityUnderMouse(pixiCoordinates: Vector, displayObject = scene.stage): Entity {
+			if (displayObject.selectableEntityHitTest) {
+				if (displayObject.selectableEntityHitTest(displayObject, pixiCoordinates, scene.stage)) {
+					return displayObject.selectableEntityOfSprite
+				}
+			} else {
+				let children = displayObject.children;
+				for (let i = children.length - 1; i >= 0; i--) {
+					let entity = getEntityUnderMouse(pixiCoordinates, children[i]);
+					if (entity) {
+						return entity;
+					}
+				}
+			}
+			return null;
+		}
 		listenMouseDown(this.el, mousePos => {
 			// Also see what happens in GameEvent.GLOBAL_ENTITY_CLICKED
 
@@ -557,6 +573,7 @@ class SceneModule extends Module {
 
 			// this.makeSureSceneHasEditorLayer();
 
+			let pixiCoordinates = scene.mouseToPIXI(mousePos);
 			mousePos = scene.mouseToWorld(mousePos);
 
 			setChangeOrigin(this);
@@ -567,18 +584,23 @@ class SceneModule extends Module {
 				// this.entityClicked(this.widgetUnderMouse.component.entity);
 				this.entitiesToEdit.push(...this.selectedEntities);
 			} else {
-				this.selectionStart = mousePos;
-				this.selectionEnd = mousePos.clone();
-				this.destroySelectionArea();
-				this.selectionArea = new PIXI.Graphics();
-				scene.selectionLayer.addChild(this.selectionArea);
+				// Check if we hit any entity
+				console.log('pixiCoordinates', pixiCoordinates);
 
-				setTimeout(() => {
-					if (!keyPressed(key.shift) && new Date().getTime() - this.previouslyEntityClicked.getTime() > 300) {
-						this.clearSelectedEntities();
-						unfocus();
-					}
-				}, 10);
+				let clickedEntity = getEntityUnderMouse(pixiCoordinates);
+				if (clickedEntity) {
+					this.entityClicked(clickedEntity);
+				} else if (!keyPressed(key.shift)) {
+					this.clearSelectedEntities();
+					unfocus();
+
+					// Start selection
+					this.selectionStart = mousePos;
+					this.selectionEnd = mousePos.clone();
+					this.destroySelectionArea();
+					this.selectionArea = new PIXI.Graphics();
+					scene.selectionLayer.addChild(this.selectionArea);
+				}
 			}
 
 			this.draw();
@@ -648,8 +670,6 @@ class SceneModule extends Module {
 	entityClicked(entity: Entity, component?: Component) {
 		if (!scene || scene.playing) // !mousePos if mouse has not moved since refresh
 			return;
-
-		this.previouslyEntityClicked = new Date();
 
 		if (this.selectedEntities.indexOf(entity) < 0) {
 			// debugger;

@@ -66,7 +66,7 @@
 	        this.chain.push({
 	            type: type,
 	            data: data,
-	            stack: (new Error()).stack
+	            stack: null
 	        });
 	        if (type !== this.currentType) {
 	            if (this.chain.find(function (link, i) { return link.type === type && i !== _this.chain.length - 1; })) {
@@ -84,7 +84,7 @@
 	                    else {
 	                        console.warn(part.data);
 	                    }
-	                    console.warn(part.stack);
+	                    console.warn(part.stack || 'Turn SAVE_STACK_TRACE on to see stack traces. It will slow down the engine.');
 	                    console.log('--------------------------------------');
 	                }
 	                assert(false, 'Change event circular dependency');
@@ -5290,6 +5290,15 @@
 	                this.tracks.push(track);
 	            }
 	            track.saveValue(frameNumber, value);
+	        };
+	        Animation.prototype.getKeyFrames = function (entityPrototypeId, componendId, propertyName) {
+	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
+	            if (track) {
+	                return track.keyFrames;
+	            }
+	            else {
+	                return null;
+	            }
 	        };
 	        Animation.prototype.deleteEmptyTracks = function () {
 	            var this$1 = this;

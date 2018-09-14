@@ -66,7 +66,7 @@
 	        this.chain.push({
 	            type: type,
 	            data: data,
-	            stack: (new Error()).stack
+	            stack: null
 	        });
 	        if (type !== this.currentType) {
 	            if (this.chain.find(function (link, i) { return link.type === type && i !== _this.chain.length - 1; })) {
@@ -84,7 +84,7 @@
 	                    else {
 	                        console.warn(part.data);
 	                    }
-	                    console.warn(part.stack);
+	                    console.warn(part.stack || 'Turn SAVE_STACK_TRACE on to see stack traces. It will slow down the engine.');
 	                    console.log('--------------------------------------');
 	                }
 	                assert(false, 'Change event circular dependency');
@@ -2153,12 +2153,15 @@
 	hitTestCanvas.width = 1;
 	hitTestCanvas.height = 1;
 	var hitTestContext = hitTestCanvas.getContext('2d');
-	function hitTest(sprite, pointerDownEvent, stage) {
+	function hitTest(sprite, pixiCoordinates, stage) {
 	    var localBounds = sprite.getLocalBounds();
 	    var textureSource = sprite.texture.baseTexture.source;
-	    var localMousePoint = sprite.toLocal(pointerDownEvent.data.global, stage);
+	    var localMousePoint = sprite.toLocal(pixiCoordinates, stage);
 	    var xPart = (localMousePoint.x - localBounds.x) / (localBounds.width);
 	    var yPart = (localMousePoint.y - localBounds.y) / (localBounds.height);
+	    if (xPart < 0 || xPart > 1 || yPart < 0 || yPart > 1) {
+	        return false;
+	    }
 	    hitTestCanvas.width = hitTestCanvas.width; // A way to reset contents of the canvas
 	    hitTestContext.drawImage(textureSource, textureSource.width * xPart | 0, textureSource.height * yPart | 0, 1, 1, 0, 0, 1, 1);
 	    var imageData = hitTestContext.getImageData(0, 0, 1, 1);
@@ -2177,7 +2180,7 @@
 	    co.strokeRect(xPart * c.width - 10, yPart * c.height - 10, 20, 20);
 	    document.body.appendChild(c);
 	    */
-	    return imageData.data[3] > 30;
+	    return imageData.data[3] > 30; // Alpha channel is over 30/255
 	}
 	//# sourceMappingURL=graphics.js.map
 
@@ -2895,6 +2898,9 @@
 	    };
 	    Scene.prototype.worldToMouse = function (worldPosition) {
 	        return new Vector((worldPosition.x - this.layers.move.pivot.x) * this.cameraZoom / this.pixelDensity.x, (worldPosition.y - this.layers.move.pivot.y) * this.cameraZoom / this.pixelDensity.y);
+	    };
+	    Scene.prototype.mouseToPIXI = function (mousePosition) {
+	        return mousePosition.clone().multiply(this.pixelDensity);
 	    };
 	    Scene.prototype.screenPixelsToWorldPixels = function (screenPixels) {
 	        return screenPixels / this.cameraZoom * this.pixelDensity.x;
@@ -4464,15 +4470,23 @@
 	            this.sprite = new PIXI$2.Sprite(textureAndAnchor.texture);
 	            this.sprite.anchor.set(textureAndAnchor.anchor.x, textureAndAnchor.anchor.y);
 	            this.graphicsContainPointFunc = textureAndAnchor.containsPoint;
-	            this.sprite.interactive = true;
-	            this.sprite.on('pointerdown', function (pointerDownEvent) {
-	                var localMousePoint = _this.sprite.toLocal(pointerDownEvent.data.global, _this.scene.stage);
-	                if (_this.containsPoint(localMousePoint)) {
-	                    // Only run in editor because player version has more stripped version of PIXI.
-	                    globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, _this.entity, _this);
-	                    _this.entity.dispatch(GameEvent.ENTITY_CLICKED, _this);
-	                }
-	            });
+	            this.sprite.selectableEntityOfSprite = this.entity;
+	            this.sprite.selectableEntityHitTest = function (sprite, pixiCoordinates, stage) {
+	                var localMousePoint = sprite.toLocal(pixiCoordinates, stage);
+	                return _this.containsPoint(localMousePoint);
+	            };
+	            // this.sprite.interactive = true;
+	            // this.sprite.on('pointerdown', (pointerDownEvent) => {
+	            // 	console.log('pointerdown', pointerDownEvent.data.global);
+	            // 	/*
+	            // 	let localMousePoint = this.sprite.toLocal(pointerDownEvent.data.global, this.scene.stage);
+	            // 	if (this.containsPoint(localMousePoint)) {
+	            // 		// Only run in editor because player version has more stripped version of PIXI.
+	            // 		globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
+	            // 		this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
+	            // 	}
+	            // 	*/
+	            // });
 	            this.Transform.container.addChild(this.sprite);
 	        },
 	        updateTexture: function () {
@@ -4610,19 +4624,23 @@
 	            });
 	        },
 	        initSprite: function () {
-	            var _this = this;
 	            if (this.sprite) {
 	                this.sprite.destroy();
 	            }
 	            this.sprite = PIXI$2.Sprite.fromImage('/img/' + this.resource);
 	            this.sprite.anchor.set(this.anchor.x, this.anchor.y);
+	            this.sprite.selectableEntityOfSprite = this.entity;
+	            this.sprite.selectableEntityHitTest = hitTest;
 	            this.sprite.interactive = true;
 	            this.sprite.on('pointerdown', function (pointerDownEvent) {
-	                if (hitTest(_this.sprite, pointerDownEvent, _this.scene.stage)) {
-	                    // Only run in editor because player version has more stripped version of PIXI.
-	                    globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, _this.entity, _this);
-	                    _this.entity.dispatch(GameEvent.ENTITY_CLICKED, _this);
-	                }
+	                console.log('pointerDownEvent', pointerDownEvent);
+	                /*
+	                                if (hitTest(this.sprite, pointerDownEvent, this.scene.stage)) {
+	                                    // Only run in editor because player version has more stripped version of PIXI.
+	                                    globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
+	                                    this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
+	                                }
+	                                */
 	            });
 	            this.Transform.container.addChild(this.sprite);
 	        },
@@ -5545,6 +5563,15 @@
 	                this.tracks.push(track);
 	            }
 	            track.saveValue(frameNumber, value);
+	        };
+	        Animation.prototype.getKeyFrames = function (entityPrototypeId, componendId, propertyName) {
+	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
+	            if (track) {
+	                return track.keyFrames;
+	            }
+	            else {
+	                return null;
+	            }
 	        };
 	        Animation.prototype.deleteEmptyTracks = function () {
 	            var this$1 = this;
@@ -6575,7 +6602,7 @@
 	    selectInEditor([], 'editor selection');
 	    editorEventDispacher.dispatch('setLevel', selectedLevel);
 	}
-	var sceneToolName = 'multiTool'; // in top bar
+	var sceneToolName = 'moveTool'; // in top bar
 	function setSceneTool(newToolName) {
 	    if (sceneToolName !== newToolName) {
 	        sceneToolName = newToolName;
@@ -6757,18 +6784,43 @@
 	                    setSceneTool('localMoveTool');
 	                })
 	            }),
+	            moveTool: new SceneControlButton({
+	                title: 'Move tool (1)',
+	                icon: 'fa-arrows-alt',
+	                callback: createCallback(function () {
+	                    setSceneTool('moveTool');
+	                })
+	            }),
+	            rotateTool: new SceneControlButton({
+	                title: 'Rotate tool (2)',
+	                icon: 'fa-sync-alt',
+	                callback: createCallback(function () {
+	                    setSceneTool('rotateTool');
+	                })
+	            }),
+	            scaleTool: new SceneControlButton({
+	                title: 'Scale tool (3)',
+	                icon: 'fa-expand-arrows-alt',
+	                callback: createCallback(function () {
+	                    setSceneTool('scaleTool');
+	                })
+	            }),
 	            multiTool: new SceneControlButton({
-	                title: 'Multitool tool (3)',
+	                title: 'Multitool tool (4)',
 	                icon: 'fa-hand-spock',
 	                callback: createCallback(function () {
 	                    setSceneTool('multiTool');
 	                })
 	            })
 	        };
-	        this.addKeyboardShortcut(key[1], tools.multiTool);
-	        // this.addKeyboardShortcut(key[2], tools.globalMoveTool);
-	        // this.addKeyboardShortcut(key[3], tools.localMoveTool);
+	        this.addKeyboardShortcut(key[1], tools.moveTool);
+	        this.addKeyboardShortcut(key[2], tools.rotateTool);
+	        this.addKeyboardShortcut(key[3], tools.scaleTool);
+	        this.addKeyboardShortcut(key[4], tools.multiTool);
 	        // mount(this.toolSelectionButtons, new SceneControlButton({ icon: 'fa-hand-spock', callback: createCallback(() => {}) }));
+	        mount(this.toolSelectionButtons, tools.moveTool);
+	        mount(this.toolSelectionButtons, tools.rotateTool);
+	        mount(this.toolSelectionButtons, tools.scaleTool);
 	        mount(this.toolSelectionButtons, tools.multiTool);
 	        // mount(this.toolSelectionButtons, tools.globalMoveTool);
 	        // mount(this.toolSelectionButtons, tools.localMoveTool);
@@ -7949,6 +8001,9 @@
 	                    (_a = _this.entities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.previouslyCreatedEntity; }).filter(Boolean));
 	                    _this.updateWidgets();
 	                }
+	                else if (editorSelection.items.length === 0) {
+	                    _this.updateWidgets();
+	                }
 	            }
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {
@@ -8013,14 +8068,33 @@
 	            return;
 	        }
 	        this.updateTransform();
-	        if (sceneToolName === 'multiTool') {
+	        if (sceneToolName === 'moveTool') {
 	            this.widgets = [
-	                new ScaleWidget$1(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000'),
-	                new ScaleWidget$1(this, new Vector(0, 1), new Vector(0, 1), '#00ff00'),
-	                new ScaleWidget$1(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff'),
 	                new MoveWidget$1(this, 1, 0, '#ff0000'),
 	                new MoveWidget$1(this, 0, 1, '#00ff00'),
-	                new AngleWidget$1(this, 'circle'),
+	                new PositionWidget$1(this)
+	            ];
+	        }
+	        else if (sceneToolName === 'rotateTool') {
+	            this.widgets = [
+	                new AngleWidget$1(this, 'centerAngleWidget')
+	            ];
+	        }
+	        else if (sceneToolName === 'scaleTool') {
+	            this.widgets = [
+	                new ScaleWidget$1(this, new Vector(1, 0), new Vector(1, 0), '#ff0000', 5),
+	                new ScaleWidget$1(this, new Vector(0, -1), new Vector(0, 1), '#00ff00', 5),
+	                // new ScaleWidget(this, new Vector(0.85, -0.85), new Vector(1, 1), '#0000ff'),
+	                new ScaleWidget$1(this, new Vector(0, 0), new Vector(1, 1), '#0000ff') ];
+	        }
+	        else if (sceneToolName === 'multiTool') {
+	            this.widgets = [
+	                new ScaleWidget$1(this, new Vector(-1, 0), new Vector(1, 0), '#ff0000', 0),
+	                new ScaleWidget$1(this, new Vector(0, 1), new Vector(0, 1), '#00ff00', 0),
+	                new ScaleWidget$1(this, new Vector(0.85, 0.85), new Vector(1, 1), '#0000ff', 0),
+	                new MoveWidget$1(this, 1, 0, '#ff0000'),
+	                new MoveWidget$1(this, 0, 1, '#00ff00'),
+	                new AngleWidget$1(this, 'littleAngleWidget'),
 	                new PositionWidget$1(this)
 	            ];
 	        }
@@ -8068,16 +8142,16 @@
 	    return WidgetRoot;
 	}());
 	var MoveWidget$1 = /** @class */ (function () {
-	    function MoveWidget(widgetRoot, dx, dy, color) {
+	    function MoveWidget(widgetRoot, dx, dy, color, lineStartPixels) {
+	        if (lineStartPixels === void 0) { lineStartPixels = 30; }
 	        var _this = this;
 	        this.widgetRoot = widgetRoot;
 	        this.relativePosition = new Vector(dx, -dy);
 	        var angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
 	        // let angle = this.relativePosition.angleTo(new Vector(1, 0)) * 180 / Math.PI;
-	        this.el = el('div.widget.moveWidget', new WidgetLine(WIDGET_DISTANCE, color, 30), this.control = new WidgetControl('.fas.fa-caret-right', {
+	        this.el = el('div.widget.moveWidget', new WidgetLine(WIDGET_DISTANCE, color, lineStartPixels), this.control = new WidgetControl('.fas.fa-caret-right', {
 	            left: WIDGET_DISTANCE + 'px',
-	            color: color,
-	            transform: 'scaleX(2) translateX(-5%) translateY(-50%)'
+	            color: color
 	        }, function (worldChange, worldPos) {
 	            var rotatedRelativePosition = _this.relativePosition.clone();
 	            { rotatedRelativePosition.rotate(_this.widgetRoot.angle); }
@@ -8105,7 +8179,7 @@
 	        //'.fas.fa-circle'
 	        this.el = el('div.widget.positionWidget', this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl', {
 	            style: {
-	                transform: 'translateX(-50%) translateY(-50%)'
+	            // transform: 'translateX(-50%) translateY(-50%)'
 	            }
 	        }), null, function (worldChange, worldPos) {
 	            _this.widgetRoot.entities.forEach(function (entity) {
@@ -8130,7 +8204,8 @@
 	     * @param relativePosition for example (1, 0) or (-1, 1)
 	     * @param color
 	     */
-	    function ScaleWidget(widgetRoot, relativePosition, scaleDirection, color) {
+	    function ScaleWidget(widgetRoot, relativePosition, scaleDirection, color, lineStartPixels) {
+	        if (lineStartPixels === void 0) { lineStartPixels = 30; }
 	        var _this = this;
 	        this.widgetRoot = widgetRoot;
 	        this.relativePosition = relativePosition;
@@ -8138,7 +8213,11 @@
 	        this.scaleDirection.normalize();
 	        var length = this.relativePosition.length() * WIDGET_DISTANCE;
 	        var angle = this.relativePosition.horizontalAngle() * 180 / Math.PI;
-	        this.el = el('div.widget.scaleWidget', new WidgetLine(length, color, 30), this.control = new WidgetControl('.fas.fa-square', {
+	        if (relativePosition.isZero()) {
+	            // hacky
+	            relativePosition.setScalars(1, -1);
+	        }
+	        this.el = el('div.widget.scaleWidget', new WidgetLine(length, color, lineStartPixels), this.control = new WidgetControl('.fas.fa-square', {
 	            left: length + 'px',
 	            color: color,
 	            transform: "translateX(-50%) translateY(-50%) rotate(" + -angle + "deg)"
@@ -8173,16 +8252,11 @@
 	    return ScaleWidget;
 	}());
 	var AngleWidget$1 = /** @class */ (function () {
-	    function AngleWidget(widgetRoot, type) {
-	        if (type === void 0) { type = 'circle'; }
+	    function AngleWidget(widgetRoot, extraClass) {
+	        if (extraClass === void 0) { extraClass = 'centerAngleWidget'; }
 	        var _this = this;
 	        this.widgetRoot = widgetRoot;
-	        var color = '#0000ff';
-	        this.el = el('div.widget.angleWidget', this.control = new WidgetControl(el('div.widgetControl', {
-	            style: {
-	                color: color
-	            }
-	        }), null, function (worldChange, worldPos) {
+	        this.el = el('div.widget.angleWidget.' + extraClass, this.control = new WidgetControl('.fas.fa-sync-alt', {}, function (worldChange, worldPos) {
 	            var widgetRootWorldPosition = _this.widgetRoot.worldPosition;
 	            var oldMousePosition = worldPos.clone().subtract(worldChange);
 	            var relativeMousePosition = worldPos.clone().subtract(widgetRootWorldPosition);
@@ -8294,6 +8368,9 @@
 	    }
 	    WidgetControl.prototype.onMouseMove = function (mousePos) {
 	        if (mousePos === void 0) { mousePos = new Vector(0, 0); }
+	        if (!scene) {
+	            return;
+	        }
 	        if (mousePos.isZero()) {
 	            mousePos.set(this.previousMousePos);
 	        }
@@ -8333,7 +8410,6 @@
 	        _this.canvasParentSize = new Vector(0, 0);
 	        _this.previousMousePosInWorldCoordinates = new Vector(0, 0);
 	        _this.parentToAddNewEntitiesOn = null;
-	        _this.previouslyEntityClicked = new Date(0);
 	        _this.widgetManager = new WidgetManager();
 	        _this.widgetEntity = null;
 	        /**
@@ -8733,12 +8809,31 @@
 	                { _this.zoomInButtonPressed = false; }
 	        });
 	        listenMouseMove(_this.el, _this.onMouseMove.bind(_this));
+	        function getEntityUnderMouse(pixiCoordinates, displayObject) {
+	            if (displayObject === void 0) { displayObject = scene.stage; }
+	            if (displayObject.selectableEntityHitTest) {
+	                if (displayObject.selectableEntityHitTest(displayObject, pixiCoordinates, scene.stage)) {
+	                    return displayObject.selectableEntityOfSprite;
+	                }
+	            }
+	            else {
+	                var children = displayObject.children;
+	                for (var i = children.length - 1; i >= 0; i--) {
+	                    var entity = getEntityUnderMouse(pixiCoordinates, children[i]);
+	                    if (entity) {
+	                        return entity;
+	                    }
+	                }
+	            }
+	            return null;
+	        }
 	        listenMouseDown(_this.el, function (mousePos) {
 	            // Also see what happens in GameEvent.GLOBAL_ENTITY_CLICKED
 	            var _a;
 	            if (!scene || !mousePos || scene.playing) // !mousePos if mouse has not moved since refresh
 	                { return; }
 	            // this.makeSureSceneHasEditorLayer();
+	            var pixiCoordinates = scene.mouseToPIXI(mousePos);
 	            mousePos = scene.mouseToWorld(mousePos);
 	            setChangeOrigin(_this);
 	            if (_this.newEntities.length > 0)
@@ -8748,17 +8843,22 @@
 	                (_a = _this.entitiesToEdit).push.apply(_a, _this.selectedEntities);
 	            }
 	            else {
-	                _this.selectionStart = mousePos;
-	                _this.selectionEnd = mousePos.clone();
-	                _this.destroySelectionArea();
-	                _this.selectionArea = new PIXI$2.Graphics();
-	                scene.selectionLayer.addChild(_this.selectionArea);
-	                setTimeout(function () {
-	                    if (!keyPressed(key.shift) && new Date().getTime() - _this.previouslyEntityClicked.getTime() > 300) {
-	                        _this.clearSelectedEntities();
-	                        unfocus();
-	                    }
-	                }, 10);
+	                // Check if we hit any entity
+	                console.log('pixiCoordinates', pixiCoordinates);
+	                var clickedEntity = getEntityUnderMouse(pixiCoordinates);
+	                if (clickedEntity) {
+	                    _this.entityClicked(clickedEntity);
+	                }
+	                else if (!keyPressed(key.shift)) {
+	                    _this.clearSelectedEntities();
+	                    unfocus();
+	                    // Start selection
+	                    _this.selectionStart = mousePos;
+	                    _this.selectionEnd = mousePos.clone();
+	                    _this.destroySelectionArea();
+	                    _this.selectionArea = new PIXI$2.Graphics();
+	                    scene.selectionLayer.addChild(_this.selectionArea);
+	                }
 	            }
 	            _this.draw();
 	        });
@@ -8820,7 +8920,6 @@
 	    SceneModule.prototype.entityClicked = function (entity, component) {
 	        if (!scene || scene.playing) // !mousePos if mouse has not moved since refresh
 	            { return; }
-	        this.previouslyEntityClicked = new Date();
 	        if (this.selectedEntities.indexOf(entity) < 0) {
 	            // debugger;
 	            if (keyPressed(key.shift)) {
@@ -11365,8 +11464,8 @@
 	                    _this.focusedKeyFrameViews.forEach(function (view) {
 	                        delete view.trackKeyFrames[view.frame];
 	                    });
-	                    unfocus();
 	                    _this.updateAnimationData();
+	                    unfocus();
 	                }
 	            }
 	        });
@@ -11530,6 +11629,14 @@
 	        }
 	    };
 	    AnimationModule.prototype.saveValue = function (entityPrototype, componendId, property) {
+	        // If this is the first keyframe, make sure there is a keyframe on frame 1.
+	        if (this.animationTimelineView.selectedFrame !== 1) {
+	            var keyFrames = this.selectedAnimation.getKeyFrames(entityPrototype.id, componendId, property.name);
+	            if (!keyFrames || Object.keys(keyFrames).length === 0) {
+	                var frame1Value = entityPrototype.getValue(componendId, property.name);
+	                this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, frame1Value);
+	            }
+	        }
 	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
 	        this.updateAnimationData();
 	    };
@@ -11676,6 +11783,7 @@
 	                frameCount: frameCount
 	            };
 	        });
+	        trackUpdateData.sort(function (a, b) { return a.name.localeCompare(b.name); });
 	        this.trackList.update(trackUpdateData);
 	    };
 	    AnimationTimelineView.prototype.selectFrame = function (frame) {
