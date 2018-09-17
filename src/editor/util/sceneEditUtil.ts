@@ -13,9 +13,11 @@ import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { editorGlobals, SceneMode } from '../editorGlobals';
 import { disableAllChanges, executeWithoutEntityPropertyChangeCreation } from '../../core/property';
 
-let radius = 10;
+export function shouldSyncLevelToScene() {
+	return scene && scene.isInInitialState() && selectedLevel;
+}
 
-export function shouldSyncLevelAndScene() {
+export function shouldSyncSceneToLevel() {
 	return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
 }
 
@@ -68,10 +70,10 @@ function getAffectedEntities(prototypeOrEntityPrototype, prototypeFilter = null)
 
 // Call setChangeOrigin(this) before calling this
 // Does modifications to entities in editor scene based on levels prototypes
-export function syncAChangeFromGameToScene(change) {
+export function syncAChangeFromLevelToScene(change) {
 	if (!scene || !scene.level) return;
 
-	if (!shouldSyncLevelAndScene())
+	if (!shouldSyncLevelToScene())
 		return;
 
 	if (change.type === 'editorSelection')
@@ -106,7 +108,6 @@ export function syncAChangeFromGameToScene(change) {
 				if (oldComponent)
 					entity.deleteComponent(oldComponent);
 
-
 				let proto = entity.prototype;
 				let componentData = proto.findComponentDataByComponentId(ref.componentId, true);
 				if (componentData) {
@@ -136,6 +137,7 @@ export function syncAChangeFromGameToScene(change) {
 			// EntityPrototype
 
 			if (prototype.previouslyCreatedEntity) {
+				//setEntityPropertyValue(prototype.previouslyCreatedEntity, cda.name, cda.componentId, property);
 				executeWithoutEntityPropertyChangeCreation(() => {
 					setEntityPropertyValue(prototype.previouslyCreatedEntity, cda.name, cda.componentId, property);
 				});
@@ -226,7 +228,7 @@ export function syncAChangeFromGameToScene(change) {
 
 export function copyEntitiesToScene(entities: Entity[]) {
 	if (scene) {
-		if (shouldSyncLevelAndScene()) {
+		if (shouldSyncSceneToLevel()) {
 			let newEntities = entities.map(entity => {
 				let parentEntity = entity.getParent() as Entity;
 				let parentEntityPrototype: EntityPrototype;
@@ -298,7 +300,7 @@ export function getEntitiesInSelection(start: Vector, end: Vector)  {
 }
 
 export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) {
-	if (shouldSyncLevelAndScene()) {
+	if (shouldSyncSceneToLevel()) {
 		entities.forEach(e => {
 			let entityPrototypeTransform = e.prototype.getTransform();
 			let entityTransform = e.getComponent('Transform');
@@ -383,7 +385,7 @@ export function setEntityPositions(entities: Entity[], position: Vector) {
 
 export function deleteEntities(entities) {
 	entities = filterChildren(entities);
-	if (shouldSyncLevelAndScene()) {
+	if (shouldSyncSceneToLevel()) {
 		entities.forEach(e => e.prototype.delete());
 	}
 	entities.forEach(e => e.delete());
@@ -393,7 +395,7 @@ export function entityModifiedInEditor(entity, change) {
 	if (!entity || entity.threeLetterType !== 'ent' || !change || change.type !== changeType.setPropertyValue)
 		return;
 
-	if (shouldSyncLevelAndScene()) {
+	if (shouldSyncSceneToLevel()) {
 		let entityPrototype = entity.prototype;
 		console.log('before', entityPrototype);
 		let property = change.reference;

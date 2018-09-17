@@ -1,7 +1,7 @@
 import Popup, { Button, ButtonWithDescription } from './Popup';
 import { componentClasses } from '../../../core/component';
 import ComponentData from '../../../core/componentData';
-import { list, el, List } from 'redom';
+import { list, el, List, RedomComponent } from 'redom';
 import assert from '../../../util/assert';
 import { setChangeOrigin } from '../../../core/change';
 import Confirmation from './Confirmation';
@@ -61,7 +61,7 @@ export default class ComponentAdder extends Popup {
 	}
 }
 
-class Category {
+class Category implements RedomComponent {
 	el: HTMLElement;
 	name: HTMLElement;
 	list: List;

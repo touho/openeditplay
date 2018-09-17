@@ -162,7 +162,6 @@ export default class Entity extends Serializable {
 	}
 
 	resetComponents() {
-		// TODO: Reset all values of all components of this entity and subentities.
 
 		let inheritedComponentDatas = this.prototype.getInheritedComponentDatas();
 

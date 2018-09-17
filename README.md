@@ -33,9 +33,10 @@ mysql -u openeditplay --password="openeditplay" --database=openeditplay < instal
 
 
 ### TODO ###
+- bug: reset when recording keyframes (mayber also preview) causing changes without origin. Don't just set the origin. Find out why entity reset is causing a change. It shouldn't. Because game itself is not changing. Maybe resetComponents should be run with executeWithoutEntityPropertyChangeCreation()?
+- left tree, user select none
 - Animation:
     - BUG: Recording properties from property editor
-    - Insert frame 1 keyframe if missing
     - Move keyframe
     - Track interpolation method discreet/linear/cubic
     - Animation loop mode: no loop/loop/back and forth
@@ -46,4 +47,4 @@ mysql -u openeditplay --password="openeditplay" --database=openeditplay < instal
 - Object instance value/component saving
 - When detaching from prototype, don't include every single property etc. Save space.
 - When changing selection, don't animate property editor packed statuses. Slows down too much.
-- Proper sprite support
+- Proper sprite support: image resource

@@ -3456,7 +3456,6 @@
 	        return true;
 	    };
 	    Entity.prototype.resetComponents = function () {
-	        // TODO: Reset all values of all components of this entity and subentities.
 	        var _this = this;
 	        var inheritedComponentDatas = this.prototype.getInheritedComponentDatas();
 	        inheritedComponentDatas.forEach(function (icd) {
@@ -6898,7 +6897,10 @@
 	}());
 	//# sourceMappingURL=topBarModule.js.map
 
-	function shouldSyncLevelAndScene() {
+	function shouldSyncLevelToScene() {
+	    return scene && scene.isInInitialState() && selectedLevel;
+	}
+	function shouldSyncSceneToLevel() {
 	    return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
 	}
 	function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
@@ -6943,10 +6945,10 @@
 	}
 	// Call setChangeOrigin(this) before calling this
 	// Does modifications to entities in editor scene based on levels prototypes
-	function syncAChangeFromGameToScene(change) {
+	function syncAChangeFromLevelToScene(change) {
 	    if (!scene || !scene.level)
 	        { return; }
-	    if (!shouldSyncLevelAndScene())
+	    if (!shouldSyncLevelToScene())
 	        { return; }
 	    if (change.type === 'editorSelection')
 	        { return; }
@@ -7005,6 +7007,7 @@
 	        if (prototype_1.threeLetterType === 'epr') {
 	            // EntityPrototype
 	            if (prototype_1.previouslyCreatedEntity) {
+	                //setEntityPropertyValue(prototype.previouslyCreatedEntity, cda.name, cda.componentId, property);
 	                executeWithoutEntityPropertyChangeCreation(function () {
 	                    setEntityPropertyValue(prototype_1.previouslyCreatedEntity, cda_1.name, cda_1.componentId, property_2);
 	                });
@@ -7097,7 +7100,7 @@
 	}
 	function copyEntitiesToScene(entities) {
 	    if (scene) {
-	        if (shouldSyncLevelAndScene()) {
+	        if (shouldSyncSceneToLevel()) {
 	            var newEntities = entities.map(function (entity) {
 	                var parentEntity = entity.getParent();
 	                var parentEntityPrototype;
@@ -7199,7 +7202,7 @@
 	function entityModifiedInEditor(entity, change) {
 	    if (!entity || entity.threeLetterType !== 'ent' || !change || change.type !== changeType.setPropertyValue)
 	        { return; }
-	    if (shouldSyncLevelAndScene()) {
+	    if (shouldSyncSceneToLevel()) {
 	        var entityPrototype = entity.prototype;
 	        console.log('before', entityPrototype);
 	        var property = change.reference;
@@ -8403,6 +8406,29 @@
 	 * If changes are made to prototypes, SceneModule will update changes to entities.
 	 * If changes are made to entities, it won't affect entityPrototypes automatically.
 	 */
+	/*
+
+	Level-Scene sync:
+
+	- If scene.isInInitialState & state = normal:
+	    - Edit level. addChange enabled in level edits
+	    - Don't edit scene. addChange disabled in scene edits
+	    - Sync everything from level to scene
+	    - state = preview:
+	        - Can also edit scene, but values are not stored.
+	        - preview state is mainly visual hint for user.
+	    - state = recording:
+	        - Edit scene & level
+	        - addChange enabled in scene & level
+	        - No sync in either direction
+	- If not scene.isInInitialState:
+	    - Don't sync from level to scene. addChange enabled in level edits
+	    - Don't sync from scene to level. addChange enabled in scene edits only when properties of selected entities change. (for property editor)
+
+	How to do:
+	- search for 'TODO: Level-Scene sync' (actually there aren't any yet)
+
+	*/
 	var SceneModule = /** @class */ (function (_super) {
 	    __extends(SceneModule, _super);
 	    function SceneModule() {
@@ -8526,7 +8552,7 @@
 	            }, 0);
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_PRE_DELETE_SELECTION, function () {
-	            if (editorSelection.type === 'ent' && shouldSyncLevelAndScene()) {
+	            if (editorSelection.type === 'ent' && shouldSyncLevelToScene()) {
 	                editorSelection.items.forEach(function (e) { return e.prototype.delete(); });
 	            }
 	        });
@@ -8691,7 +8717,7 @@
 	                ]);
 	                var transform = entity.getComponent('Transform');
 	                transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (position) {
-	                    if (shouldSyncLevelAndScene()) {
+	                    if (shouldSyncSceneToLevel()) {
 	                        var entityPrototype = entity.prototype;
 	                        var entityPrototypeTransform_1 = entityPrototype.getTransform();
 	                        executeWithOrigin(_this, function () {
@@ -8702,7 +8728,7 @@
 	                    }
 	                });
 	                transform._properties.scale.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (scale) {
-	                    if (shouldSyncLevelAndScene()) {
+	                    if (shouldSyncSceneToLevel()) {
 	                        var entityPrototype = entity.prototype;
 	                        var entityPrototypeTransform_2 = entityPrototype.getTransform();
 	                        executeWithOrigin(_this, function () {
@@ -8713,7 +8739,7 @@
 	                    }
 	                });
 	                transform._properties.angle.listen(GameEvent.PROPERTY_VALUE_CHANGE, function (angle) {
-	                    if (shouldSyncLevelAndScene()) {
+	                    if (shouldSyncSceneToLevel()) {
 	                        var entityPrototype = entity.prototype;
 	                        var entityPrototypeTransform_3 = entityPrototype.getTransform();
 	                        executeWithOrigin(_this, function () {
@@ -8761,7 +8787,7 @@
 	            if (change.origin !== _this) {
 	                _this.deleteNewEntities(); // Why? If someone else does anything in editor, new entities are gone..
 	                setChangeOrigin(_this);
-	                syncAChangeFromGameToScene(change);
+	                syncAChangeFromLevelToScene(change);
 	                _this.draw();
 	            }
 	            stop('Editor: Scene');
@@ -9202,7 +9228,7 @@
 	        this.newEntities.length = 0;
 	    };
 	    SceneModule.prototype.selectSelectedEntitiesInEditor = function () {
-	        if (shouldSyncLevelAndScene() || editorGlobals.sceneMode === SceneMode.RECORDING) {
+	        if (shouldSyncLevelToScene() && editorGlobals.sceneMode !== SceneMode.RECORDING) {
 	            selectInEditor(this.selectedEntities.map(function (ent) { return ent.prototype; }), this);
 	            editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 	            Module.activateOneOfModules(['type', 'object'], false);
@@ -9261,7 +9287,7 @@
 	    SceneModule.prototype.copyEntities = function (entities) {
 	        var _a;
 	        this.copiedEntities.forEach(function (entity) { return entity.delete(); });
-	        this.copiedEntities.length = [];
+	        this.copiedEntities.length = 0;
 	        (_a = this.copiedEntities).push.apply(_a, entities.map(function (entity) { return entity.clone(); }));
 	        this.copiedEntities.forEach(function (entity) { return entity.sleep(); });
 	    };
@@ -11634,7 +11660,7 @@
 	            var keyFrames = this.selectedAnimation.getKeyFrames(entityPrototype.id, componendId, property.name);
 	            if (!keyFrames || Object.keys(keyFrames).length === 0) {
 	                var frame1Value = entityPrototype.getValue(componendId, property.name);
-	                this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, frame1Value);
+	                this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, property.propertyType.type.toJSON(frame1Value));
 	            }
 	        }
 	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
@@ -11925,7 +11951,6 @@
 	    }
 	}
 	*/
-	//# sourceMappingURL=animationModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);

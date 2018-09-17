@@ -364,7 +364,7 @@ class AnimationModule extends Module {
 			let keyFrames = this.selectedAnimation.getKeyFrames(entityPrototype.id, componendId, property.name);
 			if (!keyFrames || Object.keys(keyFrames).length === 0) {
 				let frame1Value = entityPrototype.getValue(componendId, property.name);
-				this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, frame1Value);
+				this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, property.propertyType.type.toJSON(frame1Value));
 			}
 		}
 

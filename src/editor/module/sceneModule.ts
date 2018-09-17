@@ -49,6 +49,30 @@ const MAX_ZOOM = 10;
  * If changes are made to entities, it won't affect entityPrototypes automatically.
  */
 
+/*
+
+Level-Scene sync:
+
+- If scene.isInInitialState & state = normal:
+	- Edit level. addChange enabled in level edits
+	- Don't edit scene. addChange disabled in scene edits
+	- Sync everything from level to scene
+	- state = preview:
+		- Can also edit scene, but values are not stored.
+		- preview state is mainly visual hint for user.
+	- state = recording:
+		- Edit scene & level
+		- addChange enabled in scene & level
+		- No sync in either direction
+- If not scene.isInInitialState:
+	- Don't sync from level to scene. addChange enabled in level edits
+	- Don't sync from scene to level. addChange enabled in scene edits only when properties of selected entities change. (for property editor)
+
+How to do:
+- search for 'TODO: Level-Scene sync' (actually there aren't any yet)
+
+*/
+
 class SceneModule extends Module {
 	canvas: HTMLCanvasElement;
 	homeButton: HTMLElement;
@@ -212,7 +236,7 @@ class SceneModule extends Module {
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_PRE_DELETE_SELECTION, () => {
-			if (editorSelection.type === 'ent' && sceneEdit.shouldSyncLevelAndScene()) {
+			if (editorSelection.type === 'ent' && sceneEdit.shouldSyncLevelToScene()) {
 				editorSelection.items.forEach((e: Entity) => e.prototype.delete());
 			}
 		});
@@ -422,7 +446,7 @@ class SceneModule extends Module {
 				]);
 				let transform = entity.getComponent('Transform');
 				transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, position => {
-					if (sceneEdit.shouldSyncLevelAndScene()) {
+					if (sceneEdit.shouldSyncSceneToLevel()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
 						executeWithOrigin(this, () => {
@@ -434,7 +458,7 @@ class SceneModule extends Module {
 					}
 				});
 				transform._properties.scale.listen(GameEvent.PROPERTY_VALUE_CHANGE, scale => {
-					if (sceneEdit.shouldSyncLevelAndScene()) {
+					if (sceneEdit.shouldSyncSceneToLevel()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
 						executeWithOrigin(this, () => {
@@ -446,7 +470,7 @@ class SceneModule extends Module {
 					}
 				});
 				transform._properties.angle.listen(GameEvent.PROPERTY_VALUE_CHANGE, angle => {
-					if (sceneEdit.shouldSyncLevelAndScene()) {
+					if (sceneEdit.shouldSyncSceneToLevel()) {
 						let entityPrototype = entity.prototype;
 						let entityPrototypeTransform = entityPrototype.getTransform();
 						executeWithOrigin(this, () => {
@@ -500,7 +524,7 @@ class SceneModule extends Module {
 				this.deleteNewEntities(); // Why? If someone else does anything in editor, new entities are gone..
 				setChangeOrigin(this);
 
-				sceneEdit.syncAChangeFromGameToScene(change);
+				sceneEdit.syncAChangeFromLevelToScene(change);
 				this.draw();
 			}
 			performanceTool.stop('Editor: Scene');
@@ -1005,7 +1029,7 @@ class SceneModule extends Module {
 	}
 
 	selectSelectedEntitiesInEditor() {
-		if (sceneEdit.shouldSyncLevelAndScene() || editorGlobals.sceneMode === SceneMode.RECORDING) {
+		if (sceneEdit.shouldSyncLevelToScene() && editorGlobals.sceneMode !== SceneMode.RECORDING) {
 			selectInEditor(this.selectedEntities.map(ent => ent.prototype), this);
 			editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
 			Module.activateOneOfModules(['type', 'object'], false);
@@ -1065,7 +1089,7 @@ class SceneModule extends Module {
 
 	copyEntities(entities: Entity[]) {
 		this.copiedEntities.forEach(entity => entity.delete());
-		this.copiedEntities.length = [];
+		this.copiedEntities.length = 0;
 		this.copiedEntities.push(...entities.map(entity => entity.clone()));
 		this.copiedEntities.forEach(entity => entity.sleep());
 	}
