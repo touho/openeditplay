@@ -76,10 +76,9 @@ class SceneModule extends Module {
 	canvas: HTMLCanvasElement;
 	homeButton: HTMLElement;
 	globeButton: HTMLElement;
-	copyButton: HTMLElement;
-	deleteButton: HTMLElement;
 	canvasParentSize: Vector = new Vector(0, 0);
 	previousMousePosInWorldCoordinates: Vector = new Vector(0, 0);
+	previousMousePosInMouseCoordinates: Vector = new Vector(0, 0);
 	parentToAddNewEntitiesOn: EntityPrototype = null;
 
 	widgetManager: WidgetManager = new WidgetManager();
@@ -103,7 +102,15 @@ class SceneModule extends Module {
 	/**
 	 * Press 'v' to clone these to newEntities. copiedEntities are sleeping.
 	 */
-	copiedEntities: Entity[] = [];
+	copiedEntityPrototypes: EntityPrototype[] = [];
+	selectionStart: Vector = null;
+	selectionEnd: Vector = null;
+	editorCameraPosition: Vector = new Vector(0, 0);
+
+	editorCameraZoom: number = 1;
+	selectionArea: PIXI.Graphics = null;
+	requestAnimationFrameId: number;
+	zoomInButtonPressed: boolean = false;
 
 	constructor() {
 		super();
@@ -197,18 +204,26 @@ class SceneModule extends Module {
 		this.widgetManager.setParentElement(this.el);
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
-			if (['ent', 'epr'].includes(editorSelection.type) && this.selectedEntities.length > 0) {
-				// Entities are put to scene tree. Game tree won't have newEntities items.
-
+			if (editorSelection.type === 'epr') {
 				setChangeOrigin(this);
-
 				this.deleteNewEntities();
-				let entities = filterChildren(this.selectedEntities) as Entity[];
-				this.newEntities.push(...entities.map(e => e.clone(e.getParent())));
-				this.copyEntities(this.newEntities);
+				let entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[]
+				this.copyEntityPrototypes(entityPrototypes)
+				this.newEntities.push(...entityPrototypes.map(epr => epr.clone().createEntity(epr.previouslyCreatedEntity.getParent())))
 				this.clearSelectedEntities();
 				sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
 				this.draw();
+				selectInEditor([], this);
+			} else if (editorSelection.type === 'ent') {
+				setChangeOrigin(this);
+				this.deleteNewEntities();
+				let entities = filterChildren(editorSelection.items) as Entity[]
+				this.copyEntityPrototypes(entities.map(ent => ent.prototype) as EntityPrototype[]);
+				this.newEntities.push(...entities.map(ent => ent.clone(ent.getParent())))
+				this.clearSelectedEntities();
+				sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
+				this.draw();
+				selectInEditor([], this);
 			}
 		});
 
@@ -258,12 +273,6 @@ class SceneModule extends Module {
 
 		this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
 
-		this.editorCameraPosition = new Vector(0, 0);
-		this.editorCameraZoom = 1;
-
-		this.selectionStart = null;
-		this.selectionEnd = null;
-		this.selectionArea = null;
 		this.entitiesInSelection = [];
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_RESET, () => {
@@ -273,7 +282,7 @@ class SceneModule extends Module {
 			setChangeOrigin(this);
 			this.stopAndReset();
 
-			if (scene.layers.editorLayer)
+			if (scene && scene.layers.editorLayer)
 				scene.layers.editorLayer.visible = true;
 		});
 
@@ -436,13 +445,13 @@ class SceneModule extends Module {
 
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
-			if (scene && scene.resetting || change.origin === this) {
+			if (scene && scene.resetting) {
 				return;
 			}
 
 			performanceTool.start('Editor: Scene');
 
-			if (change.type === 'editorSelection') {
+			if (change.type === 'editorSelection' && change.origin !== this) {
 				this.updatePropertyChangeCreationFilter();
 				this.clearSelectedEntities();
 				if (change.reference.type === 'epr') {
@@ -467,18 +476,13 @@ class SceneModule extends Module {
 				}
 			}
 
-			// console.log('sceneModule change', change);
-			if (change.origin !== this) {
-				this.deleteNewEntities(); // Why? If someone else does anything in editor, new entities are gone..
-				setChangeOrigin(this);
-
+			executeWithOrigin(this, () => {
 				sceneEdit.syncAChangeFromLevelToScene(change);
-				this.draw();
-			}
+			})
+			this.draw();
+
 			performanceTool.stop('Editor: Scene');
 		});
-
-		this.zoomInButtonPressed = false;
 
 		listenKeyDown(k => {
 			if (!scene)
@@ -556,7 +560,7 @@ class SceneModule extends Module {
 				let clickedEntity = getEntityUnderMouse(pixiCoordinates);
 				if (clickedEntity) {
 					this.entityClicked(clickedEntity);
-				} else if (!keyPressed(key.shift)) {
+				} else if (!sceneEdit.isMultiSelectModifierPressed()) {
 					this.clearSelectedEntities();
 					unfocus();
 
@@ -582,7 +586,7 @@ class SceneModule extends Module {
 			this.entitiesToEdit.length = 0;
 
 			if (this.entitiesInSelection.length > 0) {
-				if (keyPressed(key.shift)) {
+				if (sceneEdit.isMultiSelectModifierPressed()) {
 					this.entitiesInSelection.push(...this.selectedEntities);
 				}
 				this.selectEntities(this.entitiesInSelection);
@@ -635,7 +639,7 @@ class SceneModule extends Module {
 
 		if (this.selectedEntities.indexOf(entity) < 0) {
 			// debugger;
-			if (keyPressed(key.shift)) {
+			if (sceneEdit.isMultiSelectModifierPressed()) {
 				this.selectEntities([...this.selectedEntities, entity]);
 			} else {
 				this.selectEntities([entity]);
@@ -646,7 +650,7 @@ class SceneModule extends Module {
 	}
 
 	// mousePos is optional. returns true if scene has been drawn
-	onMouseMove(mouseCoordinatePosition) {
+	onMouseMove(mouseCoordinatePosition?) {
 		if (!scene || !mouseCoordinatePosition && !this.previousMousePosInMouseCoordinates)
 			return false;
 
@@ -986,7 +990,11 @@ class SceneModule extends Module {
 			return;
 
 		if (scene.isInInitialState()) {
-			enableAllChanges();
+			if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+				enableAllChanges();
+			} else {
+				disableAllChanges();
+			}
 		} else if (editorSelection.type === 'ent') {
 			filterSceneChanges(property => {
 				let selectedEntities = editorSelection.items;
@@ -997,17 +1005,16 @@ class SceneModule extends Module {
 		}
 	}
 
-	copyEntities(entities: Entity[]) {
-		this.copiedEntities.forEach(entity => entity.delete());
-		this.copiedEntities.length = 0;
-		this.copiedEntities.push(...entities.map(entity => entity.clone()));
-		this.copiedEntities.forEach(entity => entity.sleep());
+	copyEntityPrototypes(entityPrototypes: EntityPrototype[]) {
+		this.copiedEntityPrototypes.forEach(epr => epr.delete());
+		this.copiedEntityPrototypes.length = 0;
+		this.copiedEntityPrototypes.push(...entityPrototypes.map(epr => epr.clone()));
 	}
 
 	pasteEntities() {
 		this.deleteNewEntities();
-		this.newEntities.push(...this.copiedEntities.map(entity => entity.clone()));
-		this.newEntities.forEach(entity => entity.wakeUp());
+		this.newEntities.push(...this.copiedEntityPrototypes.map(epr => epr.clone().createEntity()));
+		// this.newEntities.forEach(entity => entity.wakeUp());
 
 		if (this.previousMousePosInWorldCoordinates)
 			sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);

@@ -274,10 +274,11 @@
 	function addChange(type, reference) {
 	    // @ifndef OPTIMIZE
 	    assert(origin, 'Change without origin!');
-	    circularDependencyDetector.enter(type + (reference && reference.threeLetterType));
+	    var circularEventId = type + (reference && reference.threeLetterType);
+	    circularDependencyDetector.enter(circularEventId);
 	    // @endif
 	    if (!reference.id)
-	        { return; }
+	        { return circularDependencyDetector.leave(circularEventId); }
 	    var change = {
 	        type: type,
 	        reference: reference,
@@ -303,6 +304,7 @@
 	        origin = previousOrigin;
 	    }
 	    // @endif
+	    circularDependencyDetector.leave(circularEventId);
 	}
 	function executeExternal(callback) {
 	    executeWithOrigin('external', function () {
@@ -5688,7 +5690,7 @@
 	        }
 	        var animationLength = this.currentAnimation.frames / this.currentAnimation.fps;
 	        this.time += dt;
-	        if (this.time > animationLength) {
+	        if (this.time >= animationLength) {
 	            this.time -= animationLength;
 	        }
 	        var totalFrames = this.currentAnimation.frames;
@@ -6903,6 +6905,9 @@
 	function shouldSyncLevelToScene() {
 	    return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
 	}
+	function isMultiSelectModifierPressed() {
+	    return keyPressed(key.shift) /*|| keyPressed(key.ctrl) buggy right click */ || keyPressed(key.appleLeft) || keyPressed(key.appleRight);
+	}
 	function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
 	    var component = entity.getComponents(componentName)
 	        .filter(function (c) { return c._componentId === componentId; })[0];
@@ -7099,6 +7104,7 @@
 	    }
 	}
 	function addEntitiesToLevel(entities) {
+	    console.log('addEntitiesToLevel', entities);
 	    entities.map(function (entity) {
 	        var parentEntity = entity.getParent();
 	        var parentEntityPrototype;
@@ -7110,7 +7116,7 @@
 	        (parentEntityPrototype || selectedLevel).addChild(epr);
 	        // TODO: Level-Scene sync - get epr.previouslyCreatedEntity and return those
 	    });
-	    return []; // new entities
+	    return []; // new entities. TODO
 	}
 	function getEntitiesInSelection(start, end) {
 	    var entities = [];
@@ -7389,15 +7395,13 @@
 	        this.transformIsDirty = false;
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.type === 'editorSelection') {
+	                console.log('gah');
 	                _this.entityPrototypes.length = 0;
 	                if (editorSelection.type === 'epr') {
 	                    _this.entityPrototypes = filterChildren(editorSelection.items);
 	                    assert(!_this.entityPrototypes.find(function (epr) { return !epr.previouslyCreatedEntity; }), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
-	                    _this.updateWidgets();
 	                }
-	                else if (editorSelection.items.length === 0) {
-	                    _this.updateWidgets();
-	                }
+	                _this.updateWidgets();
 	            }
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {
@@ -7822,6 +7826,7 @@
 	        var _this = _super.call(this) || this;
 	        _this.canvasParentSize = new Vector(0, 0);
 	        _this.previousMousePosInWorldCoordinates = new Vector(0, 0);
+	        _this.previousMousePosInMouseCoordinates = new Vector(0, 0);
 	        _this.parentToAddNewEntitiesOn = null;
 	        _this.widgetManager = new WidgetManager();
 	        _this.widgetEntity = null;
@@ -7840,7 +7845,13 @@
 	        /**
 	         * Press 'v' to clone these to newEntities. copiedEntities are sleeping.
 	         */
-	        _this.copiedEntities = [];
+	        _this.copiedEntityPrototypes = [];
+	        _this.selectionStart = null;
+	        _this.selectionEnd = null;
+	        _this.editorCameraPosition = new Vector(0, 0);
+	        _this.editorCameraZoom = 1;
+	        _this.selectionArea = null;
+	        _this.zoomInButtonPressed = false;
 	        _this.addElements(_this.canvas = el('canvas.openEditPlayCanvas.select-none', {
 	            // width and height will be fixed after loading
 	            width: 0,
@@ -7904,17 +7915,28 @@
 	        _this.el.classList.add('hideScenePauseInformation');
 	        _this.widgetManager.setParentElement(_this.el);
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, function () {
-	            var _a;
-	            if (['ent', 'epr'].includes(editorSelection.type) && _this.selectedEntities.length > 0) {
-	                // Entities are put to scene tree. Game tree won't have newEntities items.
+	            var _a, _b;
+	            if (editorSelection.type === 'epr') {
 	                setChangeOrigin(_this);
 	                _this.deleteNewEntities();
-	                var entities = filterChildren(_this.selectedEntities);
-	                (_a = _this.newEntities).push.apply(_a, entities.map(function (e) { return e.clone(e.getParent()); }));
-	                _this.copyEntities(_this.newEntities);
+	                var entityPrototypes = filterChildren(editorSelection.items);
+	                _this.copyEntityPrototypes(entityPrototypes);
+	                (_a = _this.newEntities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.clone().createEntity(epr.previouslyCreatedEntity.getParent()); }));
 	                _this.clearSelectedEntities();
 	                setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
 	                _this.draw();
+	                selectInEditor([], _this);
+	            }
+	            else if (editorSelection.type === 'ent') {
+	                setChangeOrigin(_this);
+	                _this.deleteNewEntities();
+	                var entities = filterChildren(editorSelection.items);
+	                _this.copyEntityPrototypes(entities.map(function (ent) { return ent.prototype; }));
+	                (_b = _this.newEntities).push.apply(_b, entities.map(function (ent) { return ent.clone(ent.getParent()); }));
+	                _this.clearSelectedEntities();
+	                setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
+	                _this.draw();
+	                selectInEditor([], _this);
 	            }
 	        });
 	        editorEventDispacher.listen('locate serializable', function (serializable) {
@@ -7954,18 +7976,13 @@
 	        _this.previousMousePosInWorldCoordinates = null;
 	        _this.previousMousePosInMouseCoordinates = null;
 	        _this.entitiesToEdit = []; // A widget is editing these entities when mouse is held down.
-	        _this.editorCameraPosition = new Vector(0, 0);
-	        _this.editorCameraZoom = 1;
-	        _this.selectionStart = null;
-	        _this.selectionEnd = null;
-	        _this.selectionArea = null;
 	        _this.entitiesInSelection = [];
 	        editorEventDispacher.listen(EditorEvent.EDITOR_RESET, function () {
 	            editorGlobals.sceneMode = SceneMode.NORMAL;
 	            unfocus();
 	            setChangeOrigin(_this);
 	            _this.stopAndReset();
-	            if (scene.layers.editorLayer)
+	            if (scene && scene.layers.editorLayer)
 	                { scene.layers.editorLayer.visible = true; }
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_PLAY, function () {
@@ -8092,11 +8109,11 @@
 	            entity.forEachChild('ent', handleEntity, true);
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
-	            if (scene && scene.resetting || change.origin === _this) {
+	            if (scene && scene.resetting) {
 	                return;
 	            }
 	            start('Editor: Scene');
-	            if (change.type === 'editorSelection') {
+	            if (change.type === 'editorSelection' && change.origin !== _this) {
 	                _this.updatePropertyChangeCreationFilter();
 	                _this.clearSelectedEntities();
 	                if (change.reference.type === 'epr') {
@@ -8121,16 +8138,12 @@
 	                    _this.selectEntities(change.reference.items);
 	                }
 	            }
-	            // console.log('sceneModule change', change);
-	            if (change.origin !== _this) {
-	                _this.deleteNewEntities(); // Why? If someone else does anything in editor, new entities are gone..
-	                setChangeOrigin(_this);
+	            executeWithOrigin(_this, function () {
 	                syncAChangeFromLevelToScene(change);
-	                _this.draw();
-	            }
+	            });
+	            _this.draw();
 	            stop('Editor: Scene');
 	        });
-	        _this.zoomInButtonPressed = false;
 	        listenKeyDown(function (k) {
 	            if (!scene)
 	                { return; }
@@ -8206,7 +8219,7 @@
 	                if (clickedEntity) {
 	                    _this.entityClicked(clickedEntity);
 	                }
-	                else if (!keyPressed(key.shift)) {
+	                else if (!isMultiSelectModifierPressed()) {
 	                    _this.clearSelectedEntities();
 	                    unfocus();
 	                    // Start selection
@@ -8229,7 +8242,7 @@
 	            _this.destroySelectionArea();
 	            _this.entitiesToEdit.length = 0;
 	            if (_this.entitiesInSelection.length > 0) {
-	                if (keyPressed(key.shift)) {
+	                if (isMultiSelectModifierPressed()) {
 	                    (_a = _this.entitiesInSelection).push.apply(_a, _this.selectedEntities);
 	                }
 	                _this.selectEntities(_this.entitiesInSelection);
@@ -8274,7 +8287,7 @@
 	            { return; }
 	        if (this.selectedEntities.indexOf(entity) < 0) {
 	            // debugger;
-	            if (keyPressed(key.shift)) {
+	            if (isMultiSelectModifierPressed()) {
 	                this.selectEntities(this.selectedEntities.concat([entity]));
 	            }
 	            else {
@@ -8570,7 +8583,12 @@
 	        if (!scene)
 	            { return; }
 	        if (scene.isInInitialState()) {
-	            enableAllChanges();
+	            if (editorGlobals.sceneMode === SceneMode.RECORDING) {
+	                enableAllChanges();
+	            }
+	            else {
+	                disableAllChanges();
+	            }
 	        }
 	        else if (editorSelection.type === 'ent') {
 	            filterSceneChanges(function (property) {
@@ -8582,18 +8600,17 @@
 	            disableAllChanges();
 	        }
 	    };
-	    SceneModule.prototype.copyEntities = function (entities) {
+	    SceneModule.prototype.copyEntityPrototypes = function (entityPrototypes) {
 	        var _a;
-	        this.copiedEntities.forEach(function (entity) { return entity.delete(); });
-	        this.copiedEntities.length = 0;
-	        (_a = this.copiedEntities).push.apply(_a, entities.map(function (entity) { return entity.clone(); }));
-	        this.copiedEntities.forEach(function (entity) { return entity.sleep(); });
+	        this.copiedEntityPrototypes.forEach(function (epr) { return epr.delete(); });
+	        this.copiedEntityPrototypes.length = 0;
+	        (_a = this.copiedEntityPrototypes).push.apply(_a, entityPrototypes.map(function (epr) { return epr.clone(); }));
 	    };
 	    SceneModule.prototype.pasteEntities = function () {
 	        var _a;
 	        this.deleteNewEntities();
-	        (_a = this.newEntities).push.apply(_a, this.copiedEntities.map(function (entity) { return entity.clone(); }));
-	        this.newEntities.forEach(function (entity) { return entity.wakeUp(); });
+	        (_a = this.newEntities).push.apply(_a, this.copiedEntityPrototypes.map(function (epr) { return epr.clone().createEntity(); }));
+	        // this.newEntities.forEach(entity => entity.wakeUp());
 	        if (this.previousMousePosInWorldCoordinates)
 	            { setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates); }
 	    };
@@ -10511,7 +10528,7 @@
 	            var keyFrameList = Array.isArray(keyFrameView) ? keyFrameView : [keyFrameView];
 	            keyFrameList = keyFrameList.filter(function (frameView) { return frameView.isKeyFrame(); });
 	            var allAreSelected = !keyFrameList.find(function (frameView) { return !_this.focusedKeyFrameViews.includes(frameView); });
-	            if (keyPressed(key.shift)) {
+	            if (isMultiSelectModifierPressed()) {
 	                if (keyFrameList.length > 0) {
 	                    if (allAreSelected) {
 	                        for (var _i = 0, keyFrameList_1 = keyFrameList; _i < keyFrameList_1.length; _i++) {
@@ -11311,9 +11328,7 @@
 	    }
 	    stop('Editor: General');
 	});
-	var circularDependencyDetector$1 = new CircularDependencyDetector();
 	editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
-	    circularDependencyDetector$1.enter(change.type + change.reference.threeLetterType + change.reference.type);
 	    editor && editorUpdateLimited();
 	});
 	editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, function () {

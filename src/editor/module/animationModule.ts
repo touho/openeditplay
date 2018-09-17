@@ -19,6 +19,7 @@ import { Component } from '../../core/component';
 import { getSerializable } from '../../core/serializableManager';
 import EditorSelection from '../components/EditorSelection';
 import Confirmation from '../views/popup/Confirmation';
+import { isMultiSelectModifierPressed } from '../util/sceneEditUtil';
 
 class AnimationModule extends Module {
 	animations: animation.Animation[] = [];
@@ -198,7 +199,7 @@ class AnimationModule extends Module {
 			keyFrameList = keyFrameList.filter(frameView => frameView.isKeyFrame());
 			let allAreSelected = !keyFrameList.find(frameView => !this.focusedKeyFrameViews.includes(frameView));
 
-			if (keyPressed(key.shift)) {
+			if (isMultiSelectModifierPressed()) {
 				if (keyFrameList.length > 0) {
 					if (allAreSelected) {
 						for (let frameView of keyFrameList) {

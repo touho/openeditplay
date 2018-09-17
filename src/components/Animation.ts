@@ -60,7 +60,7 @@ class Animator {
 		}
 		const animationLength = this.currentAnimation.frames / this.currentAnimation.fps;
 		this.time += dt;
-		if (this.time > animationLength) {
+		if (this.time >= animationLength) {
 			this.time -= animationLength;
 		}
 		let totalFrames = this.currentAnimation.frames;

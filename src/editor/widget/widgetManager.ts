@@ -21,14 +21,14 @@ export class WidgetManager {
     constructor() {
         editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
             if (change.type === 'editorSelection') {
+                console.log('gah');
+
                 this.entityPrototypes.length = 0;
                 if (editorSelection.type === 'epr') {
                     this.entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[];
                     assert(!this.entityPrototypes.find(epr => !epr.previouslyCreatedEntity), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
-                    this.updateWidgets();
-                } else if (editorSelection.items.length === 0) {
-                    this.updateWidgets();
                 }
+                this.updateWidgets();
             }
         });
         editorEventDispacher.listen(EditorEvent.EDITOR_UNFOCUS, () => {

@@ -5,13 +5,14 @@ import Prototype, { InheritedComponentData } from './prototype';
 import { Component } from './component';
 import { getSerializable } from './serializableManager';
 import Property from './property';
+import EntityPrototype from './entityPrototype';
 
 const ALIVE_ERROR = 'entity is already dead';
 
 export default class Entity extends Serializable {
 	components: Map<string, Array<Component>>;
 	sleeping: boolean;
-	prototype: Prototype;
+	prototype: EntityPrototype;
 	localMaster: boolean;
 
 	static ENTITY_CREATION_DEBUGGING = false;
@@ -60,7 +61,7 @@ export default class Entity extends Serializable {
 
 	clone(parent: Serializable = null) {
 		let entity = new Entity();
-		entity.prototype = this.prototype.clone() as Prototype;
+		entity.prototype = this.prototype.clone() as EntityPrototype;
 		entity.sleeping = this.sleeping;
 
 		let components = [];

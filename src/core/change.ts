@@ -60,10 +60,11 @@ let externalChange = false;
 export function addChange(type: string, reference: Serializable) {
 	// @ifndef OPTIMIZE
 	assert(origin, 'Change without origin!');
-	circularDependencyDetector.enter(type + (reference && reference.threeLetterType));
+	const circularEventId = type + (reference && reference.threeLetterType)
+	circularDependencyDetector.enter(circularEventId)
 	// @endif
 
-	if (!reference.id) return;
+	if (!reference.id) return circularDependencyDetector.leave(circularEventId);
 
 	let change: Change = {
 		type,
@@ -97,6 +98,8 @@ export function addChange(type: string, reference: Serializable) {
 		origin = previousOrigin;
 	}
 	// @endif
+
+	circularDependencyDetector.leave(circularEventId)
 }
 
 export function executeExternal(callback) {

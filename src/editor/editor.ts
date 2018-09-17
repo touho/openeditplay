@@ -89,9 +89,7 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	performance.stop('Editor: General');
 });
 
-let circularDependencyDetector = new CircularDependencyDetector();
 editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
-	circularDependencyDetector.enter(change.type + change.reference.threeLetterType + (change.reference as any).type);
 	editor && editorUpdateLimited();
 });
 

@@ -12,9 +12,14 @@ import EntityPrototype from '../../core/entityPrototype';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { editorGlobals, SceneMode } from '../editorGlobals';
 import { disableAllChanges, executeWithoutEntityPropertyChangeCreation } from '../../core/property';
+import { keyPressed, key } from '../../util/input';
 
 export function shouldSyncLevelToScene() {
 	return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
+}
+
+export function isMultiSelectModifierPressed() {
+	return keyPressed(key.shift) /*|| keyPressed(key.ctrl) buggy right click */ || keyPressed(key.appleLeft) || keyPressed(key.appleRight)
 }
 
 function setEntityPropertyValue(entity, componentName, componentId, sourceProperty) {
@@ -223,6 +228,8 @@ export function syncAChangeFromLevelToScene(change) {
 }
 
 export function addEntitiesToLevel(entities: Entity[]) {
+	console.log('addEntitiesToLevel', entities);
+
 	entities.map(entity => {
 		let parentEntity = entity.getParent() as Entity;
 		let parentEntityPrototype: EntityPrototype;
@@ -235,7 +242,7 @@ export function addEntitiesToLevel(entities: Entity[]) {
 		// TODO: Level-Scene sync - get epr.previouslyCreatedEntity and return those
 	});
 
-	return []; // new entities
+	return []; // new entities. TODO
 }
 
 export function getEntitiesInSelection(start: Vector, end: Vector)  {
