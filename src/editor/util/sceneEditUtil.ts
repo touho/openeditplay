@@ -14,10 +14,6 @@ import { editorGlobals, SceneMode } from '../editorGlobals';
 import { disableAllChanges, executeWithoutEntityPropertyChangeCreation } from '../../core/property';
 
 export function shouldSyncLevelToScene() {
-	return scene && scene.isInInitialState() && selectedLevel;
-}
-
-export function shouldSyncSceneToLevel() {
 	return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
 }
 
@@ -226,55 +222,22 @@ export function syncAChangeFromLevelToScene(change) {
 	}
 }
 
-export function copyEntitiesToScene(entities: Entity[]) {
-	if (scene) {
-		if (shouldSyncSceneToLevel()) {
-			let newEntities = entities.map(entity => {
-				let parentEntity = entity.getParent() as Entity;
-				let parentEntityPrototype: EntityPrototype;
-				if (parentEntity && parentEntity.threeLetterType === 'ent') {
-					parentEntityPrototype = parentEntity.prototype as EntityPrototype;
-				}
-				let epr = entity.prototype.clone() as EntityPrototype;
-				epr.position = entity.position;
-				(parentEntityPrototype || selectedLevel).addChild(epr);
-				return epr.createEntity(parentEntity || scene);
-			});
-			return newEntities;
-		} else {
-			let newEntities = entities.map(e => e.clone(e.getParent()));
-			// scene.addChildren(newEntities);
-			return newEntities;
+export function addEntitiesToLevel(entities: Entity[]) {
+	entities.map(entity => {
+		let parentEntity = entity.getParent() as Entity;
+		let parentEntityPrototype: EntityPrototype;
+		if (parentEntity && parentEntity.threeLetterType === 'ent') {
+			parentEntityPrototype = parentEntity.prototype as EntityPrototype;
 		}
-	}
-	return null;
-}
-
-export function getWidgetUnderMouse(mousePos: Vector): Component {
-	let nearestWidget = null;
-	let nearestDistanceSq = Infinity;
-
-	function testWidget(widget) {
-		if (!widget.isMouseInWidget(mousePos))
-			return;
-
-		let distSq = mousePos.distanceSq(widget);
-		if (distSq < nearestDistanceSq) {
-			nearestDistanceSq = distSq;
-			nearestWidget = widget;
-		}
-	}
-
-	scene.getComponents('EditorWidget').forEach(editorWidget => {
-		if (editorWidget.selected) {
-			editorWidget.widgets.forEach(testWidget);
-		} /*else {
-			testWidget(editorWidget.position);
-		}*/
+		let epr = entity.prototype.clone() as EntityPrototype;
+		epr.position = entity.position;
+		(parentEntityPrototype || selectedLevel).addChild(epr);
+		// TODO: Level-Scene sync - get epr.previouslyCreatedEntity and return those
 	});
 
-	return nearestWidget;
+	return []; // new entities
 }
+
 export function getEntitiesInSelection(start: Vector, end: Vector)  {
 	let entities = [];
 
@@ -299,42 +262,6 @@ export function getEntitiesInSelection(start: Vector, end: Vector)  {
 	return entities;
 }
 
-export function copyTransformPropertiesFromEntitiesToEntityPrototypes(entities) {
-	if (shouldSyncSceneToLevel()) {
-		entities.forEach(e => {
-			let entityPrototypeTransform = e.prototype.getTransform();
-			let entityTransform = e.getComponent('Transform');
-
-			console.log('ny mentiin')
-
-			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'position', '_p', (a, b) => a.isEqualTo(b));
-			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'scale', '_s', (a, b) => a.isEqualTo(b));
-			setOrCreateTransformDataPropertyValue(entityPrototypeTransform, entityTransform, 'angle', '_a', (a, b) => a === b);
-
-			/*
-			let position = entityPrototypeTransform.getProperty('position');
-			if (position) {
-				if (!position.value.isEqualTo(entityTransform.position))
-					position.value = entityTransform.position;
-			} else {
-				position = transform.componentClass._propertyTypesByName.position.createProperty({
-					value: entityTransform.position,
-					predefinedId: entityPrototypeTransform.id + '_p'
-				});
-				entityPrototypeTransform.addChild(position);
-			}
-
-			let scale = entityPrototypeTransform.findChild('prp', prp => prp.name === 'scale');
-			if (!scale.value.isEqualTo(entityTransform.scale))
-				scale.value = entityTransform.scale;
-
-			let angle = entityPrototypeTransform.findChild('prp', prp => prp.name === 'angle');
-			if (angle.value !== entityTransform.angle)
-				angle.value = entityTransform.angle;
-				*/
-		});
-	}
-}
 export function setOrCreateTransformDataPropertyValue(transformComponentData, transform, propertyName = 'position', idPostfix = '_p', valueCompareFunc = (a, b) => a === b) {
 	let property = transformComponentData.getProperty(propertyName);
 	if (property) {
@@ -383,33 +310,25 @@ export function setEntityPositions(entities: Entity[], position: Vector) {
 	});
 }
 
-export function deleteEntities(entities) {
-	entities = filterChildren(entities);
-	if (shouldSyncSceneToLevel()) {
-		entities.forEach(e => e.prototype.delete());
-	}
-	entities.forEach(e => e.delete());
-}
+// export function entityModifiedInEditor(entity, change) {
+// 	if (!entity || entity.threeLetterType !== 'ent' || !change || change.type !== changeType.setPropertyValue)
+// 		return;
 
-export function entityModifiedInEditor(entity, change) {
-	if (!entity || entity.threeLetterType !== 'ent' || !change || change.type !== changeType.setPropertyValue)
-		return;
-
-	if (shouldSyncSceneToLevel()) {
-		let entityPrototype = entity.prototype;
-		console.log('before', entityPrototype);
-		let property = change.reference;
-		let component = property.getParent();
-		let changeComponentId = component._componentId;
-		let changePropertyName = change.reference.name;
-		let componentData = entityPrototype.getOwnComponentDataOrInherit(changeComponentId);
-		console.log('componentData', componentData);
-		let entityPrototypeProperty = componentData.getPropertyOrCreate(changePropertyName);
-		console.log('entityPrototypeProperty', entityPrototypeProperty);
-		entityPrototypeProperty.value = property.value;
-		console.log('after', entityPrototype);
-	}
-}
+// 	if (shouldSyncSceneToLevel()) {
+// 		let entityPrototype = entity.prototype;
+// 		console.log('before', entityPrototype);
+// 		let property = change.reference;
+// 		let component = property.getParent();
+// 		let changeComponentId = component._componentId;
+// 		let changePropertyName = change.reference.name;
+// 		let componentData = entityPrototype.getOwnComponentDataOrInherit(changeComponentId);
+// 		console.log('componentData', componentData);
+// 		let entityPrototypeProperty = componentData.getPropertyOrCreate(changePropertyName);
+// 		console.log('entityPrototypeProperty', entityPrototypeProperty);
+// 		entityPrototypeProperty.value = property.value;
+// 		console.log('after', entityPrototype);
+// 	}
+// }
 
 export function setEntitiesInSelectionArea(entities, inSelectionArea) {
 	entities.forEach(entity => {

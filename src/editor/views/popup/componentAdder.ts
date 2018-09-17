@@ -14,7 +14,7 @@ const CATEGORY_ORDER = [
 	'Graphics'
 ];
 
-const HIDDEN_COMPONENTS = ['Transform', 'EditorWidget'];
+const HIDDEN_COMPONENTS = ['Transform'];
 
 export default class ComponentAdder extends Popup {
 	content: List;

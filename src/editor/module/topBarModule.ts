@@ -186,7 +186,7 @@ export class TopBarModule extends Module {
 				})
 			}),
 			multiTool: new SceneControlButton({
-				title: 'Multitool tool (4)',
+				title: 'Multitool (4)',
 				icon: 'fa-hand-spock',
 				callback: createCallback(() => {
 					setSceneTool('multiTool');

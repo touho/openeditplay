@@ -4,11 +4,9 @@ import './module/topBarModule';
 import './module/sceneModule';
 
 import './module/objectsModule';
-import './module/typesModule';
 import './module/prefabsModule';
 import './module/levelsModule';
 
-import './module/typeModule';
 import './module/prefabModule';
 import './module/objectModule';
 import './module/levelModule';

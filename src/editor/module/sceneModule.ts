@@ -23,7 +23,6 @@ import PIXI, { hitTest } from '../../features/graphics';
 import * as performanceTool from '../../util/performance';
 import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../core/property';
 
-import '../components/EditorWidget';
 import '../components/EditorSelection';
 
 import Serializable, { filterChildren } from "../../core/serializable";
@@ -226,10 +225,6 @@ class SceneModule extends Module {
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, () => {
-			if (this.widgetUnderMouse) {
-				this.widgetUnderMouse.unhover();
-				this.widgetUnderMouse = null;
-			}
 			setTimeout(() => {
 				this.draw();
 			}, 0);
@@ -258,7 +253,6 @@ class SceneModule extends Module {
 
 		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'sceneModule', this);
 
-		this.widgetUnderMouse = null; // Link to a widget (not EditorWidget but widget that EditorWidget contains)
 		this.previousMousePosInWorldCoordinates = null;
 		this.previousMousePosInMouseCoordinates = null;
 
@@ -404,16 +398,6 @@ class SceneModule extends Module {
 				scene.selectionLayer
 			);
 		});
-		/*
-		globalEventDispatcher.listen('scene load level', (scene, level) => {
-			if (this.widgetEntity && this.widgetEntity._alive) {
-				this.widgetEntity.delete();
-			}
-			let epr = EntityPrototype.create('WidgetEntity');
-			epr.addChild(new ComponentData('EditorWidget'));
-			this.widgetEntity = epr.createEntity(scene);
-		});
-		*/
 
 		// Change in serializable tree
 		editorEventDispacher.listen('prototypeClicked', prototype => {
@@ -438,54 +422,18 @@ class SceneModule extends Module {
 
 		globalEventDispatcher.listen('new entity created', entity => {
 			if (!entity.prototype._rootType) {
-				return; // Temporary entity such as editor widget entity. No need to sync data from scene to game.
+				return; // Temporary entity. (new entities are probably like this. they appear when you copy entities) No need to make them selectable.
 			}
 			let handleEntity = entity => {
 				entity.addComponents([
 					Component.create('EditorSelection')
 				]);
-				let transform = entity.getComponent('Transform');
-				transform._properties.position.listen(GameEvent.PROPERTY_VALUE_CHANGE, position => {
-					if (sceneEdit.shouldSyncSceneToLevel()) {
-						let entityPrototype = entity.prototype;
-						let entityPrototypeTransform = entityPrototype.getTransform();
-						executeWithOrigin(this, () => {
-							sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'position', '_p', (a, b) => a.isEqualTo(b));
-						});
-
-						this.draw();
-						this.widgetManager.updateTransform();
-					}
-				});
-				transform._properties.scale.listen(GameEvent.PROPERTY_VALUE_CHANGE, scale => {
-					if (sceneEdit.shouldSyncSceneToLevel()) {
-						let entityPrototype = entity.prototype;
-						let entityPrototypeTransform = entityPrototype.getTransform();
-						executeWithOrigin(this, () => {
-							sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'scale', '_s', (a, b) => a.isEqualTo(b));
-						});
-
-						this.draw();
-						this.widgetManager.updateTransform();
-					}
-				});
-				transform._properties.angle.listen(GameEvent.PROPERTY_VALUE_CHANGE, angle => {
-					if (sceneEdit.shouldSyncSceneToLevel()) {
-						let entityPrototype = entity.prototype;
-						let entityPrototypeTransform = entityPrototype.getTransform();
-						executeWithOrigin(this, () => {
-							sceneEdit.setOrCreateTransformDataPropertyValue(entityPrototypeTransform, transform, 'angle', '_a', (a, b) => a === b);
-						});
-
-						this.draw();
-						this.widgetManager.updateTransform();
-					}
-				});
 			};
 
 			handleEntity(entity);
 			entity.forEachChild('ent', handleEntity, true);
 		});
+
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (scene && scene.resetting || change.origin === this) {
@@ -603,14 +551,8 @@ class SceneModule extends Module {
 			setChangeOrigin(this);
 
 			if (this.newEntities.length > 0)
-				sceneEdit.copyEntitiesToScene(this.newEntities);
-			else if (this.widgetUnderMouse) {
-				// this.entityClicked(this.widgetUnderMouse.component.entity);
-				this.entitiesToEdit.push(...this.selectedEntities);
-			} else {
-				// Check if we hit any entity
-				console.log('pixiCoordinates', pixiCoordinates);
-
+				sceneEdit.addEntitiesToLevel(this.newEntities);
+			else {
 				let clickedEntity = getEntityUnderMouse(pixiCoordinates);
 				if (clickedEntity) {
 					this.entityClicked(clickedEntity);
@@ -644,12 +586,6 @@ class SceneModule extends Module {
 					this.entitiesInSelection.push(...this.selectedEntities);
 				}
 				this.selectEntities(this.entitiesInSelection);
-				/*
-				this.selectedEntities.push(...this.entitiesInSelection);
-				this.entitiesInSelection.forEach(entity => {
-					entity.getComponent('EditorWidget').select();
-				});
-				*/
 
 				sceneEdit.setEntitiesInSelectionArea(this.entitiesInSelection, false);
 				this.entitiesInSelection.length = 0;
@@ -673,7 +609,9 @@ class SceneModule extends Module {
 		});
 		let entityDragEnd = () => {
 			setChangeOrigin(this);
-			let entitiesInSelection = sceneEdit.copyEntitiesToScene(this.newEntities) || [];
+			let entitiesInSelection = sceneEdit.addEntitiesToLevel(this.newEntities) || [];
+			// TODO: Level-Scene sync
+
 			this.clearState();
 			this.selectEntities(entitiesInSelection);
 			this.selectSelectedEntitiesInEditor();
@@ -724,31 +662,10 @@ class SceneModule extends Module {
 
 		setChangeOrigin(this);
 		let change = this.previousMousePosInWorldCoordinates ? mousePos.clone().subtract(this.previousMousePosInWorldCoordinates) : mousePos;
-		if (this.entitiesToEdit.length > 0 && this.widgetUnderMouse) {
-			// Editing entities with a widget
-			this.widgetUnderMouse.onDrag(mousePos, change, filterChildren(this.entitiesToEdit));
-			// Sync is done with listeners now
-			// sceneEdit.copyTransformPropertiesFromEntitiesToEntityPrototypes(this.entitiesToEdit);
+
+		if (this.newEntities.length > 0) {
+			sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
 			needsDraw = true;
-		} else {
-			if (this.widgetUnderMouse) {
-				this.widgetUnderMouse.unhover();
-				this.widgetUnderMouse = null;
-				needsDraw = true;
-			}
-			if (this.newEntities.length > 0) {
-				sceneEdit.setEntityPositions(this.newEntities, mousePos); // these are not in scene
-				needsDraw = true;
-			}
-			if (scene) {
-				if (!scene.playing && this.newEntities.length === 0 && !this.selectionEnd) {
-					this.widgetUnderMouse = sceneEdit.getWidgetUnderMouse(mousePos);
-					if (this.widgetUnderMouse) {
-						this.widgetUnderMouse.hover();
-						needsDraw = true;
-					}
-				}
-			}
 		}
 
 		if (this.selectionEnd) {
@@ -993,8 +910,6 @@ class SceneModule extends Module {
 		this.selectedEntities.forEach(entity => {
 			entity.getComponent('EditorSelection').select();
 		});
-
-		this.updateEditorWidget();
 	}
 
 	clearSelectedEntities() {
@@ -1003,16 +918,11 @@ class SceneModule extends Module {
 				entity.getComponent('EditorSelection').deselect();
 		});
 		this.selectedEntities.length = 0;
-
-		this.updateEditorWidget();
 	}
 
 	clearState() {
 		this.deleteNewEntities();
 
-		if (this.widgetUnderMouse)
-			this.widgetUnderMouse.unhover();
-		this.widgetUnderMouse = null;
 		this.clearSelectedEntities();
 		this.entitiesToEdit.length = 0;
 
@@ -1032,7 +942,7 @@ class SceneModule extends Module {
 		if (sceneEdit.shouldSyncLevelToScene() && editorGlobals.sceneMode !== SceneMode.RECORDING) {
 			selectInEditor(this.selectedEntities.map(ent => ent.prototype), this);
 			editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
-			Module.activateOneOfModules(['type', 'object'], false);
+			Module.activateModule('object', false);
 		} else {
 			selectInEditor(this.selectedEntities, this);
 			editorEventDispacher.dispatch(EditorEvent.EDITOR_FORCE_UPDATE);
@@ -1108,16 +1018,6 @@ class SceneModule extends Module {
 			return;
 		this.selectionArea.destroy();
 		this.selectionArea = null;
-	}
-	updateEditorWidget() {
-		/*
-		if (!this.widgetEntity) {
-			return;
-		}
-		setChangeOrigin(this);
-		let editorWidget = this.widgetEntity.getComponent('EditorWidget');
-		editorWidget.entitiesSelected(this.selectedEntities);
-		*/
 	}
 }
 

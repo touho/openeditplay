@@ -1,34 +1,5 @@
-import {Component, Prop} from '../../core/component';
-import Widget from '../widget/widget';
-import AngleWidget from '../widget/angleWidget';
-import PositionWidget from '../widget/positionWidget';
-import ScaleWidget from '../widget/scaleWidget';
-import MoveWidget from '../widget/moveWidget';
-"../../util/";
-import { GameEvent } from '../../core/eventDispatcher';
-import { sceneToolName } from '../editorSelection';
-import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
+import {Component} from '../../core/component';
 import PIXI from '../../features/graphics';
-
-let primaryColor = 'white';
-let hoverColor = 'yellow';
-let secondaryColor = 'rgb(200, 200, 200)';
-let radius = 10;
-let smallR = 5;
-let widgetDistance = 30;
-let squared2 = Math.sqrt(2);
-let aabbSize = widgetDistance + smallR;
-
-/*
-How mouse interaction works?
-
-Hovering:
-- Scene module: find widgetUnderMouse, call widgetUnderMouse.hover() and widgetUnderMouse.unhover()
-
-Selection:
-- Scene module: if widgetUnderMouse is clicked, call editorWidget.select() and editorWidget.deselect()
-
- */
 
 // Export so that other components can have this component as parent
 export default Component.register({

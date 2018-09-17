@@ -73,6 +73,9 @@ Component.register({
 		setGlobalPosition(position: Vector) {
 			this.position = position.set(this.container.parent.toLocal(position, this.layer, tempPoint));
 		},
+		getLocalPosition(globalPosition: Vector) {
+			return Vector.fromObject(this.container.parent.toLocal(globalPosition, this.layer, tempPoint));
+		},
 		getGlobalAngle() {
 			let angle = this.angle;
 			let parent = this.getParentTransform();

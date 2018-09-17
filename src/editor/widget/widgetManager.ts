@@ -10,20 +10,21 @@ import { Color } from "../../util/color";
 import { listenMouseUp, listenMouseMove, listenMouseDown, keyPressed, key } from "../../util/input";
 import Scene, { scene, forEachScene } from "../../core/scene";
 import { filterChildren } from "../../core/serializable";
+import assert from "../../util/assert";
 
 const WIDGET_DISTANCE = 50;
 
 export class WidgetManager {
-    entities: Entity[] = [];
+    entityPrototypes: EntityPrototype[] = [];
     widgetRoot: WidgetRoot;
     transformIsDirty: boolean = false;
     constructor() {
         editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
             if (change.type === 'editorSelection') {
-                this.entities.length = 0;
+                this.entityPrototypes.length = 0;
                 if (editorSelection.type === 'epr') {
-                    let entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[];
-                    this.entities.push(...entityPrototypes.map(epr => epr.previouslyCreatedEntity).filter(Boolean));
+                    this.entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[];
+                    assert(!this.entityPrototypes.find(epr => !epr.previouslyCreatedEntity), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
                     this.updateWidgets();
                 } else if (editorSelection.items.length === 0) {
                     this.updateWidgets();
@@ -53,7 +54,7 @@ export class WidgetManager {
         if (!this.widgetRoot) {
             return;
         }
-        this.widgetRoot.update(this.entities);
+        this.widgetRoot.update(this.entityPrototypes);
         this.transformIsDirty = false;
     }
     setParentElement(parent: HTMLElement) {
@@ -62,7 +63,7 @@ export class WidgetManager {
         this.updateWidgets();
     }
     clear() {
-        this.entities.length = 0;
+        this.entityPrototypes.length = 0;
         this.updateWidgets();
     }
     updateTransform() {
@@ -80,7 +81,7 @@ export class WidgetManager {
 
 class WidgetRoot implements RedomComponent {
     el: HTMLElement;
-    entities: Entity[];
+    entityPrototypes: EntityPrototype[];
     worldPosition: Vector;
     mousePosition: Vector;
     angle: number;
@@ -89,12 +90,12 @@ class WidgetRoot implements RedomComponent {
     constructor() {
         this.el = el('div.widgetRoot');
     }
-    update(entities) {
-        this.entities = entities;
+    update(entityPrototypes: EntityPrototype[]) {
+        this.entityPrototypes = entityPrototypes;
         this.el.innerHTML = '';
         this.widgets.length = 0;
 
-        if (entities.length === 0) {
+        if (entityPrototypes.length === 0) {
             return;
         }
 
@@ -140,15 +141,15 @@ class WidgetRoot implements RedomComponent {
     }
 
     updateTransform() {
-        if (!this.entities || this.entities.length === 0) {
+        if (!this.entityPrototypes || this.entityPrototypes.length === 0) {
             return;
         }
         let averagePosition = new Vector(0, 0);
-        for (const entity of this.entities) {
-            averagePosition.add(entity.Transform.getGlobalPosition());
+        for (const entityPrototype of this.entityPrototypes) {
+            averagePosition.add(entityPrototype.previouslyCreatedEntity.Transform.getGlobalPosition());
         }
-        this.setPosition(averagePosition.divideScalar(this.entities.length));
-        this.setAngle(this.entities[0].Transform.getGlobalAngle());
+        this.setPosition(averagePosition.divideScalar(this.entityPrototypes.length));
+        this.setAngle(this.entityPrototypes[0].previouslyCreatedEntity.Transform.getGlobalAngle());
     }
 
     setPosition(worldPosition: Vector) {
@@ -196,9 +197,12 @@ class MoveWidget implements Widget {
                     rotatedRelativePosition.rotate(this.widgetRoot.angle);
 
                 let moveVector = worldChange.getProjectionOn(rotatedRelativePosition);
-                this.widgetRoot.entities.forEach(entity => {
-                    let Transform = entity.getComponent('Transform');
-                    Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
+                this.widgetRoot.entityPrototypes.forEach(epr => {
+                    const Transform = epr.previouslyCreatedEntity.getComponent('Transform');
+                    const newLocalPosition = Transform.getLocalPosition(Transform.getGlobalPosition().add(moveVector));
+                    epr.getTransform().setValue('position', newLocalPosition);
+
+                    // Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
                 });
 
                 this.widgetRoot.move(moveVector);
@@ -223,22 +227,18 @@ class PositionWidget implements Widget {
     constructor(public widgetRoot: WidgetRoot) {
         //'.fas.fa-circle'
         this.el = el('div.widget.positionWidget',
-            this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl', {
-                style: {
-                    // transform: 'translateX(-50%) translateY(-50%)'
+            this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl'),
+                null,
+                (worldChange: Vector, worldPos: Vector) => {
+                    this.widgetRoot.entityPrototypes.forEach(epr => {
+                        let Transform = epr.previouslyCreatedEntity.getComponent('Transform');
+                        let newLocalPosition = Transform.getLocalPosition(Transform.getGlobalPosition().add(worldChange));
+                        epr.getTransform().setValue('position', newLocalPosition);
+                    });
+                    this.widgetRoot.move(worldChange);
                 }
-            }), null, (worldChange: Vector, worldPos: Vector) => {
-
-                this.widgetRoot.entities.forEach(entity => {
-                    let transform = entity.getComponent('Transform');
-                    let globalPosition = transform.getGlobalPosition();
-                    globalPosition.add(worldChange);
-                    transform.setGlobalPosition(globalPosition);
-                });
-                this.widgetRoot.move(worldChange);
-                // this.component.Transform.position = mousePositionChange.add(this.component.Transform.position);
-            })
-        );
+            )
+        )
     }
     update(data) {
     }
@@ -288,14 +288,14 @@ class ScaleWidget implements Widget {
 
                 let changeVector = new Vector(1, 1).add(this.scaleDirection.clone().multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
 
-                this.widgetRoot.entities.forEach(entity => {
-                    let Transform = entity.getComponent('Transform');
-                    let newScale = Transform.scale.clone().multiply(changeVector);
+                this.widgetRoot.entityPrototypes.forEach(epr => {
+                    let scaleProperty = epr.getTransform().getProperty('scale');
+                    let newScale = scaleProperty.value.clone().multiply(changeVector);
                     if (newScale.x < MIN_SCALE)
                         newScale.x = MIN_SCALE;
                     if (newScale.y < MIN_SCALE)
                         newScale.y = MIN_SCALE;
-                    Transform.scale = newScale;
+                    scaleProperty.value = newScale
                 });
             }),
             {
@@ -338,9 +338,9 @@ class AngleWidget implements Widget {
                     angleDifference = newWidgetAngle - this.widgetRoot.angle;
                 }*/
 
-                this.widgetRoot.entities.forEach(entity => {
-                    let Transform = entity.getComponent('Transform');
-                    Transform.angle = Transform.angle + angleDifference;
+                this.widgetRoot.entityPrototypes.forEach(epr => {
+                    let angleProperty = epr.getTransform().getProperty('angle')
+                    angleProperty.value = angleProperty.value + angleDifference
                 });
 
                 this.widgetRoot.rotate(angleDifference);

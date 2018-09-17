@@ -48,10 +48,11 @@ export default class PropertyEditor {
 				this.dirty = true;
 			} else if (change.type === changeType.setPropertyValue) {
 				if (this.item && this.item.hasDescendant(change.reference)) {
+					// TODO: Level-Scene sync - What's happening here?
 					if (change.origin === this) {
-						if (this.item.threeLetterType === 'ent') {
-							sceneEdit.entityModifiedInEditor(this.item, change);
-						}
+						// if (this.item.threeLetterType === 'ent') {
+						// 	sceneEdit.entityModifiedInEditor(this.item, change);
+						// }
 					} else {
 						this.dirty = true;
 					}
