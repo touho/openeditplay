@@ -37,18 +37,6 @@ Component.register({
 			this.sprite.selectableEntityOfSprite = this.entity;
 			this.sprite.selectableEntityHitTest = hitTest;
 
-			this.sprite.interactive = true;
-			this.sprite.on('pointerdown', (pointerDownEvent) => {
-				console.log('pointerDownEvent', pointerDownEvent);
-/*
-				if (hitTest(this.sprite, pointerDownEvent, this.scene.stage)) {
-					// Only run in editor because player version has more stripped version of PIXI.
-					globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
-					this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
-				}
-				*/
-			});
-
 			this.Transform.container.addChild(this.sprite);
 		},
 		sleep() {

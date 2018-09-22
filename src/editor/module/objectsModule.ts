@@ -52,7 +52,11 @@ class ObjectsModule extends Module {
 			selectionChangedCallback: selectedIds => {
 				if (this.externalChange) return;
 				let serializables = selectedIds.map(getSerializable).filter(Boolean);
-				selectInEditor(serializables, this);
+				if (serializables.length === 1 && editorSelection.items.length === 1 && serializables[0] === editorSelection.items[0]) {
+					// Skip select because it is causing unexpected behaviour when trying to locate entity in preview mode by double clicking
+				} else {
+					selectInEditor(serializables, this);
+				}
 				Module.activateModule('object', false);
 			},
 			moveCallback: (serializableId: string, parentId: string) => {

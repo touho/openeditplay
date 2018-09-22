@@ -4,29 +4,31 @@ import { editorSelection, sceneToolName } from "../editorSelection";
 import Entity from "../../core/entity";
 import EntityPrototype from "../../core/entityPrototype";
 import { globalEventDispatcher, GameEvent } from "../../core/eventDispatcher";
-import { RedomComponent, el, mount, RedomComponent } from "redom";
+import { RedomComponent, el, mount } from "redom";
 import Vector from "../../util/vector";
 import { Color } from "../../util/color";
 import { listenMouseUp, listenMouseMove, listenMouseDown, keyPressed, key } from "../../util/input";
 import Scene, { scene, forEachScene } from "../../core/scene";
 import { filterChildren } from "../../core/serializable";
 import assert from "../../util/assert";
+import { editorGlobals, SceneMode } from "../editorGlobals";
 
 const WIDGET_DISTANCE = 50;
 
+// Widgets usually edit entityPrototypes, but in case sceneMode is recording, entities itself are edited.
 export class WidgetManager {
-    entityPrototypes: EntityPrototype[] = [];
+    entities: Entity[] = [];
     widgetRoot: WidgetRoot;
     transformIsDirty: boolean = false;
     constructor() {
         editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
             if (change.type === 'editorSelection') {
-                console.log('gah');
-
-                this.entityPrototypes.length = 0;
+                this.entities.length = 0;
                 if (editorSelection.type === 'epr') {
-                    this.entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[];
-                    assert(!this.entityPrototypes.find(epr => !epr.previouslyCreatedEntity), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
+                    this.entities = filterChildren(editorSelection.items.map((epr: EntityPrototype) => epr.previouslyCreatedEntity)) as Entity[];
+                    assert(!this.entities.find(ent => !ent), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
+                } else if (editorSelection.type === 'ent') {
+                    this.entities = filterChildren(editorSelection.items) as Entity[];
                 }
                 this.updateWidgets();
             }
@@ -38,6 +40,9 @@ export class WidgetManager {
             this.clear();
         });
         editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, newTool => {
+            this.updateWidgets();
+        });
+        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, () => {
             this.updateWidgets();
         });
 
@@ -54,7 +59,14 @@ export class WidgetManager {
         if (!this.widgetRoot) {
             return;
         }
-        this.widgetRoot.update(this.entityPrototypes);
+        if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+            // In preview mode, you cannot edit anything
+            console.log('nothing');
+
+            this.widgetRoot.update([]);
+        } else {
+            this.widgetRoot.update(this.entities);
+        }
         this.transformIsDirty = false;
     }
     setParentElement(parent: HTMLElement) {
@@ -63,7 +75,7 @@ export class WidgetManager {
         this.updateWidgets();
     }
     clear() {
-        this.entityPrototypes.length = 0;
+        this.entities.length = 0;
         this.updateWidgets();
     }
     updateTransform() {
@@ -71,7 +83,6 @@ export class WidgetManager {
             this.transformIsDirty = true;
 
             // to activate movement effect when clicking down with mouse and dragging with keyboard movement
-            // scene.canvas.parentElement.dispatchEvent(new Event('mousemove'));
             for (const widget of this.widgetRoot.widgets) {
                 widget.control.onMouseMove();
             }
@@ -79,9 +90,13 @@ export class WidgetManager {
     }
 }
 
+function editEntityInsteadOfEntityPrototype() {
+    return editorGlobals.sceneMode === SceneMode.RECORDING
+}
+
 class WidgetRoot implements RedomComponent {
     el: HTMLElement;
-    entityPrototypes: EntityPrototype[];
+    entities: Entity[];
     worldPosition: Vector;
     mousePosition: Vector;
     angle: number;
@@ -90,12 +105,12 @@ class WidgetRoot implements RedomComponent {
     constructor() {
         this.el = el('div.widgetRoot');
     }
-    update(entityPrototypes: EntityPrototype[]) {
-        this.entityPrototypes = entityPrototypes;
+    update(entities: Entity[]) {
+        this.entities = entities;
         this.el.innerHTML = '';
         this.widgets.length = 0;
 
-        if (entityPrototypes.length === 0) {
+        if (entities.length === 0) {
             return;
         }
 
@@ -141,15 +156,15 @@ class WidgetRoot implements RedomComponent {
     }
 
     updateTransform() {
-        if (!this.entityPrototypes || this.entityPrototypes.length === 0) {
+        if (!this.entities || this.entities.length === 0) {
             return;
         }
         let averagePosition = new Vector(0, 0);
-        for (const entityPrototype of this.entityPrototypes) {
-            averagePosition.add(entityPrototype.previouslyCreatedEntity.Transform.getGlobalPosition());
+        for (const entity of this.entities) {
+            averagePosition.add(entity.Transform.getGlobalPosition());
         }
-        this.setPosition(averagePosition.divideScalar(this.entityPrototypes.length));
-        this.setAngle(this.entityPrototypes[0].previouslyCreatedEntity.Transform.getGlobalAngle());
+        this.setPosition(averagePosition.divideScalar(this.entities.length));
+        this.setAngle(this.entities[0].Transform.getGlobalAngle());
     }
 
     setPosition(worldPosition: Vector) {
@@ -197,10 +212,14 @@ class MoveWidget implements Widget {
                     rotatedRelativePosition.rotate(this.widgetRoot.angle);
 
                 let moveVector = worldChange.getProjectionOn(rotatedRelativePosition);
-                this.widgetRoot.entityPrototypes.forEach(epr => {
-                    const Transform = epr.previouslyCreatedEntity.getComponent('Transform');
+                this.widgetRoot.entities.forEach(entity => {
+                    const Transform = entity.getComponent('Transform');
                     const newLocalPosition = Transform.getLocalPosition(Transform.getGlobalPosition().add(moveVector));
-                    epr.getTransform().setValue('position', newLocalPosition);
+                    if (editEntityInsteadOfEntityPrototype()) {
+                        entity.Transform.position = newLocalPosition
+                    } else {
+                        entity.prototype.getTransform().setValue('position', newLocalPosition)
+                    }
 
                     // Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
                 });
@@ -230,10 +249,15 @@ class PositionWidget implements Widget {
             this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl'),
                 null,
                 (worldChange: Vector, worldPos: Vector) => {
-                    this.widgetRoot.entityPrototypes.forEach(epr => {
-                        let Transform = epr.previouslyCreatedEntity.getComponent('Transform');
+                    this.widgetRoot.entities.forEach(entity => {
+                        let Transform = entity.getComponent('Transform');
                         let newLocalPosition = Transform.getLocalPosition(Transform.getGlobalPosition().add(worldChange));
-                        epr.getTransform().setValue('position', newLocalPosition);
+
+                        if (editEntityInsteadOfEntityPrototype()) {
+                            entity.Transform.position = newLocalPosition
+                        } else {
+                            entity.prototype.getTransform().setValue('position', newLocalPosition);
+                        }
                     });
                     this.widgetRoot.move(worldChange);
                 }
@@ -288,8 +312,15 @@ class ScaleWidget implements Widget {
 
                 let changeVector = new Vector(1, 1).add(this.scaleDirection.clone().multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
 
-                this.widgetRoot.entityPrototypes.forEach(epr => {
-                    let scaleProperty = epr.getTransform().getProperty('scale');
+                this.widgetRoot.entities.forEach(entity => {
+                    let scaleProperty
+
+                    if (editEntityInsteadOfEntityPrototype()) {
+                        scaleProperty = entity.Transform._properties['scale']
+                    } else {
+                        scaleProperty = entity.prototype.getTransform().getProperty('scale')
+                    }
+
                     let newScale = scaleProperty.value.clone().multiply(changeVector);
                     if (newScale.x < MIN_SCALE)
                         newScale.x = MIN_SCALE;
@@ -338,8 +369,8 @@ class AngleWidget implements Widget {
                     angleDifference = newWidgetAngle - this.widgetRoot.angle;
                 }*/
 
-                this.widgetRoot.entityPrototypes.forEach(epr => {
-                    let angleProperty = epr.getTransform().getProperty('angle')
+                this.widgetRoot.entities.forEach(entity => {
+                    let angleProperty = entity.prototype.getTransform().getProperty('angle')
                     angleProperty.value = angleProperty.value + angleDifference
                 });
 

@@ -72,7 +72,9 @@ class AnimationModule extends Module {
 			} else {
 				this.recordButton.classList.remove('selected');
 				if (editorGlobals.sceneMode === SceneMode.NORMAL && this.editedEntityPrototype) {
-					this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+					executeWithOrigin(this, () => {
+						this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+					})
 					// selectInEditor([this.editedEntityPrototype], this);
 					this.editedEntityPrototype = null;
 				}
@@ -100,6 +102,8 @@ class AnimationModule extends Module {
 			this.animationTimelineView.selectFrame(1);
 
 			this.recordButton.style.display = animation ? 'inline-block' : 'none';
+
+			editorEventDispacher.dispatch(EditorEvent.EDITOR_DRAW_NEEDED)
 		});
 		redomListen(this, 'frameCountChanged', frameCount => {
 			if (!(frameCount > 0 && frameCount <= animation.MAX_FRAME_COUNT)) {
@@ -386,6 +390,8 @@ class AnimationModule extends Module {
 
 				setChangeOrigin(this);
 				component.animator.currentAnimation.setFrame(this.animationTimelineView.selectedFrame);
+
+				editorEventDispacher.dispatch(EditorEvent.EDITOR_DRAW_NEEDED)
 			}
 		}
 	}

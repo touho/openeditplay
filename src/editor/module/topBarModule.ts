@@ -2,7 +2,7 @@ import { el, list, mount } from 'redom';
 import Module from './module';
 import { forEachScene, scene } from '../../core/scene';
 import { listenKeyDown, key } from "../../util/input";
-import { GameEvent } from '../../core/eventDispatcher';
+import { GameEvent, globalEventDispatcher } from '../../core/eventDispatcher';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { setSceneTool, sceneToolName, editorSelection, unfocus } from '../editorSelection';
 import { Button } from '../views/popup/Popup';
@@ -110,6 +110,8 @@ export class TopBarModule extends Module {
 
 		const updateButtons = () => {
 			setTimeout(() => {
+				console.log('scene', scene.playing, editorGlobals.sceneMode, scene.time);
+
 				if (scene.playing) {
 					playButton.update(pauseButtonData);
 				} else if (editorGlobals.sceneMode === SceneMode.NORMAL) {
@@ -132,6 +134,7 @@ export class TopBarModule extends Module {
 			scene.listen(GameEvent.SCENE_RESET, updateButtons);
 			scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 			scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
+			globalEventDispatcher.listen('scene load level', updateButtons);
 			editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, updateButtons);
 		});
 

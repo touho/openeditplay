@@ -44,7 +44,7 @@ export default Component.register({
 	}
 });
 
-const controlPointDistanceFactor = 0.33;
+const controlPointDistanceFactor = 0.33333; // 0.33333333;
 
 class Animator {
 	time: number = 0;
@@ -166,15 +166,52 @@ class AnimatorTrack {
 				let prevToCurr = currValue.clone().subtract(prevValue);
 				let currToNext = nextValue.clone().subtract(currValue);
 
-				let angleFactor = prevToCurr.closestAngleTo(currToNext) * 2 / Math.PI;
+				let angleFactor = (Math.PI - prevToCurr.angleTo(currToNext)) / Math.PI;
+				angleFactor *= 2;
+				if (angleFactor > 1) {
+					angleFactor = 1
+				}
 
-				let prevControlDist = prevToCurr.length() * controlPointDistanceFactor * angleFactor;
-				let nextControlDist = currToNext.length() * controlPointDistanceFactor * angleFactor;
+				// Look at this cool way to reduce sqrt calls to 1! :D
+				// let smallerDistance = Math.sqrt(Math.min(prevToCurr.lengthSq(), currToNext.lengthSq()))
+				let controlPointDistance = controlPointDistanceFactor * angleFactor * 0.5 * (prevToCurr.length() + currToNext.length())
+
+
+				// let angleFactor = prevToCurr.closestAngleTo(currToNext) * 2 / Math.PI;
+
+				let prevKeyFrameFrames = curr.frame - prev.frame;
+				if (prevKeyFrameFrames <= 0) {
+					prevKeyFrameFrames += this.frames;
+				}
+
+				let currKeyFrameFrames = next.frame - curr.frame;
+				if (currKeyFrameFrames <= 0) {
+					currKeyFrameFrames += this.frames;
+				}
+
+				let speedIncreaseSq = Math.sqrt(prevKeyFrameFrames / currKeyFrameFrames);
+
+				// let controlPointDistance = Math.max(prevToCurr.length(), currToNext.length()) * controlPointDistanceFactor * angleFactor;
+				let prevControlDist = controlPointDistance;
+				let nextControlDist = controlPointDistance;
+
+				if (speedIncreaseSq > 1) {
+					nextControlDist /= speedIncreaseSq;
+					prevControlDist *= speedIncreaseSq;
+				} else {
+					prevControlDist *= speedIncreaseSq;
+					nextControlDist /= speedIncreaseSq;
+				}
 
 				let prevNextDirection = nextValue.clone().subtract(prevValue).setLength(1);
 
 				curr.control1 = currValue.clone().subtract(prevNextDirection.clone().multiplyScalar(prevControlDist));
 				curr.control2 = currValue.clone().add(prevNextDirection.multiplyScalar(nextControlDist));
+
+				// let xControl = calculateControlPointsForScalar(prev.value.x, curr.value.x, next.value.x);
+				// let yControl = calculateControlPointsForScalar(prev.value.y, curr.value.y, next.value.y);
+				// curr.control1 = new Vector(xControl.control1, yControl.control1);
+				// curr.control2 = new Vector(xControl.control2, yControl.control2);
 			} else if (propertyTypeName === 'color') {
 				let rControl = calculateControlPointsForScalar(prev.value.r, curr.value.r, next.value.r);
 				let gControl = calculateControlPointsForScalar(prev.value.g, curr.value.g, next.value.g);
@@ -269,6 +306,15 @@ function interpolateBezier(fromValue, control1Value, control2Value, targetValue,
 	}
 }
 
+function bezier(fromValue, control1Value, control2Value, targetValue, t) {
+	let t2 = 1 - t;
+	return t2 ** 3 * fromValue +
+		3 * t2 * t2 * t * control1Value +
+		3 * t2 * t * t * control2Value +
+		t ** 3 * targetValue;
+}
+window.bezier = bezier
+
 function interpolateLinear(fromValue, targetValue, t: number, propertyType: PropertyType) {
 	let typeName = propertyType.type.name;
 	if (typeName === 'float') {
@@ -287,6 +333,11 @@ function interpolateLinear(fromValue, targetValue, t: number, propertyType: Prop
 }
 
 function calculateControlPointsForScalar(prev: number, curr: number, next: number) {
+	return {
+		control1: curr + (prev - next) / 3,
+		control2: curr + (next - prev) / 3
+	}
+
 	if (curr >= prev && curr >= next || curr <= prev && curr <= next) {
 		return {
 			control1: curr,
@@ -296,6 +347,19 @@ function calculateControlPointsForScalar(prev: number, curr: number, next: numbe
 
 	let prevDist = Math.abs(curr - prev);
 	let nextDist = Math.abs(next - curr);
+
+	let prevNextDirection = (next - prev) < 0 ? -1 : 1;
+
+	return {
+		control1: curr - prevNextDirection * prevDist * controlPointDistanceFactor,
+		control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
+	};
+}
+
+function calculateControlPointsForScalar2(prev: number, curr: number, next: number) {
+	let prevDist = Math.abs(curr - prev);
+	let nextDist = Math.abs(next - curr);
+	let dist = Math.min(prevDist, nextDist);
 
 	let prevNextDirection = (next - prev) < 0 ? -1 : 1;
 

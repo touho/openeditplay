@@ -1,3 +1,7 @@
+.treeView {
+  user-select: none;
+}
+
 .jstree-default .jstree-search {
   color: $editor-text-color;
   left: 10px;

@@ -15,6 +15,7 @@ export enum EditorEvent {
     EDITOR_PAUSE = 'pause',
     EDITOR_CLONE = 'clone',
     EDITOR_DELETE = 'delete',
+    EDITOR_DRAW_NEEDED = 'draw needed',
     EDITOR_SCENE_MODE_CHANGED = 'scene mode change' // mode just turned on. get state from editorGlobals.recording
 };
 

@@ -21,7 +21,7 @@ import Vector from '../../util/vector';
 import { removeTheDeadFromArray, absLimit } from '../../util/algorithm';
 import PIXI, { hitTest } from '../../features/graphics';
 import * as performanceTool from '../../util/performance';
-import { enableAllChanges, filterSceneChanges, disableAllChanges } from '../../core/property';
+import { enableAllChanges, filterSceneChanges, disableAllChanges, setPropertyChangeSettings } from '../../core/property';
 
 import '../components/EditorSelection';
 
@@ -226,6 +226,11 @@ class SceneModule extends Module {
 				selectInEditor([], this);
 			}
 		});
+
+		editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, () => {
+			this.updatePropertyChangeCreationFilter()
+			this.widgetManager.updateWidgets()
+		}, 10000)
 
 		editorEventDispacher.listen('locate serializable', serializable => {
 			if (serializable.threeLetterType === 'epr') {
@@ -443,6 +448,8 @@ class SceneModule extends Module {
 			entity.forEachChild('ent', handleEntity, true);
 		});
 
+		editorEventDispacher.listen(EditorEvent.EDITOR_DRAW_NEEDED, () => this.draw())
+
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, change => {
 			if (scene && scene.resetting) {
@@ -614,7 +621,6 @@ class SceneModule extends Module {
 		let entityDragEnd = () => {
 			setChangeOrigin(this);
 			let entitiesInSelection = sceneEdit.addEntitiesToLevel(this.newEntities) || [];
-			// TODO: Level-Scene sync
 
 			this.clearState();
 			this.selectEntities(entitiesInSelection);
@@ -989,19 +995,39 @@ class SceneModule extends Module {
 		if (!scene)
 			return;
 
+			/*
+
+- If scene.isInInitialState & state = normal:
+	- Edit level. addChange enabled in level edits
+	- Don't edit scene. addChange disabled in scene edits
+	- Sync everything from level to scene
+	- state = preview:
+		- Can also edit scene, but values are not stored.
+		- preview state is mainly visual hint for user.
+	- state = recording:
+		- Edit scene & level
+		- addChange enabled in scene & level
+		- No sync in either direction
+- If not scene.isInInitialState:
+	- Don't sync from level to scene. addChange enabled in level edits
+	- Don't sync from scene to level. addChange enabled in scene edits only when properties of selected entities change. (for property editor)
+
+
+			*/
+
 		if (scene.isInInitialState()) {
 			if (editorGlobals.sceneMode === SceneMode.RECORDING) {
-				enableAllChanges();
+				setPropertyChangeSettings(true, true)
 			} else {
-				disableAllChanges();
+				setPropertyChangeSettings(true, false)
 			}
 		} else if (editorSelection.type === 'ent') {
-			filterSceneChanges(property => {
+			setPropertyChangeSettings(true, property => {
 				let selectedEntities = editorSelection.items;
 				return !!property.findParent('ent', serializable => selectedEntities.includes(serializable));
-			});
+			})
 		} else {
-			disableAllChanges();
+			setPropertyChangeSettings(true, false)
 		}
 	}
 

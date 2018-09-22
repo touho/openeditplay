@@ -582,7 +582,7 @@ div.topSceneControlButton:last-of-type {
 }
 .perSecondItemName {
   display: inline-block;
-  width: 150px;
+  width: 200px;
 }
 .perSecondItemValue {
 }
@@ -626,6 +626,9 @@ div.animationModule td.trackFrame:first-child {
 div.animationModule td.trackFrame.selected {
   color: yellow;
   text-shadow: 0 0 12px white;
+}
+.treeView {
+  user-select: none;
 }
 .jstree-default .jstree-search {
   color: #ccc8c6;

@@ -727,25 +727,16 @@
 	}
 	//# sourceMappingURL=serializable.js.map
 
-	var changesEnabled = true;
-	var scenePropertyFilter = null;
-	// true / false to enable / disable property value change sharing.
-	// if object is passed, changes are only sent
-	function filterSceneChanges(_scenePropertyFilter) {
-	    scenePropertyFilter = _scenePropertyFilter;
-	    changesEnabled = true;
-	}
-	function disableAllChanges() {
-	    changesEnabled = false;
-	}
-	function enableAllChanges() {
-	    changesEnabled = true;
+	var gameChangesEnabled = true;
+	var sceneChangesEnabled = false;
+	var sceneChangeFilter = null;
+	function setPropertyChangeSettings(enableGameChanges, enableSceneChanges) {
+	    gameChangesEnabled = enableGameChanges;
+	    sceneChangesEnabled = !!enableSceneChanges;
+	    sceneChangeFilter = typeof enableSceneChanges === 'function' ? enableSceneChanges : null;
 	}
 	function executeWithoutEntityPropertyChangeCreation(task) {
-	    var oldChangesEnabled = changesEnabled;
-	    changesEnabled = false;
 	    task();
-	    changesEnabled = oldChangesEnabled;
 	}
 	// Object of a property
 	var Property = /** @class */ (function (_super) {
@@ -817,12 +808,13 @@
 	            var oldValue = this._value;
 	            this._value = this.propertyType.validator.validate(newValue);
 	            this.dispatch(GameEvent.PROPERTY_VALUE_CHANGE, this._value, oldValue);
-	            if (changesEnabled && this._rootType) { // not scene or empty
-	                if (scenePropertyFilter === null
-	                    || this._rootType !== 'sce'
-	                    || scenePropertyFilter(this)) {
+	            if (this._rootType === 'gam') {
+	                if (gameChangesEnabled) {
 	                    addChange(changeType.setPropertyValue, this);
 	                }
+	            }
+	            else if (sceneChangesEnabled && (!sceneChangeFilter || sceneChangeFilter(this))) {
+	                addChange(changeType.setPropertyValue, this);
 	            }
 	        },
 	        enumerable: true,
@@ -2541,6 +2533,7 @@
 	    EditorEvent["EDITOR_PAUSE"] = "pause";
 	    EditorEvent["EDITOR_CLONE"] = "clone";
 	    EditorEvent["EDITOR_DELETE"] = "delete";
+	    EditorEvent["EDITOR_DRAW_NEEDED"] = "draw needed";
 	    EditorEvent["EDITOR_SCENE_MODE_CHANGED"] = "scene mode change"; // mode just turned on. get state from editorGlobals.recording
 	})(EditorEvent || (EditorEvent = {}));
 	// Wrapper that takes only EditorEvents
@@ -4479,18 +4472,6 @@
 	                var localMousePoint = sprite.toLocal(pixiCoordinates, stage);
 	                return _this.containsPoint(localMousePoint);
 	            };
-	            // this.sprite.interactive = true;
-	            // this.sprite.on('pointerdown', (pointerDownEvent) => {
-	            // 	console.log('pointerdown', pointerDownEvent.data.global);
-	            // 	/*
-	            // 	let localMousePoint = this.sprite.toLocal(pointerDownEvent.data.global, this.scene.stage);
-	            // 	if (this.containsPoint(localMousePoint)) {
-	            // 		// Only run in editor because player version has more stripped version of PIXI.
-	            // 		globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
-	            // 		this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
-	            // 	}
-	            // 	*/
-	            // });
 	            this.Transform.container.addChild(this.sprite);
 	        },
 	        updateTexture: function () {
@@ -4635,17 +4616,6 @@
 	            this.sprite.anchor.set(this.anchor.x, this.anchor.y);
 	            this.sprite.selectableEntityOfSprite = this.entity;
 	            this.sprite.selectableEntityHitTest = hitTest;
-	            this.sprite.interactive = true;
-	            this.sprite.on('pointerdown', function (pointerDownEvent) {
-	                console.log('pointerDownEvent', pointerDownEvent);
-	                /*
-	                                if (hitTest(this.sprite, pointerDownEvent, this.scene.stage)) {
-	                                    // Only run in editor because player version has more stripped version of PIXI.
-	                                    globalEventDispatcher.dispatch(GameEvent.GLOBAL_ENTITY_CLICKED, this.entity, this);
-	                                    this.entity.dispatch(GameEvent.ENTITY_CLICKED, this);
-	                                }
-	                                */
-	            });
 	            this.Transform.container.addChild(this.sprite);
 	        },
 	        sleep: function () {
@@ -5676,7 +5646,7 @@
 	        }
 	    }
 	});
-	var controlPointDistanceFactor = 0.33;
+	var controlPointDistanceFactor = 0.33333; // 0.33333333;
 	var Animator = /** @class */ (function () {
 	    function Animator(animationData, component) {
 	        this.component = component;
@@ -5784,12 +5754,42 @@
 	                var nextValue = next.value;
 	                var prevToCurr = currValue.clone().subtract(prevValue);
 	                var currToNext = nextValue.clone().subtract(currValue);
-	                var angleFactor = prevToCurr.closestAngleTo(currToNext) * 2 / Math.PI;
-	                var prevControlDist = prevToCurr.length() * controlPointDistanceFactor * angleFactor;
-	                var nextControlDist = currToNext.length() * controlPointDistanceFactor * angleFactor;
+	                var angleFactor = (Math.PI - prevToCurr.angleTo(currToNext)) / Math.PI;
+	                angleFactor *= 2;
+	                if (angleFactor > 1) {
+	                    angleFactor = 1;
+	                }
+	                // Look at this cool way to reduce sqrt calls to 1! :D
+	                // let smallerDistance = Math.sqrt(Math.min(prevToCurr.lengthSq(), currToNext.lengthSq()))
+	                var controlPointDistance = controlPointDistanceFactor * angleFactor * 0.5 * (prevToCurr.length() + currToNext.length());
+	                // let angleFactor = prevToCurr.closestAngleTo(currToNext) * 2 / Math.PI;
+	                var prevKeyFrameFrames = curr.frame - prev.frame;
+	                if (prevKeyFrameFrames <= 0) {
+	                    prevKeyFrameFrames += this$1.frames;
+	                }
+	                var currKeyFrameFrames = next.frame - curr.frame;
+	                if (currKeyFrameFrames <= 0) {
+	                    currKeyFrameFrames += this$1.frames;
+	                }
+	                var speedIncreaseSq = Math.sqrt(prevKeyFrameFrames / currKeyFrameFrames);
+	                // let controlPointDistance = Math.max(prevToCurr.length(), currToNext.length()) * controlPointDistanceFactor * angleFactor;
+	                var prevControlDist = controlPointDistance;
+	                var nextControlDist = controlPointDistance;
+	                if (speedIncreaseSq > 1) {
+	                    nextControlDist /= speedIncreaseSq;
+	                    prevControlDist *= speedIncreaseSq;
+	                }
+	                else {
+	                    prevControlDist *= speedIncreaseSq;
+	                    nextControlDist /= speedIncreaseSq;
+	                }
 	                var prevNextDirection = nextValue.clone().subtract(prevValue).setLength(1);
 	                curr.control1 = currValue.clone().subtract(prevNextDirection.clone().multiplyScalar(prevControlDist));
 	                curr.control2 = currValue.clone().add(prevNextDirection.multiplyScalar(nextControlDist));
+	                // let xControl = calculateControlPointsForScalar(prev.value.x, curr.value.x, next.value.x);
+	                // let yControl = calculateControlPointsForScalar(prev.value.y, curr.value.y, next.value.y);
+	                // curr.control1 = new Vector(xControl.control1, yControl.control1);
+	                // curr.control2 = new Vector(xControl.control2, yControl.control2);
 	            }
 	            else if (propertyTypeName === 'color') {
 	                var rControl = calculateControlPointsForScalar(prev.value.r, curr.value.r, next.value.r);
@@ -5881,7 +5881,19 @@
 	        return fromValue;
 	    }
 	}
+	function bezier(fromValue, control1Value, control2Value, targetValue, t) {
+	    var t2 = 1 - t;
+	    return Math.pow(t2, 3) * fromValue +
+	        3 * t2 * t2 * t * control1Value +
+	        3 * t2 * t * t * control2Value +
+	        Math.pow(t, 3) * targetValue;
+	}
+	window.bezier = bezier;
 	function calculateControlPointsForScalar(prev, curr, next) {
+	    return {
+	        control1: curr + (prev - next) / 3,
+	        control2: curr + (next - prev) / 3
+	    };
 	    if (curr >= prev && curr >= next || curr <= prev && curr <= next) {
 	        return {
 	            control1: curr,
@@ -6735,6 +6747,7 @@
 	        });
 	        var updateButtons = function () {
 	            setTimeout(function () {
+	                console.log('scene', scene.playing, editorGlobals.sceneMode, scene.time);
 	                if (scene.playing) {
 	                    playButton.update(pauseButtonData);
 	                }
@@ -6757,6 +6770,7 @@
 	            scene.listen(GameEvent.SCENE_RESET, updateButtons);
 	            scene.listen(GameEvent.SCENE_PLAY, updateButtons);
 	            scene.listen(GameEvent.SCENE_PAUSE, updateButtons);
+	            globalEventDispatcher.listen('scene load level', updateButtons);
 	            editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, updateButtons);
 	        });
 	        mount(this.controlButtons, playButton);
@@ -6900,7 +6914,6 @@
 	    };
 	    return SelectionButton;
 	}());
-	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelToScene() {
 	    return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
@@ -7333,7 +7346,6 @@
 	        this.el = el('div.popupLayer', {
 	            onclick: function () {
 	                popup.remove();
-	                console.log('popup.cancelCallback', popup.cancelCallback);
 	                popup.cancelCallback && popup.cancelCallback();
 	            }
 	        });
@@ -7388,18 +7400,21 @@
 	//# sourceMappingURL=createObject.js.map
 
 	var WIDGET_DISTANCE = 50;
+	// Widgets usually edit entityPrototypes, but in case sceneMode is recording, entities itself are edited.
 	var WidgetManager = /** @class */ (function () {
 	    function WidgetManager() {
 	        var _this = this;
-	        this.entityPrototypes = [];
+	        this.entities = [];
 	        this.transformIsDirty = false;
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (change.type === 'editorSelection') {
-	                console.log('gah');
-	                _this.entityPrototypes.length = 0;
+	                _this.entities.length = 0;
 	                if (editorSelection.type === 'epr') {
-	                    _this.entityPrototypes = filterChildren(editorSelection.items);
-	                    assert(!_this.entityPrototypes.find(function (epr) { return !epr.previouslyCreatedEntity; }), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
+	                    _this.entities = filterChildren(editorSelection.items.map(function (epr) { return epr.previouslyCreatedEntity; }));
+	                    assert(!_this.entities.find(function (ent) { return !ent; }), 'all entityPrototypes of widgetManager must have previouslyCreatedEntity');
+	                }
+	                else if (editorSelection.type === 'ent') {
+	                    _this.entities = filterChildren(editorSelection.items);
 	                }
 	                _this.updateWidgets();
 	            }
@@ -7411,6 +7426,9 @@
 	            _this.clear();
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_TOOL_CHANGED, function (newTool) {
+	            _this.updateWidgets();
+	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, function () {
 	            _this.updateWidgets();
 	        });
 	        forEachScene(function (scene$$1) {
@@ -7426,7 +7444,14 @@
 	        if (!this.widgetRoot) {
 	            return;
 	        }
-	        this.widgetRoot.update(this.entityPrototypes);
+	        if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
+	            // In preview mode, you cannot edit anything
+	            console.log('nothing');
+	            this.widgetRoot.update([]);
+	        }
+	        else {
+	            this.widgetRoot.update(this.entities);
+	        }
 	        this.transformIsDirty = false;
 	    };
 	    WidgetManager.prototype.setParentElement = function (parent) {
@@ -7435,14 +7460,13 @@
 	        this.updateWidgets();
 	    };
 	    WidgetManager.prototype.clear = function () {
-	        this.entityPrototypes.length = 0;
+	        this.entities.length = 0;
 	        this.updateWidgets();
 	    };
 	    WidgetManager.prototype.updateTransform = function () {
 	        if (this.widgetRoot) {
 	            this.transformIsDirty = true;
 	            // to activate movement effect when clicking down with mouse and dragging with keyboard movement
-	            // scene.canvas.parentElement.dispatchEvent(new Event('mousemove'));
 	            for (var _i = 0, _a = this.widgetRoot.widgets; _i < _a.length; _i++) {
 	                var widget = _a[_i];
 	                widget.control.onMouseMove();
@@ -7451,18 +7475,21 @@
 	    };
 	    return WidgetManager;
 	}());
+	function editEntityInsteadOfEntityPrototype() {
+	    return editorGlobals.sceneMode === SceneMode.RECORDING;
+	}
 	var WidgetRoot = /** @class */ (function () {
 	    function WidgetRoot() {
 	        this.widgets = [];
 	        this.el = el('div.widgetRoot');
 	    }
-	    WidgetRoot.prototype.update = function (entityPrototypes) {
+	    WidgetRoot.prototype.update = function (entities) {
 	        var this$1 = this;
 
-	        this.entityPrototypes = entityPrototypes;
+	        this.entities = entities;
 	        this.el.innerHTML = '';
 	        this.widgets.length = 0;
-	        if (entityPrototypes.length === 0) {
+	        if (entities.length === 0) {
 	            return;
 	        }
 	        this.updateTransform();
@@ -7509,16 +7536,16 @@
 	        }
 	    };
 	    WidgetRoot.prototype.updateTransform = function () {
-	        if (!this.entityPrototypes || this.entityPrototypes.length === 0) {
+	        if (!this.entities || this.entities.length === 0) {
 	            return;
 	        }
 	        var averagePosition = new Vector(0, 0);
-	        for (var _i = 0, _a = this.entityPrototypes; _i < _a.length; _i++) {
-	            var entityPrototype = _a[_i];
-	            averagePosition.add(entityPrototype.previouslyCreatedEntity.Transform.getGlobalPosition());
+	        for (var _i = 0, _a = this.entities; _i < _a.length; _i++) {
+	            var entity = _a[_i];
+	            averagePosition.add(entity.Transform.getGlobalPosition());
 	        }
-	        this.setPosition(averagePosition.divideScalar(this.entityPrototypes.length));
-	        this.setAngle(this.entityPrototypes[0].previouslyCreatedEntity.Transform.getGlobalAngle());
+	        this.setPosition(averagePosition.divideScalar(this.entities.length));
+	        this.setAngle(this.entities[0].Transform.getGlobalAngle());
 	    };
 	    WidgetRoot.prototype.setPosition = function (worldPosition) {
 	        this.worldPosition = worldPosition;
@@ -7554,10 +7581,15 @@
 	            var rotatedRelativePosition = _this.relativePosition.clone();
 	            { rotatedRelativePosition.rotate(_this.widgetRoot.angle); }
 	            var moveVector = worldChange.getProjectionOn(rotatedRelativePosition);
-	            _this.widgetRoot.entityPrototypes.forEach(function (epr) {
-	                var Transform = epr.previouslyCreatedEntity.getComponent('Transform');
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var Transform = entity.getComponent('Transform');
 	                var newLocalPosition = Transform.getLocalPosition(Transform.getGlobalPosition().add(moveVector));
-	                epr.getTransform().setValue('position', newLocalPosition);
+	                if (editEntityInsteadOfEntityPrototype()) {
+	                    entity.Transform.position = newLocalPosition;
+	                }
+	                else {
+	                    entity.prototype.getTransform().setValue('position', newLocalPosition);
+	                }
 	                // Transform.setGlobalPosition(Transform.getGlobalPosition().add(moveVector));
 	            });
 	            _this.widgetRoot.move(moveVector);
@@ -7578,10 +7610,15 @@
 	        this.widgetRoot = widgetRoot;
 	        //'.fas.fa-circle'
 	        this.el = el('div.widget.positionWidget', this.control = new WidgetControl(el('div.widgetControl.positionWidgetControl'), null, function (worldChange, worldPos) {
-	            _this.widgetRoot.entityPrototypes.forEach(function (epr) {
-	                var Transform = epr.previouslyCreatedEntity.getComponent('Transform');
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var Transform = entity.getComponent('Transform');
 	                var newLocalPosition = Transform.getLocalPosition(Transform.getGlobalPosition().add(worldChange));
-	                epr.getTransform().setValue('position', newLocalPosition);
+	                if (editEntityInsteadOfEntityPrototype()) {
+	                    entity.Transform.position = newLocalPosition;
+	                }
+	                else {
+	                    entity.prototype.getTransform().setValue('position', newLocalPosition);
+	                }
 	            });
 	            _this.widgetRoot.move(worldChange);
 	        }));
@@ -7626,8 +7663,14 @@
 	            var oldMousePositionValue = relativeWidgetPosition.dot(relativeOldMousePosition) / relativeWidgetPosition.lengthSq();
 	            var change = mousePositionValue - oldMousePositionValue;
 	            var changeVector = new Vector(1, 1).add(_this.scaleDirection.clone().multiplyScalar(change / Math.max(1, Math.pow(mousePositionValue, 1))));
-	            _this.widgetRoot.entityPrototypes.forEach(function (epr) {
-	                var scaleProperty = epr.getTransform().getProperty('scale');
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var scaleProperty;
+	                if (editEntityInsteadOfEntityPrototype()) {
+	                    scaleProperty = entity.Transform._properties['scale'];
+	                }
+	                else {
+	                    scaleProperty = entity.prototype.getTransform().getProperty('scale');
+	                }
 	                var newScale = scaleProperty.value.clone().multiply(changeVector);
 	                if (newScale.x < MIN_SCALE)
 	                    { newScale.x = MIN_SCALE; }
@@ -7666,8 +7709,8 @@
 	                newWidgetAngle -= newWidgetAngle % (Math.PI / SHIFT_STEPS * 2);
 	                angleDifference = newWidgetAngle - this.widgetRoot.angle;
 	            }*/
-	            _this.widgetRoot.entityPrototypes.forEach(function (epr) {
-	                var angleProperty = epr.getTransform().getProperty('angle');
+	            _this.widgetRoot.entities.forEach(function (entity) {
+	                var angleProperty = entity.prototype.getTransform().getProperty('angle');
 	                angleProperty.value = angleProperty.value + angleDifference;
 	            });
 	            _this.widgetRoot.rotate(angleDifference);
@@ -7939,6 +7982,10 @@
 	                selectInEditor([], _this);
 	            }
 	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_SCENE_MODE_CHANGED, function () {
+	            _this.updatePropertyChangeCreationFilter();
+	            _this.widgetManager.updateWidgets();
+	        }, 10000);
 	        editorEventDispacher.listen('locate serializable', function (serializable) {
 	            if (serializable.threeLetterType === 'epr') {
 	                var entityPrototype = serializable;
@@ -8108,6 +8155,7 @@
 	            handleEntity(entity);
 	            entity.forEachChild('ent', handleEntity, true);
 	        });
+	        editorEventDispacher.listen(EditorEvent.EDITOR_DRAW_NEEDED, function () { return _this.draw(); });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
 	            if (scene && scene.resetting) {
 	                return;
@@ -8266,7 +8314,6 @@
 	        var entityDragEnd = function () {
 	            setChangeOrigin(_this);
 	            var entitiesInSelection = addEntitiesToLevel(_this.newEntities) || [];
-	            // TODO: Level-Scene sync
 	            _this.clearState();
 	            _this.selectEntities(entitiesInSelection);
 	            _this.selectSelectedEntitiesInEditor();
@@ -8582,22 +8629,41 @@
 	    SceneModule.prototype.updatePropertyChangeCreationFilter = function () {
 	        if (!scene)
 	            { return; }
+	        /*
+
+	- If scene.isInInitialState & state = normal:
+	- Edit level. addChange enabled in level edits
+	- Don't edit scene. addChange disabled in scene edits
+	- Sync everything from level to scene
+	- state = preview:
+	    - Can also edit scene, but values are not stored.
+	    - preview state is mainly visual hint for user.
+	- state = recording:
+	    - Edit scene & level
+	    - addChange enabled in scene & level
+	    - No sync in either direction
+	- If not scene.isInInitialState:
+	- Don't sync from level to scene. addChange enabled in level edits
+	- Don't sync from scene to level. addChange enabled in scene edits only when properties of selected entities change. (for property editor)
+
+
+	        */
 	        if (scene.isInInitialState()) {
 	            if (editorGlobals.sceneMode === SceneMode.RECORDING) {
-	                enableAllChanges();
+	                setPropertyChangeSettings(true, true);
 	            }
 	            else {
-	                disableAllChanges();
+	                setPropertyChangeSettings(true, false);
 	            }
 	        }
 	        else if (editorSelection.type === 'ent') {
-	            filterSceneChanges(function (property) {
+	            setPropertyChangeSettings(true, function (property) {
 	                var selectedEntities = editorSelection.items;
 	                return !!property.findParent('ent', function (serializable) { return selectedEntities.includes(serializable); });
 	            });
 	        }
 	        else {
-	            disableAllChanges();
+	            setPropertyChangeSettings(true, false);
 	        }
 	    };
 	    SceneModule.prototype.copyEntityPrototypes = function (entityPrototypes) {
@@ -8881,7 +8947,10 @@
 	                if (_this.externalChange)
 	                    { return; }
 	                var serializables$$1 = selectedIds.map(getSerializable).filter(Boolean);
-	                selectInEditor(serializables$$1, _this);
+	                if (serializables$$1.length === 1 && editorSelection.items.length === 1 && serializables$$1[0] === editorSelection.items[0]) ;
+	                else {
+	                    selectInEditor(serializables$$1, _this);
+	                }
 	                Module.activateModule('object', false);
 	            },
 	            moveCallback: function (serializableId, parentId) {
@@ -10417,7 +10486,9 @@
 	            else {
 	                _this.recordButton.classList.remove('selected');
 	                if (editorGlobals.sceneMode === SceneMode.NORMAL && _this.editedEntityPrototype) {
-	                    _this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+	                    executeWithOrigin(_this, function () {
+	                        _this.editedEntityPrototype.previouslyCreatedEntity.resetComponents();
+	                    });
 	                    // selectInEditor([this.editedEntityPrototype], this);
 	                    _this.editedEntityPrototype = null;
 	                }
@@ -10440,6 +10511,7 @@
 	            }
 	            _this.animationTimelineView.selectFrame(1);
 	            _this.recordButton.style.display = animation$$1 ? 'inline-block' : 'none';
+	            editorEventDispacher.dispatch(EditorEvent.EDITOR_DRAW_NEEDED);
 	        });
 	        redomListen(_this, 'frameCountChanged', function (frameCount) {
 	            if (!(frameCount > 0 && frameCount <= animation.MAX_FRAME_COUNT)) {
@@ -10702,6 +10774,7 @@
 	                }
 	                setChangeOrigin(this);
 	                component.animator.currentAnimation.setFrame(this.animationTimelineView.selectedFrame);
+	                editorEventDispacher.dispatch(EditorEvent.EDITOR_DRAW_NEEDED);
 	            }
 	        }
 	    };

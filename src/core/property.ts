@@ -5,7 +5,11 @@ import * as performanceTool from '../util/performance';
 import { PropertyType } from './propertyType';
 import { GameEvent } from './eventDispatcher';
 
-let changesEnabled = true;
+let gameChangesEnabled = true;
+let sceneChangesEnabled = false;
+let sceneChangeFilter: (prp: Property) => boolean = null;
+
+let changesEnabled = false;
 let scenePropertyFilter = null;
 // true / false to enable / disable property value change sharing.
 // if object is passed, changes are only sent
@@ -20,6 +24,12 @@ export function disableAllChanges() {
 
 export function enableAllChanges() {
 	changesEnabled = true;
+}
+
+export function setPropertyChangeSettings(enableGameChanges: boolean, enableSceneChanges: boolean | ((prp: Property) => boolean)) {
+	gameChangesEnabled = enableGameChanges
+	sceneChangesEnabled = !!enableSceneChanges
+	sceneChangeFilter = typeof enableSceneChanges === 'function' ? enableSceneChanges : null
 }
 
 export function executeWithoutEntityPropertyChangeCreation(task) {
@@ -61,7 +71,7 @@ export default class Property extends Serializable {
 				this.value = this._initialValueIsJSON ? propertyType.type.fromJSON(this._initialValue) : this._initialValue;
 			else
 				this.value = propertyType.initialValue;
-		} catch(e) {
+		} catch (e) {
 			console.log('Invalid value', e, propertyType, this);
 			this.value = propertyType.initialValue;
 		}
@@ -83,7 +93,7 @@ export default class Property extends Serializable {
 	}
 
 	valueEquals(otherValue) {
-		return this.propertyType.type.equal(this._value,otherValue);
+		return this.propertyType.type.equal(this._value, otherValue);
 	}
 
 	get type() {
@@ -95,13 +105,12 @@ export default class Property extends Serializable {
 		this._value = this.propertyType.validator.validate(newValue);
 
 		this.dispatch(GameEvent.PROPERTY_VALUE_CHANGE, this._value, oldValue);
-		if (changesEnabled && this._rootType) { // not scene or empty
-			if (scenePropertyFilter === null
-				|| this._rootType !== 'sce'
-				|| scenePropertyFilter(this)
-			) {
+		if (this._rootType === 'gam') {
+			if (gameChangesEnabled) {
 				addChange(changeType.setPropertyValue, this);
 			}
+		} else if (sceneChangesEnabled && (!sceneChangeFilter || sceneChangeFilter(this))) {
+			addChange(changeType.setPropertyValue, this);
 		}
 	}
 	get value() {
