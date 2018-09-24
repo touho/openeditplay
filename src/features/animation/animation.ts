@@ -17,7 +17,7 @@ export namespace animation {
         fps?: number; // If falsy, use DEFAULT_FRAME_RATE
     };
     export type AnimationDataTrack = {
-        eprId: string;
+        path: string;
         cId: string;
         prpName: string;
         keyFrames: { [frame: number]: any }
@@ -58,17 +58,17 @@ export namespace animation {
          * @param componendId
          * @param value jsoned property value
          */
-        saveValue(entityPrototypeId: string, componendId: string, propertyName: string, frameNumber: number, value: any) {
-            let track = this.tracks.find(track => track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName);
+        saveValue(path: string, componendId: string, propertyName: string, frameNumber: number, value: any) {
+            let track = this.tracks.find(track => track.cId === componendId && track.path === path && track.prpName === propertyName);
             if (!track) {
-                track = new Track(entityPrototypeId, componendId, propertyName);
+                track = new Track(path, componendId, propertyName);
                 this.tracks.push(track);
             }
             track.saveValue(frameNumber, value);
         }
 
-        getKeyFrames(entityPrototypeId: string, componendId: string, propertyName: string) {
-            let track = this.tracks.find(track => track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName);
+        getKeyFrames(path: string, componendId: string, propertyName: string) {
+            let track = this.tracks.find(track => track.cId === componendId && track.path === path && track.prpName === propertyName);
             if (track) {
                 return track.keyFrames;
             } else {
@@ -116,7 +116,7 @@ export namespace animation {
     }
 
     export class Track {
-        constructor(public eprId: string, public cId: string, public prpName: string, public keyFrames: { [frame: number]: any } = {}) {
+        constructor(public path: string, public cId: string, public prpName: string, public keyFrames: { [frame: number]: any } = {}) {
         }
 
         saveValue(frameNumber: number, value) {
@@ -125,7 +125,7 @@ export namespace animation {
 
         static create(json) {
             let keyFrames = json.keyFrames || {};
-            return new Track(json.eprId, json.cId, json.prpName, keyFrames);
+            return new Track(json.path, json.cId, json.prpName, keyFrames);
         }
     }
 }

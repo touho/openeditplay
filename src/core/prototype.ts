@@ -1,6 +1,5 @@
-import Serializable from './serializable';
+import Serializable, { createStringId } from './serializable';
 import assert from '../util/assert';
-import { getSerializable } from './serializableManager';
 import Prop, { PropertyType } from './propertyType';
 import PropertyOwner from './propertyOwner';
 import ComponentData from './componentData';
@@ -9,7 +8,7 @@ import { game } from './game';
 import { Component } from './component';
 import EntityPrototype from './entityPrototype';
 import Level from './level';
-import { globalEventDispatcher } from './eventDispatcher';
+import { globalEventDispatcher, GameEvent } from './eventDispatcher';
 import Property from './property';
 
 let propertyTypes = [
@@ -19,14 +18,15 @@ let propertyTypes = [
 export default class Prototype extends PropertyOwner {
 	previouslyCreatedEntity: Entity;
 	name: string; // Hack to reveal PropertyOwner property
+	siblingId: string;
 
 	static _propertyTypes: Array<PropertyType>;
 	static _propertyTypesByName: { [s: string]: PropertyType };
 
-	constructor(predefinedId?: string) {
+	constructor(predefinedId?: string, siblingId?: string) {
 		super(predefinedId);
-
 		this.previouslyCreatedEntity = null;
+		this.siblingId = siblingId || createStringId('', 5);
 	}
 
 	makeUpAName() {
@@ -42,6 +42,43 @@ export default class Prototype extends PropertyOwner {
 	}
 	getParentPrototype(): Prototype {
 		return this._parent && this._parent.threeLetterType === 'prt' ? this._parent as Prototype : null;
+	}
+
+	/**
+	 * "" = path to current prototype
+	 * "abc" = path to child prototype that has siblingId "abc"
+	 * "abc/def/ghi" = path to child of child of child.
+	 */
+	getPrototypePath(childTarget: Prototype) {
+		let path = '';
+		while (childTarget && childTarget !== this) {
+			if (path) {
+				path = childTarget.siblingId + '/' + path
+			} else {
+				path = childTarget.siblingId
+			}
+			childTarget = childTarget.getParent() as Prototype
+		}
+		if (childTarget === this) {
+			return path;
+		}
+		return null;
+	}
+	getPrototypeByPath(path) {
+		if (typeof path !== 'string') {
+			// assert(false, 'did not find prototype by path')
+			return null
+		}
+		let siblingIds = path.split('/').filter(Boolean)
+		let prototype = this
+		for (const siblingId of siblingIds) {
+			prototype = prototype.findChild(this.threeLetterType, (prt: Prototype) => prt.siblingId === siblingId)
+			if (!prototype) {
+				// assert(false, 'did not find prototype by path')
+				return null
+			}
+		}
+		return prototype
 	}
 
 	/*
@@ -294,13 +331,27 @@ export default class Prototype extends PropertyOwner {
 		this.previouslyCreatedEntity = null;
 		return true;
 	}
+
+	clone() {
+		let clone = super.clone() as any as Prototype;
+		clone.siblingId = this.siblingId
+		return clone
+	}
+
+	toJSON() {
+		let json = super.toJSON();
+		json.si = this.siblingId;
+		return json;
+	}
 	static create(name: string) {
 		return new Prototype().initWithPropertyValues({ name });
 	};
 }
 PropertyOwner.defineProperties(Prototype, propertyTypes);
 
-Serializable.registerSerializable(Prototype, 'prt');
+Serializable.registerSerializable(Prototype, 'prt', json => {
+	return new Prototype(json.id, json.si);
+});
 
 export type InheritedComponentData = {
 	ownComponentData: ComponentData;

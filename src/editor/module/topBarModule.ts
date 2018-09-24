@@ -110,8 +110,6 @@ export class TopBarModule extends Module {
 
 		const updateButtons = () => {
 			setTimeout(() => {
-				console.log('scene', scene.playing, editorGlobals.sceneMode, scene.time);
-
 				if (scene.playing) {
 					playButton.update(pauseButtonData);
 				} else if (editorGlobals.sceneMode === SceneMode.NORMAL) {

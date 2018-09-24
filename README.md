@@ -33,15 +33,18 @@ mysql -u openeditplay --password="openeditplay" --database=openeditplay < instal
 
 
 ### TODO ###
+- Proper sprite support: image resource
+- BUG: When epr with children detaches from prefab, children will disappear
 - Animation:
     - Move keyframe
     - Track interpolation method discreet/linear/cubic
     - Animation loop mode: no loop/loop/back and forth
     - Animation module playing
+    - Root level transform animation to use relative values to initial pose
+    - What if you break entityPrototype animated tree by moving when it using PreFab?
 - Game / Level settings
     - Camera viewport
 - Multiedit of objects
 - Object instance value/component saving
 - When detaching from prototype, don't include every single property etc. Save space.
 - When changing selection, don't animate property editor packed statuses. Slows down too much.
-- Proper sprite support: image resource

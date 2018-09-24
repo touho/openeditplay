@@ -567,6 +567,7 @@ class SceneModule extends Module {
 				let clickedEntity = getEntityUnderMouse(pixiCoordinates);
 				if (clickedEntity) {
 					this.entityClicked(clickedEntity);
+					this.updatePropertyChangeCreationFilter()
 				} else if (!sceneEdit.isMultiSelectModifierPressed()) {
 					this.clearSelectedEntities();
 					unfocus();

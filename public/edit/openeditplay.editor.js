@@ -26,7 +26,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -119,7 +118,6 @@
 	    c.enter('a');
 	}
 	test();
-	//# sourceMappingURL=circularDependencyDetector.js.map
 
 	var GameEvent;
 	(function (GameEvent) {
@@ -241,7 +239,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -321,13 +318,11 @@
 	    task();
 	    setChangeOrigin(oldOrigin);
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
 	if (isClient && isServer)
 	    { throw new Error('Can not be client and server at the same time.'); }
-	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -725,7 +720,6 @@
 	        return true;
 	    });
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var gameChangesEnabled = true;
 	var sceneChangesEnabled = false;
@@ -835,7 +829,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -979,7 +972,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1145,7 +1137,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1223,7 +1214,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1380,7 +1370,6 @@
 	    fromJSON: function (x) { return new Color(x); },
 	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1509,7 +1498,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -2065,7 +2053,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -2176,7 +2163,6 @@
 	    */
 	    return imageData.data[3] > 30; // Alpha channel is over 30/255
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2212,9 +2198,6 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -2291,7 +2274,6 @@
 	    }
 	    return new Game(json.id);
 	});
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2379,7 +2361,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2515,7 +2496,6 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
-	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2561,7 +2541,6 @@
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
 	editorEventDispacher.dispatcher['editorEventDispatcher'] = true; // for debugging
-	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -2647,7 +2626,6 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2928,7 +2906,6 @@
 	    if (scene)
 	        { listener(scene); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -3139,7 +3116,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -3293,7 +3269,6 @@
 	    }
 
 	*/
-	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3315,7 +3290,6 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3542,16 +3516,16 @@
 	    }
 	    return entity;
 	});
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
 	];
 	var Prototype = /** @class */ (function (_super) {
 	    __extends(Prototype, _super);
-	    function Prototype(predefinedId) {
+	    function Prototype(predefinedId, siblingId) {
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this.previouslyCreatedEntity = null;
+	        _this.siblingId = siblingId || createStringId('', 5);
 	        return _this;
 	    }
 	    Prototype.prototype.makeUpAName = function () {
@@ -3566,6 +3540,49 @@
 	    };
 	    Prototype.prototype.getParentPrototype = function () {
 	        return this._parent && this._parent.threeLetterType === 'prt' ? this._parent : null;
+	    };
+	    /**
+	     * "" = path to current prototype
+	     * "abc" = path to child prototype that has siblingId "abc"
+	     * "abc/def/ghi" = path to child of child of child.
+	     */
+	    Prototype.prototype.getPrototypePath = function (childTarget) {
+	        var path = '';
+	        while (childTarget && childTarget !== this) {
+	            if (path) {
+	                path = childTarget.siblingId + '/' + path;
+	            }
+	            else {
+	                path = childTarget.siblingId;
+	            }
+	            childTarget = childTarget.getParent();
+	        }
+	        if (childTarget === this) {
+	            return path;
+	        }
+	        return null;
+	    };
+	    Prototype.prototype.getPrototypeByPath = function (path) {
+	        if (typeof path !== 'string') {
+	            // assert(false, 'did not find prototype by path')
+	            return null;
+	        }
+	        var siblingIds = path.split('/').filter(Boolean);
+	        var prototype = this;
+	        var _loop_1 = function (siblingId) {
+	            prototype = prototype.findChild(this_1.threeLetterType, function (prt) { return prt.siblingId === siblingId; });
+	            if (!prototype) {
+	                return { value: null };
+	            }
+	        };
+	        var this_1 = this;
+	        for (var _i = 0, siblingIds_1 = siblingIds; _i < siblingIds_1.length; _i++) {
+	            var siblingId = siblingIds_1[_i];
+	            var state_1 = _loop_1(siblingId);
+	            if (typeof state_1 === "object")
+	                { return state_1.value; }
+	        }
+	        return prototype;
 	    };
 	    /*
 	    filter filters component datas
@@ -3753,7 +3770,7 @@
 	            };
 	        }
 	        var levelArray = game.getChildren('lvl');
-	        var _loop_1 = function (i) {
+	        var _loop_2 = function (i) {
 	            var foundInThisLevel = false;
 	            levelArray[i].forEachChild('epr', function (epr) {
 	                if (epr.prototype === _this) {
@@ -3766,7 +3783,7 @@
 	            }
 	        };
 	        for (var i = levelArray.length - 1; i >= 0; i--) {
-	            _loop_1(i);
+	            _loop_2(i);
 	        }
 	        this.forEachChild(this.threeLetterType, function (prt) {
 	            var results = prt.getEntityPrototypesThatUseThisPrototype();
@@ -3796,13 +3813,25 @@
 	        this.previouslyCreatedEntity = null;
 	        return true;
 	    };
+	    Prototype.prototype.clone = function () {
+	        var clone = _super.prototype.clone.call(this);
+	        clone.siblingId = this.siblingId;
+	        return clone;
+	    };
+	    Prototype.prototype.toJSON = function () {
+	        var json = _super.prototype.toJSON.call(this);
+	        json.si = this.siblingId;
+	        return json;
+	    };
 	    Prototype.create = function (name) {
 	        return new Prototype().initWithPropertyValues({ name: name });
 	    };
 	    return Prototype;
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Prototype, propertyTypes$1);
-	Serializable.registerSerializable(Prototype, 'prt');
+	Serializable.registerSerializable(Prototype, 'prt', function (json) {
+	    return new Prototype(json.id, json.si);
+	});
 	function getDataFromPrototype(prototype, originalPrototype, filter, _depth) {
 	    if (_depth === void 0) { _depth = 0; }
 	    var data = null;
@@ -3846,14 +3875,13 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
 	var EntityPrototype = /** @class */ (function (_super) {
 	    __extends(EntityPrototype, _super);
-	    function EntityPrototype(predefinedId) {
-	        var _this = _super.call(this, predefinedId) || this;
+	    function EntityPrototype(predefinedId, siblingId) {
+	        var _this = _super.call(this, predefinedId, siblingId) || this;
 	        // this._parent is level or another entityPrototype, not prototype as in type or prefab. We need a link to parent-prototype. That's why we have prototype property
 	        /**
 	         * prototype stays the same whole EntityPrototype lifetime. It can not change. It is not and will be not supported by server communication.
@@ -3877,7 +3905,7 @@
 	        return this.prototype || null;
 	    };
 	    EntityPrototype.prototype.clone = function () {
-	        var obj = new EntityPrototype();
+	        var obj = new EntityPrototype(null, this.siblingId);
 	        obj.prototype = this.prototype;
 	        var id = obj.id;
 	        var children = [];
@@ -3938,7 +3966,8 @@
 	        // Below optimization reduces size 88%. child id's have to be generated based on this.id
 	        var Transform = this.getTransform();
 	        var json = {
-	            id: this.id
+	            id: this.id,
+	            si: this.siblingId
 	        };
 	        if (this.prototype)
 	            { json.t = this.prototype.id; } // might be prototype or prefab or may not exist. .t as in type
@@ -4039,6 +4068,8 @@
 	        if (prototype.threeLetterType === 'pfa') {
 	            return prototype.createEntityPrototype();
 	        }
+	        // DEPRECATED
+	        console.log("This isn't used anymore because we don't anymore have \"Types\" which are plain Prototypes");
 	        var entityPrototype = new EntityPrototype();
 	        entityPrototype.prototype = prototype;
 	        var id = entityPrototype.id;
@@ -4103,7 +4134,7 @@
 	    return transform;
 	}
 	Serializable.registerSerializable(EntityPrototype, 'epr', function (json) {
-	    var entityPrototype = new EntityPrototype(json.id);
+	    var entityPrototype = new EntityPrototype(json.id, json.si);
 	    entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
 	    // assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type
 	    if (json.t && !entityPrototype.prototype) {
@@ -4138,13 +4169,12 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
 	    __extends(Prefab, _super);
-	    function Prefab(predefinedId) {
-	        return _super.call(this, predefinedId) || this;
+	    function Prefab(predefinedId, siblingId) {
+	        return _super.call(this, predefinedId, siblingId) || this;
 	    }
 	    Prefab.prototype.makeUpAName = function () {
 	        var nameProperty = this.findChild('prp', function (property) { return property.name === 'name'; });
@@ -4160,21 +4190,22 @@
 	    Prefab.createFromPrototype = function (prototype) {
 	        var inheritedComponentDatas = prototype.getInheritedComponentDatas();
 	        var children = inheritedComponentDatas.map(function (icd) {
-	            return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
-	                .initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
+	            var cda = new ComponentData(icd.componentClass.componentName, null, icd.componentId);
+	            cda.initWithChildren(icd.properties.map(function (prp) { return prp.clone(); }));
+	            return cda;
 	        });
 	        children.push(prototype._properties.name.clone());
 	        prototype.forEachChild('epr', function (childEntityPrototype) {
 	            var prefab = Prefab.createFromPrototype(childEntityPrototype);
 	            children.push(prefab);
 	        });
-	        var prefab = new Prefab().initWithChildren(children);
+	        var prefab = new Prefab(null, prototype.siblingId).initWithChildren(children);
 	        // Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
 	        prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
 	        return prefab;
 	    };
 	    Prefab.prototype.createEntityPrototype = function () {
-	        var entityPrototype = new EntityPrototype();
+	        var entityPrototype = new EntityPrototype(null, this.siblingId);
 	        entityPrototype.prototype = this;
 	        var id = entityPrototype.id;
 	        var prototypeTransform = this.findChild('cda', function (cda) { return cda.name === 'Transform'; });
@@ -4235,8 +4266,9 @@
 	     }
 	]
 	 */
-	Serializable.registerSerializable(Prefab, 'pfa');
-	//# sourceMappingURL=prefab.js.map
+	Serializable.registerSerializable(Prefab, 'pfa', function (json) {
+	    return new Prefab(json.id, json.si);
+	});
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -4260,9 +4292,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -4368,7 +4397,6 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -4392,7 +4420,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4582,7 +4609,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4624,7 +4650,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4682,8 +4707,7 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/ 
-	//# sourceMappingURL=Spawner.js.map
+	*/
 
 	Component.register({
 	    name: 'Trigger',
@@ -4731,7 +4755,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -4944,7 +4967,6 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -4970,7 +4992,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -5266,7 +5287,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -5282,7 +5302,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5484,7 +5503,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
@@ -5530,16 +5548,16 @@
 	         * @param componendId
 	         * @param value jsoned property value
 	         */
-	        Animation.prototype.saveValue = function (entityPrototypeId, componendId, propertyName, frameNumber, value) {
-	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
+	        Animation.prototype.saveValue = function (path, componendId, propertyName, frameNumber, value) {
+	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.path === path && track.prpName === propertyName; });
 	            if (!track) {
-	                track = new Track(entityPrototypeId, componendId, propertyName);
+	                track = new Track(path, componendId, propertyName);
 	                this.tracks.push(track);
 	            }
 	            track.saveValue(frameNumber, value);
 	        };
-	        Animation.prototype.getKeyFrames = function (entityPrototypeId, componendId, propertyName) {
-	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.eprId === entityPrototypeId && track.prpName === propertyName; });
+	        Animation.prototype.getKeyFrames = function (path, componendId, propertyName) {
+	            var track = this.tracks.find(function (track) { return track.cId === componendId && track.path === path && track.prpName === propertyName; });
 	            if (track) {
 	                return track.keyFrames;
 	            }
@@ -5591,9 +5609,9 @@
 	    }());
 	    animation.Animation = Animation;
 	    var Track = /** @class */ (function () {
-	        function Track(eprId, cId, prpName, keyFrames) {
+	        function Track(path, cId, prpName, keyFrames) {
 	            if (keyFrames === void 0) { keyFrames = {}; }
-	            this.eprId = eprId;
+	            this.path = path;
 	            this.cId = cId;
 	            this.prpName = prpName;
 	            this.keyFrames = keyFrames;
@@ -5603,13 +5621,12 @@
 	        };
 	        Track.create = function (json) {
 	            var keyFrames = json.keyFrames || {};
-	            return new Track(json.eprId, json.cId, json.prpName, keyFrames);
+	            return new Track(json.path, json.cId, json.prpName, keyFrames);
 	        };
 	        return Track;
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
-	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5620,6 +5637,7 @@
 	    properties: [
 	        Prop('animationData', '{}', Prop.longString, 'temporary var for development')
 	    ],
+	    allowMultiple: false,
 	    prototype: {
 	        animator: null,
 	        constructor: function () {
@@ -5651,7 +5669,7 @@
 	    function Animator(animationData, component) {
 	        this.component = component;
 	        this.time = 0;
-	        this.animations = animationData.animations.map(function (anim) { return new AnimatorAnimation(anim); });
+	        this.animations = animationData.animations.map(function (anim) { return new AnimatorAnimation(anim, component.entity.prototype); });
 	        this.currentAnimation = this.animations[0];
 	    }
 	    Animator.prototype.update = function (dt) {
@@ -5687,12 +5705,12 @@
 	    return Animator;
 	}());
 	var AnimatorAnimation = /** @class */ (function () {
-	    function AnimatorAnimation(animationJSON) {
+	    function AnimatorAnimation(animationJSON, rootEntityPrototype) {
 	        var _this = this;
 	        this.name = animationJSON.name;
 	        this.frames = animationJSON.frames || animation.DEFAULT_FRAME_COUNT;
 	        this.fps = animationJSON.fps || animation.DEFAULT_FRAME_RATE;
-	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData, _this.frames); });
+	        this.tracks = animationJSON.tracks.map(function (trackData) { return new AnimatorTrack(trackData, _this.frames, rootEntityPrototype); });
 	    }
 	    AnimatorAnimation.prototype.setFrame = function (frame) {
 	        assert(frame >= 1 && frame < this.frames + 1, 'invalid frame number: ' + frame);
@@ -5704,13 +5722,17 @@
 	    return AnimatorAnimation;
 	}());
 	var AnimatorTrack = /** @class */ (function () {
-	    function AnimatorTrack(trackData, frames) {
+	    function AnimatorTrack(trackData, frames, rootEntityPrototype) {
 	        var this$1 = this;
 
 	        this.frames = frames;
 	        this.currentKeyFrameIndex = 0;
 	        this.keyFrames = [];
-	        this.entityPrototype = getSerializable(trackData.eprId);
+	        this.entityPrototype = rootEntityPrototype.getPrototypeByPath(trackData.path);
+	        if (!this.entityPrototype) {
+	            console.warn('Animation path did not match anything:', trackData.path);
+	            return;
+	        }
 	        var componentData = this.entityPrototype.findComponentDataByComponentId(trackData.cId, true);
 	        var componentName = componentData.componentClass.componentName;
 	        this.entity = this.entityPrototype.previouslyCreatedEntity;
@@ -5908,9 +5930,6 @@
 	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
-	//# sourceMappingURL=Animation.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -5953,7 +5972,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -6198,7 +6216,6 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=net.js.map
 
 	// DOM / ReDom event system
 	function redomDispatch(view, type, data) {
@@ -6218,7 +6235,6 @@
 	            { handler(event); }
 	    });
 	}
-	//# sourceMappingURL=redomEvents.js.map
 
 	var options$1 = null;
 	function loadOptions() {
@@ -6247,7 +6263,6 @@
 	    loadOptions();
 	    return options$1[id];
 	}
-	//# sourceMappingURL=options.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -6424,7 +6439,6 @@
 	    };
 	    return ModuleTab;
 	}());
-	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -6448,7 +6462,6 @@
 	    };
 	    return Layout;
 	}());
-	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -6545,7 +6558,6 @@
 	        resolve();
 	    });
 	});
-	//# sourceMappingURL=module.js.map
 
 	var selectedLevel = null;
 	var editorSelection = {
@@ -6628,7 +6640,6 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editorSelection', editorSelection);
 	});
-	//# sourceMappingURL=editorSelection.js.map
 
 	var EditorGlobals = /** @class */ (function () {
 	    function EditorGlobals() {
@@ -6664,7 +6675,6 @@
 	    SceneMode["PREVIEW"] = "preview";
 	})(SceneMode || (SceneMode = {}));
 	var editorGlobals = new EditorGlobals();
-	//# sourceMappingURL=editorGlobals.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -6747,7 +6757,6 @@
 	        });
 	        var updateButtons = function () {
 	            setTimeout(function () {
-	                console.log('scene', scene.playing, editorGlobals.sceneMode, scene.time);
 	                if (scene.playing) {
 	                    playButton.update(pauseButtonData);
 	                }
@@ -7191,7 +7200,6 @@
 	        Selection.setIsInSelectionArea(inSelectionArea);
 	    });
 	}
-	//# sourceMappingURL=sceneEditUtil.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -7254,7 +7262,6 @@
 	    ];
 	}
 	var inSelectionAreaFilter = createSelectionAreaFilters();
-	//# sourceMappingURL=EditorSelection.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7352,7 +7359,6 @@
 	    }
 	    return Layer;
 	}());
-	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7397,7 +7403,6 @@
 	    }
 	    return CreateObject;
 	}(Popup));
-	//# sourceMappingURL=createObject.js.map
 
 	var WIDGET_DISTANCE = 50;
 	// Widgets usually edit entityPrototypes, but in case sceneMode is recording, entities itself are edited.
@@ -7476,7 +7481,7 @@
 	    return WidgetManager;
 	}());
 	function editEntityInsteadOfEntityPrototype() {
-	    return editorGlobals.sceneMode === SceneMode.RECORDING;
+	    return editorGlobals.sceneMode === SceneMode.RECORDING || !scene.isInInitialState();
 	}
 	var WidgetRoot = /** @class */ (function () {
 	    function WidgetRoot() {
@@ -7710,7 +7715,13 @@
 	                angleDifference = newWidgetAngle - this.widgetRoot.angle;
 	            }*/
 	            _this.widgetRoot.entities.forEach(function (entity) {
-	                var angleProperty = entity.prototype.getTransform().getProperty('angle');
+	                var angleProperty;
+	                if (editEntityInsteadOfEntityPrototype()) {
+	                    angleProperty = entity.Transform._properties['angle'];
+	                }
+	                else {
+	                    angleProperty = entity.prototype.getTransform().getProperty('angle');
+	                }
 	                angleProperty.value = angleProperty.value + angleDifference;
 	            });
 	            _this.widgetRoot.rotate(angleDifference);
@@ -7829,7 +7840,6 @@
 	    };
 	    return WidgetControl;
 	}());
-	//# sourceMappingURL=widgetManager.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -8266,6 +8276,7 @@
 	                var clickedEntity = getEntityUnderMouse(pixiCoordinates);
 	                if (clickedEntity) {
 	                    _this.entityClicked(clickedEntity);
+	                    _this.updatePropertyChangeCreationFilter();
 	                }
 	                else if (!isMultiSelectModifierPressed()) {
 	                    _this.clearSelectedEntities();
@@ -8690,7 +8701,6 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
-	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -8736,7 +8746,6 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
-	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
@@ -8858,7 +8867,6 @@
 	    var event = new DragAndDropStopEvent(idList, targetElement);
 	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
-	//# sourceMappingURL=treeView.js.map
 
 	var PositionAngleScale = /** @class */ (function () {
 	    function PositionAngleScale(position, angle, scale) {
@@ -8923,7 +8931,6 @@
 	    };
 	    return PositionAngleScale;
 	}());
-	//# sourceMappingURL=positionAngleScaleUtil.js.map
 
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
@@ -9225,7 +9232,6 @@
 	    return ObjectsModule;
 	}(Module));
 	Module.register(ObjectsModule, 'left');
-	//# sourceMappingURL=objectsModule.js.map
 
 	/**
 	 * Handles everything else than prototype deletion itself.
@@ -9297,7 +9303,6 @@
 	    }
 	    return PrototypeDeleteConfirmation;
 	}(Popup));
-	//# sourceMappingURL=PrototypeDeleteConfirmation.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -9408,7 +9413,6 @@
 	    return PrefabsModule;
 	}(Module));
 	Module.register(PrefabsModule, 'left');
-	//# sourceMappingURL=prefabsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -9502,7 +9506,6 @@
 	    };
 	    return LevelItem;
 	}());
-	//# sourceMappingURL=levelsModule.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -9590,7 +9593,6 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
-	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -9630,7 +9632,6 @@
 	    };
 	    return Confirmation;
 	}(Popup));
-	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -9748,7 +9749,6 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
-	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -9804,7 +9804,6 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
-	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -9813,7 +9812,6 @@
 	        element.classList.remove('skipPropertyEditorTransitions');
 	    }, 10);
 	}
-	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -10310,7 +10308,6 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
-	//# sourceMappingURL=propertyEditor.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -10348,7 +10345,6 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
-	//# sourceMappingURL=prefabModule.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -10385,7 +10381,6 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
-	//# sourceMappingURL=objectModule.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -10420,7 +10415,6 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
-	//# sourceMappingURL=levelModule.js.map
 
 	var GameModule = /** @class */ (function (_super) {
 	    __extends(GameModule, _super);
@@ -10451,7 +10445,6 @@
 	    return GameModule;
 	}(Module));
 	Module.register(GameModule, 'right');
-	//# sourceMappingURL=gameModule.js.map
 
 	var AnimationModule = /** @class */ (function (_super) {
 	    __extends(AnimationModule, _super);
@@ -10539,6 +10532,31 @@
 	            _this.updateAnimationData();
 	        });
 	        editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, function (change) {
+	            if (change.type === changeType.move) {
+	                if (change.reference instanceof Prototype) {
+	                    var movedPrototype = change.reference;
+	                    var movedSiblingId = movedPrototype.siblingId;
+	                    var path = _this.editedEntityPrototype.getPrototypePath(movedPrototype);
+	                    if (path === null) {
+	                        // moved out from animated tree. lets do nothing.
+	                        return;
+	                    }
+	                    var animationPrototypeFinder = movedPrototype;
+	                    // No need to do any changes if moved prototype is the animated prototype itself
+	                    animationPrototypeFinder = animationPrototypeFinder.getParent();
+	                    while (animationPrototypeFinder instanceof Prototype) {
+	                        // TODO: what if you break entityPrototype animated tree when it using PreFab?
+	                        var animationComponentData = animationPrototypeFinder.findChild('cda', function (cda) { return cda.name === 'Animation'; });
+	                        if (animationComponentData) {
+	                            var animationData = animationComponentData.getValue('animationData');
+	                            animationData = replaceAnimationDataPrototypePath(animationData, movedSiblingId, path);
+	                            animationComponentData.setValue('animationData', animationData);
+	                        }
+	                        animationPrototypeFinder = animationPrototypeFinder._parent;
+	                    }
+	                    return;
+	                }
+	            }
 	            if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
 	                if (change.type === 'editorSelection' && _this.editedEntityPrototype) {
 	                    var editorSelection_1 = change.reference;
@@ -10751,15 +10769,16 @@
 	        }
 	    };
 	    AnimationModule.prototype.saveValue = function (entityPrototype, componendId, property) {
+	        var path = this.editedEntityPrototype.getPrototypePath(entityPrototype);
 	        // If this is the first keyframe, make sure there is a keyframe on frame 1.
 	        if (this.animationTimelineView.selectedFrame !== 1) {
 	            var keyFrames = this.selectedAnimation.getKeyFrames(entityPrototype.id, componendId, property.name);
 	            if (!keyFrames || Object.keys(keyFrames).length === 0) {
 	                var frame1Value = entityPrototype.getValue(componendId, property.name);
-	                this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, property.propertyType.type.toJSON(frame1Value));
+	                this.selectedAnimation.saveValue(path, componendId, property.name, 1, property.propertyType.type.toJSON(frame1Value));
 	            }
 	        }
-	        this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
+	        this.selectedAnimation.saveValue(path, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
 	        this.updateAnimationData();
 	    };
 	    AnimationModule.prototype.setFrameInEntity = function () {
@@ -10899,7 +10918,7 @@
 	        }
 	        this.frameNumbers.update(frameNumbers);
 	        var trackUpdateData = currentAnimation.tracks.map(function (track) {
-	            var entityPrototype = getSerializable(track.eprId);
+	            var entityPrototype = editorGlobals.animationEntityPrototype.getPrototypeByPath(track.path);
 	            return {
 	                name: entityPrototype.makeUpAName() + ' ' + track.prpName,
 	                keyFrames: track.keyFrames,
@@ -11048,7 +11067,16 @@
 	    }
 	}
 	*/
-	//# sourceMappingURL=animationModule.js.map
+	/*
+	animationData: 'path: "aaaaa/bbbbb/ccccc/ddddd" ...'
+	siblingId: "ccccc"
+	newPath: "aaaaa/ccccc"
+
+	output: path: "aaaaa/ccccc/ddddd"
+	*/
+	function replaceAnimationDataPrototypePath(animationData, siblingId, newPath) {
+	    return animationData.replace(new RegExp("\"[^\"]*" + siblingId, 'g'), "\"" + newPath);
+	}
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -11158,7 +11186,6 @@
 	    };
 	    return FPSMeter;
 	}());
-	//# sourceMappingURL=performanceModule.js.map
 
 	var PerSecondModule = /** @class */ (function (_super) {
 	    __extends(PerSecondModule, _super);
@@ -11200,7 +11227,6 @@
 	    };
 	    return PerSecondItem;
 	}());
-	//# sourceMappingURL=perSecondModule.js.map
 
 	var AnimationView = /** @class */ (function () {
 	    function AnimationView(serializable) {
@@ -11219,7 +11245,6 @@
 	    };
 	    return AnimationView;
 	}());
-	//# sourceMappingURL=animationView.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -11317,11 +11342,9 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, function (name, value) {
 	    help[name] = value;
 	});
-	//# sourceMappingURL=help.js.map
 
 	window.test = function () {
 	};
-	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -11357,7 +11380,6 @@
 	    };
 	    return OKPopup;
 	}(Popup));
-	//# sourceMappingURL=OKPopup.js.map
 
 	editorEventDispacher.getEventPromise('modulesRegistered').then(function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
@@ -11501,7 +11523,6 @@
 	        number: num
 	    };
 	}
-	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -11517,7 +11538,6 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

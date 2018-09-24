@@ -1,8 +1,6 @@
 import { Component, Prop } from '../core/component';
 import Vector from '../util/vector';
-import { Color } from '../util/color';
 import { default as PIXI, generateTextureAndAnchor, getHashedTextureAndAnchor, hitTest } from '../features/graphics';
-import { globalEventDispatcher, GameEvent } from '../core/eventDispatcher';
 
 Component.register({
 	name: 'Sprite',

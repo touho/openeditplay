@@ -8,32 +8,32 @@ RUNS IN GAME SCENE
     Entity (Called "Object" is editor):
         - exists in the game scene
         - contains things called "Component"
-    
+
     Component:
         - adds features to an Entity and makes it alive
         - is always inside an Entity
         - contains things called "Property"
-        
+
     Property:
         - makes Components editable and serializable
-        
+
 
 BEHIND THE SCENE
 
     Game:
         - Has Prototypes and Levels
-    
+
     Prototype (Type in editor):
         - you can create an Entity based on a Prototype
         - contains many ComponentDatas
-        
+
     ComponentData:
         - holds a set of Properties that decide the initial value of a Property in a Component
 
     PropertyType:
         - you can create a Property based on PropertyModel
-    
-    
+
+
 
 
 
@@ -60,4 +60,22 @@ Prototype
                 has: dataType
                 defined in: ComponentClass
     creates: Entity
+
+
+Game (1)
+Level
+EntityPrototype
+ComponentData
+Property
+
+Game (1)
+Prototype/Prefab
+ComponentData
+Property
+
+Scene (1) (Level instance)
+Entity (EntityPrototype instance)
+Component (ComponentData instance)
+Property (Property instance)
+
 

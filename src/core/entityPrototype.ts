@@ -10,6 +10,7 @@ import Prefab from './prefab';
 import PropertyOwner from './propertyOwner';
 import { PropertyType } from './propertyType';
 import { selectInEditor } from '../editor/editorSelection';
+import { GameEvent, globalEventDispatcher } from './eventDispatcher';
 
 let propertyTypes = [
 	// Prop('name2', 'No name', Prop.string)
@@ -25,8 +26,8 @@ export default class EntityPrototype extends Prototype {
 	 */
 	prototype: Prototype = null;
 
-	constructor(predefinedId?) {
-		super(predefinedId);
+	constructor(predefinedId?, siblingId?: string) {
+		super(predefinedId, siblingId);
 	}
 
 	makeUpAName(): string {
@@ -46,7 +47,7 @@ export default class EntityPrototype extends Prototype {
 		return this.prototype || null;
 	}
 	clone() {
-		let obj = new EntityPrototype();
+		let obj = new EntityPrototype(null, this.siblingId);
 		obj.prototype = this.prototype;
 		let id = obj.id;
 		let children = [];
@@ -110,7 +111,8 @@ export default class EntityPrototype extends Prototype {
 
 		let Transform = this.getTransform();
 		let json: any = {
-			id: this.id
+			id: this.id,
+			si: this.siblingId
 		};
 		if (this.prototype)
 			json.t = this.prototype.id; // might be prototype or prefab or may not exist. .t as in type
@@ -226,6 +228,9 @@ export default class EntityPrototype extends Prototype {
 			return (prototype as Prefab).createEntityPrototype();
 		}
 
+		// DEPRECATED
+		console.log(`This isn't used anymore because we don't anymore have "Types" which are plain Prototypes`);
+
 		let entityPrototype = new EntityPrototype();
 		entityPrototype.prototype = prototype;
 		let id = entityPrototype.id;
@@ -300,7 +305,7 @@ export function createEntityPrototypeTransform(entityPrototypeId) {
 }
 
 Serializable.registerSerializable(EntityPrototype, 'epr', json => {
-	let entityPrototype = new EntityPrototype(json.id);
+	let entityPrototype = new EntityPrototype(json.id, json.si);
 	entityPrototype.prototype = json.t ? getSerializable(json.t) : null;
 
 	// assert(!json.t || entityPrototype.prototype, `Prototype or Prefab ${json.t} not found`); // .t as in type

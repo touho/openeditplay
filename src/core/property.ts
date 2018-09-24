@@ -3,7 +3,7 @@ import { addChange, changeType, setChangeOrigin } from './change';
 import assert from '../util/assert';
 import * as performanceTool from '../util/performance';
 import { PropertyType } from './propertyType';
-import { GameEvent } from './eventDispatcher';
+import { GameEvent, globalEventDispatcher } from './eventDispatcher';
 
 let gameChangesEnabled = true;
 let sceneChangesEnabled = false;

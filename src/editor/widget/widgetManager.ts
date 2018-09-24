@@ -6,7 +6,6 @@ import EntityPrototype from "../../core/entityPrototype";
 import { globalEventDispatcher, GameEvent } from "../../core/eventDispatcher";
 import { RedomComponent, el, mount } from "redom";
 import Vector from "../../util/vector";
-import { Color } from "../../util/color";
 import { listenMouseUp, listenMouseMove, listenMouseDown, keyPressed, key } from "../../util/input";
 import Scene, { scene, forEachScene } from "../../core/scene";
 import { filterChildren } from "../../core/serializable";
@@ -91,7 +90,7 @@ export class WidgetManager {
 }
 
 function editEntityInsteadOfEntityPrototype() {
-    return editorGlobals.sceneMode === SceneMode.RECORDING
+    return editorGlobals.sceneMode === SceneMode.RECORDING || !scene.isInInitialState()
 }
 
 class WidgetRoot implements RedomComponent {
@@ -370,7 +369,13 @@ class AngleWidget implements Widget {
                 }*/
 
                 this.widgetRoot.entities.forEach(entity => {
-                    let angleProperty = entity.prototype.getTransform().getProperty('angle')
+                    let angleProperty
+                    if (editEntityInsteadOfEntityPrototype()) {
+                        angleProperty = entity.Transform._properties['angle']
+                    } else {
+                        angleProperty = entity.prototype.getTransform().getProperty('angle')
+                    }
+
                     angleProperty.value = angleProperty.value + angleDifference
                 });
 

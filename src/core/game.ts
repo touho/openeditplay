@@ -1,11 +1,8 @@
 // @flow
 
 import Serializable from './serializable'
-import { addChange, changeType, setChangeOrigin } from './change';
-import Prototype from './prototype'
-import assert from '../util/assert'
-import PropertyOwner, { Prop, PropertyOwnerClass } from './propertyOwner';
-import { Component } from './component';
+import { addChange, changeType } from './change';
+import PropertyOwner, { Prop } from './propertyOwner';
 import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
 import { globalEventDispatcher, GameEvent } from './eventDispatcher';

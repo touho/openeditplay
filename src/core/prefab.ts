@@ -1,17 +1,14 @@
 import Prototype from './prototype';
 import Property from './property';
 import Serializable from './serializable';
-import { getSerializable } from './serializableManager';
-import { Prop, componentClasses } from './component';
 import ComponentData from './componentData';
 import assert from '../util/assert';
-import Vector from '../util/vector';
 import EntityPrototype, { createEntityPrototypeNameProperty, createEntityPrototypeTransform } from "./entityPrototype";
 
 // Prefab is an EntityPrototype that has been saved to a prefab.
 export default class Prefab extends Prototype {
-	constructor(predefinedId?: string) {
-		super(predefinedId);
+	constructor(predefinedId?: string, siblingId?: string) {
+		super(predefinedId, siblingId);
 	}
 
 	makeUpAName() {
@@ -30,8 +27,9 @@ export default class Prefab extends Prototype {
 	static createFromPrototype(prototype: Prototype) {
 		let inheritedComponentDatas = prototype.getInheritedComponentDatas();
 		let children: Array<Serializable> = inheritedComponentDatas.map(icd => {
-			return new ComponentData(icd.componentClass.componentName, null, icd.componentId)
-				.initWithChildren(icd.properties.map(prp => prp.clone()));
+			const cda = new ComponentData(icd.componentClass.componentName, null, icd.componentId)
+			cda.initWithChildren(icd.properties.map(prp => prp.clone()))
+			return cda
 		}) as any as Array<Serializable>;
 
 		children.push(prototype._properties.name.clone());
@@ -41,7 +39,7 @@ export default class Prefab extends Prototype {
 			children.push(prefab);
 		});
 
-		let prefab = new Prefab().initWithChildren(children);
+		let prefab = new Prefab(null, prototype.siblingId).initWithChildren(children);
 
 		// Don't just prototype.makeUpAName() because it might give you "Prototype" or "EntityPrototype". Checking them would be a hack.
 		prefab.name = prototype.name || prototype.prototype && prototype.prototype.makeUpAName() || 'Prefab';
@@ -50,7 +48,7 @@ export default class Prefab extends Prototype {
 	}
 
 	createEntityPrototype() {
-		let entityPrototype = new EntityPrototype();
+		let entityPrototype = new EntityPrototype(null, this.siblingId);
 		entityPrototype.prototype = this;
 		let id = entityPrototype.id;
 
@@ -133,4 +131,6 @@ Returns JSON:
 ]
  */
 
-Serializable.registerSerializable(Prefab, 'pfa');
+Serializable.registerSerializable(Prefab, 'pfa', json => {
+	return new Prefab(json.id, json.si);
+});

@@ -18,6 +18,7 @@ export default Component.register({
 	properties: [
 		Prop('animationData', '{}', Prop.longString, 'temporary var for development')
 	],
+	allowMultiple: false, // see prototype.ts clone(). Would need multi-component support
 	prototype: {
 		animator: null,
 		constructor() {
@@ -51,7 +52,7 @@ class Animator {
 	animations: AnimatorAnimation[];
 	currentAnimation: AnimatorAnimation;
 	constructor(animationData: animation.AnimationData, public component: Component) {
-		this.animations = animationData.animations.map(anim => new AnimatorAnimation(anim));
+		this.animations = animationData.animations.map(anim => new AnimatorAnimation(anim, component.entity.prototype));
 		this.currentAnimation = this.animations[0];
 	}
 	update(dt) {
@@ -91,11 +92,11 @@ class AnimatorAnimation {
 	tracks: AnimatorTrack[];
 	frames: number;
 	fps: number;
-	constructor(animationJSON: animation.AnimationDataAnimation) {
+	constructor(animationJSON: animation.AnimationDataAnimation, rootEntityPrototype: EntityPrototype) {
 		this.name = animationJSON.name;
 		this.frames = animationJSON.frames || animation.DEFAULT_FRAME_COUNT;
 		this.fps = animationJSON.fps || animation.DEFAULT_FRAME_RATE;
-		this.tracks = animationJSON.tracks.map(trackData => new AnimatorTrack(trackData, this.frames));
+		this.tracks = animationJSON.tracks.map(trackData => new AnimatorTrack(trackData, this.frames, rootEntityPrototype));
 	}
 	setFrame(frame: number) {
 		assert(frame >= 1 && frame < this.frames + 1, 'invalid frame number: ' + frame);
@@ -116,8 +117,12 @@ class AnimatorTrack {
 		control1: any;
 		control2: any;
 	}> = [];
-	constructor(trackData: animation.AnimationDataTrack, public frames: number) {
-		this.entityPrototype = getSerializable(trackData.eprId) as EntityPrototype;
+	constructor(trackData: animation.AnimationDataTrack, public frames: number, rootEntityPrototype: EntityPrototype) {
+		this.entityPrototype = rootEntityPrototype.getPrototypeByPath(trackData.path) as EntityPrototype;
+		if (!this.entityPrototype) {
+			console.warn('Animation path did not match anything:', trackData.path)
+			return
+		}
 		let componentData = this.entityPrototype.findComponentDataByComponentId(trackData.cId, true);
 		let componentName = componentData.componentClass.componentName;
 		this.entity = this.entityPrototype.previouslyCreatedEntity;

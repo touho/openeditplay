@@ -1,6 +1,7 @@
 
 const propertiesStoredInValueField = [
 	'cid', // componentId
+	'si', // simblingId of a Prototype
 	's', // scale
 	'a', // angle
 	't', // prototypeId

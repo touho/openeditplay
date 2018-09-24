@@ -1,7 +1,7 @@
 import assert from '../util/assert';
 import { changeType, addChange } from './change';
 import { isClient } from '../util/environment';
-import EventDispatcher from './eventDispatcher';
+import EventDispatcher, { globalEventDispatcher, GameEvent } from './eventDispatcher';
 
 export const serializableCallbacks = {
 	addSerializable: (serializable: Serializable) => { },
@@ -288,7 +288,7 @@ export default class Serializable extends EventDispatcher {
 		obj._state |= Serializable.STATE_FROMJSON;
 		return obj;
 	}
-	static registerSerializable(Class: { new(...args): Serializable }, threeLetterType: string, fromJSON: (string) => void = null) {
+	static registerSerializable(Class: { new(...args): Serializable }, threeLetterType: string, fromJSON: (json: any) => Serializable = null) {
 		Class.prototype.threeLetterType = threeLetterType;
 		assert(typeof threeLetterType === 'string' && threeLetterType.length === 3);
 		if (!fromJSON)

@@ -1,13 +1,10 @@
 import { el, list, mount, RedomComponent, List, text } from 'redom';
 import Module from './module';
-import * as performance from '../../util/performance';
 import Scene, { scene } from '../../core/scene';
 import { editorEventDispacher, EditorEvent } from '../editorEventDispatcher';
 import { editorSelection, unfocus, selectInEditor } from '../editorSelection';
 import EntityPrototype from '../../core/entityPrototype';
 import ComponentData from '../../core/componentData';
-import Prefab from '../../core/prefab';
-import debug from '../../player/debug';
 import Property from '../../core/property';
 import { animation } from '../../features/animation/animation';
 import { redomDispatch, redomListen } from '../../util/redomEvents';
@@ -16,10 +13,9 @@ import { editorGlobals, SceneMode } from '../editorGlobals';
 import { Change, changeType, setChangeOrigin, getChangeOrigin, executeWithOrigin } from '../../core/change';
 import Entity from '../../core/entity';
 import { Component } from '../../core/component';
-import { getSerializable } from '../../core/serializableManager';
-import EditorSelection from '../components/EditorSelection';
 import Confirmation from '../views/popup/Confirmation';
 import { isMultiSelectModifierPressed } from '../util/sceneEditUtil';
+import Prototype from '../../core/prototype';
 
 class AnimationModule extends Module {
 	animations: animation.Animation[] = [];
@@ -131,6 +127,34 @@ class AnimationModule extends Module {
 		});
 
 		editorEventDispacher.listen(EditorEvent.EDITOR_CHANGE, (change: Change) => {
+			if (change.type === changeType.move) {
+				if (change.reference instanceof Prototype) {
+					let movedPrototype = change.reference
+					let movedSiblingId = movedPrototype.siblingId
+					let path = this.editedEntityPrototype.getPrototypePath(movedPrototype)
+					if (path === null) {
+						// moved out from animated tree. lets do nothing.
+						return
+					}
+					let animationPrototypeFinder = movedPrototype
+
+					// No need to do any changes if moved prototype is the animated prototype itself
+					animationPrototypeFinder = animationPrototypeFinder.getParent() as Prototype
+
+					while (animationPrototypeFinder instanceof Prototype) {
+						// TODO: what if you break entityPrototype animated tree when it using PreFab?
+
+						let animationComponentData = animationPrototypeFinder.findChild('cda', (cda: ComponentData) => cda.name === 'Animation') as ComponentData
+						if (animationComponentData) {
+							let animationData = animationComponentData.getValue('animationData')
+							animationData = replaceAnimationDataPrototypePath(animationData, movedSiblingId, path)
+							animationComponentData.setValue('animationData', animationData)
+						}
+						animationPrototypeFinder = animationPrototypeFinder._parent as Prototype
+					}
+					return
+				}
+			}
 			if (editorGlobals.sceneMode !== SceneMode.RECORDING) {
 				if (change.type === 'editorSelection' && this.editedEntityPrototype) {
 					let editorSelection = change.reference as any;
@@ -364,16 +388,17 @@ class AnimationModule extends Module {
 	}
 
 	saveValue(entityPrototype: EntityPrototype, componendId: string, property: Property) {
+		let path = this.editedEntityPrototype.getPrototypePath(entityPrototype)
 		// If this is the first keyframe, make sure there is a keyframe on frame 1.
 		if (this.animationTimelineView.selectedFrame !== 1) {
 			let keyFrames = this.selectedAnimation.getKeyFrames(entityPrototype.id, componendId, property.name);
 			if (!keyFrames || Object.keys(keyFrames).length === 0) {
 				let frame1Value = entityPrototype.getValue(componendId, property.name);
-				this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, 1, property.propertyType.type.toJSON(frame1Value));
+				this.selectedAnimation.saveValue(path, componendId, property.name, 1, property.propertyType.type.toJSON(frame1Value));
 			}
 		}
 
-		this.selectedAnimation.saveValue(entityPrototype.id, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
+		this.selectedAnimation.saveValue(path, componendId, property.name, this.animationTimelineView.selectedFrame, property.propertyType.type.toJSON(property._value));
 		this.updateAnimationData();
 	}
 
@@ -539,7 +564,7 @@ class AnimationTimelineView implements RedomComponent {
 		this.frameNumbers.update(frameNumbers);
 
 		let trackUpdateData = currentAnimation.tracks.map(track => {
-			let entityPrototype = getSerializable(track.eprId) as EntityPrototype;
+			let entityPrototype = editorGlobals.animationEntityPrototype.getPrototypeByPath(track.path) as EntityPrototype;
 			return {
 				name: entityPrototype.makeUpAName() + ' ' + track.prpName,
 				keyFrames: track.keyFrames,
@@ -695,3 +720,14 @@ class AnimationFrameView implements RedomComponent {
 	}
 }
 */
+
+/*
+animationData: 'path: "aaaaa/bbbbb/ccccc/ddddd" ...'
+siblingId: "ccccc"
+newPath: "aaaaa/ccccc"
+
+output: path: "aaaaa/ccccc/ddddd"
+*/
+function replaceAnimationDataPrototypePath(animationData, siblingId, newPath) {
+	return animationData.replace(new RegExp(`"[^"]*${siblingId}`, 'g'), `"${newPath}`)
+}
