@@ -58,6 +58,7 @@ function gameReceivedOverNet(gameData) {
 	try {
 		executeExternal(() => {
 			Serializable.fromJSON(gameData);
+			globalEventDispatcher.dispatch(GameEvent.GLOBAL_GAME_CREATED, game);
 		});
 		localStorage.openEditPlayGameId = gameData.id;
 		// location.replace(`${location.origin}${location.pathname}?gameId=${gameData.id}`);

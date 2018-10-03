@@ -1,7 +1,7 @@
 // @flow
 
 import Serializable from './serializable'
-import { addChange, changeType } from './change';
+import { addChange, changeType, getChangeOrigin } from './change';
 import PropertyOwner, { Prop } from './propertyOwner';
 import {stickyNonModalErrorPopup} from '../util/popup'
 import '../modules';
@@ -40,10 +40,6 @@ export default class Game extends PropertyOwner {
 		if (isClient) {
 			game = this;
 		}
-
-		setTimeout(() => {
-			globalEventDispatcher.dispatch(GameEvent.GLOBAL_GAME_CREATED, this);
-		}, 1);
 	}
 	initWithChildren(children: Array<Serializable> = []) {
 		let val = super.initWithChildren(children);
