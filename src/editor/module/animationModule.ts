@@ -565,8 +565,9 @@ class AnimationTimelineView implements RedomComponent {
 
 		let trackUpdateData = currentAnimation.tracks.map(track => {
 			let entityPrototype = editorGlobals.animationEntityPrototype.getPrototypeByPath(track.path) as EntityPrototype;
+			let name = (entityPrototype ? entityPrototype.makeUpAName() : '?') + ' ' + track.prpName;
 			return {
-				name: entityPrototype.makeUpAName() + ' ' + track.prpName,
+				name,
 				keyFrames: track.keyFrames,
 				frameCount
 			};

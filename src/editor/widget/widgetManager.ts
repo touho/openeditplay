@@ -60,8 +60,6 @@ export class WidgetManager {
         }
         if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
             // In preview mode, you cannot edit anything
-            console.log('nothing');
-
             this.widgetRoot.update([]);
         } else {
             this.widgetRoot.update(this.entities);

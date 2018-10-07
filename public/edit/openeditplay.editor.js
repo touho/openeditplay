@@ -6263,6 +6263,7 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
+	//# sourceMappingURL=net.js.map
 
 	// DOM / ReDom event system
 	function redomDispatch(view, type, data) {
@@ -7510,7 +7511,6 @@
 	        }
 	        if (editorGlobals.sceneMode === SceneMode.PREVIEW) {
 	            // In preview mode, you cannot edit anything
-	            console.log('nothing');
 	            this.widgetRoot.update([]);
 	        }
 	        else {
@@ -10997,8 +10997,9 @@
 	        this.frameNumbers.update(frameNumbers);
 	        var trackUpdateData = currentAnimation.tracks.map(function (track) {
 	            var entityPrototype = editorGlobals.animationEntityPrototype.getPrototypeByPath(track.path);
+	            var name = (entityPrototype ? entityPrototype.makeUpAName() : '?') + ' ' + track.prpName;
 	            return {
-	                name: entityPrototype.makeUpAName() + ' ' + track.prpName,
+	                name: name,
 	                keyFrames: track.keyFrames,
 	                frameCount: frameCount
 	            };
