@@ -7969,7 +7969,7 @@
 	            // width and height will be fixed after loading
 	            width: 0,
 	            height: 0
-	        }), el('div.pauseInfo', "Paused. Editing objects will not affect the level."), el('i.fas.fa-pause.pauseInfo.topLeft'), el('i.fas.fa-pause.pauseInfo.topRight'), el('i.fas.fa-pause.pauseInfo.bottomLeft'), el('i.fas.fa-pause.pauseInfo.bottomRight'), el('div.sceneEditorSideBarButtons', el('i.fas.fa-arrows.iconButton.button.movement', {
+	        }), el('div.pauseInfo', "Paused. Editing objects will not affect the level."), el('i.fas.fa-pause.pauseInfo.topLeft'), el('i.fas.fa-pause.pauseInfo.topRight'), el('i.fas.fa-pause.pauseInfo.bottomLeft'), el('i.fas.fa-pause.pauseInfo.bottomRight'), el('div.sceneEditorSideBarButtons', el('i.fas.fa-arrows-alt.iconButton.button.movement', {
 	            onclick: function () {
 	                alert('Move in editor with arrow keys or WASD');
 	            },
@@ -8761,7 +8761,6 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
-	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {

@@ -135,7 +135,7 @@ class SceneModule extends Module {
 			el('i.fas.fa-pause.pauseInfo.bottomRight'),
 			el('div.sceneEditorSideBarButtons',
 
-				el('i.fas.fa-arrows.iconButton.button.movement', {
+				el('i.fas.fa-arrows-alt.iconButton.button.movement', {
 					onclick: () => {
 						alert('Move in editor with arrow keys or WASD');
 					},

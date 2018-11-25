@@ -18,7 +18,7 @@ app.use(express.static('public'));
 api.init(app);
 
 server.listen(3000, function(){
-	console.log('listening on *:3000');
+	console.log('listening on localhost:3000');
 });
 
 connection.init(server);
