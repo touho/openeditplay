@@ -67,17 +67,19 @@ globalEventDispatcher.listen(GameEvent.GLOBAL_CHANGE_OCCURED, change => {
 	editorEventDispacher.dispatch(EditorEvent.EDITOR_CHANGE, change);
 	if (change.reference.threeLetterType === 'gam' && change.type === changeType.addSerializableToTree) {
 		let game = change.reference;
+		editor = new Editor(game);
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
+		editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
+		editor.update();
 
-		let timeSincePageLoad = window['timeOfPageLoad'] ? (Date.now() - window['timeOfPageLoad']) : 100;
+		// Lets give DOM some time to build itself before we hide the splash screen
 		setTimeout(() => {
 			document.getElementById('introLogo').classList.add('hiding');
 			setTimeout(() => {
-				editor = new Editor(game);
-				editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editor', editor);
-				editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_MODULES, editor);
-				editor.update();
-			}, 50);
-		}, Math.max(800 - timeSincePageLoad, 10));
+				// we want light DOM.
+				document.getElementById('introLogo').remove();
+			}, 1000);
+		}, 300);
 	} else if (editor) {
 		if (change.reference.threeLetterType === 'lvl' && change.type === changeType.deleteSerializable) {
 			if (selectedLevel === change.reference) {
@@ -168,7 +170,7 @@ class Editor {
 	constructor(game) {
 		assert(game);
 		this.layout = new Layout();
-		document.body.innerHTML = '';
+		// document.body.innerHTML = '';
 		mount(document.body, this.layout);
 	}
 

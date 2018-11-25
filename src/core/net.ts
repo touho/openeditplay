@@ -11,6 +11,7 @@ import assert from '../util/assert';
 import { getSerializable } from './serializableManager';
 import Property from './property';
 import { GameEvent, globalEventDispatcher } from './eventDispatcher';
+import { isServer } from '../util/environment';
 
 let options = {
 	context: null, // 'play' or 'edit'. This is communicated to server. Doesn't affect client.
@@ -161,6 +162,18 @@ let sendChanges = limit(200, 'soon', () => {
 
 let socket;
 function connect() {
+	if (isServer) {
+		// Electron app, not using sockets
+		gameReceivedOverNet({
+			id: 'gam_dumb',
+			c: [{"id":"prtrQ10Xvlt26lKIsrk","c":[{"id":"cdaP5MbwTHjlNTtsbOf","c":[{"id":"prp7GBI7ptGoOB0czCf","v":1,"n":"rotationalDrag"}],"cid":"_Physics","n":"Physics"},{"id":"cdalev0lEyN36HMU1yq","cid":"_CharacterController","n":"CharacterController"},{"id":"cdatyGx2WHvS86caySN","cid":"cidhFIVThaem3","n":"Shape"},{"id":"prp_testPrototypeName","v":"Actor","n":"name"}],"si":"M19cq"},{"id":"prte2f3KiHuM0sF8fGr","c":[{"id":"cdaUTyhrNmhJgbj3hWz","c":[{"id":"prptvjNMPCRfYOB18By","v":"static","n":"type"}],"cid":"_Physics","n":"Physics"},{"id":"cdayHf6lKxMHybf1UDm","cid":"cidAqAv86xu0G","n":"Shape"},{"id":"prpQUR3Ei2tKQ10XL40","v":"Static","n":"name"}],"si":"XaLeF"},{"id":"prtTsDqevlt2okzITrF","c":[{"id":"cda9QvRA0RtxAJ2Y73E","cid":"cidPNowJEkdoK","n":"Shape"},{"id":"cdaGVd0cK6exGIvPlm8","cid":"_Physics","n":"Physics"},{"id":"prpcCUqrxeQMOamqIbc","v":"Dynamic","n":"name"}],"si":"OXlXy"},{"id":"lvloRefeYW72V69c3Q1","c":[{"id":"eprBsqCAnWgyaoVfyiM","si":"GxMPD","c":[{"id":"cdaEpszsej3gKpA0ZaQ","cid":"cidW8yFNDGQX9","n":"Shape"},{"id":"cdadevJLE9pHC8ITKrc","c":[{"id":"prpHBLerc9GTmQe5JBO","v":"static","n":"type"}],"cid":"_Physics","n":"Physics"}],"n":"Floor","p":{"x":-182.1158,"y":78.5093},"s":{"x":4.0126,"y":0.5846}},{"id":"eprCyIXOLETKXtrmRzf","si":"GxMPD","c":[{"id":"cdaQXPj6dFUQBtbOREZ","cid":"_CharacterController","n":"CharacterController"},{"id":"cdaRpjAVXeYHIAvRPtQ","c":[{"id":"prpDPLnUOytA2bb2gXF","v":"circle","n":"type"}],"cid":"cidW8yFNDGQX9","n":"Shape"},{"id":"cdazw3hJYQKgeidpVbB","c":[{"id":"prpwFGr3IBoruOTBIbr","v":"dynamic","n":"type"}],"cid":"_Physics","n":"Physics"}],"n":"guy","p":{"x":-72.9377,"y":-12.0532}},{"id":"eprTK6vWjNyLCU2lmC3","si":"GxMPD","c":[{"id":"cdaFtZvXSTpnde2mCaw","c":[{"id":"prpHcFA2HUNovmcJw7D","v":"static","n":"type"}],"cid":"_Physics","n":"Physics"},{"id":"cdaw8rjFsM9mw8jMbEz","cid":"cidW8yFNDGQX9","n":"Shape"}],"n":"Floor","p":{"x":-254.0626,"y":33.7312},"s":{"x":4.0126,"y":0.5846}},{"id":"epra8MzE4b0YWUS8bAu","si":"GxMPD","c":[{"id":"cdaZr6GMN5zlVAHCl2X","c":[{"id":"prpRxYyZV8HU42ht82h","v":"static","n":"type"}],"cid":"_Physics","n":"Physics"},{"id":"cdarBCjhtof8Sy9pDdt","cid":"cidW8yFNDGQX9","n":"Shape"}],"n":"Floor","p":{"x":-75.4687,"y":42.7656},"s":{"x":4.0126,"y":0.5846}},{"id":"prpfI8ByaPzgGnGavwE","v":"Level 1","n":"name"}]}]
+		})
+
+		// TODO: Save stuff to file system
+
+		return
+	}
+
 	let io = window['io'];
 	if (!io) {
 		return console.error('socket.io not defined after window load.');

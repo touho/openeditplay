@@ -1,7 +1,7 @@
 {
   "name": "openeditplay",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "electron.js",
   "license": "MIT",
   "scripts": {
     "postinstall": "cp installation/configLocal.js config.js",
@@ -10,7 +10,8 @@
     "server": "node server",
     "clean": "./scripts/clean",
     "flow": "flow",
-    "build-editor": "rollup -c -i src/editor/main.ts -o builds/openeditplay.editor.js"
+    "build-editor": "rollup -c -i src/editor/main.ts -o builds/openeditplay.editor.js",
+    "app": "electron ."
   },
   "devDependencies": {
     "@types/redom": "^3.12.0",
