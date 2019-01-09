@@ -1,0 +1,117 @@
+Visual style:
+https://qph.ec.quoracdn.net/main-qimg-6adc5bc884884ddedb35dcdc4633e415
+https://www.youtube.com/watch?v=dYXXRWnRno8
+
+
+Gameplay style:
+Starbound: http://store.steampowered.com/app/211820/Starbound/
+Planet Centauri: http://store.steampowered.com/app/385380/Planet_Centauri/
+
+UI menu style:
+2nd video: http://store.steampowered.com/app/526160/The_Wild_Eight/
+
+Console UI:
+http://i.imgur.com/IiJ3pNw.png
+
+
+
+
+
+Why unity is good:
+Successfull projects have: ease of first access, good documentation and architectural flexibility
+free
+making money for producers
+many users
+it works
+not doing too little or too much
+public variable hack
+run time edit
+A tool for Indie game developers
+Asset store
+Cross Platform
+IDE
+Drag n drop
+Scripting
+Integration with file formats
+pricing
+easy asset workflow
+easy scripting
+Endless possibilities
+Games always come optimised for console manufacturers
+Allows for rapid prototyping
+Comes with a fair amount of versatile (though ugly) default shaders
+Great community
+Lots of Assets
+Tutorials/Scripts for just about anything.
+
+
+Why unity is bad:
+heavy
+mouse heavy
+no editor for linux
+Expensive if you need all features
+Using the engine requires you to agree with their policies
+Crud GUI, finally about to be replaced though. (2011)
+Out of date Mono
+GC is a massive pain in the a$$
+Working on big games takes ALOT of optimisations. 
+Standard networking isnt the greatest.
+Terrain engine is a complete joke
+
+
+
+
+Prefab:
+
+Revert: Go up the tree until you are at the prefabbed object. Delete it and insert prefab Replace str Keep position and rotation (not scale), 
+
+
+
+scene
+    entity
+        entity
+        entity
+            entity
+
+
+level
+    entityData
+        entityData
+        entityData
+            entityData
+            
+!create prefab!
+
+game
+    entityData
+        entityData
+        entityData
+            entityData
+ 
+OR
+
+game
+    prefab
+        entityData
+            entityData
+            entityData
+                entityData
+
+game
+    prefab
+        entityData
+        entityData
+            entityData
+
+
+
+
+
+TODO: bugfixes
+- If Objects-module is open, entityprototype selecting is buggy.
+
+
+
+
+
+

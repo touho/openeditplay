@@ -26,7 +26,11 @@ export default class Prototype extends PropertyOwner {
 	constructor(predefinedId?: string, siblingId?: string) {
 		super(predefinedId);
 		this.previouslyCreatedEntity = null;
-		this.siblingId = siblingId || createStringId('', 5);
+		this.siblingId = siblingId || Prototype.createSiblingId()
+	}
+
+	static createSiblingId() {
+		return createStringId('', 6)
 	}
 
 	makeUpAName() {
@@ -335,6 +339,12 @@ export default class Prototype extends PropertyOwner {
 	clone() {
 		let clone = super.clone() as any as Prototype;
 		clone.siblingId = this.siblingId
+		return clone
+	}
+
+	cloneWithNewSiblingId() {
+		let clone = this.clone()
+		clone.siblingId = Prototype.createSiblingId()
 		return clone
 	}
 

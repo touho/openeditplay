@@ -131,7 +131,7 @@ editorEventDispacher.listen(EditorEvent.EDITOR_CLONE, () => {
 			setChangeOrigin(editor);
 			filteredSerializabled.forEach((serializable: Prototype) => {
 				let parent = serializable.getParent() as Serializable;
-				let clone = serializable.clone() as Prototype;
+				let clone = serializable.cloneWithNewSiblingId() as Prototype;
 
 				if (parent) {
 					let { text, number } = parseTextAndNumber(serializable.name);

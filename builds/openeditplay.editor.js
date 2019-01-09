@@ -26,7 +26,6 @@
 	    }
 	    // @endif
 	}
-	//# sourceMappingURL=assert.js.map
 
 	/*! *****************************************************************************
 	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -119,7 +118,6 @@
 	    c.enter('a');
 	}
 	test();
-	//# sourceMappingURL=circularDependencyDetector.js.map
 
 	var GameEvent;
 	(function (GameEvent) {
@@ -241,7 +239,6 @@
 	    }
 	    return low;
 	}
-	//# sourceMappingURL=eventDispatcher.js.map
 
 	// reference parameters are not sent over net. they are helpers in local game instance
 	var changeType = {
@@ -321,11 +318,9 @@
 	    task();
 	    setChangeOrigin(oldOrigin);
 	}
-	//# sourceMappingURL=change.js.map
 
 	var isClient = typeof window !== 'undefined';
 	var isServer = typeof module !== 'undefined';
-	//# sourceMappingURL=environment.js.map
 
 	var serializableCallbacks = {
 	    addSerializable: function (serializable) { },
@@ -723,7 +718,6 @@
 	        return true;
 	    });
 	}
-	//# sourceMappingURL=serializable.js.map
 
 	var gameChangesEnabled = true;
 	var sceneChangesEnabled = false;
@@ -833,7 +827,6 @@
 	        return "prp " + this.name + "=" + this.value;
 	    }
 	});
-	//# sourceMappingURL=property.js.map
 
 	// info about type, validator, validatorParameters, initialValue
 	var PropertyType = /** @class */ (function () {
@@ -977,7 +970,6 @@
 	    validator.validate = validatorFunction;
 	    return validator;
 	}
-	//# sourceMappingURL=propertyType.js.map
 
 	var Vector = /** @class */ (function () {
 	    function Vector(x, y) {
@@ -1143,7 +1135,6 @@
 	    };
 	    return Vector;
 	}());
-	//# sourceMappingURL=vector.js.map
 
 	var Color = /** @class */ (function () {
 	    function Color(r, g, b) {
@@ -1221,7 +1212,6 @@
 	function rgbToHex(r, g, b) {
 	    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 	}
-	//# sourceMappingURL=color.js.map
 
 	function validateFloat(val) {
 	    if (isNaN(val) || val === Infinity || val === -Infinity)
@@ -1378,7 +1368,6 @@
 	    fromJSON: function (x) { return new Color(x); },
 	    equal: function (a, b) { return a.isEqualTo(b); }
 	});
-	//# sourceMappingURL=dataTypes.js.map
 
 	var PropertyOwner = /** @class */ (function (_super) {
 	    __extends(PropertyOwner, _super);
@@ -1507,7 +1496,6 @@
 	    };
 	    return PropertyOwner;
 	}(Serializable));
-	//# sourceMappingURL=propertyOwner.js.map
 
 	var HASH = '#'.charCodeAt(0);
 	var DOT = '.'.charCodeAt(0);
@@ -2063,7 +2051,6 @@
 	    mount(document.body, popup);
 	}
 	window.sticky = stickyNonModalErrorPopup;
-	//# sourceMappingURL=popup.js.map
 
 	var PIXI;
 	if (isClient) {
@@ -2174,7 +2161,6 @@
 	    */
 	    return imageData.data[3] > 30; // Alpha channel is over 30/255
 	}
-	//# sourceMappingURL=graphics.js.map
 
 	function createCanvas() {
 	    var RESOLUTION = 10;
@@ -2210,9 +2196,6 @@
 	    scene['backgroundGradient'].width = scene.canvas.width;
 	    scene['backgroundGradient'].height = scene.canvas.height;
 	}
-	//# sourceMappingURL=backgroundGradient.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	// @flow
 	console.log('%cOpen Edit Play', 'color: #666; font-size: 16px; text-shadow: 0px 0px 1px #777;');
@@ -2286,7 +2269,6 @@
 	    }
 	    return new Game(json.id);
 	});
-	//# sourceMappingURL=game.js.map
 
 	var p2;
 	if (isClient)
@@ -2374,7 +2356,6 @@
 	    }
 	    return material;
 	}
-	//# sourceMappingURL=physics.js.map
 
 	function keyPressed(key) {
 	    return keys[key] || false;
@@ -2510,7 +2491,6 @@
 	        keyUpListeners.forEach(function (l) { return l(key); });
 	    };
 	}
-	//# sourceMappingURL=input.js.map
 
 	var EditorEvent;
 	(function (EditorEvent) {
@@ -2556,7 +2536,6 @@
 	}());
 	var editorEventDispacher = new EditorEventDispatcher();
 	editorEventDispacher.dispatcher['editorEventDispatcher'] = true; // for debugging
-	//# sourceMappingURL=editorEventDispatcher.js.map
 
 	var UPDATE_INTERVAL = 1000; //ms
 	var performance$1;
@@ -2642,7 +2621,6 @@
 	function getFrameTimes() {
 	    return frameTimes;
 	}
-	//# sourceMappingURL=performance.js.map
 
 	var scene = null;
 	var physicsOptions = {
@@ -2923,7 +2901,6 @@
 	    if (scene)
 	        { listener(scene); }
 	}
-	//# sourceMappingURL=scene.js.map
 
 	var componentClasses = new Map();
 	var automaticSceneEventListeners = {
@@ -3134,7 +3111,6 @@
 	    component._componentId = json.cid || null;
 	    return component;
 	});
-	//# sourceMappingURL=component.js.map
 
 	var ComponentData = /** @class */ (function (_super) {
 	    __extends(ComponentData, _super);
@@ -3288,7 +3264,6 @@
 	    }
 
 	*/
-	//# sourceMappingURL=componentData.js.map
 
 	var serializables = {};
 	function addSerializable(serializable) {
@@ -3310,7 +3285,6 @@
 	    delete serializables[id];
 	}
 	serializableCallbacks.removeSerializable = removeSerializable;
-	//# sourceMappingURL=serializableManager.js.map
 
 	var ALIVE_ERROR = 'entity is already dead';
 	var Entity = /** @class */ (function (_super) {
@@ -3537,7 +3511,6 @@
 	    }
 	    return entity;
 	});
-	//# sourceMappingURL=entity.js.map
 
 	var propertyTypes$1 = [
 	    Prop('name', 'No name', Prop.string)
@@ -3547,9 +3520,12 @@
 	    function Prototype(predefinedId, siblingId) {
 	        var _this = _super.call(this, predefinedId) || this;
 	        _this.previouslyCreatedEntity = null;
-	        _this.siblingId = siblingId || createStringId('', 5);
+	        _this.siblingId = siblingId || Prototype.createSiblingId();
 	        return _this;
 	    }
+	    Prototype.createSiblingId = function () {
+	        return createStringId('', 6);
+	    };
 	    Prototype.prototype.makeUpAName = function () {
 	        return this.name || 'Prototype';
 	    };
@@ -3840,6 +3816,11 @@
 	        clone.siblingId = this.siblingId;
 	        return clone;
 	    };
+	    Prototype.prototype.cloneWithNewSiblingId = function () {
+	        var clone = this.clone();
+	        clone.siblingId = Prototype.createSiblingId();
+	        return clone;
+	    };
 	    Prototype.prototype.toJSON = function () {
 	        var json = _super.prototype.toJSON.call(this);
 	        json.si = this.siblingId;
@@ -3897,7 +3878,6 @@
 	function sortInheritedComponentDatas(a, b) {
 	    return a.componentClass.componentName.localeCompare(b.componentClass.componentName);
 	}
-	//# sourceMappingURL=prototype.js.map
 
 	// EntityPrototype is a prototype that always has one Transform ComponentData and optionally other ComponentDatas also.
 	// Entities are created based on EntityPrototypes
@@ -3978,6 +3958,11 @@
 	        obj.initWithChildren(children);
 	        this._state |= Serializable.STATE_CLONE;
 	        return obj;
+	    };
+	    EntityPrototype.prototype.cloneWithNewSiblingId = function () {
+	        var clone = this.clone();
+	        clone.siblingId = Prototype.createSiblingId();
+	        return clone;
 	    };
 	    EntityPrototype.prototype.toJSON = function () {
 	        /*
@@ -4192,7 +4177,6 @@
 	    entityPrototype.initWithChildren([name, transformData]);
 	    return entityPrototype;
 	});
-	//# sourceMappingURL=entityPrototype.js.map
 
 	// Prefab is an EntityPrototype that has been saved to a prefab.
 	var Prefab = /** @class */ (function (_super) {
@@ -4293,7 +4277,6 @@
 	Serializable.registerSerializable(Prefab, 'pfa', function (json) {
 	    return new Prefab(json.id, json.si);
 	});
-	//# sourceMappingURL=prefab.js.map
 
 	var propertyTypes$3 = [
 	    Prop('name', 'No name', Prop.string)
@@ -4317,9 +4300,6 @@
 	}(PropertyOwner));
 	PropertyOwner.defineProperties(Level, propertyTypes$3);
 	Serializable.registerSerializable(Level, 'lvl');
-	//# sourceMappingURL=level.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	Component.register({
 	    name: 'Transform',
@@ -4425,7 +4405,6 @@
 	});
 	var zeroPoint = new PIXI$1.Point();
 	var tempPoint = new PIXI$1.Point();
-	//# sourceMappingURL=Transform.js.map
 
 	Component.register({
 	    name: 'TransformVariance',
@@ -4449,7 +4428,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=TransformVariance.js.map
 
 	Component.register({
 	    name: 'Shape',
@@ -4639,7 +4617,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Shape.js.map
 
 	Component.register({
 	    name: 'Sprite',
@@ -4681,7 +4658,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Sprite.js.map
 
 	Component.register({
 	    name: 'Spawner',
@@ -4739,8 +4715,7 @@
 	    console.log('testi', window['testi']);
 	    window['testi'] = 0;
 	}, 1000);
-	*/ 
-	//# sourceMappingURL=Spawner.js.map
+	*/
 
 	Component.register({
 	    name: 'Trigger',
@@ -4788,7 +4763,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Trigger.js.map
 
 	var PHYSICS_SCALE = 1 / 50;
 	var PHYSICS_SCALE_INV = 1 / PHYSICS_SCALE;
@@ -5001,7 +4975,6 @@
 	function fromBodyPositionToGlobalVector(bodyPosition) {
 	    return Vector.fromArray(bodyPosition).multiplyScalar(PHYSICS_SCALE_INV);
 	}
-	//# sourceMappingURL=Physics.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5027,7 +5000,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=Lifetime.js.map
 
 	Component.register({
 	    name: 'Particles',
@@ -5323,7 +5295,6 @@
 	    }
 	    return textureCache[hash];
 	}
-	//# sourceMappingURL=Particles.js.map
 
 	function removeTheDeadFromArray(array) {
 	    for (var i = array.length - 1; i >= 0; --i) {
@@ -5339,7 +5310,6 @@
 	    else
 	        { return value; }
 	}
-	//# sourceMappingURL=algorithm.js.map
 
 	var JUMP_SAFE_DELAY = 0.1; // seconds
 	Component.register({
@@ -5541,7 +5511,6 @@
 	        }
 	    }
 	});
-	//# sourceMappingURL=CharacterController.js.map
 
 	// Animation clashes with typescript lib "DOM" (lib.dom.d.ts). Therefore we have namespace.
 	var animation;
@@ -5666,7 +5635,6 @@
 	    }());
 	    animation.Track = Track;
 	})(animation || (animation = {}));
-	//# sourceMappingURL=animation.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -5970,9 +5938,6 @@
 	        control2: curr + prevNextDirection * nextDist * controlPointDistanceFactor,
 	    };
 	}
-	//# sourceMappingURL=Animation.js.map
-
-	//# sourceMappingURL=index.js.map
 
 	/*
 	 milliseconds: how often callback can be called
@@ -6015,7 +5980,6 @@
 	        }
 	    };
 	}
-	//# sourceMappingURL=callLimiter.js.map
 
 	var options = {
 	    context: null,
@@ -6270,7 +6234,6 @@
 	    if (newScene)
 	        { newScene.play(); }
 	}
-	//# sourceMappingURL=net.js.map
 
 	// DOM / ReDom event system
 	function redomDispatch(view, type, data) {
@@ -6290,7 +6253,6 @@
 	            { handler(event); }
 	    });
 	}
-	//# sourceMappingURL=redomEvents.js.map
 
 	var options$1 = null;
 	function loadOptions() {
@@ -6319,7 +6281,6 @@
 	    loadOptions();
 	    return options$1[id];
 	}
-	//# sourceMappingURL=options.js.map
 
 	var ModuleContainer = /** @class */ (function () {
 	    function ModuleContainer(moduleContainerName, packButtonIcon) {
@@ -6496,7 +6457,6 @@
 	    };
 	    return ModuleTab;
 	}());
-	//# sourceMappingURL=moduleContainer.js.map
 
 	var Layout = /** @class */ (function () {
 	    function Layout() {
@@ -6520,7 +6480,6 @@
 	    };
 	    return Layout;
 	}());
-	//# sourceMappingURL=layout.js.map
 
 	var moduleIdToModule = {};
 	var Module = /** @class */ (function () {
@@ -6617,7 +6576,6 @@
 	        resolve();
 	    });
 	});
-	//# sourceMappingURL=module.js.map
 
 	var selectedLevel = null;
 	var editorSelection = {
@@ -6700,7 +6658,6 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_LOADED, function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, 'editorSelection', editorSelection);
 	});
-	//# sourceMappingURL=editorSelection.js.map
 
 	var EditorGlobals = /** @class */ (function () {
 	    function EditorGlobals() {
@@ -6736,7 +6693,6 @@
 	    SceneMode["PREVIEW"] = "preview";
 	})(SceneMode || (SceneMode = {}));
 	var editorGlobals = new EditorGlobals();
-	//# sourceMappingURL=editorGlobals.js.map
 
 	var TopBarModule = /** @class */ (function (_super) {
 	    __extends(TopBarModule, _super);
@@ -6985,7 +6941,6 @@
 	    };
 	    return SelectionButton;
 	}());
-	//# sourceMappingURL=topBarModule.js.map
 
 	function shouldSyncLevelToScene() {
 	    return scene && scene.isInInitialState() && selectedLevel && editorGlobals.sceneMode === SceneMode.NORMAL;
@@ -7196,7 +7151,7 @@
 	        if (parentEntity && parentEntity.threeLetterType === 'ent') {
 	            parentEntityPrototype = parentEntity.prototype;
 	        }
-	        var epr = entity.prototype.clone();
+	        var epr = entity.prototype.cloneWithNewSiblingId();
 	        epr.position = entity.position;
 	        (parentEntityPrototype || selectedLevel).addChild(epr);
 	        // TODO: Level-Scene sync - get epr.previouslyCreatedEntity and return those
@@ -7263,7 +7218,6 @@
 	        Selection.setIsInSelectionArea(inSelectionArea);
 	    });
 	}
-	//# sourceMappingURL=sceneEditUtil.js.map
 
 	// Export so that other components can have this component as parent
 	Component.register({
@@ -7326,7 +7280,6 @@
 	    ];
 	}
 	var inSelectionAreaFilter = createSelectionAreaFilters();
-	//# sourceMappingURL=EditorSelection.js.map
 
 	var popupDepth = 0;
 	var Popup = /** @class */ (function () {
@@ -7424,7 +7377,6 @@
 	    }
 	    return Layer;
 	}());
-	//# sourceMappingURL=Popup.js.map
 
 	var CreateObject = /** @class */ (function (_super) {
 	    __extends(CreateObject, _super);
@@ -7469,7 +7421,6 @@
 	    }
 	    return CreateObject;
 	}(Popup));
-	//# sourceMappingURL=createObject.js.map
 
 	var WIDGET_DISTANCE = 50;
 	// Widgets usually edit entityPrototypes, but in case sceneMode is recording, entities itself are edited.
@@ -7906,7 +7857,6 @@
 	    };
 	    return WidgetControl;
 	}());
-	//# sourceMappingURL=widgetManager.js.map
 
 	var MOVEMENT_KEYS = [key.w, key.a, key.s, key.d, key.up, key.left, key.down, key.right, key.plus, key.minus, key.questionMark, key.q, key.e];
 	var MIN_ZOOM = 0.1;
@@ -8041,7 +7991,7 @@
 	                _this.deleteNewEntities();
 	                var entityPrototypes = filterChildren(editorSelection.items);
 	                _this.copyEntityPrototypes(entityPrototypes);
-	                (_a = _this.newEntities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.clone().createEntity(epr.previouslyCreatedEntity.getParent()); }));
+	                (_a = _this.newEntities).push.apply(_a, entityPrototypes.map(function (epr) { return epr.cloneWithNewSiblingId().createEntity(epr.previouslyCreatedEntity.getParent()); }));
 	                _this.clearSelectedEntities();
 	                setEntityPositions(_this.newEntities, _this.previousMousePosInWorldCoordinates);
 	                _this.draw();
@@ -8748,12 +8698,12 @@
 	        var _a;
 	        this.copiedEntityPrototypes.forEach(function (epr) { return epr.delete(); });
 	        this.copiedEntityPrototypes.length = 0;
-	        (_a = this.copiedEntityPrototypes).push.apply(_a, entityPrototypes.map(function (epr) { return epr.clone(); }));
+	        (_a = this.copiedEntityPrototypes).push.apply(_a, entityPrototypes.map(function (epr) { return epr.cloneWithNewSiblingId(); }));
 	    };
 	    SceneModule.prototype.pasteEntities = function () {
 	        var _a;
 	        this.deleteNewEntities();
-	        (_a = this.newEntities).push.apply(_a, this.copiedEntityPrototypes.map(function (epr) { return epr.clone().createEntity(); }));
+	        (_a = this.newEntities).push.apply(_a, this.copiedEntityPrototypes.map(function (epr) { return epr.cloneWithNewSiblingId().createEntity(); }));
 	        // this.newEntities.forEach(entity => entity.wakeUp());
 	        if (this.previousMousePosInWorldCoordinates)
 	            { setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates); }
@@ -8768,7 +8718,6 @@
 	}(Module));
 	Module.register(SceneModule, 'center');
 	var makeADrawRequest = limit(15, 'soon', function () { return scene && scene.draw(); });
-	//# sourceMappingURL=sceneModule.js.map
 
 	var DragAndDropEvent = /** @class */ (function () {
 	    function DragAndDropEvent(idList, targetElement, state) {
@@ -8814,7 +8763,6 @@
 	    }
 	    return DragAndDropStopEvent;
 	}(DragAndDropEvent));
-	//# sourceMappingURL=dragAndDrop.js.map
 
 	var TreeView = /** @class */ (function () {
 	    function TreeView(options) {
@@ -8936,7 +8884,6 @@
 	    var event = new DragAndDropStopEvent(idList, targetElement);
 	    editorEventDispacher.dispatch('treeView drag stop ' + data.data.origin.element[0].id, event);
 	});
-	//# sourceMappingURL=treeView.js.map
 
 	var PositionAngleScale = /** @class */ (function () {
 	    function PositionAngleScale(position, angle, scale) {
@@ -9001,7 +8948,6 @@
 	    };
 	    return PositionAngleScale;
 	}());
-	//# sourceMappingURL=positionAngleScaleUtil.js.map
 
 	var ObjectsModule = /** @class */ (function (_super) {
 	    __extends(ObjectsModule, _super);
@@ -9303,7 +9249,6 @@
 	    return ObjectsModule;
 	}(Module));
 	Module.register(ObjectsModule, 'left');
-	//# sourceMappingURL=objectsModule.js.map
 
 	/**
 	 * Handles everything else than prototype deletion itself.
@@ -9375,7 +9320,6 @@
 	    }
 	    return PrototypeDeleteConfirmation;
 	}(Popup));
-	//# sourceMappingURL=PrototypeDeleteConfirmation.js.map
 
 	var PrefabsModule = /** @class */ (function (_super) {
 	    __extends(PrefabsModule, _super);
@@ -9486,7 +9430,6 @@
 	    return PrefabsModule;
 	}(Module));
 	Module.register(PrefabsModule, 'left');
-	//# sourceMappingURL=prefabsModule.js.map
 
 	function createNewLevel() {
 	    var lvl = new Level();
@@ -9580,7 +9523,6 @@
 	    };
 	    return LevelItem;
 	}());
-	//# sourceMappingURL=levelsModule.js.map
 
 	var EDITOR_FLOAT_PRECISION = Math.pow(10, 3);
 	// <dataTypeName>: createFunction(container, oninput, onchange) -> setValueFunction
@@ -9668,7 +9610,6 @@
 	    mount(container, input);
 	    return function (val) { return input.value = val.toHexString(); };
 	};
-	//# sourceMappingURL=propertyEditorTypes.js.map
 
 	var Confirmation = /** @class */ (function (_super) {
 	    __extends(Confirmation, _super);
@@ -9708,7 +9649,6 @@
 	    };
 	    return Confirmation;
 	}(Popup));
-	//# sourceMappingURL=Confirmation.js.map
 
 	var CATEGORY_ORDER = [
 	    'Common',
@@ -9826,7 +9766,6 @@
 	    }
 	    return requirements.filter(isMissing).filter(function (r) { return r !== 'Transform'; });
 	}
-	//# sourceMappingURL=componentAdder.js.map
 
 	var ObjectMoreButtonContextMenu = /** @class */ (function (_super) {
 	    __extends(ObjectMoreButtonContextMenu, _super);
@@ -9882,7 +9821,6 @@
 	    };
 	    return ObjectMoreButtonContextMenu;
 	}(Popup));
-	//# sourceMappingURL=objectMoreButtonContextMenu.js.map
 
 	function skipTransitions(element) {
 	    return;
@@ -9891,7 +9829,6 @@
 	        element.classList.remove('skipPropertyEditorTransitions');
 	    }, 10);
 	}
-	//# sourceMappingURL=util.js.map
 
 	/*
 	Reference: Unbounce
@@ -10388,7 +10325,6 @@
 	    var name = propertyName.replace(/[A-Z]/g, function (c) { return ' ' + c; });
 	    return name[0].toUpperCase() + name.substring(1);
 	}
-	//# sourceMappingURL=propertyEditor.js.map
 
 	var PrefabModule = /** @class */ (function (_super) {
 	    __extends(PrefabModule, _super);
@@ -10426,7 +10362,6 @@
 	    return PrefabModule;
 	}(Module));
 	Module.register(PrefabModule, 'right');
-	//# sourceMappingURL=prefabModule.js.map
 
 	var ObjectModule = /** @class */ (function (_super) {
 	    __extends(ObjectModule, _super);
@@ -10463,7 +10398,6 @@
 	    return ObjectModule;
 	}(Module));
 	Module.register(ObjectModule, 'right');
-	//# sourceMappingURL=objectModule.js.map
 
 	var LevelModule = /** @class */ (function (_super) {
 	    __extends(LevelModule, _super);
@@ -10498,7 +10432,6 @@
 	    return LevelModule;
 	}(Module));
 	Module.register(LevelModule, 'right');
-	//# sourceMappingURL=levelModule.js.map
 
 	var GameModule = /** @class */ (function (_super) {
 	    __extends(GameModule, _super);
@@ -10529,7 +10462,6 @@
 	    return GameModule;
 	}(Module));
 	Module.register(GameModule, 'right');
-	//# sourceMappingURL=gameModule.js.map
 
 	var AnimationModule = /** @class */ (function (_super) {
 	    __extends(AnimationModule, _super);
@@ -11163,7 +11095,6 @@
 	function replaceAnimationDataPrototypePath(animationData, siblingId, newPath) {
 	    return animationData.replace(new RegExp("\"[^\"]*" + siblingId, 'g'), "\"" + newPath);
 	}
-	//# sourceMappingURL=animationModule.js.map
 
 	var PerformanceModule = /** @class */ (function (_super) {
 	    __extends(PerformanceModule, _super);
@@ -11273,7 +11204,6 @@
 	    };
 	    return FPSMeter;
 	}());
-	//# sourceMappingURL=performanceModule.js.map
 
 	var PerSecondModule = /** @class */ (function (_super) {
 	    __extends(PerSecondModule, _super);
@@ -11315,7 +11245,6 @@
 	    };
 	    return PerSecondItem;
 	}());
-	//# sourceMappingURL=perSecondModule.js.map
 
 	var AnimationView = /** @class */ (function () {
 	    function AnimationView(serializable) {
@@ -11334,7 +11263,6 @@
 	    };
 	    return AnimationView;
 	}());
-	//# sourceMappingURL=animationView.js.map
 
 	var Help = /** @class */ (function () {
 	    function Help() {
@@ -11432,11 +11360,9 @@
 	editorEventDispacher.listen(EditorEvent.EDITOR_REGISTER_HELP_VARIABLE, function (name, value) {
 	    help[name] = value;
 	});
-	//# sourceMappingURL=help.js.map
 
 	window.test = function () {
 	};
-	//# sourceMappingURL=index.js.map
 
 	var OKPopup = /** @class */ (function (_super) {
 	    __extends(OKPopup, _super);
@@ -11472,7 +11398,6 @@
 	    };
 	    return OKPopup;
 	}(Popup));
-	//# sourceMappingURL=OKPopup.js.map
 
 	editorEventDispacher.getEventPromise('modulesRegistered').then(function () {
 	    editorEventDispacher.dispatch(EditorEvent.EDITOR_LOADED);
@@ -11557,7 +11482,7 @@
 	            setChangeOrigin(editor);
 	            filteredSerializabled.forEach(function (serializable) {
 	                var parent = serializable.getParent();
-	                var clone = serializable.clone();
+	                var clone = serializable.cloneWithNewSiblingId();
 	                if (parent) {
 	                    var _a = parseTextAndNumber(serializable.name), text$$1 = _a.text, number = _a.number;
 	                    var nameSuggestion_1 = text$$1 + number++;
@@ -11618,7 +11543,6 @@
 	        number: num
 	    };
 	}
-	//# sourceMappingURL=editor.js.map
 
 	// import Property from '../core/property';
 	// window.Property = Property;
@@ -11634,7 +11558,6 @@
 	// window.serializables = serializables;
 	// window.setChangeOrigin = setChangeOrigin;
 	// import { default as Game } from '../core/game';
-	//# sourceMappingURL=main.js.map
 
 })));
 //# sourceMappingURL=openeditplay.editor.js.map

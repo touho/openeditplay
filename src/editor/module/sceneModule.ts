@@ -209,7 +209,7 @@ class SceneModule extends Module {
 				this.deleteNewEntities();
 				let entityPrototypes = filterChildren(editorSelection.items) as EntityPrototype[]
 				this.copyEntityPrototypes(entityPrototypes)
-				this.newEntities.push(...entityPrototypes.map(epr => epr.clone().createEntity(epr.previouslyCreatedEntity.getParent())))
+				this.newEntities.push(...entityPrototypes.map(epr => epr.cloneWithNewSiblingId().createEntity(epr.previouslyCreatedEntity.getParent())))
 				this.clearSelectedEntities();
 				sceneEdit.setEntityPositions(this.newEntities, this.previousMousePosInWorldCoordinates);
 				this.draw();
@@ -1035,12 +1035,12 @@ class SceneModule extends Module {
 	copyEntityPrototypes(entityPrototypes: EntityPrototype[]) {
 		this.copiedEntityPrototypes.forEach(epr => epr.delete());
 		this.copiedEntityPrototypes.length = 0;
-		this.copiedEntityPrototypes.push(...entityPrototypes.map(epr => epr.clone()));
+		this.copiedEntityPrototypes.push(...entityPrototypes.map(epr => epr.cloneWithNewSiblingId()));
 	}
 
 	pasteEntities() {
 		this.deleteNewEntities();
-		this.newEntities.push(...this.copiedEntityPrototypes.map(epr => epr.clone().createEntity()));
+		this.newEntities.push(...this.copiedEntityPrototypes.map(epr => epr.cloneWithNewSiblingId().createEntity()));
 		// this.newEntities.forEach(entity => entity.wakeUp());
 
 		if (this.previousMousePosInWorldCoordinates)

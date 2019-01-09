@@ -99,6 +99,11 @@ export default class EntityPrototype extends Prototype {
 		this._state |= Serializable.STATE_CLONE;
 		return obj;
 	}
+	cloneWithNewSiblingId() {
+		let clone = this.clone()
+		clone.siblingId = Prototype.createSiblingId()
+		return clone
+	}
 
 	toJSON() {
 		/*

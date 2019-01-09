@@ -236,7 +236,7 @@ export function addEntitiesToLevel(entities: Entity[]) {
 		if (parentEntity && parentEntity.threeLetterType === 'ent') {
 			parentEntityPrototype = parentEntity.prototype as EntityPrototype;
 		}
-		let epr = entity.prototype.clone() as EntityPrototype;
+		let epr = entity.prototype.cloneWithNewSiblingId() as EntityPrototype;
 		epr.position = entity.position;
 		(parentEntityPrototype || selectedLevel).addChild(epr);
 		// TODO: Level-Scene sync - get epr.previouslyCreatedEntity and return those
