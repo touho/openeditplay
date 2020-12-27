@@ -230,7 +230,7 @@ export function syncAChangeFromLevelToScene(change) {
 export function addEntitiesToLevel(entities: Entity[]) {
 	console.log('addEntitiesToLevel', entities);
 
-	entities.map(entity => {
+	let entityPrototypes = entities.map(entity => {
 		let parentEntity = entity.getParent() as Entity;
 		let parentEntityPrototype: EntityPrototype;
 		if (parentEntity && parentEntity.threeLetterType === 'ent') {
@@ -239,10 +239,11 @@ export function addEntitiesToLevel(entities: Entity[]) {
 		let epr = entity.prototype.cloneWithNewSiblingId() as EntityPrototype;
 		epr.position = entity.position;
 		(parentEntityPrototype || selectedLevel).addChild(epr);
-		// TODO: Level-Scene sync - get epr.previouslyCreatedEntity and return those
+
+		return epr
 	});
 
-	return []; // new entities. TODO
+	return entityPrototypes;
 }
 
 export function getEntitiesInSelection(start: Vector, end: Vector)  {

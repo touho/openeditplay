@@ -48,8 +48,8 @@ editorEventDispacher.getEventPromise('modulesRegistered').then(() => {
 export let loadedPromise = editorEventDispacher.getEventPromise(EditorEvent.EDITOR_LOADED);
 
 configureNetSync({
-	serverToClientEnabled: true,
-	clientToServerEnabled: true,
+	serverToClientEnabled: false,
+	clientToServerEnabled: false,
 	context: 'edit'
 });
 

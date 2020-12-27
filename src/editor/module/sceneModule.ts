@@ -621,10 +621,10 @@ class SceneModule extends Module {
 		});
 		let entityDragEnd = () => {
 			setChangeOrigin(this);
-			let entitiesInSelection = sceneEdit.addEntitiesToLevel(this.newEntities) || [];
+			sceneEdit.addEntitiesToLevel(this.newEntities);
 
 			this.clearState();
-			this.selectEntities(entitiesInSelection);
+			this.selectEntities([]);
 			this.selectSelectedEntitiesInEditor();
 
 			this.draw();

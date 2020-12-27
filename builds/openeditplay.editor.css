@@ -5,7 +5,10 @@
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.3s;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
 }
 .button:hover {
   opacity: 1;
@@ -32,7 +35,7 @@ button.button {
   font-size: 12px;
   text-shadow: 0 0 1px rgba(0, 0, 0, 0.76);
   /*background: #3e3e3e;*/
-  box-shadow: inset 1px 1px 1px #ffffff36, 0 0 1px black;
+  box-shadow: inset 1px 1px 1px rgba(255,255,255,0.21176), 0 0 1px black;
 }
 button.button:hover {
   color: #ccc8c6;
@@ -258,12 +261,28 @@ div.top {
   top: 0;
   padding-top: 2px;
 }
+@-webkit-keyframes rainbow {
+  0% {
+    filter: sepia(100%) hue-rotate(0deg);
+  }
+  100% {
+    filter: sepia(100%) hue-rotate(360deg);
+  }
+}
 @keyframes rainbow {
   0% {
     filter: sepia(100%) hue-rotate(0deg);
   }
   100% {
     filter: sepia(100%) hue-rotate(360deg);
+  }
+}
+@-webkit-keyframes rainbowLittle {
+  0% {
+    filter: sepia(30%) hue-rotate(0deg);
+  }
+  100% {
+    filter: sepia(30%) hue-rotate(360deg);
   }
 }
 @keyframes rainbowLittle {
@@ -281,7 +300,8 @@ img.logo {
   box-sizing: border-box;
 }
 img.logo:hover {
-  animation: rainbow 7s infinite;
+  -webkit-animation: rainbow 7s infinite;
+          animation: rainbow 7s infinite;
 }
 .topIconTextButton {
   box-sizing: border-box;
@@ -305,7 +325,8 @@ img.logo:hover {
 }
 .topIconTextButtonContent:hover {
   background: #373737;
-  animation: rainbowLittle 7s infinite;
+  -webkit-animation: rainbowLittle 7s infinite;
+          animation: rainbowLittle 7s infinite;
 }
 .topIconTextButtonContent:active {
   border: 1px inset #555;
@@ -357,6 +378,11 @@ div.selectionView:not(.selectionFocused) div.selectionButtons {
 div.selectionView div.selectionButtons .fa-trash:hover {
   color: #ff745f;
 }
+@-webkit-keyframes blinkPlayButton {
+  0% { opacity: 1 }
+  50% { opacity: 0.8 }
+  100% { opacity: 1 }
+}
 @keyframes blinkPlayButton {
   0% { opacity: 1 }
   50% { opacity: 0.8 }
@@ -365,7 +391,8 @@ div.selectionView div.selectionButtons .fa-trash:hover {
 div.topSceneControlButtons.topSceneControlButtonsPaused div.button[controlButtonType='play'] {
   color: white;
   text-shadow: 0 0 20px white;
-  animation: blinkPlayButton 2s 0s infinite;
+  -webkit-animation: blinkPlayButton 2s 0s infinite;
+          animation: blinkPlayButton 2s 0s infinite;
 }
 div.topSceneControlButtons div.button[controlButtonType='rec'] {
   color: #ff3333;
@@ -387,7 +414,8 @@ div.topSceneControlButton {
 div.topSceneControlButton:hover {
   box-shadow: inset 0 1px 4px 0px #888888;
 }
-div.topSceneControlButton.selected, div.topSceneControlButton:active {
+div.topSceneControlButton.selected,
+div.topSceneControlButton:active {
   background: linear-gradient(to bottom, #383838, #6d6d6d);
   color: white;
   opacity: 0.9;
@@ -439,7 +467,13 @@ div.topSceneControlButton:last-of-type {
   
   text-align: center;
   
-  user-select: none;
+  -webkit-user-select: none;
+  
+     -moz-user-select: none;
+  
+      -ms-user-select: none;
+  
+          user-select: none;
   cursor: default;
 }
 .typesDragHelper i {
@@ -528,7 +562,8 @@ div.topSceneControlButton:last-of-type {
 .sceneEditorSideBarButtons .movement {
   opacity: 0.5;
 }
-.module-scene.noScene .pauseInfo, .module-scene.noScene .sceneEditorSideBarButtons {
+.module-scene.noScene .pauseInfo,
+.module-scene.noScene .sceneEditorSideBarButtons {
   display: none;
 }
 .module.module-performance {
@@ -587,48 +622,54 @@ div.topSceneControlButton:last-of-type {
 .perSecondItemValue {
 }
 div.animationModule table.animationTimeline {
-  width: 100%;
-  user-select: none;
-  border-collapse: collapse;
-  position: relative;
-}
+        width: 100%;
+        -webkit-user-select: none;
+           -moz-user-select: none;
+            -ms-user-select: none;
+                user-select: none;
+        border-collapse: collapse;
+        position: relative;
+    }
 div.animationModule th.frameHeader {
-  border-right: 1px solid gray;
-  height: 30px;
-}
+        border-right: 1px solid gray;
+        height: 30px;
+    }
 div.animationModule th.frameHeader.selected {
-  background: rgba(255, 255, 255, 0.15);
-}
+        background: rgba(255, 255, 255, 0.15);
+    }
 div.animationModule button.recordButton {
-  color: white;
-  text-shadow: 0px 0px 4px red;
-}
+        color: white;
+        text-shadow: 0px 0px 4px red;
+    }
 div.animationModule button.recordButton i {
-  color: #ff3333;
-  text-shadow: 0px 0px 4px white;
-}
+            color: #ff3333;
+            text-shadow: 0px 0px 4px white;
+        }
 div.animationModule button.recordButton.selected {
-  background: #ff3333;
-}
+        background: #ff3333;
+    }
 div.animationModule button.recordButton.selected i {
-  /* color: #ff3333;*/
-  /* text-shadow: 0px 0px 4px white;*/
-}
+            /* color: #ff3333;*/
+            /* text-shadow: 0px 0px 4px white;*/
+        }
 div.animationModule td.trackFrame {
-  border-top: 1px solid black;
-  text-align: center;
-}
+        border-top: 1px solid black;
+        text-align: center;
+    }
 div.animationModule td.trackFrame:first-child {
-  text-align: left;
-  padding-left: 10px;
-  width: auto !important;
-}
+        text-align: left;
+        padding-left: 10px;
+        width: auto !important;
+    }
 div.animationModule td.trackFrame.selected {
-  color: yellow;
-  text-shadow: 0 0 12px white;
-}
+        color: yellow;
+        text-shadow: 0 0 12px white;
+    }
 .treeView {
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
 }
 .jstree-default .jstree-search {
   color: #ccc8c6;
@@ -657,15 +698,18 @@ div.animationModule td.trackFrame.selected {
   background: rgba(255, 255, 255, 0.06);;
   color: #8d8d8d;
 }
-div.propertyEditor div.container[type='icd'], div.propertyEditor div.container[type='com'] {
+div.propertyEditor div.container[type='icd'],
+div.propertyEditor div.container[type='com'] {
   transition: opacity 0.5s;
   background: #2d2d2d;
 }
-div.propertyEditor div.container.packed[type='icd'], div.propertyEditor div.container.packed[type='com'] {
+div.propertyEditor div.container.packed[type='icd'],
+div.propertyEditor div.container.packed[type='com'] {
   /*opacity: 0.6;*/
   /*filter: saturate(0.4);*/
 }
-div.propertyEditor div.container[type='icd'] .containerContent, div.propertyEditor div.container[type='com'] .containerContent {
+div.propertyEditor div.container[type='icd'] .containerContent,
+div.propertyEditor div.container[type='com'] .containerContent {
   overflow: auto;
   height: auto;
   transition: opacity 0.4s, max-height 0.3s cubic-bezier(1, 0, 1, 1);
@@ -686,13 +730,15 @@ div.propertyEditor div.container {
   padding-bottom: 5px;
   padding-top: 3px;
 }
-div.propertyEditor div.container[type='icd'] div.containerTitle, div.propertyEditor div.container[type='com'] div.containerTitle {
+div.propertyEditor div.container[type='icd'] div.containerTitle,
+div.propertyEditor div.container[type='com'] div.containerTitle {
   cursor: pointer;
   position: relative;
   padding: 2px;
   background: linear-gradient(to bottom, #5d5d5d, #3c3c3c);
 }
-div.propertyEditor div.container[type='icd'] div.containerTitle::before, div.propertyEditor div.container[type='com'] div.containerTitle::before {
+div.propertyEditor div.container[type='icd'] div.containerTitle::before,
+div.propertyEditor div.container[type='com'] div.containerTitle::before {
   content: '\f0d7';
   font-family: "Font Awesome 5 Free";
   font-weight: 900;
@@ -700,7 +746,8 @@ div.propertyEditor div.container[type='icd'] div.containerTitle::before, div.pro
   width: 42px;
   margin-left: 3px;
 }
-div.propertyEditor div.container.packed[type='icd'] div.containerTitle::before, div.propertyEditor div.container.packed[type='com'] div.containerTitle::before {
+div.propertyEditor div.container.packed[type='icd'] div.containerTitle::before,
+div.propertyEditor div.container.packed[type='com'] div.containerTitle::before {
   font-family: "Font Awesome 5 Free";
   font-weight: 900;
   content: '\f0da';
@@ -754,7 +801,8 @@ div.propertyContent {
 .property:not(.ownProperty) {
   opacity: 0.65;
 }
-.container[type='icd'] .property.ownProperty .propertyContent, .container[type='com'] .property.ownProperty .propertyContent {
+.container[type='icd'] .property.ownProperty .propertyContent,
+.container[type='com'] .property.ownProperty .propertyContent {
   padding-right: 30px;
 }
 .property .resetButton {
@@ -919,7 +967,8 @@ div.widgetRoot {
     text-shadow: none;
     /* opacity: 0.8;*/
 }
-.widgetRoot:not(.dragging) .widgetControl:hover, .widgetRoot.dragging .widgetControl.dragging {
+.widgetRoot:not(.dragging) .widgetControl:hover,
+.widgetRoot.dragging .widgetControl.dragging {
     /* text-shadow: 0 0 1px;*/
     filter: brightness(140%);
     /* text-shadow: 0 0 4px;*/
@@ -927,7 +976,10 @@ div.widgetRoot {
 }
 .widgetRoot .widget {
     position: absolute;
-    user-select: none;
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
 }
 .widgetRoot .moveWidget .widgetControl {
     font-size: 22px;
@@ -974,7 +1026,8 @@ div.widgetRoot {
     height: 30.5px;
     transform: translateY(-100%) translateX(-0.5px) translateY(0.5px);
 }
-.widgetRoot:not(.dragging) .positionWidget .widgetControl:hover, .widgetRoot.dragging .positionWidget .widgetControl.dragging {
+.widgetRoot:not(.dragging) .positionWidget .widgetControl:hover,
+.widgetRoot.dragging .positionWidget .widgetControl.dragging {
     opacity: 0.6;
     /* box-shadow: 0 0 8px 4px;*/
 }
@@ -1005,6 +1058,14 @@ body.noEditAccess {
   -ms-user-select: none;      /* IE 10+ */
   user-select: none;          /* Likely future */
 }
+@-webkit-keyframes clickMeEffect {
+   0%   {
+     filter: sepia(100%) hue-rotate(0deg) saturate(150%);
+   }
+   100% {
+     filter: sepia(100%) hue-rotate(360deg) saturate(150%);
+   }
+}
 @keyframes clickMeEffect {
    0%   {
      filter: sepia(100%) hue-rotate(0deg) saturate(150%);
@@ -1014,7 +1075,8 @@ body.noEditAccess {
    }
 }
 .clickMeEffect {
-  animation: clickMeEffect 2s infinite;
+  -webkit-animation: clickMeEffect 2s infinite;
+          animation: clickMeEffect 2s infinite;
 }
 button.clickMeEffect {
   box-shadow: 0 0 30px #555;

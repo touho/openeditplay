@@ -9,6 +9,7 @@ import { selectInEditor } from '../../editorSelection';
 import Module from '../../module/module';
 import { editorEventDispacher, EditorEvent } from '../../editorEventDispatcher';
 import { setChangeOrigin } from '../../../core/change';
+import ComponentAdder from "./componentAdder"
 
 export default class CreateObject extends Popup {
 	/*
@@ -23,6 +24,8 @@ export default class CreateObject extends Popup {
 			width: 500,
 			content: list('div.confirmationButtons', Button)
 		});
+
+		this.remove();
 
 		const selectCreatedObjects = (entities: Entity[]) => {
 			if (entities.length === 0) {
@@ -40,19 +43,31 @@ export default class CreateObject extends Popup {
 			Module.activateModule('object', true, 'focusOnProperty', 'name');
 		}
 
-		this.content.update([{
-			text: 'Empty Object',
-			callback: () => {
-				setChangeOrigin(this);
-				let entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
+		setChangeOrigin(this);
+		let entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
 
-				let entity = entityPrototype.createEntity(null, true);
-				let entitiesInScene = addEntitiesToLevel([entity]);
+		let entity = entityPrototype.createEntity(null, true);
+		let levelEntityPrototype = addEntitiesToLevel([entity]);
 
-				selectCreatedObjects(entitiesInScene);
+		selectCreatedObjects([entity]);
 
-				this.remove();
-			}
-		}]);
+		new ComponentAdder(levelEntityPrototype[0]);
+
+		this.remove();
+
+		// this.content.update([{
+		// 	text: 'Empty Object',
+		// 	callback: () => {
+		// 		setChangeOrigin(this);
+		// 		let entityPrototype = EntityPrototype.create('Empty', scene.cameraPosition.clone());
+		//
+		// 		let entity = entityPrototype.createEntity(null, true);
+		// 		let entitiesInScene = addEntitiesToLevel([entity]);
+		//
+		// 		// selectCreatedObjects(entitiesInScene);
+		//
+		// 		this.remove();
+		// 	}
+		// }]);
 	}
 }

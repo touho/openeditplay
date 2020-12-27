@@ -5,10 +5,9 @@ const rollup = require('rollup');
 const rollupWatch = require('rollup-watch');
 const rollupBuble = require('rollup-plugin-buble');
 const rollupNodeResolve = require('rollup-plugin-node-resolve');
-const rollupUglify = require('rollup-plugin-uglify');
+// const rollupUglify = require('rollup-plugin-uglify');
 const rollupTypeScript = require('rollup-plugin-typescript2');
 const glob = require('glob');
-const kexec = require('kexec');
 const postcss = require('postcss');
 const postcssImport = require('postcss-import');
 const postcssScss = require('postcss-scss');
@@ -224,7 +223,7 @@ function autobuildJs(entry, destination, options) {
 	}));
 
 	plugins.push(rollupNodeResolve({
-		jsnext: true
+		// jsnext: true
 	}));
 
 	plugins.push(rollupBuble({
@@ -241,8 +240,8 @@ function autobuildJs(entry, destination, options) {
 		}));
 	}
 
-	if (options.uglify)
-		plugins.push(rollupUglify());
+	// if (options.uglify)
+	// 	plugins.push(rollupUglify());
 
 	let watchOptions = {
 		input: ROOT + entry,

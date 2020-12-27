@@ -1,8 +1,7 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
+(function (factory) {
 	typeof define === 'function' && define.amd ? define(factory) :
-	(factory());
-}(this, (function () { 'use strict';
+	factory();
+}((function () { 'use strict';
 
 	function getAjax(url) {
 	    return new Promise(function (resolve, reject) {
@@ -81,57 +80,31 @@
 	    }
 	}
 
-	var HASH = '#'.charCodeAt(0);
-	var DOT = '.'.charCodeAt(0);
+	function parseQuery (query) {
+	  var chunks = query.split(/([#.])/);
+	  var tagName = '';
+	  var id = '';
+	  var classNames = [];
 
-	var TAG_NAME = 0;
-	var ID = 1;
-	var CLASS_NAME = 2;
-
-	var parseQuery = function (query) {
-	  var tag = null;
-	  var id = null;
-	  var className = null;
-	  var mode = TAG_NAME;
-	  var offset = 0;
-
-	  for (var i = 0; i <= query.length; i++) {
-	    var char = query.charCodeAt(i);
-	    var isHash = char === HASH;
-	    var isDot = char === DOT;
-	    var isEnd = !char;
-
-	    if (isHash || isDot || isEnd) {
-	      if (mode === TAG_NAME) {
-	        if (i === 0) {
-	          tag = 'div';
-	        } else {
-	          tag = query.substring(offset, i);
-	        }
-	      } else if (mode === ID) {
-	        id = query.substring(offset, i);
-	      } else {
-	        if (className) {
-	          className += ' ' + query.substring(offset, i);
-	        } else {
-	          className = query.substring(offset, i);
-	        }
-	      }
-
-	      if (isHash) {
-	        mode = ID;
-	      } else if (isDot) {
-	        mode = CLASS_NAME;
-	      }
-
-	      offset = i + 1;
+	  for (var i = 0; i < chunks.length; i++) {
+	    var chunk = chunks[i];
+	    if (chunk === '#') {
+	      id = chunks[++i];
+	    } else if (chunk === '.') {
+	      classNames.push(chunks[++i]);
+	    } else if (chunk.length) {
+	      tagName = chunk;
 	    }
 	  }
 
-	  return { tag: tag, id: id, className: className };
-	};
+	  return {
+	    tag: tagName || 'div',
+	    id: id,
+	    className: classNames.join(' ')
+	  };
+	}
 
-	var createElement = function (query, ns) {
+	function createElement (query, ns) {
 	  var ref = parseQuery(query);
 	  var tag = ref.tag;
 	  var id = ref.id;
@@ -151,9 +124,9 @@
 	  }
 
 	  return element;
-	};
+	}
 
-	var unmount = function (parent, child) {
+	function unmount (parent, child) {
 	  var parentEl = getEl(parent);
 	  var childEl = getEl(child);
 
@@ -169,13 +142,13 @@
 	  }
 
 	  return child;
-	};
+	}
 
-	var doUnmount = function (child, childEl, parentEl) {
+	function doUnmount (child, childEl, parentEl) {
 	  var hooks = childEl.__redom_lifecycle;
 
 	  if (hooksAreEmpty(hooks)) {
-	    childEl.__redom_mounted = false;
+	    childEl.__redom_lifecycle = {};
 	    return;
 	  }
 
@@ -200,9 +173,9 @@
 
 	    traverse = traverse.parentNode;
 	  }
-	};
+	}
 
-	var hooksAreEmpty = function (hooks) {
+	function hooksAreEmpty (hooks) {
 	  if (hooks == null) {
 	    return true;
 	  }
@@ -212,12 +185,14 @@
 	    }
 	  }
 	  return true;
-	};
+	}
 
-	var hookNames = ['onmount', 'onunmount'];
+	/* global Node, ShadowRoot */
+
+	var hookNames = ['onmount', 'onremount', 'onunmount'];
 	var shadowRootAvailable = typeof window !== 'undefined' && 'ShadowRoot' in window;
 
-	var mount = function (parent, child, before) {
+	function mount (parent, child, before, replace) {
 	  var parentEl = getEl(parent);
 	  var childEl = getEl(child);
 
@@ -238,7 +213,11 @@
 	  }
 
 	  if (before != null) {
-	    parentEl.insertBefore(childEl, getEl(before));
+	    if (replace) {
+	      parentEl.replaceChild(childEl, getEl(before));
+	    } else {
+	      parentEl.insertBefore(childEl, getEl(before));
+	    }
 	  } else {
 	    parentEl.appendChild(childEl);
 	  }
@@ -246,60 +225,10 @@
 	  doMount(child, childEl, parentEl, oldParent);
 
 	  return child;
-	};
+	}
 
-	var doMount = function (child, childEl, parentEl, oldParent) {
-	  var hooks = childEl.__redom_lifecycle || (childEl.__redom_lifecycle = {});
-	  var remount = (parentEl === oldParent);
-	  var hooksFound = false;
-
-	  for (var i = 0; i < hookNames.length; i++) {
-	    var hookName = hookNames[i];
-
-	    if (!remount && (child !== childEl) && (hookName in child)) {
-	      hooks[hookName] = (hooks[hookName] || 0) + 1;
-	    }
-	    if (hooks[hookName]) {
-	      hooksFound = true;
-	    }
-	  }
-
-	  if (!hooksFound) {
-	    childEl.__redom_mounted = true;
-	    return;
-	  }
-
-	  var traverse = parentEl;
-	  var triggered = false;
-
-	  if (remount || (!triggered && (traverse && traverse.__redom_mounted))) {
-	    trigger(childEl, remount ? 'onremount' : 'onmount');
-	    triggered = true;
-	  }
-
-	  if (remount) {
-	    return;
-	  }
-
-	  while (traverse) {
-	    var parent = traverse.parentNode;
-	    var parentHooks = traverse.__redom_lifecycle || (traverse.__redom_lifecycle = {});
-
-	    for (var hook in hooks) {
-	      parentHooks[hook] = (parentHooks[hook] || 0) + hooks[hook];
-	    }
-
-	    if (!triggered && (traverse === document || (shadowRootAvailable && (traverse instanceof window.ShadowRoot)) || (parent && parent.__redom_mounted))) {
-	      trigger(traverse, remount ? 'onremount' : 'onmount');
-	      triggered = true;
-	    }
-
-	    traverse = parent;
-	  }
-	};
-
-	var trigger = function (el, eventName) {
-	  if (eventName === 'onmount') {
+	function trigger (el, eventName) {
+	  if (eventName === 'onmount' || eventName === 'onremount') {
 	    el.__redom_mounted = true;
 	  } else if (eventName === 'onunmount') {
 	    el.__redom_mounted = false;
@@ -316,6 +245,12 @@
 
 	  view && view[eventName] && view[eventName]();
 
+	  for (var hook in hooks) {
+	    if (hook) {
+	      hookCount++;
+	    }
+	  }
+
 	  if (hookCount) {
 	    var traverse = el.firstChild;
 
@@ -327,104 +262,197 @@
 	      traverse = next;
 	    }
 	  }
-	};
+	}
 
-	var setStyle = function (view, arg1, arg2) {
-	  var el = getEl(view);
+	function doMount (child, childEl, parentEl, oldParent) {
+	  var hooks = childEl.__redom_lifecycle || (childEl.__redom_lifecycle = {});
+	  var remount = (parentEl === oldParent);
+	  var hooksFound = false;
 
-	  if (arg2 !== undefined) {
-	    el.style[arg1] = arg2;
-	  } else if (isString(arg1)) {
-	    el.setAttribute('style', arg1);
-	  } else {
-	    for (var key in arg1) {
-	      setStyle(el, key, arg1[key]);
+	  for (var i = 0, list = hookNames; i < list.length; i += 1) {
+	    var hookName = list[i];
+
+	    if (!remount) { // if already mounted, skip this phase
+	      if (child !== childEl) { // only Views can have lifecycle events
+	        if (hookName in child) {
+	          hooks[hookName] = (hooks[hookName] || 0) + 1;
+	        }
+	      }
+	    }
+	    if (hooks[hookName]) {
+	      hooksFound = true;
 	    }
 	  }
-	};
+
+	  if (!hooksFound) {
+	    childEl.__redom_lifecycle = {};
+	    return;
+	  }
+
+	  var traverse = parentEl;
+	  var triggered = false;
+
+	  if (remount || (traverse && traverse.__redom_mounted)) {
+	    trigger(childEl, remount ? 'onremount' : 'onmount');
+	    triggered = true;
+	  }
+
+	  while (traverse) {
+	    var parent = traverse.parentNode;
+	    var parentHooks = traverse.__redom_lifecycle || (traverse.__redom_lifecycle = {});
+
+	    for (var hook in hooks) {
+	      parentHooks[hook] = (parentHooks[hook] || 0) + hooks[hook];
+	    }
+
+	    if (triggered) {
+	      break;
+	    } else {
+	      if (traverse.nodeType === Node.DOCUMENT_NODE ||
+	        (shadowRootAvailable && (traverse instanceof ShadowRoot)) ||
+	        (parent && parent.__redom_mounted)
+	      ) {
+	        trigger(traverse, remount ? 'onremount' : 'onmount');
+	        triggered = true;
+	      }
+	      traverse = parent;
+	    }
+	  }
+	}
+
+	function setStyle (view, arg1, arg2) {
+	  var el = getEl(view);
+
+	  if (typeof arg1 === 'object') {
+	    for (var key in arg1) {
+	      setStyleValue(el, key, arg1[key]);
+	    }
+	  } else {
+	    setStyleValue(el, arg1, arg2);
+	  }
+	}
+
+	function setStyleValue (el, key, value) {
+	  if (value == null) {
+	    el.style[key] = '';
+	  } else {
+	    el.style[key] = value;
+	  }
+	}
 
 	/* global SVGElement */
 
 	var xlinkns = 'http://www.w3.org/1999/xlink';
 
-	var setAttr = function (view, arg1, arg2) {
+	function setAttrInternal (view, arg1, arg2, initial) {
 	  var el = getEl(view);
-	  var isSVG = el instanceof SVGElement;
 
-	  if (arg2 !== undefined) {
-	    if (arg1 === 'style') {
+	  var isObj = typeof arg1 === 'object';
+
+	  if (isObj) {
+	    for (var key in arg1) {
+	      setAttrInternal(el, key, arg1[key], initial);
+	    }
+	  } else {
+	    var isSVG = el instanceof SVGElement;
+	    var isFunc = typeof arg2 === 'function';
+
+	    if (arg1 === 'style' && typeof arg2 === 'object') {
 	      setStyle(el, arg2);
-	    } else if (isSVG && isFunction(arg2)) {
+	    } else if (isSVG && isFunc) {
 	      el[arg1] = arg2;
 	    } else if (arg1 === 'dataset') {
 	      setData(el, arg2);
-	    } else if (!isSVG && (arg1 in el || isFunction(arg2))) {
+	    } else if (!isSVG && (arg1 in el || isFunc) && (arg1 !== 'list')) {
 	      el[arg1] = arg2;
 	    } else {
 	      if (isSVG && (arg1 === 'xlink')) {
 	        setXlink(el, arg2);
 	        return;
 	      }
-	      el.setAttribute(arg1, arg2);
+	      if (initial && arg1 === 'class') {
+	        arg2 = el.className + ' ' + arg2;
+	      }
+	      if (arg2 == null) {
+	        el.removeAttribute(arg1);
+	      } else {
+	        el.setAttribute(arg1, arg2);
+	      }
+	    }
+	  }
+	}
+
+	function setXlink (el, arg1, arg2) {
+	  if (typeof arg1 === 'object') {
+	    for (var key in arg1) {
+	      setXlink(el, key, arg1[key]);
 	    }
 	  } else {
-	    for (var key in arg1) {
-	      setAttr(el, key, arg1[key]);
+	    if (arg2 != null) {
+	      el.setAttributeNS(xlinkns, arg1, arg2);
+	    } else {
+	      el.removeAttributeNS(xlinkns, arg1, arg2);
 	    }
 	  }
-	};
+	}
 
-	function setXlink (el, obj) {
-	  for (var key in obj) {
-	    el.setAttributeNS(xlinkns, key, obj[key]);
+	function setData (el, arg1, arg2) {
+	  if (typeof arg1 === 'object') {
+	    for (var key in arg1) {
+	      setData(el, key, arg1[key]);
+	    }
+	  } else {
+	    if (arg2 != null) {
+	      el.dataset[arg1] = arg2;
+	    } else {
+	      delete el.dataset[arg1];
+	    }
 	  }
 	}
 
-	function setData (el, obj) {
-	  for (var key in obj) {
-	    el.dataset[key] = obj[key];
-	  }
+	function text (str) {
+	  return document.createTextNode((str != null) ? str : '');
 	}
 
-	var text = function (str) { return document.createTextNode((str != null) ? str : ''); };
-
-	var parseArguments = function (element, args) {
-	  for (var i = 0; i < args.length; i++) {
-	    var arg = args[i];
+	function parseArgumentsInternal (element, args, initial) {
+	  for (var i = 0, list = args; i < list.length; i += 1) {
+	    var arg = list[i];
 
 	    if (arg !== 0 && !arg) {
 	      continue;
 	    }
 
-	    // support middleware
-	    if (typeof arg === 'function') {
+	    var type = typeof arg;
+
+	    if (type === 'function') {
 	      arg(element);
-	    } else if (isString(arg) || isNumber(arg)) {
+	    } else if (type === 'string' || type === 'number') {
 	      element.appendChild(text(arg));
 	    } else if (isNode(getEl(arg))) {
 	      mount(element, arg);
 	    } else if (arg.length) {
-	      parseArguments(element, arg);
-	    } else if (typeof arg === 'object') {
-	      setAttr(element, arg);
+	      parseArgumentsInternal(element, arg, initial);
+	    } else if (type === 'object') {
+	      setAttrInternal(element, arg, null, initial);
 	    }
 	  }
-	};
+	}
 
-	var ensureEl = function (parent) { return isString(parent) ? html(parent) : getEl(parent); };
-	var getEl = function (parent) { return (parent.nodeType && parent) || (!parent.el && parent) || getEl(parent.el); };
+	function ensureEl (parent) {
+	  return typeof parent === 'string' ? html(parent) : getEl(parent);
+	}
 
-	var isString = function (a) { return typeof a === 'string'; };
-	var isNumber = function (a) { return typeof a === 'number'; };
-	var isFunction = function (a) { return typeof a === 'function'; };
+	function getEl (parent) {
+	  return (parent.nodeType && parent) || (!parent.el && parent) || getEl(parent.el);
+	}
 
-	var isNode = function (a) { return a && a.nodeType; };
+	function isNode (arg) {
+	  return arg && arg.nodeType;
+	}
 
 	var htmlCache = {};
 
-	var memoizeHTML = function (query) { return htmlCache[query] || (htmlCache[query] = createElement(query)); };
-
-	var html = function (query) {
+	function html (query) {
 	  var arguments$1 = arguments;
 
 	  var args = [], len = arguments.length - 1;
@@ -432,23 +460,27 @@
 
 	  var element;
 
-	  if (isString(query)) {
+	  var type = typeof query;
+
+	  if (type === 'string') {
 	    element = memoizeHTML(query).cloneNode(false);
 	  } else if (isNode(query)) {
 	    element = query.cloneNode(false);
-	  } else if (isFunction(query)) {
+	  } else if (type === 'function') {
 	    var Query = query;
 	    element = new (Function.prototype.bind.apply( Query, [ null ].concat( args) ));
 	  } else {
 	    throw new Error('At least one argument required');
 	  }
 
-	  parseArguments(getEl(element), args);
+	  parseArgumentsInternal(getEl(element), args, true);
 
 	  return element;
-	};
+	}
 
-	html.extend = function (query) {
+	var el = html;
+
+	html.extend = function extendHtml (query) {
 	  var arguments$1 = arguments;
 
 	  var args = [], len = arguments.length - 1;
@@ -459,9 +491,11 @@
 	  return html.bind.apply(html, [ this, clone ].concat( args ));
 	};
 
-	var el = html;
+	function memoizeHTML (query) {
+	  return htmlCache[query] || (htmlCache[query] = createElement(query));
+	}
 
-	var setChildren = function (parent) {
+	function setChildren (parent) {
 	  var arguments$1 = arguments;
 
 	  var children = [], len = arguments.length - 1;
@@ -477,19 +511,25 @@
 
 	    current = next;
 	  }
-	};
+	}
 
 	function traverse (parent, children, _current) {
 	  var current = _current;
 
+	  var childEls = new Array(children.length);
+
 	  for (var i = 0; i < children.length; i++) {
-	    var child = children[i];
+	    childEls[i] = children[i] && getEl(children[i]);
+	  }
+
+	  for (var i$1 = 0; i$1 < children.length; i$1++) {
+	    var child = children[i$1];
 
 	    if (!child) {
 	      continue;
 	    }
 
-	    var childEl = getEl(child);
+	    var childEl = childEls[i$1];
 
 	    if (childEl === current) {
 	      current = current.nextSibling;
@@ -497,7 +537,16 @@
 	    }
 
 	    if (isNode(childEl)) {
-	      mount(parent, child, current);
+	      var next = current && current.nextSibling;
+	      var exists = child.__redom_index != null;
+	      var replace = exists && next === childEls[i$1 + 1];
+
+	      mount(parent, child, current, replace);
+
+	      if (replace) {
+	        current = next;
+	      }
+
 	      continue;
 	    }
 
@@ -509,8 +558,6 @@
 	  return current;
 	}
 
-	var propKey = function (key) { return function (item) { return item[key]; }; };
-
 	var ListPool = function ListPool (View, key, initData) {
 	  this.View = View;
 	  this.initData = initData;
@@ -520,10 +567,10 @@
 	  this.views = [];
 
 	  if (key != null) {
-	    this.lookup = {};
-	    this.key = isFunction(key) ? key : propKey(key);
+	    this.key = typeof key === 'function' ? key : propKey(key);
 	  }
 	};
+
 	ListPool.prototype.update = function update (data, context) {
 	  var ref = this;
 	    var View = ref.View;
@@ -543,6 +590,7 @@
 
 	    if (keySet) {
 	      var id = key(item);
+
 	      view = oldLookup[id] || new View(initData, item, i, data);
 	      newLookup[id] = view;
 	      view.__redom_id = id;
@@ -552,6 +600,7 @@
 	    view.update && view.update(item, i, data, context);
 
 	    var el = getEl(view.el);
+
 	    el.__redom_view = view;
 	    newViews[i] = view;
 	  }
@@ -563,12 +612,17 @@
 	  this.lookup = newLookup;
 	};
 
-	var list = function (parent, View, key, initData) {
+	function propKey (key) {
+	  return function (item) {
+	    return item[key];
+	  };
+	}
+
+	function list (parent, View, key, initData) {
 	  return new List(parent, View, key, initData);
-	};
+	}
 
 	var List = function List (parent, View, key, initData) {
-	  this.__redom_list = true;
 	  this.View = View;
 	  this.initData = initData;
 	  this.views = [];
@@ -576,27 +630,36 @@
 	  this.el = ensureEl(parent);
 	  this.keySet = key != null;
 	};
+
 	List.prototype.update = function update (data, context) {
-	    var this$1 = this;
 	    if ( data === void 0 ) { data = []; }
 
 	  var ref = this;
 	    var keySet = ref.keySet;
 	  var oldViews = this.views;
-	  var oldLookup = keySet && this.lookup;
 
 	  this.pool.update(data, context);
+
 	  var ref$1 = this.pool;
 	    var views = ref$1.views;
 	    var lookup = ref$1.lookup;
 
 	  if (keySet) {
 	    for (var i = 0; i < oldViews.length; i++) {
-	      var id = oldViews[i].__redom_id;
-	      if (!(id in lookup)) {
-	        unmount(this$1, oldLookup[id]);
+	      var oldView = oldViews[i];
+	      var id = oldView.__redom_id;
+
+	      if (lookup[id] == null) {
+	        oldView.__redom_index = null;
+	        unmount(this, oldView);
 	      }
 	    }
+	  }
+
+	  for (var i$1 = 0; i$1 < views.length; i$1++) {
+	    var view = views[i$1];
+
+	    view.__redom_index = i$1;
 	  }
 
 	  setChildren(this, views);
@@ -607,7 +670,7 @@
 	  this.views = views;
 	};
 
-	List.extend = function (parent, View, key, initData) {
+	List.extend = function extendList (parent, View, key, initData) {
 	  return List.bind(List, parent, View, key, initData);
 	};
 
