@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "compression": "^1.7.3",
-    "express": "^4.16.3",
+    "express": "^4.18.2",
     "redom": "^3.12.7"
   }
 }
